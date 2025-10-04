@@ -70,7 +70,7 @@ export default function FloatingChatbot() {
 const styles = StyleSheet.create({
   floatingBtn: {
     position: "absolute",
-    bottom: 30,
+    bottom: 70,
     right: 20,
     backgroundColor: "#8B5CF6",
     padding: 15,

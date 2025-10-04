@@ -518,7 +518,7 @@ export default function LandingPage({ navigation }) {
     { title: "Accomplishment Report", screen: "GADReport" },
     { title: "Projects", screen: "GADProjects" },
     { title: "Committee Reports", screen: "CommitteeReports" },
-    { title: "Resource Materials", screen: "Resources" }
+    // { title: "Resource Materials", screen: "Resources" }
   ];
 
   const handleQuickLinkPress = (link) => {

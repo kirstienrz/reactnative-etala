@@ -1,10 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-const CommitteeReports = () => {
+const GADPlanBudget = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Accomplishment to Reports</Text>
+      <Text style={styles.title}>BUDGET</Text>
       <Text>This is the Committee Reports screen.</Text>
     </View>
   );
@@ -25,4 +25,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CommitteeReports;
+export default GADPlanBudget;

@@ -1,96 +1,45 @@
-// seed.js
-const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const User = require("./models/User");
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import Announcement from "./models/Announcement.js";
 
 dotenv.config();
 
-async function seed() {
+// ✅ Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1);
+  });
+
+// ✅ Sample announcements
+const sampleAnnouncements = [
+  {
+    title: "Barangay Clean-Up Drive",
+    message: "Join us this Saturday for our community clean-up drive at 8AM. Meeting point: Barangay Hall."
+  },
+  {
+    title: "Job Fair Announcement",
+    message: "Local job fair will be held on October 20, 2025, at the Barangay Covered Court. Don’t miss it!"
+  },
+  {
+    title: "Health Check-Up",
+    message: "Free medical and dental check-up on October 15, 2025. Bring your valid ID."
+  },
+];
+
+// ✅ Insert function
+const seedAnnouncements = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-
-    const hashedPassword = await bcrypt.hash("123456", 10);
-
-    // Clear old users to prevent duplicate key errors
-    await User.deleteMany({});
-
-    // Insert all users
-  await User.insertMany([
-  // Super Admin
-  {
-    email: "gad@etala.com",
-    password: hashedPassword,
-    role: "superadmin",
-    department: "System",
-    tupId: "TUPT-00-0001",
-  },
-
-  // Admins
-  {
-    email: "osa_admin@etala.com",
-    password: hashedPassword,
-    role: "admin",
-    department: "OSA",
-    tupId: "TUPT-00-0002",
-  },
-  {
-    email: "hr_admin@etala.com",
-    password: hashedPassword,
-    role: "admin",
-    department: "HR",
-    tupId: "TUPT-00-0003",
-  },
-  {
-    email: "depthead_admin@etala.com",
-    password: hashedPassword,
-    role: "admin",
-    department: "Department Head",
-    tupId: "TUPT-00-0004",
-  },
-
-  // Users - Students
-  {
-    email: "student1@etala.com",
-    password: hashedPassword,
-    role: "user",
-    department: "Student",
-    tupId: "TUPT-00-0005",
-  },
-  {
-    email: "student2@etala.com",
-    password: hashedPassword,
-    role: "user",
-    department: "Student",
-    tupId: "TUPT-00-0006",
-  },
-
-  // Users - Faculty
-  {
-    email: "faculty1@etala.com",
-    password: hashedPassword,
-    role: "user",
-    department: "Faculty",
-    tupId: "TUPT-00-0007",
-  },
-
-  // Users - Staff
-  {
-    email: "staff1@etala.com",
-    password: hashedPassword,
-    role: "user",
-    department: "Staff",
-    tupId: "TUPT-00-0008",
-  },
-]);
-
-
-    console.log("✅ Superadmin, Admins, and Users created successfully!");
-    mongoose.disconnect();
-  } catch (err) {
-    console.error("❌ Error seeding data:", err);
-    mongoose.disconnect();
+    await Announcement.deleteMany(); // clear old data
+    await Announcement.insertMany(sampleAnnouncements); // insert new ones
+    console.log("🌱 Announcements seeded successfully!");
+    process.exit(); // exit after success
+  } catch (error) {
+    console.error("❌ Error seeding announcements:", error);
+    process.exit(1);
   }
-}
+};
 
-seed();
+// Run the function
+seedAnnouncements();
