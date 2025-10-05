@@ -22,15 +22,18 @@ router.post("/login", async (req, res) => {
     );
 
     res.json({
-      token,
+      _id: user._id,      // ✅ send the actual user id
+      token,              // ✅ send JWT token
       role: user.role,
       department: user.department,
       tupId: user.tupId,
     });
   } catch (err) {
+    console.error(err);
     res.status(500).send("Server error");
   }
 });
+
 
 
 module.exports = router;

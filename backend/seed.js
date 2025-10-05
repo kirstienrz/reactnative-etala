@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import Announcement from "./models/Announcement.js";
+import User from "./models/User.js"; // Make sure this path is correct
+import bcrypt from "bcryptjs";
 
 dotenv.config();
 
@@ -12,34 +13,37 @@ mongoose.connect(process.env.MONGO_URI)
     process.exit(1);
   });
 
-// ✅ Sample announcements
-const sampleAnnouncements = [
-  {
-    title: "Barangay Clean-Up Drive",
-    message: "Join us this Saturday for our community clean-up drive at 8AM. Meeting point: Barangay Hall."
-  },
-  {
-    title: "Job Fair Announcement",
-    message: "Local job fair will be held on October 20, 2025, at the Barangay Covered Court. Don’t miss it!"
-  },
-  {
-    title: "Health Check-Up",
-    message: "Free medical and dental check-up on October 15, 2025. Bring your valid ID."
-  },
+// ✅ Sample users
+const users = [
+  { firstName: "GAD", lastName: "Admin", tupId: "TUPT-00-0001", email: "gad@etala.com", password: "123456", role: "superadmin", department: "System" },
+  { firstName: "OSA", lastName: "Admin", tupId: "TUPT-00-0002", email: "osa_admin@etala.com", password: "123456", role: "admin", department: "OSA" },
+  { firstName: "HR", lastName: "Admin", tupId: "TUPT-00-0003", email: "hr_admin@etala.com", password: "123456", role: "admin", department: "HR" },
+  { firstName: "DeptHead", lastName: "Admin", tupId: "TUPT-00-0004", email: "depthead_admin@etala.com", password: "123456", role: "admin", department: "Department Head" },
+  { firstName: "Student", lastName: "One", tupId: "TUPT-00-0005", email: "student1@etala.com", password: "123456", role: "user", department: "Student" },
+  { firstName: "Student", lastName: "Two", tupId: "TUPT-00-0006", email: "student2@etala.com", password: "123456", role: "user", department: "Student" },
+  { firstName: "Faculty", lastName: "One", tupId: "TUPT-00-0007", email: "faculty1@etala.com", password: "123456", role: "user", department: "Faculty" },
+  { firstName: "Staff", lastName: "One", tupId: "TUPT-00-0008", email: "staff1@etala.com", password: "123456", role: "user", department: "Staff" },
 ];
 
 // ✅ Insert function
-const seedAnnouncements = async () => {
+const seedUsers = async () => {
   try {
-    await Announcement.deleteMany(); // clear old data
-    await Announcement.insertMany(sampleAnnouncements); // insert new ones
-    console.log("🌱 Announcements seeded successfully!");
+    await User.deleteMany(); // clear old users
+
+    // Hash passwords and insert users
+    for (let user of users) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(user.password, salt);
+      await User.create(user);
+    }
+
+    console.log("🌱 Users seeded successfully!");
     process.exit(); // exit after success
   } catch (error) {
-    console.error("❌ Error seeding announcements:", error);
+    console.error("❌ Error seeding users:", error);
     process.exit(1);
   }
 };
 
 // Run the function
-seedAnnouncements();
+seedUsers();

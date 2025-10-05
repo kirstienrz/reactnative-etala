@@ -424,6 +424,9 @@ import {
   Alert
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import logoImage from "../../assets/logo.jpg";
+import Footer from "../components/Footer";
+
 
 const { width } = Dimensions.get("window");
 
@@ -446,12 +449,12 @@ export default function LandingPage({ navigation }) {
       subtitle: "Building stronger communities"
     },
     {
-      image: require("../../assets/carousel/CAROUSEL.png"),
+      image: require("../../assets/carousel/CAROUSEL1.jpg"),
       title: "Innovation & Progress",
       subtitle: "Leading with transparency"
     },
     {
-      image: require("../../assets/carousel/CAROUSEL.png"),
+      image: require("../../assets/carousel/CAROUSEL2.jpg"),
       title: "Community Partnership",
       subtitle: "Working together for development"
     }
@@ -467,8 +470,8 @@ export default function LandingPage({ navigation }) {
         { name: "Vision and Mission", screen: "VisionMission" },
         { name: "Organizational Structure", screen: "OrgStructure" },
         { name: "GAD Committee", screen: "GADCommittee" },
-        { name: "Contact Us", screen: "ContactUs" },
-        { name: "Hotlines", screen: "Hotlines" }
+        // { name: "Contact Us", screen: "ContactUs" },
+        // { name: "Hotlines", screen: "Hotlines" }
       ]
     },
     {
@@ -581,16 +584,16 @@ export default function LandingPage({ navigation }) {
   }, []);
 
   const renderCarouselItem = ({ item }) => (
-  <View style={styles.carouselItem}>
-    <Image source={item.image} style={styles.carouselImage} />
-    <View style={styles.carouselOverlay}>
-      <View style={styles.carouselContent}>
-        <Text style={styles.carouselTitle}>{item.title}</Text>
-        <Text style={styles.carouselSubtitle}>{item.subtitle}</Text>
+    <View style={styles.carouselItem}>
+      <Image source={item.image} style={styles.carouselImage} />
+      <View style={styles.carouselOverlay}>
+        <View style={styles.carouselContent}>
+          <Text style={styles.carouselTitle}>{item.title}</Text>
+          <Text style={styles.carouselSubtitle}>{item.subtitle}</Text>
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
 
 
   const renderMenuCard = (item, index) => {
@@ -672,7 +675,11 @@ export default function LandingPage({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.logo}>
-            <Text style={styles.logoText}>GAD</Text>
+            <Image
+              source={logoImage}
+              style={{ width: 30, height: 30 }} // adjust size to fit nicely
+              resizeMode="contain"
+            />
           </View>
           <View>
             <Text style={styles.headerTitle}>GAD Portal</Text>
@@ -774,7 +781,10 @@ export default function LandingPage({ navigation }) {
 
           {/* Infographics */}
           <View style={styles.infographicsContainer}>
-            <Text style={styles.cardTitle}>Infographics</Text>
+            <View style={styles.infographicsHeader}>
+              <Text style={styles.cardTitle}>Infographics</Text>
+            </View>
+
             <TouchableOpacity style={styles.infographicCard}>
               <Image
                 source={{ uri: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&h=200&fit=crop" }}
@@ -784,16 +794,20 @@ export default function LandingPage({ navigation }) {
                 <Text style={styles.infographicText}>GAD Statistics 2025</Text>
               </View>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.seeMoreButton}
+              onPress={() => navigation.navigate("MoreInfographics")} // Your screen
+            >
+              <Text style={styles.seeMoreText}>See More</Text>
+              <Text style={styles.seeMoreArrow}>→</Text>
+            </TouchableOpacity>
           </View>
+
         </View>
 
         {/* Contact Section */}
-        <View style={styles.contactSection}>
-          <Text style={styles.contactTitle}>Get in Touch</Text>
-          <Text style={styles.contactText}>📍 Technological University of the Philippines - Taguig</Text>
-          <Text style={styles.contactText}>📞 +63 123 456 7890</Text>
-          <Text style={styles.contactText}>✉️ gad@government.ph</Text>
-        </View>
+         <Footer />
+
       </Animated.ScrollView>
     </SafeAreaView>
   );
@@ -818,11 +832,12 @@ const styles = StyleSheet.create({
   logo: {
     width: 50,
     height: 50,
-    backgroundColor: "#8B5CF6",
-    borderRadius: 12,
+    backgroundColor: "#ffffffff",
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 15,
+    borderWidth: 0.5,
   },
   logoText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold" },
   headerTitle: { fontSize: 20, fontWeight: "bold", color: "#1F2937" },
@@ -962,20 +977,82 @@ const styles = StyleSheet.create({
   infographicImage: { width: "100%", height: 120, resizeMode: "cover" },
   infographicOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.7)", padding: 10 },
   infographicText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
-  contactSection: { backgroundColor: "#8B5CF6", margin: 20, padding: 20, borderRadius: 16, alignItems: "center" },
-  contactTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "bold", marginBottom: 15 },
-  contactText: { color: "#E5E7EB", fontSize: 11, marginBottom: 5 },
+  contactSection: {
+    backgroundColor: "#7C3AED", // Rich violet accent
+    marginHorizontal: 20,
+    marginVertical: 25,
+    paddingVertical: 25,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  contactTitle: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 20,
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+  contactItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    width: "100%",
+  },
+  contactIcon: {
+    fontSize: 18,
+    marginRight: 10,
+    color: "#E0E7FF",
+  },
+  contactText: {
+    flex: 1,
+    color: "#F3F4F6",
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "400",
+  },
   viewOlderText: {
-  fontSize: 15,
-  fontWeight: '500',
-  color: '#C4B5FD',
-  letterSpacing: 0.2,
-},
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#C4B5FD',
+    letterSpacing: 0.2,
+  },
 
-viewOlderArrow: {
-  fontSize: 16,
-  color: '#8B5CF6',
-  fontWeight: '400',
-  marginLeft: 8,
-},
+  viewOlderArrow: {
+    fontSize: 16,
+    color: '#8B5CF6',
+    fontWeight: '400',
+    marginLeft: 8,
+  },
+  infographicsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  seeMoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  seeMoreText: {
+    color: "#8B5CF6",
+    fontWeight: "600",
+    fontSize: 13,
+    marginTop: 10,
+    marginRight: 5,
+  },
+
+  seeMoreArrow: {
+    color: "#8B5CF6",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+
 });

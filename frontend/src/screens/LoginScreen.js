@@ -35,10 +35,13 @@ export default function LoginScreen({ setUser }) {
 
       // Save everything in one "user" object
       const userData = {
+        _id: res._id,     // now defined
         token: res.token,
         role: res.role,
         department: res.department || "",
+        tupId: res.tupId,
       };
+
 
       await SecureStore.setItemAsync("user", JSON.stringify(userData));
 
