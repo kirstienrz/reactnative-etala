@@ -1,14 +1,15 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
-firstName: { type: String, required: false},
-lastName: { type: String, required: false },
-tupId: { 
-  type: String, 
-  required: true, 
-  unique: true, 
-  match: /^TUPT-\d{2}-\d{4}$/ // ensures TUPT-00-0000 format
-},
+  firstName: { type: String },
+  lastName: { type: String },
+  tupId: { 
+    type: String, 
+    required: true, 
+    unique: true, 
+    match: /^TUPT-\d{2}-\d{4}$/ 
+  },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { 
@@ -19,7 +20,12 @@ tupId: {
   department: { 
     type: String,
     enum: ["System", "OSA", "HR", "Department Head", "CIT", "Faculty", "Staff", "Student"],
-  }
+  },
+  // 👇 new fields
+  isFirstLogin: { type: Boolean, default: true },
+  hasPin: { type: Boolean, default: false },
+  pin: { type: String }, // hashed pin
 });
+
 
 module.exports = mongoose.model("User", userSchema);

@@ -4,354 +4,223 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
-  Animated,
+  StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { IdCard, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { loginUser } from "../api/auth";
 import * as SecureStore from "expo-secure-store";
+import Header from "../components/Header";
 
-export default function LoginScreen({ setUser }) {
+export default function LoginScreen({ navigation }) {
+  const [tuptId, setTuptId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [focusedInput, setFocusedInput] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
+const handleLogin = async () => {
+  if (!tuptId || !email || !password) {
+    Alert.alert("Missing Fields", "Please fill in all fields.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const data = await loginUser(email, password, tuptId);
+
+    if (data?.token) {
+      // Save token & user data
+      await SecureStore.setItemAsync("token", data.token);
+      await SecureStore.setItemAsync("email", email);
+      await SecureStore.setItemAsync("hasPin", "true");
+      await SecureStore.setItemAsync("userId", data._id);
+
+      // Navigate based on first login or PIN setup
+      if (data.isFirstLogin) {
+        navigation.replace("ChangePasswordScreen");
+      } else if (!data.hasPin) {
+        navigation.replace("SetPinScreen");
+      } else {
+        navigation.replace("PinLoginScreen");
+      }
+    } else {
+      // Kung walang token pero may msg, ipakita ito
+      Alert.alert(
+        "Login Failed",
+        data?.msg || "Invalid TUPT ID, email, or password. Please try again."
+      );
     }
+  } catch (error) {
+    console.error("Login error:", error.response?.data || error.message);
 
-    setIsLoading(true);
-    try {
-      const res = await loginUser(email, password);
+    // Custom message kapag 400
+    if (error.response?.status === 400) {
+      Alert.alert(
+        "Login Failed",
+        error.response?.data?.msg || "Invalid credentials. Please try again."
+      );
+    } else {
+      Alert.alert(
+        "Error",
+        "Unable to connect to server. Please check your connection."
+      );
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
-      // Save everything in one "user" object
-      const userData = {
-        _id: res._id,     // now defined
-        token: res.token,
-        role: res.role,
-        department: res.department || "",
-        tupId: res.tupId,
-      };
 
-
-      await SecureStore.setItemAsync("user", JSON.stringify(userData));
-
-      // Update App.js state immediately
-      setUser(userData);
-    } catch (err) {
-      console.log("Login error:", err);
-      Alert.alert("Login Failed", "Invalid email or password. Please try again.");
-    } finally {
-      setIsLoading(false);
+  const handleFocus = () => {
+    // Kung walang laman, automatic lagay ng "TUPT-"
+    if (tuptId.length === 0) {
+      setTuptId("TUPT-");
     }
   };
 
+  const formatTuptId = (text) => {
+    // Palitan lahat ng lowercase to uppercase
+    let formatted = text.toUpperCase();
+
+    // Tanggalin lahat ng non-alphanumeric characters maliban sa dash
+    formatted = formatted.replace(/[^A-Z0-9]/g, "");
+
+    // Automatic dash insertion after TUPT-
+    if (formatted.length > 4) {
+      formatted = formatted.slice(0, 4) + "-" + formatted.slice(4);
+    }
+    if (formatted.length > 7) {
+      formatted = formatted.slice(0, 7) + "-" + formatted.slice(7, 11);
+    }
+
+    // Limit length to TUPT-00-0000 (12 characters including dashes)
+    return formatted.slice(0, 12);
+  };
+
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      <Header />
+      <ScrollView contentContainerStyle={styles.formContainer}>
+        <Text style={styles.title}>Hello, Welcome!</Text>
+        <Text style={styles.subtitle}>Please sign in to continue</Text>
+
+        {/* TUPT ID */}
+        <View style={styles.inputContainer}>
+          <IdCard size={20} color="#9CA3AF" style={styles.inputIcon} />
+          <TextInput
+            placeholder="TUPT-00-0000"
+            value={tuptId}
+            onChangeText={(text) => setTuptId(formatTuptId(text))}
+            onFocus={handleFocus} // <-- dito automatic "TUPT-" kapag walang laman
+            style={styles.input}
+            autoCapitalize="characters"
+          />
+
+        </View>
+
+
+        {/* Email */}
+        <View style={styles.inputContainer}>
+          <Mail size={20} color="#9CA3AF" style={styles.inputIcon} />
+          <TextInput
+            placeholder="your@etala.com"
+            value={email}
+            onChangeText={setEmail}
+            style={styles.input}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+        {/* Password */}
+        <View style={styles.inputContainer}>
+          <Lock size={20} color="#9CA3AF" style={styles.inputIcon} />
+          <TextInput
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={setPassword}
+            style={styles.input}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.eyeIcon}
+          >
+            {showPassword ? (
+              <EyeOff size={20} color="#9CA3AF" />
+            ) : (
+              <Eye size={20} color="#9CA3AF" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity>
+          <Text style={styles.forgotPassword}>Forgot password?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={loading}
+          style={[styles.loginBtn, loading && styles.disabledBtn]}
         >
-          {/* Header Section */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logo}>
-                <Text style={styles.logoText}>GAD</Text>
-              </View>
-            </View>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to access GAD Portal</Text>
-          </View>
-
-          {/* Form Section */}
-          <View style={styles.formContainer}>
-            {/* Email Input */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.label}>Email Address</Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  focusedInput === "email" && styles.inputFocused,
-                ]}
-              >
-                <Text style={styles.inputIcon}>✉️</Text>
-                <TextInput
-                  placeholder="Enter your email"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
-                  onChangeText={setEmail}
-                  onFocus={() => setFocusedInput("email")}
-                  onBlur={() => setFocusedInput(null)}
-                  style={styles.input}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.label}>Password</Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  focusedInput === "password" && styles.inputFocused,
-                ]}
-              >
-                <Text style={styles.inputIcon}>🔒</Text>
-                <TextInput
-                  placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
-                  value={password}
-                  onChangeText={setPassword}
-                  onFocus={() => setFocusedInput("password")}
-                  onBlur={() => setFocusedInput(null)}
-                  secureTextEntry={!showPassword}
-                  style={styles.input}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeButton}
-                >
-                  <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Forgot Password */}
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            {/* Login Button */}
-            <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Additional Options */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity>
-                <Text style={styles.footerLink}>Contact Admin</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Bottom Info */}
-          <View style={styles.bottomInfo}>
-            <Text style={styles.versionText}>GAD Portal v1.0</Text>
-            <Text style={styles.copyrightText}>
-              © 2025 Gender & Development Committee
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.loginText}>Sign In</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  logoContainer: {
-    marginBottom: 20,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    backgroundColor: "#8B5CF6",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#8B5CF6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-  },
-  formContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    marginBottom: 20,
-  },
-  inputWrapper: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  formContainer: { paddingHorizontal: 28, paddingVertical: 24 },
+  title: { fontSize: 22, fontWeight: "700", color: "#1E1E1E", marginBottom: 4 },
+  subtitle: { color: "#6B7280", marginBottom: 20, fontSize: 14 },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 10,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 16,
-    height: 56,
   },
-  inputFocused: {
-    borderColor: "#8B5CF6",
-    backgroundColor: "#FFFFFF",
-  },
-  inputIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: "#1F2937",
-    paddingVertical: 0,
-  },
-  eyeButton: {
-    padding: 4,
-  },
-  eyeIcon: {
-    fontSize: 20,
-  },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, paddingVertical: 10, fontSize: 15, color: "#111827" },
+  eyeIcon: { padding: 4 },
   forgotPassword: {
-    alignSelf: "flex-end",
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    color: "#8B5CF6",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  loginButton: {
-    backgroundColor: "#8B5CF6",
-    borderRadius: 12,
-    height: 56,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#8B5CF6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginButtonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: "#9CA3AF",
-    fontSize: 14,
+    textAlign: "right",
+    color: "#4338CA",
     fontWeight: "500",
+    marginBottom: 22,
+    fontSize: 13,
   },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+  loginBtn: {
+    backgroundColor: "#4338CA",
+    borderRadius: 10,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+    elevation: 2,
   },
-  footerText: {
-    color: "#6B7280",
-    fontSize: 14,
-  },
-  footerLink: {
-    color: "#8B5CF6",
-    fontSize: 14,
+  loginText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 16,
     fontWeight: "600",
+    letterSpacing: 0.3,
   },
-  bottomInfo: {
-    alignItems: "center",
-    marginTop: "auto",
-    paddingTop: 20,
-  },
-  versionText: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  copyrightText: {
-    color: "#9CA3AF",
-    fontSize: 12,
-  },
+  disabledBtn: { backgroundColor: "#9CA3AF" },
 });
