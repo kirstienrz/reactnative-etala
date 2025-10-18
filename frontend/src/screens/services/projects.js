@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const GADProjects = () => {
+const Projects = () => {
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>GAD Projects</Text>
-            <Text>Welcome to the GAD Projects screen!</Text>
+            <Text style={styles.title}>Projects</Text>
+            <Text>mam dito rin po</Text>
         </View>
     );
 };
@@ -13,15 +13,16 @@ const GADProjects = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        padding: 16,
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 10,
+        marginBottom: 12,
     },
 });
 
-export default GADProjects;
+export default Projects;

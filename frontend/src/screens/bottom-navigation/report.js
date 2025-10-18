@@ -1,11 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const KnowledgeHub = () => {
+const ReportScreen = () => {
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Knowledge Hub</Text>
-            <Text style={styles.subtitle}>Welcome to the Knowledge Hub!</Text>
+            <Text style={styles.text}>Report Screen</Text>
         </View>
     );
 };
@@ -17,15 +16,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#fff',
     },
-    title: {
-        fontSize: 28,
+    text: {
+        fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 10,
-    },
-    subtitle: {
-        fontSize: 18,
-        color: '#666',
     },
 });
 
-export default KnowledgeHub;
+export default ReportScreen;

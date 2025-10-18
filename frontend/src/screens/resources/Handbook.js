@@ -1,29 +1,35 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 
 const Handbook = () => {
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Handbook</Text>
-            <Text style={styles.text}>Welcome to the Handbook screen!</Text>
-        </View>
+        <ScrollView style={styles.container}>
+            <View style={styles.content}>
+                <Text style={styles.title}>Handbook</Text>
+                <Text style={styles.paragraph}>
+                    Welcome to the handbook section. This is where you can find important information and guidelines.
+                </Text>
+            </View>
+        </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
         backgroundColor: '#fff',
     },
+    content: {
+        padding: 20,
+    },
     title: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 16,
     },
-    text: {
-        fontSize: 18,
+    paragraph: {
+        fontSize: 16,
+        lineHeight: 24,
         color: '#333',
     },
 });

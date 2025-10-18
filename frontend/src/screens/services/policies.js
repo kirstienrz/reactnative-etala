@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const Resolutions = () => {
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Resolutions</Text>
-            <Text style={styles.text}>This is the Resolutions screen.</Text>
-        </View>
-    );
-};
+const PoliciesScreen = () => (
+    <View style={styles.container}>
+        <Text style={styles.title}>Policies</Text>
+        <Text style={styles.text}>
+           maam what to put here 
+        </Text>
+    </View>
+);
 
 const styles = StyleSheet.create({
     container: {
@@ -28,4 +28,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Resolutions;
+export default PoliciesScreen;

@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const Resources = () => {
+const AccomplishmentReport = () => {
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Resources</Text>
-            <Text>Welcome to the Resources screen!</Text>
+            <Text style={styles.title}>Accomplishment Report</Text>
+            <Text>mam dito rin po</Text>
         </View>
     );
 };
@@ -24,4 +24,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Resources;
+export default AccomplishmentReport;

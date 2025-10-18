@@ -13,7 +13,29 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bell, User, LogOut, Award, Grid, FileText, File, User2, Home as HomeIcon, QrCode, Calendar, BookOpen, Brain, Lightbulb, BarChart3 } from "lucide-react-native";
+import {
+  Bell,
+  User,
+  LogOut,
+  Award,
+  Grid,
+  FileText,
+  File,
+  User2,
+  Home as HomeIcon,
+  QrCode,
+  Calendar,
+  BookOpen,
+  Brain,
+  Lightbulb,
+  BarChart3,
+  Info,
+  Shield,
+  FileBarChart,
+  ClipboardList,
+  Layers,
+  Users,
+} from "lucide-react-native";
 import * as SecureStore from "expo-secure-store";
 
 export default function Home({ navigation }) {
@@ -37,14 +59,46 @@ export default function Home({ navigation }) {
     }
   };
 
-  const serviceCategories = [
-    { id: 1, title: "About", icon: Grid, color: "#8B5CF6" },
-    { id: 2, title: "Policies", icon: FileText, color: "#059669" },
-    { id: 3, title: "Plan and Budget", icon: FileText, color: "#DC2626" },
-    { id: 4, title: "Accomplishment Report", icon: FileText, color: "#2563EB" },
-    { id: 5, title: "GAD Projects", icon: FileText, color: "#EA580C" },
-    { id: 6, title: "Committee Report", icon: User2, color: "#7C3AED" },
-  ];
+
+const serviceCategories = [
+  {
+    id: 1,
+    title: "About",
+    icon: Info, // ℹ️ more fitting for "About"
+    color: "#8B5CF6",
+  },
+  {
+    id: 2,
+    title: "Policies",
+    icon: Shield, // 🛡️ symbolizes protection, rules, policies
+    color: "#059669",
+  },
+  {
+    id: 3,
+    title: "Plan and Budget",
+    icon: BarChart3, // 📊 symbolizes planning, analysis, finance
+    color: "#DC2626",
+  },
+  {
+    id: 4,
+    title: "Accomplishment Report",
+    icon: ClipboardList, // ✅ represents completed tasks/reports
+    color: "#2563EB",
+  },
+  {
+    id: 5,
+    title: "GAD Projects",
+    icon: Layers, // 📚 represents multiple ongoing projects
+    color: "#EA580C",
+  },
+  {
+    id: 6,
+    title: "Committee Report",
+    icon: Users, // 👥 symbolizes teamwork or committee
+    color: "#7C3AED",
+  },
+];
+
 
   const carouselImages = [
     { id: 1, source: require("../../../assets/carousel/CAROUSEL1.jpg") },
@@ -104,17 +158,79 @@ export default function Home({ navigation }) {
     },
   ];
 
-  const handleServicePress = (service) => {
-    console.log(`Navigating to ${service.title}`);
+   const handleServicePress = (service) => {
+    switch (service.title) {
+      case "About":
+        navigation.navigate("AboutPage");
+        break;
+      case "Policies":
+        navigation.navigate("PoliciesPage");
+        break;
+      case "Plan and Budget":
+        navigation.navigate("PlanBudgetPage");
+        break;
+      case "Accomplishment Report":
+        navigation.navigate("AccomplishmentPage");
+        break;
+      case "GAD Projects":
+        navigation.navigate("GADProjectsPage");
+        break;
+      case "Committee Report":
+        navigation.navigate("CommitteeReportPage");
+        break;
+      default:
+        console.log(`No page found for ${service.title}`);
+    }
   };
+
 
   const handleResourcePress = (resource) => {
-    console.log(`Opening ${resource.title}`);
-  };
+  switch (resource.title) {
+    case "Calendar":
+      navigation.navigate("CalendarScreen");
+      break;
+    case "Handbook":
+      navigation.navigate("Handbook");
+      break;
+    case "Knowledge Hub":
+      navigation.navigate("KnowledgeHub");
+      break;
+    case "Suggestion Box":
+      navigation.navigate("SuggestionBox");
+      break;
+    case "Infographics":
+      navigation.navigate("InfographicsScreen");
+      break;
+    default:
+      console.log(`No page found for ${resource.title}`);
+  }
+};
+
 
   const handleTabPress = (tab) => {
-    setActiveTab(tab);
-  };
+  setActiveTab(tab);
+
+  switch (tab) {
+    case "Home":
+      navigation.navigate("UserHome"); // name of your home page
+      break;
+    case "News":
+      navigation.navigate("NewsScreen"); // your News page
+      break;
+    case "Report":
+      navigation.navigate("ReportScreen"); // or ReportScreen, depending on what you call it
+      break;
+    case "Scan QR":
+      navigation.navigate("ScanQRScreen"); // your QR scanner page
+      break;
+    case "Account":
+      navigation.navigate("AccountScreen"); // your account/profile page
+      break;
+    default:
+      console.log("Unknown tab:", tabName);
+  }
+};
+
 
   const handleLogout = async () => {
     setLoading(true);
@@ -312,7 +428,7 @@ export default function Home({ navigation }) {
 
 
         {/* Logout Section */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <TouchableOpacity
             style={styles.logoutButton}
             onPress={handleLogout}
@@ -327,7 +443,7 @@ export default function Home({ navigation }) {
               </>
             )}
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         <View style={styles.spacer} />
       </ScrollView>
@@ -366,13 +482,13 @@ export default function Home({ navigation }) {
 
         <TouchableOpacity
           style={styles.navItemCenter}
-          onPress={() => handleTabPress("Digital ID")}
+          onPress={() => handleTabPress("Report")}
         >
           <View style={styles.centerButton}>
             <QrCode size={28} color="#FFFFFF" />
           </View>
           <Text
-            style={[styles.navLabel, activeTab === "Digital ID" && styles.activeNavLabel]}
+            style={[styles.navLabel, activeTab === "Report" && styles.activeNavLabel]}
           >
             Report
           </Text>

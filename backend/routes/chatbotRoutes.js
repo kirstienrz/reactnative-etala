@@ -75,7 +75,7 @@ router.post("/", async (req, res) => {
         reply: `We appreciate your courage in reaching out. 
 We are ready to assist you, and please know that you may also report anonymously.
 
-To proceed:
+To proceed reporting an incident at **TUP-Taguig**, please follow these steps:
 1. **Log in** to your account using your **Student Number** (e.g., TUPT-XX-XXXX).  
 2. Use your **official email** following this format: yourfullname@etala.com  
    - Example: Juan Dela Cruz → juandelacruz@etala.com  
