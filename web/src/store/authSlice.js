@@ -14,11 +14,11 @@ if (token) {
     isTokenValid = false;
   }
 }
-
 const initialState = {
   token: isTokenValid ? token : null,
   role: isTokenValid ? role : "",
   isLoggedIn: isTokenValid && !!role,
+  profile: null, // <-- add this
 };
 
 const authSlice = createSlice({
@@ -26,10 +26,11 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     loginSuccess: (state, action) => {
-      const { token, role } = action.payload;
+      const { token, role, profile } = action.payload;
       state.isLoggedIn = true;
       state.token = token;
       state.role = role;
+      state.profile = profile || null; // <-- store user profile on login
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
     },
@@ -37,11 +38,15 @@ const authSlice = createSlice({
       state.isLoggedIn = false;
       state.token = null;
       state.role = "";
+      state.profile = null; // <-- clear profile
       localStorage.removeItem("token");
       localStorage.removeItem("role");
+    },
+    setProfile: (state, action) => {
+      state.profile = action.payload; // <-- update profile anytime
     },
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const { loginSuccess, logout, setProfile } = authSlice.actions;
 export default authSlice.reducer;
