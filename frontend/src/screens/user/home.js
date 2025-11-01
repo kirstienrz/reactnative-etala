@@ -60,44 +60,44 @@ export default function Home({ navigation }) {
   };
 
 
-const serviceCategories = [
-  {
-    id: 1,
-    title: "About",
-    icon: Info, // ℹ️ more fitting for "About"
-    color: "#8B5CF6",
-  },
-  {
-    id: 2,
-    title: "Policies",
-    icon: Shield, // 🛡️ symbolizes protection, rules, policies
-    color: "#059669",
-  },
-  {
-    id: 3,
-    title: "Plan and Budget",
-    icon: BarChart3, // 📊 symbolizes planning, analysis, finance
-    color: "#DC2626",
-  },
-  {
-    id: 4,
-    title: "Accomplishment Report",
-    icon: ClipboardList, // ✅ represents completed tasks/reports
-    color: "#2563EB",
-  },
-  {
-    id: 5,
-    title: "GAD Projects",
-    icon: Layers, // 📚 represents multiple ongoing projects
-    color: "#EA580C",
-  },
-  {
-    id: 6,
-    title: "Committee Report",
-    icon: Users, // 👥 symbolizes teamwork or committee
-    color: "#7C3AED",
-  },
-];
+  const serviceCategories = [
+    {
+      id: 1,
+      title: "About",
+      icon: Info, // ℹ️ more fitting for "About"
+      color: "#8B5CF6",
+    },
+    {
+      id: 2,
+      title: "Policies",
+      icon: Shield, // 🛡️ symbolizes protection, rules, policies
+      color: "#059669",
+    },
+    {
+      id: 3,
+      title: "Plan and Budget",
+      icon: BarChart3, // 📊 symbolizes planning, analysis, finance
+      color: "#DC2626",
+    },
+    {
+      id: 4,
+      title: "Accomplishment Report",
+      icon: ClipboardList, // ✅ represents completed tasks/reports
+      color: "#2563EB",
+    },
+    {
+      id: 5,
+      title: "GAD Projects",
+      icon: Layers, // 📚 represents multiple ongoing projects
+      color: "#EA580C",
+    },
+    {
+      id: 6,
+      title: "Committee Report",
+      icon: Users, // 👥 symbolizes teamwork or committee
+      color: "#7C3AED",
+    },
+  ];
 
 
   const carouselImages = [
@@ -158,7 +158,7 @@ const serviceCategories = [
     },
   ];
 
-   const handleServicePress = (service) => {
+  const handleServicePress = (service) => {
     switch (service.title) {
       case "About":
         navigation.navigate("AboutPage");
@@ -185,51 +185,51 @@ const serviceCategories = [
 
 
   const handleResourcePress = (resource) => {
-  switch (resource.title) {
-    case "Calendar":
-      navigation.navigate("CalendarScreen");
-      break;
-    case "Handbook":
-      navigation.navigate("Handbook");
-      break;
-    case "Knowledge Hub":
-      navigation.navigate("KnowledgeHub");
-      break;
-    case "Suggestion Box":
-      navigation.navigate("SuggestionBox");
-      break;
-    case "Infographics":
-      navigation.navigate("InfographicsScreen");
-      break;
-    default:
-      console.log(`No page found for ${resource.title}`);
-  }
-};
+    switch (resource.title) {
+      case "Calendar":
+        navigation.navigate("CalendarScreen");
+        break;
+      case "Handbook":
+        navigation.navigate("Handbook");
+        break;
+      case "Knowledge Hub":
+        navigation.navigate("KnowledgeHub");
+        break;
+      case "Suggestion Box":
+        navigation.navigate("SuggestionBox");
+        break;
+      case "Infographics":
+        navigation.navigate("InfographicsScreen");
+        break;
+      default:
+        console.log(`No page found for ${resource.title}`);
+    }
+  };
 
 
   const handleTabPress = (tab) => {
-  setActiveTab(tab);
+    setActiveTab(tab);
 
-  switch (tab) {
-    case "Home":
-      navigation.navigate("UserHome"); // name of your home page
-      break;
-    case "News":
-      navigation.navigate("NewsScreen"); // your News page
-      break;
-    case "Report":
-      navigation.navigate("ReportScreen"); // or ReportScreen, depending on what you call it
-      break;
-    case "Scan QR":
-      navigation.navigate("ScanQRScreen"); // your QR scanner page
-      break;
-    case "Account":
-      navigation.navigate("AccountScreen"); // your account/profile page
-      break;
-    default:
-      console.log("Unknown tab:", tabName);
-  }
-};
+    switch (tab) {
+      case "Home":
+        navigation.navigate("UserHome"); // name of your home page
+        break;
+      case "News":
+        navigation.navigate("NewsScreen"); // your News page
+        break;
+      case "Report":
+        navigation.navigate("ReportScreen"); // or ReportScreen, depending on what you call it
+        break;
+      case "Scan QR":
+        navigation.navigate("ScanQRScreen"); // your QR scanner page
+        break;
+      case "Account":
+        navigation.navigate("AccountScreen"); // your account/profile page
+        break;
+      default:
+        console.log("Unknown tab:", tabName);
+    }
+  };
 
 
   const handleLogout = async () => {
@@ -255,7 +255,7 @@ const serviceCategories = [
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image
-            source={require("../../../assets/logo.jpg")} 
+            source={require("../../../assets/logo.jpg")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -299,7 +299,10 @@ const serviceCategories = [
             <Text style={styles.announcementText}>
               Welcome to the new GAD Portal! Check out the latest updates and resources.
             </Text>
-            <TouchableOpacity style={styles.viewOlderButton}>
+            <TouchableOpacity
+              style={styles.viewOlderButton}
+              onPress={() => navigation.navigate('OlderAnnouncements')} // <--- dito
+            >
               <Text style={styles.viewOlderText}>View older announcements</Text>
             </TouchableOpacity>
           </View>
