@@ -4,6 +4,18 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const auth = require("../middleware/auth"); // ✅ import your JWT middleware
 
+
+router.get("/all", auth(), async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user.id } })
+      .select("firstName lastName email")
+      .sort({ firstName: 1 });
+    res.json(users);
+  } catch (err) {
+    console.error("❌ Error fetching users:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
 // 🧠 GET user profile (Protected)
 router.get("/:id", auth(), async (req, res) => {
   try {
@@ -76,5 +88,18 @@ router.put("/:id", auth(), async (req, res) => {
     res.status(500).json({ message: "Failed to update user" });
   }
 });
+
+router.get("/all", auth(), async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user.id } })
+      .select("firstName lastName email")
+      .sort({ firstName: 1 });
+    res.json(users);
+  } catch (err) {
+    console.error("❌ Error fetching users:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 module.exports = router;

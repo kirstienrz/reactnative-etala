@@ -1,6 +1,6 @@
 // App.js
 import React from "react";
-import { StatusBar } from "react-native";
+import { StatusBar, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -26,36 +26,39 @@ import CommitteeReportPage from "./src/screens/services/committee-report";
 //import resources
 import CalendarScreen from "./src/screens/resources/calendar";
 import InfographicsScreen from "./src/screens/resources/infographics";
-import Handbook from "./src/screens/resources/handbook";
 import KnowledgeHub from "./src/screens/resources/knowledge-hub";
 import SuggestionBox from "./src/screens/resources/suggestion-box";
 // IMPORT BOTTOM NAVIGATION SCREENS
+import ReportHistoryScreen from "./src/screens/bottom-navigation/reports";
 import ReportScreen from "./src/screens/bottom-navigation/report";
 import AccountScreen from "./src/screens/bottom-navigation/account";
 import NewsScreen from "./src/screens/bottom-navigation/news";
 import ScanQRScreen from "./src/screens/bottom-navigation/scan-qr";
 
-
 // import account screens
 import EditProfileScreen from "./src/screens/account/edit-profile";
 import InboxScreen from "./src/screens/account/inbox";
+import ChatDetailScreen from "./src/screens/account/chat-detail"; // 🆕 Add ChatDetailScreen
 import FAQScreen from "./src/screens/account/faqs";
 import AboutScreen from "./src/screens/account/about";
 import ContactScreen from "./src/screens/account/contact-us";
 import SettingsScreen from "./src/screens/account/settings";
-// 🆕 Add FloatingChatbot component to the UserHome screen
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <>
-
       <NavigationContainer>
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top", "left", "right"]}>
+        <SafeAreaView 
+          style={{ flex: 1, backgroundColor: "#fff" }} 
+          edges={Platform.select({
+            ios: ["top", "left", "right"],
+            android: ["left", "right"]
+          })}
+        >
           <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-          {/* ✅ Added screenOptions for centered title */}
           <Stack.Navigator
             initialRouteName="StartupScreen"
             screenOptions={{
@@ -84,7 +87,6 @@ export default function App() {
             />
 
             {/* services */}
-
             <Stack.Screen name="AboutPage" component={AboutPage} options={{ title: "About" }}/>
             <Stack.Screen name="PoliciesPage" component={PoliciesPage} options={{ title: "Policies" }} />
             <Stack.Screen name="PlanBudgetPage" component={PlanBudgetPage} options={{ title: "Plan and Budget" }} />
@@ -95,12 +97,12 @@ export default function App() {
             {/* resources  */}
             <Stack.Screen name="CalendarScreen" component={CalendarScreen} options={{ title: "Calendar" }} />
             <Stack.Screen name="InfographicsScreen" component={InfographicsScreen} options={{ title: "Infographics" }} />
-            <Stack.Screen name="Handbook" component={Handbook} options={{ title: "Handbook" }} />
             <Stack.Screen name="KnowledgeHub" component={KnowledgeHub} options={{ title: "Knowledge Hub" }} />
             <Stack.Screen name="SuggestionBox" component={SuggestionBox} options={{ title: "Suggestion Box" }} />
 
             {/* bottom navigation screens */}
-            <Stack.Screen name="ReportScreen" component={ReportScreen} options={{ title: "Report" }} />
+            <Stack.Screen name="ReportHistoryScreen" component={ReportHistoryScreen} options={{  headerShown: false}} />
+            <Stack.Screen name="ReportScreen" component={ReportScreen} options={{  headerShown: false}} />
             <Stack.Screen name="AccountScreen" component={AccountScreen} options={{ title: "Account" }} />
             <Stack.Screen name="NewsScreen" component={NewsScreen} options={{ title: "News" }} />
             <Stack.Screen name="ScanQRScreen" component={ScanQRScreen} options={{ title: "Scan QR" }} />
@@ -108,8 +110,16 @@ export default function App() {
             {/* account screens */}
             <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} options={{ title: "Edit Profile" }} />
             <Stack.Screen name="InboxScreen" component={InboxScreen} options={{ title: "Inbox" }} />
+            <Stack.Screen 
+              name="ChatDetail" 
+              component={ChatDetailScreen} 
+              options={{ 
+                title: "Chat",
+                headerBackTitle: "Back"
+              }} 
+            />
             <Stack.Screen name="FAQScreen" component={FAQScreen} options={{ title: "FAQs" }} />
-            <Stack.Screen name="AboutScreen" component={AboutScreen} options={{ title: "About GAD Portal" }} />
+            <Stack.Screen name="AboutScreen" component={AboutScreen} options={{ title: "About the App" }} />
             <Stack.Screen name="ContactScreen" component={ContactScreen} options={{ title: "Contact Us" }} />
             <Stack.Screen name="SettingsScreen" component={SettingsScreen} options={{ title: "Settings" }} />
           </Stack.Navigator>
@@ -117,7 +127,6 @@ export default function App() {
         </SafeAreaView>
       </NavigationContainer>
       <FloatingChatbot />
-
     </>
   );
 }

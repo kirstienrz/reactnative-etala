@@ -48,7 +48,7 @@ const AccountScreen = ({ navigation }) => {
       case "FAQs":
         navigation.navigate("FAQScreen");
         break;
-      case "About GAD Portal":
+      case "About the App":
         navigation.navigate("AboutScreen");
         break;
       case "Contact Us":
@@ -68,7 +68,7 @@ const AccountScreen = ({ navigation }) => {
   const menuItems = [
     { label: "Inbox", icon: Mail },
     { label: "FAQs", icon: HelpCircle },
-    { label: "About GAD Portal", icon: Info },
+    { label: "About the App", icon: Info },
     { label: "Contact Us", icon: Phone },
     { label: "Settings", icon: Settings },
     { label: "Logout", icon: LogOut },

@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -11,6 +8,7 @@ import {
   StyleSheet,
   StatusBar,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -35,6 +33,9 @@ import {
   ClipboardList,
   Layers,
   Users,
+  X,
+  FilePlus,
+  History,
 } from "lucide-react-native";
 import * as SecureStore from "expo-secure-store";
 
@@ -42,6 +43,7 @@ export default function Home({ navigation }) {
   const [activeTab, setActiveTab] = useState("Home");
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -59,46 +61,44 @@ export default function Home({ navigation }) {
     }
   };
 
-
-const serviceCategories = [
-  {
-    id: 1,
-    title: "About",
-    icon: Info, // ℹ️ more fitting for "About"
-    color: "#8B5CF6",
-  },
-  {
-    id: 2,
-    title: "Policies",
-    icon: Shield, // 🛡️ symbolizes protection, rules, policies
-    color: "#059669",
-  },
-  {
-    id: 3,
-    title: "Plan and Budget",
-    icon: BarChart3, // 📊 symbolizes planning, analysis, finance
-    color: "#DC2626",
-  },
-  {
-    id: 4,
-    title: "Accomplishment Report",
-    icon: ClipboardList, // ✅ represents completed tasks/reports
-    color: "#2563EB",
-  },
-  {
-    id: 5,
-    title: "GAD Projects",
-    icon: Layers, // 📚 represents multiple ongoing projects
-    color: "#EA580C",
-  },
-  {
-    id: 6,
-    title: "Committee Report",
-    icon: Users, // 👥 symbolizes teamwork or committee
-    color: "#7C3AED",
-  },
-];
-
+  const serviceCategories = [
+    {
+      id: 1,
+      title: "About GAD",
+      icon: Info,
+      color: "#8B5CF6",
+    },
+    {
+      id: 2,
+      title: "Policies",
+      icon: Shield,
+      color: "#059669",
+    },
+    {
+      id: 3,
+      title: "Plan and Budget",
+      icon: BarChart3,
+      color: "#DC2626",
+    },
+    {
+      id: 4,
+      title: "Accomplishment Report",
+      icon: ClipboardList,
+      color: "#2563EB",
+    },
+    {
+      id: 5,
+      title: "GAD Projects",
+      icon: Layers,
+      color: "#EA580C",
+    },
+    {
+      id: 6,
+      title: "Committee Report",
+      icon: Users,
+      color: "#7C3AED",
+    },
+  ];
 
   const carouselImages = [
     { id: 1, source: require("../../../assets/carousel/CAROUSEL1.jpg") },
@@ -158,7 +158,7 @@ const serviceCategories = [
     },
   ];
 
-   const handleServicePress = (service) => {
+  const handleServicePress = (service) => {
     switch (service.title) {
       case "About":
         navigation.navigate("AboutPage");
@@ -183,54 +183,62 @@ const serviceCategories = [
     }
   };
 
-
   const handleResourcePress = (resource) => {
-  switch (resource.title) {
-    case "Calendar":
-      navigation.navigate("CalendarScreen");
-      break;
-    case "Handbook":
-      navigation.navigate("Handbook");
-      break;
-    case "Knowledge Hub":
-      navigation.navigate("KnowledgeHub");
-      break;
-    case "Suggestion Box":
-      navigation.navigate("SuggestionBox");
-      break;
-    case "Infographics":
-      navigation.navigate("InfographicsScreen");
-      break;
-    default:
-      console.log(`No page found for ${resource.title}`);
-  }
-};
-
+    switch (resource.title) {
+      case "Calendar":
+        navigation.navigate("CalendarScreen");
+        break;
+      case "Handbook":
+        navigation.navigate("Handbook");
+        break;
+      case "Knowledge Hub":
+        navigation.navigate("KnowledgeHub");
+        break;
+      case "Suggestion Box":
+        navigation.navigate("SuggestionBox");
+        break;
+      case "Infographics":
+        navigation.navigate("InfographicsScreen");
+        break;
+      default:
+        console.log(`No page found for ${resource.title}`);
+    }
+  };
 
   const handleTabPress = (tab) => {
-  setActiveTab(tab);
+    if (tab === "Report") {
+      setReportModalVisible(true);
+      return;
+    }
 
-  switch (tab) {
-    case "Home":
-      navigation.navigate("UserHome"); // name of your home page
-      break;
-    case "News":
-      navigation.navigate("NewsScreen"); // your News page
-      break;
-    case "Report":
-      navigation.navigate("ReportScreen"); // or ReportScreen, depending on what you call it
-      break;
-    case "Scan QR":
-      navigation.navigate("ScanQRScreen"); // your QR scanner page
-      break;
-    case "Account":
-      navigation.navigate("AccountScreen"); // your account/profile page
-      break;
-    default:
-      console.log("Unknown tab:", tabName);
-  }
-};
+    setActiveTab(tab);
 
+    switch (tab) {
+      case "Home":
+        navigation.navigate("UserHome");
+        break;
+      case "News":
+        navigation.navigate("NewsScreen");
+        break;
+      case "Scan QR":
+        navigation.navigate("ScanQRScreen");
+        break;
+      case "Account":
+        navigation.navigate("AccountScreen");
+        break;
+      default:
+        console.log("Unknown tab:", tab);
+    }
+  };
+
+  const handleReportOption = (option) => {
+    setReportModalVisible(false);
+    if (option === "new") {
+      navigation.navigate("ReportScreen");
+    } else if (option === "history") {
+      navigation.navigate("ReportHistoryScreen");
+    }
+  };
 
   const handleLogout = async () => {
     setLoading(true);
@@ -255,7 +263,7 @@ const serviceCategories = [
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image
-            source={require("../../../assets/logo.jpg")} 
+            source={require("../../../assets/logo.jpg")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -413,7 +421,7 @@ const serviceCategories = [
                 activeOpacity={0.8}
               >
                 <Image
-                  source={require("../../../assets/news/news1.jpg")} // replace with actual news image
+                  source={require("../../../assets/news/news1.jpg")}
                   style={styles.newsImage}
                   resizeMode="cover"
                 />
@@ -426,27 +434,66 @@ const serviceCategories = [
           </ScrollView>
         </View>
 
-
-        {/* Logout Section */}
-        {/* <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#DC2626" />
-            ) : (
-              <>
-                <LogOut size={20} color="#DC2626" />
-                <Text style={styles.logoutText}>Logout</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View> */}
-
         <View style={styles.spacer} />
       </ScrollView>
+
+      {/* Report Modal */}
+      <Modal
+        visible={reportModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setReportModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Report Options</Text>
+              <TouchableOpacity
+                onPress={() => setReportModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={() => handleReportOption("new")}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modalIconCircle, { backgroundColor: "#EEF2FF" }]}>
+                  <FilePlus size={24} color="#4338CA" />
+                </View>
+                <View style={styles.modalOptionText}>
+                  <Text style={styles.modalOptionTitle}>Create New Report</Text>
+                  <Text style={styles.modalOptionSubtitle}>Submit a new incident report</Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.modalDivider} />
+
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={() => handleReportOption("history")}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modalIconCircle, { backgroundColor: "#FEF3C7" }]}>
+                  <History size={24} color="#D97706" />
+                </View>
+                <View style={styles.modalOptionText}>
+                  <Text style={styles.modalOptionTitle}>Report History</Text>
+                  <Text style={styles.modalOptionSubtitle}>View your previous reports</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
@@ -485,7 +532,7 @@ const serviceCategories = [
           onPress={() => handleTabPress("Report")}
         >
           <View style={styles.centerButton}>
-            <QrCode size={28} color="#FFFFFF" />
+            <FileText size={28} color="#FFFFFF" />
           </View>
           <Text
             style={[styles.navLabel, activeTab === "Report" && styles.activeNavLabel]}
@@ -831,7 +878,6 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     lineHeight: 16,
   },
-
   newsText: {
     color: "#6B7280",
     fontSize: 13,
@@ -907,5 +953,75 @@ const styles = StyleSheet.create({
   activeNavLabel: {
     color: "#4338CA",
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+  modalIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  modalOptionText: {
+    flex: 1,
+  },
+  modalOptionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  modalOptionSubtitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    lineHeight: 18,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 8,
   },
 });
