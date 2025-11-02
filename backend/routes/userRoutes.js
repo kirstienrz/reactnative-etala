@@ -5,6 +5,53 @@ const User = require("../models/User");
 const auth = require("../middleware/auth"); // ✅ import your JWT middleware
 
 
+// GET /api/user/me → get current user profile
+router.get("/me", auth(), async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PUT /api/user/me → update current user profile
+router.put("/me", auth(), async (req, res) => {
+  try {
+    const { firstName, lastName, birthday, gender, currentPassword, newPassword } = req.body || {};
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // ✅ Only handle password if both fields are provided
+    if (currentPassword && newPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+    }
+
+    // ✅ Update only provided fields
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (birthday) user.birthday = birthday;
+    if (gender) user.gender = gender;
+
+    const updatedUser = await user.save();
+    const userObj = updatedUser.toObject();
+    delete userObj.password;
+
+    res.json(userObj);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+});
+
+
 router.get("/all", auth(), async (req, res) => {
   try {
     const users = await User.find({ _id: { $ne: req.user.id } })

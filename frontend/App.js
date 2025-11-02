@@ -26,6 +26,7 @@ import CommitteeReportPage from "./src/screens/services/committee-report";
 //import resources
 import CalendarScreen from "./src/screens/resources/calendar";
 import InfographicsScreen from "./src/screens/resources/infographics";
+import Handbook from "./src/screens/resources/handbook";
 import KnowledgeHub from "./src/screens/resources/knowledge-hub";
 import SuggestionBox from "./src/screens/resources/suggestion-box";
 // IMPORT BOTTOM NAVIGATION SCREENS
@@ -97,6 +98,7 @@ export default function App() {
             {/* resources  */}
             <Stack.Screen name="CalendarScreen" component={CalendarScreen} options={{ title: "Calendar" }} />
             <Stack.Screen name="InfographicsScreen" component={InfographicsScreen} options={{ title: "Infographics" }} />
+            <Stack.Screen name="Handbook" component={Handbook} options={{ title: "Handbook" }} />
             <Stack.Screen name="KnowledgeHub" component={KnowledgeHub} options={{ title: "Knowledge Hub" }} />
             <Stack.Screen name="SuggestionBox" component={SuggestionBox} options={{ title: "Suggestion Box" }} />
 
