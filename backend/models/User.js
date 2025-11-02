@@ -21,19 +21,16 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ["System", "OSA", "HR", "Department Head", "CIT", "Faculty", "Staff", "Student"],
   },
-
-  // 🆕 Added fields
   birthday: { type: Date },
   age: { type: Number },
   gender: { 
     type: String,
     enum: ["Male", "Female", "Other"],
   },
-
-  // 👇 existing fields
   isFirstLogin: { type: Boolean, default: true },
   hasPin: { type: Boolean, default: false },
-  pin: { type: String }, // hashed pin
+  pin: { type: String },
+  isArchived: { type: Boolean, default: false },
 });
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("User", userSchema); // ✅ ADD THIS

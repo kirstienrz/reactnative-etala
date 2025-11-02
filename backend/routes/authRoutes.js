@@ -6,17 +6,41 @@ const router = express.Router();
 
 // LOGIN ONLY (no signup)
 // routes/authRoutes.js
+
 router.post("/login", async (req, res) => {
   const { email, password, tupId } = req.body;
+  
+  console.log("Login attempt:", { email, tupId }); // 🔍 DEBUG
+  
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ msg: "Invalid credentials" });
+    if (!user) {
+      console.log("❌ User not found"); // 🔍 DEBUG
+      return res.status(400).json({ msg: "Invalid credentials" });
+    }
 
-    if (user.tupId !== tupId)
+    console.log("✅ User found:", user.email, "isArchived:", user.isArchived); // 🔍 DEBUG
+
+    // ✅ Check if user is archived (only block if explicitly true)
+    if (user.isArchived) {
+      console.log("❌ User is archived"); // 🔍 DEBUG
+      return res.status(403).json({ 
+        msg: "Your account has been deactivated. Please contact the administrator." 
+      });
+    }
+
+    if (user.tupId !== tupId) {
+      console.log("❌ TUP ID mismatch"); // 🔍 DEBUG
       return res.status(400).json({ msg: "Invalid TUPT ID" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
+    if (!isMatch) {
+      console.log("❌ Password mismatch"); // 🔍 DEBUG
+      return res.status(400).json({ msg: "Invalid credentials" });
+    }
+
+    console.log("✅ Login successful"); // 🔍 DEBUG
 
     const token = jwt.sign(
       { id: user._id, role: user.role, department: user.department },
@@ -34,10 +58,12 @@ router.post("/login", async (req, res) => {
       hasPin: user.hasPin,
     });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Login error:", err);
     res.status(500).send("Server error");
   }
 });
+
+
 router.post("/change-password", async (req, res) => {
   const { userId, newPassword } = req.body;
   try {

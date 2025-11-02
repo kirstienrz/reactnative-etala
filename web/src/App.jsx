@@ -11,7 +11,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import SuperAdminLayout from "./components/SuperAdminLayout";
 
-
 // SuperAdmin Pages
 import SuperAdminDashboard from "./pages/superadmin/Dashboard";
 import ProfilePage from "./pages/superadmin/Profile";
@@ -32,6 +31,9 @@ import BudgetPage from "./pages/superadmin/Budget";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserDashboard from "./pages/user/Dashboard";
+
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const App = () => {
   return (
@@ -61,8 +63,6 @@ const App = () => {
               <Route path="/superadmin/budget" element={<BudgetPage />} />
             </Route>
 
-
-
             <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Route>
@@ -72,6 +72,18 @@ const App = () => {
             </Route>
           </Routes>
         </Layout>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </Router>
     </Provider>
   );
