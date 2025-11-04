@@ -10,6 +10,10 @@ const uploadImage = async (req, res) => {
     const newImage = new Carousel({ imageUrl, publicId });
     await newImage.save();
 
+    // 🔔 Real-time update
+    const io = req.app.get("io");
+    io.emit("carouselUpdated");
+
     res.status(201).json({
       success: true,
       message: "Image uploaded successfully",
@@ -45,6 +49,10 @@ const archiveImage = async (req, res) => {
     image.archived = true;
     await image.save();
 
+    // 🔔 Real-time update
+    const io = req.app.get("io");
+    io.emit("carouselUpdated");
+
     res.status(200).json({ success: true, message: "Image archived successfully" });
   } catch (error) {
     console.error(error);
@@ -76,6 +84,10 @@ const restoreImage = async (req, res) => {
     image.archived = false;
     await image.save();
 
+    // 🔔 Real-time update
+    const io = req.app.get("io");
+    io.emit("carouselUpdated");
+
     res.status(200).json({ success: true, message: "Image restored successfully" });
   } catch (error) {
     console.error(error);
@@ -83,5 +95,10 @@ const restoreImage = async (req, res) => {
   }
 };
 
-
-module.exports = { uploadImage, getAllImages, archiveImage, getArchivedImages, restoreImage };
+module.exports = {
+  uploadImage,
+  getAllImages,
+  archiveImage,
+  getArchivedImages,
+  restoreImage,
+};

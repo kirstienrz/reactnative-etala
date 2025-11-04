@@ -39,6 +39,8 @@ import {
 } from "lucide-react-native";
 import * as SecureStore from "expo-secure-store";
 import { getCarouselImages } from "../../api/carousel";
+import io from "socket.io-client";
+
 
 
 export default function Home({ navigation }) {
@@ -47,11 +49,33 @@ export default function Home({ navigation }) {
   const [userName, setUserName] = useState("");
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [featuredItems, setFeaturedItems] = useState([]);
+const [socket, setSocket] = useState(null);
 
 
   useEffect(() => {
     fetchFeaturedItems();
   }, []);
+
+  useEffect(() => {
+  // ⚡ Connect to Socket.IO server
+  const newSocket = io("http://192.168.254.162:5000", {
+    transports: ["websocket"],
+  });
+
+  setSocket(newSocket);
+
+  // 🔔 Listen for real-time updates
+  newSocket.on("carouselUpdated", () => {
+    console.log("🟢 Carousel updated in real-time!");
+    fetchFeaturedItems(); // Refresh the carousel images
+  });
+
+  // Cleanup on component unmount
+  return () => {
+    newSocket.disconnect();
+  };
+}, []);
+
 
   const fetchFeaturedItems = async () => {
     try {
