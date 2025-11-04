@@ -16,6 +16,7 @@ app.use("/api/chatbot", require("./routes/chatbotRoutes")); // 👈 added
 app.use("/api/announcements", require("./routes/announcementRoutes")); // 👈 added
 app.use("/api/user", require("./routes/userRoutes")); // 👈 added
 app.use("/api/chat", require("./routes/chatRoutes")); 
+app.use("/api/carousel", require("./routes/carouselRoutes")); // 👈 added
 
 
 const PORT = process.env.PORT || 5000;

@@ -38,12 +38,33 @@ import {
   History,
 } from "lucide-react-native";
 import * as SecureStore from "expo-secure-store";
+import { getCarouselImages } from "../../api/carousel";
+
 
 export default function Home({ navigation }) {
   const [activeTab, setActiveTab] = useState("Home");
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [featuredItems, setFeaturedItems] = useState([]);
+
+
+  useEffect(() => {
+    fetchFeaturedItems();
+  }, []);
+
+  const fetchFeaturedItems = async () => {
+    try {
+      setLoading(true);
+      const data = await getCarouselImages();
+      setFeaturedItems(data);
+    } catch (error) {
+      console.error("Error fetching featured items:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     loadUserData();
@@ -109,11 +130,13 @@ export default function Home({ navigation }) {
   const [currentCarousel, setCurrentCarousel] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentCarousel((prev) => (prev + 1) % carouselImages.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
+    if (featuredItems.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentCarousel((prev) => (prev + 1) % featuredItems.length);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [featuredItems]);
 
   const resourcesData = [
     {
@@ -340,27 +363,62 @@ export default function Home({ navigation }) {
           </View>
         </View>
 
-        {/* Featured Carousel */}
+       /* Replace the entire Featured Carousel section (lines 389-424) with this: */
+
+        {/* Featured Carousel (Dynamic from Backend) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Featured</Text>
-          <View style={styles.carouselContainer}>
-            <Image
-              source={carouselImages[currentCarousel].source}
-              style={styles.carouselImage}
-              resizeMode="cover"
-            />
-            <View style={styles.carouselDots}>
-              {carouselImages.map((_, index) => (
+
+          {loading ? (
+            <ActivityIndicator size="large" color="#4338CA" style={{ marginVertical: 20 }} />
+          ) : featuredItems.length > 0 ? (
+            <View style={styles.carouselContainer}>
+              <Image
+                source={{ uri: featuredItems[currentCarousel]?.imageUrl }}
+                style={styles.carouselImage}
+                resizeMode="cover"
+              />
+              {featuredItems[currentCarousel]?.title && (
                 <View
-                  key={index}
-                  style={[
-                    styles.dot,
-                    currentCarousel === index && styles.activeDot,
-                  ]}
-                />
-              ))}
+                  style={{
+                    position: "absolute",
+                    bottom: 20,
+                    left: 16,
+                    right: 16,
+                    backgroundColor: "rgba(0,0,0,0.4)",
+                    borderRadius: 10,
+                    padding: 10,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
+                    {featuredItems[currentCarousel]?.title}
+                  </Text>
+                  {featuredItems[currentCarousel]?.description && (
+                    <Text style={{ color: "#E5E7EB", fontSize: 12 }} numberOfLines={2}>
+                      {featuredItems[currentCarousel]?.description}
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              <View style={styles.carouselDots}>
+                {featuredItems.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.dot,
+                      currentCarousel === index && styles.activeDot,
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.carouselContainer}>
+              <View style={{ flex: 1, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }}>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Resources */}
@@ -453,7 +511,7 @@ export default function Home({ navigation }) {
           activeOpacity={1}
           onPress={() => setReportModalVisible(false)}
         >
-          <View 
+          <View
             style={styles.modalContent}
             onStartShouldSetResponder={() => true}
           >
