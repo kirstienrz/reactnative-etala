@@ -20,21 +20,12 @@ const LandingPage = () => {
 
   const heroSlides = [
     {
-      title: 'GAD PORTAL',
-      subtitle: 'Gender and Development Office',
-      description: 'Advancing gender equality and inclusive development',
       image: '/assets/carousel/CAROUSEL.png'
     },
     {
-      title: 'GENDER EQUALITY',
-      subtitle: 'Building an Inclusive Community',
-      description: 'Committed to eliminating discrimination and promoting opportunity',
       image: '/assets/carousel/CAROUSEL1.jpg'
     },
     {
-      title: 'EMPOWERMENT',
-      subtitle: 'Creating Equal Opportunities',
-      description: 'Dedicated to ensuring equal rights and opportunities for all',
       image: '/assets/carousel/CAROUSEL2.jpg'
     }
   ];
@@ -142,24 +133,6 @@ const LandingPage = () => {
                 key={idx}
                 className={`transition-all duration-1000 ${idx === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 absolute inset-0 pointer-events-none'}`}
               >
-                <div className="inline-block mb-6">
-                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500/20 border border-violet-400/30 backdrop-blur-sm text-violet-200 text-sm font-semibold tracking-wide">
-                    <Sparkles className="w-4 h-4" />
-                    TUP TAGUIG
-                  </span>
-                </div>
-                <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-white mb-6 tracking-tight leading-none">{slide.title}</h1>
-                <p className="text-2xl md:text-3xl text-violet-200 font-light mb-6">{slide.subtitle}</p>
-                <div className="flex items-center justify-center gap-3 mb-10">
-                  <div className="h-px w-16 bg-gradient-to-r from-transparent via-violet-400 to-transparent"></div>
-                  <div className="w-2 h-2 rounded-full bg-violet-400"></div>
-                  <div className="h-px w-16 bg-gradient-to-r from-transparent via-violet-400 to-transparent"></div>
-                </div>
-                <p className="text-lg text-slate-300 mb-12 max-w-2xl mx-auto leading-relaxed">{slide.description}</p>
-                <button className="group bg-white hover:bg-violet-50 text-violet-900 px-10 py-4 transition-all duration-300 font-bold text-lg inline-flex items-center gap-3 shadow-lg hover:shadow-xl hover:scale-105">
-                  Explore More
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
               </div>
             ))}
           </div>
@@ -218,41 +191,24 @@ const LandingPage = () => {
       </section>
 
       {/* About Section */}
-      <section className="py-28 bg-white">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <div className="inline-block mb-4">
                 <span className="text-sm font-bold text-violet-600 tracking-wider uppercase">Who We Are</span>
               </div>
-              <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-8 leading-tight">About GAD Office</h2>
-              <div className="w-20 h-1 bg-gradient-to-r from-violet-600 to-purple-600 mb-8"></div>
-              <div className="space-y-6 text-slate-700 text-lg leading-relaxed mb-10">
+              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6 leading-tight">About GAD Office</h2>
+              <div className="w-20 h-1 bg-gradient-to-r from-violet-600 to-purple-600 mb-6"></div>
+              <div className="space-y-5 text-slate-700 text-base leading-relaxed mb-8">
                 <p>The Gender and Development (GAD) Office of TUP Taguig is committed to promoting gender equality and women's empowerment within the university community.</p>
                 <p>We implement programs, policies, and activities that address gender issues, eliminate discrimination, and ensure equal opportunities for all students, faculty, and staff regardless of gender.</p>
               </div>
-              <div className="grid grid-cols-3 gap-6 mb-10">
-                <div className="bg-gradient-to-br from-rose-50 to-pink-50 p-6 border-2 border-rose-100 hover:border-rose-300 transition-all hover:shadow-lg">
-                  <Target className="w-10 h-10 text-rose-600 mb-3" />
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Our Mission</h4>
-                  <p className="text-xs text-slate-600">Advancing equality</p>
-                </div>
-                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 border-2 border-cyan-100 hover:border-cyan-300 transition-all hover:shadow-lg">
-                  <Users className="w-10 h-10 text-cyan-600 mb-3" />
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Community</h4>
-                  <p className="text-xs text-slate-600">Inclusive culture</p>
-                </div>
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 border-2 border-amber-100 hover:border-amber-300 transition-all hover:shadow-lg">
-                  <BookOpen className="w-10 h-10 text-amber-600 mb-3" />
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Education</h4>
-                  <p className="text-xs text-slate-600">Awareness first</p>
-                </div>
-              </div>
               <div className="flex gap-4">
-                <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-4 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105">
+                <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-3 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105">
                   Learn More
                 </button>
-                <button className="border-2 border-violet-600 text-violet-700 px-8 py-4 bg-white hover:bg-violet-50 transition-all duration-300 font-bold hover:scale-105">
+                <button className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-bold hover:scale-105">
                   Contact Us
                 </button>
               </div>

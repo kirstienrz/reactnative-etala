@@ -32,6 +32,7 @@ app.use("/api/chat", require("./routes/chatRoutes"));
 app.use("/api/carousel", require("./routes/carouselRoutes"));
 app.use("/api/resources", require("./routes/resourceRoutes"));
 app.use("/api/webinars", require("./routes/webinarRouter"));
+app.use("/api/reports", require("./routes/reportRoutes"));
 
 // ✅ SOCKET EVENTS
 io.on("connection", (socket) => {

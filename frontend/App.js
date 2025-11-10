@@ -30,7 +30,8 @@ import Handbook from "./src/screens/resources/handbook";
 import KnowledgeHub from "./src/screens/resources/knowledge-hub";
 import SuggestionBox from "./src/screens/resources/suggestion-box";
 // IMPORT BOTTOM NAVIGATION SCREENS
-import ReportHistoryScreen from "./src/screens/bottom-navigation/reports";
+import ReportHistoryScreen from "./src/screens/bottom-navigation/myreports";
+import ReportDetailsScreen from "./src/screens/bottom-navigation/report-details";
 import ReportScreen from "./src/screens/bottom-navigation/report";
 import AccountScreen from "./src/screens/bottom-navigation/account";
 import NewsScreen from "./src/screens/bottom-navigation/news";
@@ -104,6 +105,7 @@ export default function App() {
 
             {/* bottom navigation screens */}
             <Stack.Screen name="ReportHistoryScreen" component={ReportHistoryScreen} options={{  headerShown: false}} />
+            <Stack.Screen name="ReportDetails" component={ReportDetailsScreen} options={{  headerShown: false}} />
             <Stack.Screen name="ReportScreen" component={ReportScreen} options={{  headerShown: false}} />
             <Stack.Screen name="AccountScreen" component={AccountScreen} options={{ title: "Account" }} />
             <Stack.Screen name="NewsScreen" component={NewsScreen} options={{ title: "News" }} />

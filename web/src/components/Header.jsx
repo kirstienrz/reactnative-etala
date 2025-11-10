@@ -57,16 +57,20 @@ const Header = () => {
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-violet-500 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-8 py-5 z-50">
+        <div className="relative max-w-7xl mx-auto px-8 py-4 z-50">
           <div className="flex justify-between items-center">
             {/* Logo */}
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-violet-800 rounded-full"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                <img 
+                  src="/assets/logo.jpg" 
+                  alt="GAD Logo" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-wide">GAD PORTAL</h1>
-                <p className="text-sm text-violet-100">TUP Taguig - Gender and Development Office</p>
+                <h1 className="text-xl font-bold text-white tracking-wide">GAD PORTAL</h1>
+                <p className="text-xs text-violet-100">TUP Taguig - Gender and Development Office</p>
               </div>
             </div>
 
@@ -79,7 +83,7 @@ const Header = () => {
             </button>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8 relative z-[60]">
+            <div className="hidden md:flex items-center gap-7 relative z-[60]">
               <nav>
                 <ul className="flex gap-2">
                   {menuItems.map((item, index) => (

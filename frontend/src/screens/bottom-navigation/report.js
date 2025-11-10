@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, ActivityIndicator, Platform,
+  Alert, ActivityIndicator, Platform, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
@@ -9,12 +9,19 @@ import * as ImagePicker from 'expo-image-picker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { createReport } from '../../api/report';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const ReportScreen = ({ navigation }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isAnonymous, setIsAnonymous] = useState(null);
   const [loading, setLoading] = useState(false);
   const [savedProgress, setSavedProgress] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerField, setDatePickerField] = useState('');
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [dropdownField, setDropdownField] = useState('');
+  const [dropdownOptions, setDropdownOptions] = useState([]);
 
   const [formData, setFormData] = useState({
     // Victim-Survivor Information
@@ -46,19 +53,20 @@ const ReportScreen = ({ navigation }) => {
     placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
     witnessAccount: '', witnessDate: '',
     
-    // Services & Support
-    crisisIntervention: false, protectionOrder: false, referToSWDO: false,
-    swdoDate: '', swdoServices: [], referToHealthcare: false, healthcareDate: '',
-    healthcareProvider: '', healthcareServices: [], referToLawEnforcement: false,
-    lawDate: '', lawAgency: '', referToOther: false, otherDate: '',
-    otherProvider: '', otherService: '',
-    
     // Additional
     attachments: [], additionalNotes: '', confirmAccuracy: false,
-    confirmConfidentiality: false, allowContact: false,
+    confirmConfidentiality: false, 
   });
 
-  const totalSteps = isAnonymous === null ? 1 : isAnonymous ? 7 : 8;
+  const totalSteps = isAnonymous === null ? 1 : isAnonymous ? 5 : 6;
+
+  const regions = ['NCR', 'Region I', 'Region II', 'Region III', 'Region IV-A', 'Region IV-B', 'Region V', 'Region VI', 'Region VII', 'Region VIII', 'Region IX', 'Region X', 'Region XI', 'Region XII', 'Region XIII', 'CAR', 'BARMM'];
+  const civilStatuses = ['Single', 'Married', 'Live In', 'Widowed', 'Separated'];
+  const educationLevels = ['No Formal Education', 'Elementary', 'High School', 'Vocational', 'College', 'Post Graduate'];
+  const religions = ['Roman Catholic', 'Islam', 'Protestant', 'Iglesia ni Kristo', 'Aglipayan', 'Other'];
+  const disabilities = ['Without Disability', 'Permanent Disability', 'Temporary Disability'];
+  const relationships = ['Current spouse/partner', 'Former spouse/partner', 'Parent/Guardian', 'Sibling', 'Relative', 'Teacher/Professor', 'Employer/Supervisor', 'Classmate', 'Neighbor', 'Stranger', 'Other'];
+  const places = ['House', 'Work', 'School', 'Commercial Place', 'Religious Institution', 'Medical Treatment', 'Transport', 'Other'];
 
   useEffect(() => { loadSavedProgress(); }, []);
 
@@ -132,36 +140,51 @@ const ReportScreen = ({ navigation }) => {
     }));
   };
 
-  const toggleService = (field, service) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].includes(service)
-        ? prev[field].filter(s => s !== service)
-        : [...prev[field], service],
-    }));
-  };
-
-  const generateTicketNumber = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
-    return `ETALA-${isAnonymous ? 'ANON' : 'ID'}-${year}${month}-${random}`;
-  };
-
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const ticketNumber = generateTicketNumber();
+      const submitData = new FormData();
+      submitData.append('isAnonymous', isAnonymous.toString());
+      
+      Object.keys(formData).forEach(key => {
+        if (key === 'attachments') return;
+        const value = formData[key];
+        if (Array.isArray(value)) {
+          value.forEach(item => submitData.append(`${key}[]`, item));
+        } else if (typeof value === 'boolean') {
+          submitData.append(key, value.toString());
+        } else if (value !== '' && value !== null && value !== undefined) {
+          submitData.append(key, value.toString());
+        }
+      });
+      
+      if (formData.attachments.length > 0) {
+        for (let i = 0; i < formData.attachments.length; i++) {
+          const attachment = formData.attachments[i];
+          const fileUri = Platform.OS === 'ios' ? attachment.uri.replace('file://', '') : attachment.uri;
+          const fileType = attachment.type === 'video' ? 'video/mp4' : 'image/jpeg';
+          submitData.append('attachments', { uri: fileUri, type: fileType, name: attachment.fileName });
+        }
+      }
+      
+      const response = await createReport(submitData);
       await clearProgress();
+      
       Alert.alert(
         'Report Submitted Successfully',
-        `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nPlease save this number for tracking your report.`,
+        `Your report has been received.\n\nTicket Number: ${response.ticketNumber}\n\nPlease save this number for tracking your report.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to submit report. Please try again.');
+      console.error('Submit error:', error);
+      let errorMessage = 'Failed to submit report. Please try again.';
+      if (error.response) {
+        errorMessage = error.response.data?.message || errorMessage;
+        console.error('Server error details:', error.response.data);
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -175,23 +198,23 @@ const ReportScreen = ({ navigation }) => {
     if (currentStep === 2) {
       if (isAnonymous) {
         if (!formData.reporterRole || !formData.tupRole) {
-          Alert.alert('Required', 'Please fill in all required fields.');
+          Alert.alert('Required', 'Please fill in all required fields (Reporter Role & TUP Role).');
           return false;
         }
       } else {
         if (!formData.lastName || !formData.firstName || !formData.sex || !formData.age) {
-          Alert.alert('Required', 'Please fill in all required fields.');
+          Alert.alert('Required', 'Please fill in all required fields (Name, Sex, Age).');
           return false;
         }
       }
     }
-    if (currentStep === 4) {
+    if ((isAnonymous && currentStep === 4) || (!isAnonymous && currentStep === 5)) {
       if (formData.incidentTypes.length === 0 || !formData.latestIncidentDate) {
-        Alert.alert('Required', 'Please fill in all required incident details.');
+        Alert.alert('Required', 'Please select at least one incident type and provide the date.');
         return false;
       }
     }
-    if ((isAnonymous && currentStep === 7) || (!isAnonymous && currentStep === 8)) {
+    if ((isAnonymous && currentStep === 5) || (!isAnonymous && currentStep === 6)) {
       if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
         Alert.alert('Required', 'Please confirm all statements before submitting.');
         return false;
@@ -202,6 +225,30 @@ const ReportScreen = ({ navigation }) => {
 
   const handleNext = () => { if (validateStep()) setCurrentStep(prev => prev + 1); };
   const handleBack = () => currentStep > 1 ? setCurrentStep(prev => prev - 1) : navigation.goBack();
+
+  const showDatePickerModal = (field) => {
+    setDatePickerField(field);
+    setShowDatePicker(true);
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selectedDate) {
+      const formattedDate = selectedDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      setFormData(prev => ({ ...prev, [datePickerField]: formattedDate }));
+    }
+  };
+
+  const showDropdown = (field, options) => {
+    setDropdownField(field);
+    setDropdownOptions(options);
+    setDropdownVisible(true);
+  };
+
+  const selectDropdownOption = (value) => {
+    setFormData(prev => ({ ...prev, [dropdownField]: value }));
+    setDropdownVisible(false);
+  };
 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
@@ -219,19 +266,12 @@ const ReportScreen = ({ navigation }) => {
       
       <TouchableOpacity
         style={[styles.anonymityCard, isAnonymous === true && styles.anonymityCardSelected]}
-        onPress={() => setIsAnonymous(true)}
-      >
+        onPress={() => setIsAnonymous(true)}>
         <View style={styles.anonymityIconContainer}>
-          <MaterialCommunityIcons 
-            name="account-off-outline" 
-            size={32} 
-            color={isAnonymous === true ? '#4338CA' : '#6B7280'} 
-          />
+          <MaterialCommunityIcons name="account-off-outline" size={32} color={isAnonymous === true ? '#4338CA' : '#6B7280'} />
         </View>
         <View style={styles.anonymityContent}>
-          <Text style={[styles.anonymityTitle, isAnonymous === true && styles.anonymityTitleSelected]}>
-            Anonymous Report
-          </Text>
+          <Text style={[styles.anonymityTitle, isAnonymous === true && styles.anonymityTitleSelected]}>Anonymous Report</Text>
           <Text style={styles.anonymityDescription}>
             Your identity will remain completely confidential. You'll receive a tracking number to check your report status.
           </Text>
@@ -245,19 +285,12 @@ const ReportScreen = ({ navigation }) => {
 
       <TouchableOpacity
         style={[styles.anonymityCard, isAnonymous === false && styles.anonymityCardSelected]}
-        onPress={() => setIsAnonymous(false)}
-      >
+        onPress={() => setIsAnonymous(false)}>
         <View style={styles.anonymityIconContainer}>
-          <MaterialIcons 
-            name="person-outline" 
-            size={32} 
-            color={isAnonymous === false ? '#4338CA' : '#6B7280'} 
-          />
+          <MaterialIcons name="person-outline" size={32} color={isAnonymous === false ? '#4338CA' : '#6B7280'} />
         </View>
         <View style={styles.anonymityContent}>
-          <Text style={[styles.anonymityTitle, isAnonymous === false && styles.anonymityTitleSelected]}>
-            Identified Report
-          </Text>
+          <Text style={[styles.anonymityTitle, isAnonymous === false && styles.anonymityTitleSelected]}>Identified Report</Text>
           <Text style={styles.anonymityDescription}>
             Provide your contact information for follow-up and support. Your information will be kept confidential.
           </Text>
@@ -347,18 +380,19 @@ const ReportScreen = ({ navigation }) => {
                 <TouchableOpacity key={sex}
                   style={[styles.chip, formData.sex === sex && styles.chipSelected]}
                   onPress={() => setFormData(prev => ({ ...prev, sex }))}>
-                  <Text style={[styles.chipText, formData.sex === sex && styles.chipTextSelected]}>
-                    {sex}
-                  </Text>
+                  <Text style={[styles.chipText, formData.sex === sex && styles.chipTextSelected]}>{sex}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Date of Birth:</Text>
-            <TextInput style={styles.input} placeholder="MM/DD/YYYY"
-              value={formData.dateOfBirth}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, dateOfBirth: text }))} />
+            <TouchableOpacity style={styles.dateInput} onPress={() => showDatePickerModal('dateOfBirth')}>
+              <Text style={[styles.dateText, !formData.dateOfBirth && styles.placeholderText]}>
+                {formData.dateOfBirth || 'MM/DD/YYYY'}
+              </Text>
+              <MaterialIcons name="calendar-today" size={20} color="#6B7280" />
+            </TouchableOpacity>
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Age: *</Text>
@@ -368,31 +402,21 @@ const ReportScreen = ({ navigation }) => {
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Civil Status:</Text>
-            <View style={styles.chipContainer}>
-              {['Single', 'Married', 'Live In', 'Widowed', 'Separated'].map(status => (
-                <TouchableOpacity key={status}
-                  style={[styles.chip, formData.civilStatus === status && styles.chipSelected]}
-                  onPress={() => setFormData(prev => ({ ...prev, civilStatus: status }))}>
-                  <Text style={[styles.chipText, formData.civilStatus === status && styles.chipTextSelected]}>
-                    {status}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('civilStatus', civilStatuses)}>
+              <Text style={[styles.dropdownText, !formData.civilStatus && styles.placeholderText]}>
+                {formData.civilStatus || 'Select civil status'}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Educational Attainment:</Text>
-            <View style={styles.chipContainer}>
-              {['No Formal Education', 'Elementary', 'High School', 'Vocational', 'College', 'Post Graduate'].map(edu => (
-                <TouchableOpacity key={edu}
-                  style={[styles.chip, formData.educationalAttainment === edu && styles.chipSelected]}
-                  onPress={() => setFormData(prev => ({ ...prev, educationalAttainment: edu }))}>
-                  <Text style={[styles.chipText, formData.educationalAttainment === edu && styles.chipTextSelected]}>
-                    {edu}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('educationalAttainment', educationLevels)}>
+              <Text style={[styles.dropdownText, !formData.educationalAttainment && styles.placeholderText]}>
+                {formData.educationalAttainment || 'Select education level'}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Nationality:</Text>
@@ -414,23 +438,21 @@ const ReportScreen = ({ navigation }) => {
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Religion:</Text>
-            <View style={styles.chipContainer}>
-              {['Roman Catholic', 'Islam', 'Protestant', 'Iglesia ni Kristo', 'Aglipayan', 'Other'].map(rel => (
-                <TouchableOpacity key={rel}
-                  style={[styles.chip, formData.religion === rel && styles.chipSelected]}
-                  onPress={() => setFormData(prev => ({ ...prev, religion: rel }))}>
-                  <Text style={[styles.chipText, formData.religion === rel && styles.chipTextSelected]}>
-                    {rel}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('religion', religions)}>
+              <Text style={[styles.dropdownText, !formData.religion && styles.placeholderText]}>
+                {formData.religion || 'Select religion'}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Address:</Text>
-            <TextInput style={styles.input} placeholder="Region"
-              value={formData.region}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, region: text }))} />
+            <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('region', regions)}>
+              <Text style={[styles.dropdownText, !formData.region && styles.placeholderText]}>
+                {formData.region || 'Select region'}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
             <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Province"
               value={formData.province}
               onChangeText={(text) => setFormData(prev => ({ ...prev, province: text }))} />
@@ -443,17 +465,12 @@ const ReportScreen = ({ navigation }) => {
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Disability Status:</Text>
-            <View style={styles.chipContainer}>
-              {['Without Disability', 'Permanent Disability', 'Temporary Disability'].map(dis => (
-                <TouchableOpacity key={dis}
-                  style={[styles.chip, formData.disability === dis && styles.chipSelected]}
-                  onPress={() => setFormData(prev => ({ ...prev, disability: dis }))}>
-                  <Text style={[styles.chipText, formData.disability === dis && styles.chipTextSelected]}>
-                    {dis}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('disability', disabilities)}>
+              <Text style={[styles.dropdownText, !formData.disability && styles.placeholderText]}>
+                {formData.disability || 'Select disability status'}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+            </TouchableOpacity>
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Number of Children (if any):</Text>
@@ -467,13 +484,6 @@ const ReportScreen = ({ navigation }) => {
               value={formData.agesOfChildren}
               onChangeText={(text) => setFormData(prev => ({ ...prev, agesOfChildren: text }))} />
           </View>
-          <TouchableOpacity style={styles.checkboxContainer}
-            onPress={() => setFormData(prev => ({ ...prev, allowContact: !prev.allowContact }))}>
-            <View style={[styles.checkbox, formData.allowContact && styles.checkboxChecked]}>
-              {formData.allowContact && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-            </View>
-            <Text style={styles.checkboxLabel}>I allow the GAD Office to contact me for follow-up</Text>
-          </TouchableOpacity>
         </>
       )}
     </View>
@@ -510,9 +520,12 @@ const ReportScreen = ({ navigation }) => {
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Guardian Address:</Text>
-        <TextInput style={styles.input} placeholder="Region"
-          value={formData.guardianRegion}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, guardianRegion: text }))} />
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('guardianRegion', regions)}>
+          <Text style={[styles.dropdownText, !formData.guardianRegion && styles.placeholderText]}>
+            {formData.guardianRegion || 'Select region'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
         <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Province"
           value={formData.guardianProvince}
           onChangeText={(text) => setFormData(prev => ({ ...prev, guardianProvince: text }))} />
@@ -568,12 +581,43 @@ const ReportScreen = ({ navigation }) => {
             <TouchableOpacity key={sex}
               style={[styles.chip, formData.perpSex === sex && styles.chipSelected]}
               onPress={() => setFormData(prev => ({ ...prev, perpSex: sex }))}>
-              <Text style={[styles.chipText, formData.perpSex === sex && styles.chipTextSelected]}>
-                {sex}
-              </Text>
+              <Text style={[styles.chipText, formData.perpSex === sex && styles.chipTextSelected]}>{sex}</Text>
             </TouchableOpacity>
           ))}
         </View>
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Date of Birth:</Text>
+        <TouchableOpacity style={styles.dateInput} onPress={() => showDatePickerModal('perpDateOfBirth')}>
+          <Text style={[styles.dateText, !formData.perpDateOfBirth && styles.placeholderText]}>
+            {formData.perpDateOfBirth || 'MM/DD/YYYY'}
+          </Text>
+          <MaterialIcons name="calendar-today" size={20} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Age:</Text>
+        <TextInput style={styles.input} placeholder="Age" keyboardType="numeric"
+          value={formData.perpAge}
+          onChangeText={(text) => setFormData(prev => ({ ...prev, perpAge: text }))} />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Civil Status:</Text>
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('perpCivilStatus', civilStatuses)}>
+          <Text style={[styles.dropdownText, !formData.perpCivilStatus && styles.placeholderText]}>
+            {formData.perpCivilStatus || 'Select civil status'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Educational Attainment:</Text>
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('perpEducation', educationLevels)}>
+          <Text style={[styles.dropdownText, !formData.perpEducation && styles.placeholderText]}>
+            {formData.perpEducation || 'Select education level'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Nationality:</Text>
@@ -595,23 +639,21 @@ const ReportScreen = ({ navigation }) => {
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Religion:</Text>
-        <View style={styles.chipContainer}>
-          {['Roman Catholic', 'Islam', 'Protestant', 'Iglesia ni Kristo', 'Aglipayan', 'Other'].map(rel => (
-            <TouchableOpacity key={rel}
-              style={[styles.chip, formData.perpReligion === rel && styles.chipSelected]}
-              onPress={() => setFormData(prev => ({ ...prev, perpReligion: rel }))}>
-              <Text style={[styles.chipText, formData.perpReligion === rel && styles.chipTextSelected]}>
-                {rel}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('perpReligion', religions)}>
+          <Text style={[styles.dropdownText, !formData.perpReligion && styles.placeholderText]}>
+            {formData.perpReligion || 'Select religion'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Address:</Text>
-        <TextInput style={styles.input} placeholder="Region"
-          value={formData.perpRegion}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, perpRegion: text }))} />
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('perpRegion', regions)}>
+          <Text style={[styles.dropdownText, !formData.perpRegion && styles.placeholderText]}>
+            {formData.perpRegion || 'Select region'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
         <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Province"
           value={formData.perpProvince}
           onChangeText={(text) => setFormData(prev => ({ ...prev, perpProvince: text }))} />
@@ -624,18 +666,12 @@ const ReportScreen = ({ navigation }) => {
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Relationship to Victim-Survivor:</Text>
-        <View style={styles.chipContainer}>
-          {['Current spouse/partner', 'Former spouse/partner', 'Parent/Guardian', 'Sibling', 'Relative', 
-            'Teacher/Professor', 'Employer/Supervisor', 'Classmate', 'Neighbor', 'Stranger', 'Other'].map(rel => (
-            <TouchableOpacity key={rel}
-              style={[styles.chip, formData.perpRelationship === rel && styles.chipSelected]}
-              onPress={() => setFormData(prev => ({ ...prev, perpRelationship: rel }))}>
-              <Text style={[styles.chipText, formData.perpRelationship === rel && styles.chipTextSelected]}>
-                {rel}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('perpRelationship', relationships)}>
+          <Text style={[styles.dropdownText, !formData.perpRelationship && styles.placeholderText]}>
+            {formData.perpRelationship || 'Select relationship'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
       </View>
       
       <Text style={[styles.stepSubtitle, { marginTop: 24, marginBottom: 16 }]}>
@@ -668,9 +704,12 @@ const ReportScreen = ({ navigation }) => {
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Guardian Address:</Text>
-        <TextInput style={styles.input} placeholder="Region"
-          value={formData.perpGuardianRegion}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, perpGuardianRegion: text }))} />
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('perpGuardianRegion', regions)}>
+          <Text style={[styles.dropdownText, !formData.perpGuardianRegion && styles.placeholderText]}>
+            {formData.perpGuardianRegion || 'Select region'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
         <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Province"
           value={formData.perpGuardianProvince}
           onChangeText={(text) => setFormData(prev => ({ ...prev, perpGuardianProvince: text }))} />
@@ -734,16 +773,22 @@ const ReportScreen = ({ navigation }) => {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Date of Latest Incident: *</Text>
-        <TextInput style={styles.input} placeholder="MM/DD/YYYY"
-          value={formData.latestIncidentDate}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, latestIncidentDate: text }))} />
+        <TouchableOpacity style={styles.dateInput} onPress={() => showDatePickerModal('latestIncidentDate')}>
+          <Text style={[styles.dateText, !formData.latestIncidentDate && styles.placeholderText]}>
+            {formData.latestIncidentDate || 'MM/DD/YYYY'}
+          </Text>
+          <MaterialIcons name="calendar-today" size={20} color="#6B7280" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Geographic Location of Incident:</Text>
-        <TextInput style={styles.input} placeholder="Region"
-          value={formData.incidentRegion}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, incidentRegion: text }))} />
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('incidentRegion', regions)}>
+          <Text style={[styles.dropdownText, !formData.incidentRegion && styles.placeholderText]}>
+            {formData.incidentRegion || 'Select region'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
         <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Province"
           value={formData.incidentProvince}
           onChangeText={(text) => setFormData(prev => ({ ...prev, incidentProvince: text }))} />
@@ -757,18 +802,12 @@ const ReportScreen = ({ navigation }) => {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Place of Incident:</Text>
-        <View style={styles.chipContainer}>
-          {['House', 'Work', 'School', 'Commercial Place', 'Religious Institution', 
-            'Medical Treatment', 'Transport', 'Other'].map(place => (
-            <TouchableOpacity key={place}
-              style={[styles.chip, formData.placeOfIncident === place && styles.chipSelected]}
-              onPress={() => setFormData(prev => ({ ...prev, placeOfIncident: place }))}>
-              <Text style={[styles.chipText, formData.placeOfIncident === place && styles.chipTextSelected]}>
-                {place}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity style={styles.dropdownInput} onPress={() => showDropdown('placeOfIncident', places)}>
+          <Text style={[styles.dropdownText, !formData.placeOfIncident && styles.placeholderText]}>
+            {formData.placeOfIncident || 'Select place'}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />
+        </TouchableOpacity>
       </View>
 
       <Text style={[styles.stepSubtitle, { marginTop: 24, marginBottom: 16 }]}>Witness Information (if any):</Text>
@@ -800,184 +839,12 @@ const ReportScreen = ({ navigation }) => {
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Date of Witness Statement:</Text>
-        <TextInput style={styles.input} placeholder="MM/DD/YYYY"
-          value={formData.witnessDate}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, witnessDate: text }))} />
-      </View>
-    </View>
-  );
-
-  const renderServicesInfo = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Services Information</Text>
-      <Text style={styles.stepSubtitle}>Select the services needed or already provided</Text>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Crisis Intervention:</Text>
-        <TouchableOpacity style={styles.checkboxContainer}
-          onPress={() => setFormData(prev => ({ ...prev, crisisIntervention: !prev.crisisIntervention }))}>
-          <View style={[styles.checkbox, formData.crisisIntervention && styles.checkboxChecked]}>
-            {formData.crisisIntervention && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-          </View>
-          <Text style={styles.checkboxLabel}>Include rescue</Text>
+        <TouchableOpacity style={styles.dateInput} onPress={() => showDatePickerModal('witnessDate')}>
+          <Text style={[styles.dateText, !formData.witnessDate && styles.placeholderText]}>
+            {formData.witnessDate || 'MM/DD/YYYY'}
+          </Text>
+          <MaterialIcons name="calendar-today" size={20} color="#6B7280" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.checkboxContainer}
-          onPress={() => setFormData(prev => ({ ...prev, protectionOrder: !prev.protectionOrder }))}>
-          <View style={[styles.checkbox, formData.protectionOrder && styles.checkboxChecked]}>
-            {formData.protectionOrder && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-          </View>
-          <Text style={styles.checkboxLabel}>Issuance/Enforcement of Barangay Protection Order</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Refer to Social Welfare and Development Officer:</Text>
-        <TouchableOpacity style={styles.checkboxContainer}
-          onPress={() => setFormData(prev => ({ ...prev, referToSWDO: !prev.referToSWDO }))}>
-          <View style={[styles.checkbox, formData.referToSWDO && styles.checkboxChecked]}>
-            {formData.referToSWDO && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-          </View>
-          <Text style={styles.checkboxLabel}>Yes, refer to SWDO</Text>
-        </TouchableOpacity>
-        {formData.referToSWDO && (
-          <>
-            <TextInput style={styles.input} placeholder="Date (MM/DD/YYYY)"
-              value={formData.swdoDate}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, swdoDate: text }))} />
-            <Text style={[styles.label, { marginTop: 12 }]}>Services needed:</Text>
-            <View style={styles.chipContainer}>
-              {['Psychiatric Services', 'Emergency Shelter', 'Economic Assistance', 'Other'].map(service => (
-                <TouchableOpacity key={service}
-                  style={[styles.chip, formData.swdoServices.includes(service) && styles.chipSelected]}
-                  onPress={() => toggleService('swdoServices', service)}>
-                  <Text style={[styles.chipText, formData.swdoServices.includes(service) && styles.chipTextSelected]}>
-                    {service}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Refer to Healthcare Provider:</Text>
-        <TouchableOpacity style={styles.checkboxContainer}
-          onPress={() => setFormData(prev => ({ ...prev, referToHealthcare: !prev.referToHealthcare }))}>
-          <View style={[styles.checkbox, formData.referToHealthcare && styles.checkboxChecked]}>
-            {formData.referToHealthcare && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-          </View>
-          <Text style={styles.checkboxLabel}>Yes, refer to healthcare provider</Text>
-        </TouchableOpacity>
-        {formData.referToHealthcare && (
-          <>
-            <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Date (MM/DD/YYYY)"
-              value={formData.healthcareDate}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, healthcareDate: text }))} />
-            <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Name of Healthcare Provider"
-              value={formData.healthcareProvider}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, healthcareProvider: text }))} />
-            <Text style={[styles.label, { marginTop: 12 }]}>Services needed:</Text>
-            <View style={styles.chipContainer}>
-              {['First Aid', 'Medical Treatment', 'Medical Certificate', 'Medical-Legal Exam', 'Other'].map(service => (
-                <TouchableOpacity key={service}
-                  style={[styles.chip, formData.healthcareServices.includes(service) && styles.chipSelected]}
-                  onPress={() => toggleService('healthcareServices', service)}>
-                  <Text style={[styles.chipText, formData.healthcareServices.includes(service) && styles.chipTextSelected]}>
-                    {service}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Refer to Law Enforcement:</Text>
-        <TouchableOpacity style={styles.checkboxContainer}
-          onPress={() => setFormData(prev => ({ ...prev, referToLawEnforcement: !prev.referToLawEnforcement }))}>
-          <View style={[styles.checkbox, formData.referToLawEnforcement && styles.checkboxChecked]}>
-            {formData.referToLawEnforcement && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-          </View>
-          <Text style={styles.checkboxLabel}>Yes, refer to law enforcement</Text>
-        </TouchableOpacity>
-        {formData.referToLawEnforcement && (
-          <>
-            <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Date (MM/DD/YYYY)"
-              value={formData.lawDate}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, lawDate: text }))} />
-            <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Agency Name"
-              value={formData.lawAgency}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, lawAgency: text }))} />
-          </>
-        )}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Refer to Other Service Provider:</Text>
-        <TouchableOpacity style={styles.checkboxContainer}
-          onPress={() => setFormData(prev => ({ ...prev, referToOther: !prev.referToOther }))}>
-          <View style={[styles.checkbox, formData.referToOther && styles.checkboxChecked]}>
-            {formData.referToOther && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-          </View>
-          <Text style={styles.checkboxLabel}>Yes, refer to other service provider</Text>
-        </TouchableOpacity>
-        {formData.referToOther && (
-          <>
-            <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Date (MM/DD/YYYY)"
-              value={formData.otherDate}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, otherDate: text }))} />
-            <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Name of Service Provider"
-              value={formData.otherProvider}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, otherProvider: text }))} />
-            <TextInput style={[styles.input, { marginTop: 8 }]} placeholder="Type of Service"
-              value={formData.otherService}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, otherService: text }))} />
-          </>
-        )}
-      </View>
-    </View>
-  );
-
-  const renderAttachments = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Attachments & Evidence</Text>
-      <Text style={styles.stepSubtitle}>Upload any supporting documents, images, or videos (optional)</Text>
-
-      <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <MaterialIcons name="cloud-upload" size={32} color="#4338CA" />
-        <Text style={styles.uploadButtonText}>Upload Files</Text>
-        <Text style={styles.uploadButtonSubtext}>Images, Videos, or Documents</Text>
-      </TouchableOpacity>
-
-      {formData.attachments.length > 0 && (
-        <View style={styles.attachmentsList}>
-          <Text style={styles.attachmentsTitle}>Uploaded Files ({formData.attachments.length})</Text>
-          {formData.attachments.map((attachment, index) => (
-            <View key={index} style={styles.attachmentItem}>
-              <View style={styles.attachmentIcon}>
-                <MaterialIcons 
-                  name={attachment.type === 'image' ? 'image' : 'videocam'} 
-                  size={20} 
-                  color="#4338CA" 
-                />
-              </View>
-              <Text style={styles.attachmentName} numberOfLines={1}>{attachment.fileName}</Text>
-              <TouchableOpacity onPress={() => removeAttachment(index)}>
-                <MaterialIcons name="close" size={20} color="#DC2626" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      )}
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Additional notes (optional):</Text>
-        <TextInput style={[styles.input, styles.textArea]}
-          placeholder="Any additional information..."
-          value={formData.additionalNotes} multiline numberOfLines={4} textAlignVertical="top"
-          onChangeText={(text) => setFormData(prev => ({ ...prev, additionalNotes: text }))} />
       </View>
     </View>
   );
@@ -1010,11 +877,37 @@ const ReportScreen = ({ navigation }) => {
             Types: {formData.incidentTypes.length > 0 ? formData.incidentTypes.join(', ') : 'Not provided'}
           </Text>
         </View>
+      </View>
 
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>Attachments</Text>
-          <Text style={styles.reviewText}>{formData.attachments.length} file(s) attached</Text>
-        </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Attachments & Evidence (optional):</Text>
+        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+          <MaterialIcons name="cloud-upload" size={24} color="#4338CA" />
+          <Text style={styles.uploadButtonText}>Upload Files</Text>
+        </TouchableOpacity>
+        {formData.attachments.length > 0 && (
+          <View style={styles.attachmentsList}>
+            {formData.attachments.map((attachment, index) => (
+              <View key={index} style={styles.attachmentItem}>
+                <View style={styles.attachmentIcon}>
+                  <MaterialIcons name={attachment.type === 'image' ? 'image' : 'videocam'} size={18} color="#4338CA" />
+                </View>
+                <Text style={styles.attachmentName} numberOfLines={1}>{attachment.fileName}</Text>
+                <TouchableOpacity onPress={() => removeAttachment(index)}>
+                  <MaterialIcons name="close" size={18} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Additional notes (optional):</Text>
+        <TextInput style={[styles.input, styles.textArea]}
+          placeholder="Any additional information..."
+          value={formData.additionalNotes} multiline numberOfLines={4} textAlignVertical="top"
+          onChangeText={(text) => setFormData(prev => ({ ...prev, additionalNotes: text }))} />
       </View>
 
       <View style={styles.confirmationChecks}>
@@ -1056,9 +949,7 @@ const ReportScreen = ({ navigation }) => {
         case 2: return renderVictimInfo();
         case 3: return renderPerpetratorInfo();
         case 4: return renderIncidentDetails();
-        case 5: return renderServicesInfo();
-        case 6: return renderAttachments();
-        case 7: return renderConfirmation();
+        case 5: return renderConfirmation();
         default: return null;
       }
     } else {
@@ -1067,9 +958,7 @@ const ReportScreen = ({ navigation }) => {
         case 3: return renderGuardianInfo();
         case 4: return renderPerpetratorInfo();
         case 5: return renderIncidentDetails();
-        case 6: return renderServicesInfo();
-        case 7: return renderAttachments();
-        case 8: return renderConfirmation();
+        case 6: return renderConfirmation();
         default: return null;
       }
     }
@@ -1119,6 +1008,58 @@ const ReportScreen = ({ navigation }) => {
           )}
         </TouchableOpacity>
       </View>
+
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={formData[datePickerField] ? new Date(formData[datePickerField]) : new Date()}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          maximumDate={new Date()}
+        />
+      )}
+
+      {Platform.OS === 'ios' && showDatePicker && (
+        <Modal transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.datePickerModal}>
+              <View style={styles.datePickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.datePickerButton}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={formData[datePickerField] ? new Date(formData[datePickerField]) : new Date()}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                maximumDate={new Date()}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      <Modal visible={dropdownVisible} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDropdownVisible(false)}>
+          <View style={styles.dropdownModal}>
+            <Text style={styles.dropdownTitle}>Select Option</Text>
+            <ScrollView style={styles.dropdownList}>
+              {dropdownOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.dropdownOption}
+                  onPress={() => selectDropdownOption(option)}>
+                  <Text style={styles.dropdownOptionText}>{option}</Text>
+                  {formData[dropdownField] === option && (
+                    <Ionicons name="checkmark" size={20} color="#4338CA" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1128,7 +1069,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FFFFFF', flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2},
     shadowOpacity: 0.05, shadowRadius: 3, elevation: 3,
   },
   backButton: { padding: 8 },
@@ -1136,12 +1077,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
   headerSubtitle: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   saveButton: { 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 8, 
-    backgroundColor: '#EEF2FF',
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#EEF2FF',
+    flexDirection: 'row', alignItems: 'center',
   },
   saveButtonText: { color: '#4338CA', fontSize: 14, fontWeight: '600' },
   progressContainer: {
@@ -1187,6 +1124,19 @@ const styles = StyleSheet.create({
     fontSize: 15, color: '#1F2937',
   },
   textArea: { minHeight: 120, paddingTop: 14 },
+  dateInput: {
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB',
+    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  dateText: { fontSize: 15, color: '#1F2937' },
+  placeholderText: { color: '#9CA3AF' },
+  dropdownInput: {
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB',
+    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  dropdownText: { fontSize: 15, color: '#1F2937', flex: 1 },
   chipContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 },
   chip: {
     backgroundColor: '#F3F4F6', paddingHorizontal: 16, paddingVertical: 10,
@@ -1204,23 +1154,21 @@ const styles = StyleSheet.create({
   checkboxChecked: { backgroundColor: '#4338CA', borderColor: '#4338CA' },
   checkboxLabel: { flex: 1, fontSize: 14, color: '#374151', lineHeight: 20 },
   uploadButton: {
-    backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#4338CA',
-    borderStyle: 'dashed', borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 20,
+    backgroundColor: '#EEF2FF', borderWidth: 2, borderColor: '#4338CA',
+    borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 12,
+    flexDirection: 'row', justifyContent: 'center',
   },
-  uploadButtonText: { fontSize: 16, fontWeight: '600', color: '#4338CA', marginTop: 12 },
-  uploadButtonSubtext: { fontSize: 13, color: '#6B7280', marginTop: 4 },
-  attachmentsList: { marginBottom: 20 },
-  attachmentsTitle: { fontSize: 14, fontWeight: '600', color: '#1F2937', marginBottom: 12 },
+  uploadButtonText: { fontSize: 14, fontWeight: '600', color: '#4338CA', marginLeft: 8 },
+  attachmentsList: { marginTop: 12 },
   attachmentItem: {
-    backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center',
-    padding: 12, borderRadius: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB', flexDirection: 'row', alignItems: 'center',
+    padding: 10, borderRadius: 8, marginBottom: 6,
   },
   attachmentIcon: {
-    width: 40, height: 40, borderRadius: 8, backgroundColor: '#EEF2FF',
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    width: 32, height: 32, borderRadius: 6, backgroundColor: '#EEF2FF',
+    justifyContent: 'center', alignItems: 'center', marginRight: 10,
   },
-  attachmentName: { flex: 1, fontSize: 14, color: '#1F2937', fontWeight: '500' },
+  attachmentName: { flex: 1, fontSize: 13, color: '#1F2937' },
   reviewCard: {
     backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 24,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
@@ -1258,6 +1206,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginRight: 8,
   },
   secondaryButtonText: { color: '#374151', fontSize: 16, fontWeight: '600' },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerModal: {
+    backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingBottom: 34,
+  },
+  datePickerHeader: {
+    flexDirection: 'row', justifyContent: 'flex-end',
+    paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB',
+  },
+  datePickerButton: { fontSize: 16, fontWeight: '600', color: '#4338CA' },
+  dropdownModal: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, marginHorizontal: 20,
+    marginVertical: 'auto', maxHeight: '60%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
+  },
+  dropdownTitle: {
+    fontSize: 18, fontWeight: '700', color: '#1F2937',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#E5E7EB',
+  },
+  dropdownList: { maxHeight: 400 },
+  dropdownOption: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+  },
+  dropdownOptionText: { fontSize: 15, color: '#1F2937', flex: 1 },
 });
 
 export default ReportScreen;

@@ -50,6 +50,7 @@ const InboxScreen = () => {
   const fetchChats = async () => {
     try {
       const data = await getChats();
+      // ✅ Only show chats that have at least one message
       const chatsWithMessages = data.filter(chat => chat.latestMessage);
       setChats(chatsWithMessages);
     } catch (error) {
@@ -64,8 +65,10 @@ const InboxScreen = () => {
     try {
       setLoadingUsers(true);
       const data = await getAllUsers();
-      setUsers(data);
-      setFilteredUsers(data);
+      // ✅ Filter out current user from the list
+      const otherUsers = data.filter(user => user._id !== currentUserId);
+      setUsers(otherUsers);
+      setFilteredUsers(otherUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -104,6 +107,8 @@ const InboxScreen = () => {
         receiverId: user._id,
         receiverName: `${user.firstName} ${user.lastName}`,
       });
+      // ✅ Refresh chats after creating new chat
+      fetchChats();
     } catch (error) {
       console.error('Error creating/getting chat:', error);
     } finally {
@@ -158,7 +163,8 @@ const InboxScreen = () => {
     if (!otherUser) return null;
 
     const userName = `${otherUser.firstName} ${otherUser.lastName}`;
-    const latestMessageContent = item.latestMessage?.content || 'No messages yet';
+    // ✅ FIXED: Handle chats with no messages yet
+    const latestMessageContent = item.latestMessage?.content || 'Start a conversation';
     const timeStamp = item.updatedAt ? formatTime(item.updatedAt) : '';
     const isUnread = item.latestMessage && !item.latestMessage.read && 
                      item.latestMessage.receiver === currentUserId;
@@ -181,10 +187,14 @@ const InboxScreen = () => {
             <Text style={[styles.userName, isUnread && styles.unreadText]}>
               {userName}
             </Text>
-            <Text style={styles.timeStamp}>{timeStamp}</Text>
+            {timeStamp && <Text style={styles.timeStamp}>{timeStamp}</Text>}
           </View>
           <Text
-            style={[styles.messagePreview, isUnread && styles.unreadText]}
+            style={[
+              styles.messagePreview,
+              isUnread && styles.unreadText,
+              !item.latestMessage && styles.placeholderText
+            ]}
             numberOfLines={1}
           >
             {latestMessageContent}
@@ -406,6 +416,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 18,
+  },
+  placeholderText: {
+    fontStyle: 'italic',
+    color: '#9CA3AF',
   },
   unreadText: {
     fontWeight: '700',

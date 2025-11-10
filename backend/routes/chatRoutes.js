@@ -15,7 +15,6 @@ router.post("/", auth(), async (req, res) => {
   if (!userId) return res.status(400).json({ message: "User ID required" });
 
   try {
-    // ✅ Use req.user.id (from JWT decoded token)
     const currentUserId = req.user.id;
     
     if (!currentUserId) {
@@ -27,7 +26,13 @@ router.post("/", auth(), async (req, res) => {
       users: { $all: [currentUserId, userId] },
     })
       .populate("users", "firstName lastName email")
-      .populate("latestMessage");
+      .populate({
+        path: "latestMessage",
+        populate: {
+          path: "sender receiver",
+          select: "firstName lastName email"
+        }
+      });
 
     if (!chat) {
       chat = await Chat.create({ users: [currentUserId, userId] });
@@ -51,7 +56,13 @@ router.get("/", auth(), async (req, res) => {
       users: { $elemMatch: { $eq: currentUserId } },
     })
       .populate("users", "firstName lastName email")
-      .populate("latestMessage")
+      .populate({
+        path: "latestMessage",
+        populate: {
+          path: "sender receiver",
+          select: "firstName lastName email"
+        }
+      })
       .sort({ updatedAt: -1 });
 
     res.json(chats);
@@ -78,7 +89,15 @@ router.post("/message", auth(), async (req, res) => {
       content,
     });
 
-    await Chat.findByIdAndUpdate(chatId, { latestMessage: message._id });
+    // ✅ Update chat's latestMessage AND updatedAt
+    await Chat.findByIdAndUpdate(
+      chatId, 
+      { 
+        latestMessage: message._id,
+        updatedAt: new Date()
+      }
+    );
+    
     const populated = await message.populate("sender", "firstName lastName email");
     res.json(populated);
   } catch (err) {
@@ -113,6 +132,27 @@ router.put("/message/:messageId/read", auth(), async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error("❌ Error marking as read:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ✅ Mark all messages in a chat as read
+router.put("/:chatId/read-all", auth(), async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    
+    await Message.updateMany(
+      { 
+        chat: req.params.chatId,
+        receiver: currentUserId,
+        read: false
+      },
+      { read: true }
+    );
+    
+    res.json({ message: "All messages marked as read" });
+  } catch (err) {
+    console.error("❌ Error marking all as read:", err);
     res.status(500).json({ message: err.message });
   }
 });
