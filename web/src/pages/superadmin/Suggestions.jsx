@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Archive, Eye, Filter, Search, Calendar, User, Tag, CheckCircle, Clock, ArchiveX, Download, Mail, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Archive, Eye, Filter, Search, Calendar, User, Tag, CheckCircle, Clock, ArchiveX, Download, Mail, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
+import { getSuggestions, updateSuggestion, toggleArchive } from "../../api/suggestion";
 
 const AdminGADSuggestionBox = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,203 +18,89 @@ const AdminGADSuggestionBox = () => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [emailContent, setEmailContent] = useState({ subject: '', body: '' });
   const [newNote, setNewNote] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Dummy suggestions with enhanced data
-  const [suggestions, setSuggestions] = useState([
-    { 
-      id: 1, 
-      text: "Organize gender sensitivity training for all employees to promote awareness and inclusion.", 
-      submittedBy: "Anonymous",
-      submittedDate: "2024-10-15",
-      status: "pending",
-      priority: "high",
-      notes: [],
-      archived: false,
-      activityLog: [
-        { date: "2024-10-15", action: "Suggestion submitted", user: "System" },
-        { date: "2024-10-16", action: "Status changed to Pending", user: "Admin" }
-      ],
-      email: "anonymous@company.com"
-    },
-    { 
-      id: 2, 
-      text: "Add a breastfeeding room in the office to support nursing mothers.", 
-      submittedBy: "Employee #2453",
-      submittedDate: "2024-10-18",
-      status: "under-review",
-      priority: "medium",
-      notes: [{ text: "Facilities team contacted", date: "2024-10-19", user: "Admin" }],
-      archived: false,
-      activityLog: [
-        { date: "2024-10-18", action: "Suggestion submitted", user: "System" },
-        { date: "2024-10-19", action: "Status changed to Under Review", user: "Admin" },
-        { date: "2024-10-19", action: "Note added", user: "Admin" }
-      ],
-      email: "emp2453@company.com"
-    },
-    { 
-      id: 3, 
-      text: "Start mentorship program for women employees to support career development.", 
-      submittedBy: "Anonymous",
-      submittedDate: "2024-10-20",
-      status: "approved",
-      priority: "high",
-      notes: [
-        { text: "Budget approved for Q1 2025", date: "2024-10-22", user: "Admin" },
-        { text: "HR team assigned", date: "2024-10-23", user: "Manager" }
-      ],
-      archived: false,
-      activityLog: [
-        { date: "2024-10-20", action: "Suggestion submitted", user: "System" },
-        { date: "2024-10-21", action: "Status changed to Under Review", user: "Admin" },
-        { date: "2024-10-22", action: "Status changed to Approved", user: "Admin" },
-        { date: "2024-10-22", action: "Note added", user: "Admin" }
-      ],
-      email: "anonymous@company.com"
-    },
-    { 
-      id: 4, 
-      text: "Include LGBTQ+ awareness in orientation programs for new hires.", 
-      submittedBy: "Employee #1872",
-      submittedDate: "2024-10-22",
-      status: "pending",
-      priority: "medium",
-      notes: [],
-      archived: false,
-      activityLog: [
-        { date: "2024-10-22", action: "Suggestion submitted", user: "System" }
-      ],
-      email: "emp1872@company.com"
-    },
-    { 
-      id: 5, 
-      text: "Create flexible work arrangements for employees with caregiving responsibilities.", 
-      submittedBy: "Anonymous",
-      submittedDate: "2024-09-10",
-      status: "implemented",
-      priority: "high",
-      notes: [{ text: "Policy rolled out in September", date: "2024-09-30", user: "HR Manager" }],
-      archived: true,
-      activityLog: [
-        { date: "2024-09-10", action: "Suggestion submitted", user: "System" },
-        { date: "2024-09-15", action: "Status changed to Approved", user: "Admin" },
-        { date: "2024-09-30", action: "Status changed to Implemented", user: "HR Manager" },
-        { date: "2024-10-01", action: "Archived", user: "Admin" }
-      ],
-      email: "anonymous@company.com"
-    },
-    { 
-      id: 6, 
-      text: "Provide gender-neutral restrooms in all office buildings.", 
-      submittedBy: "Employee #3201",
-      submittedDate: "2024-09-05",
-      status: "rejected",
-      priority: "low",
-      notes: [{ text: "Not feasible with current infrastructure", date: "2024-09-20", user: "Facilities Manager" }],
-      archived: true,
-      activityLog: [
-        { date: "2024-09-05", action: "Suggestion submitted", user: "System" },
-        { date: "2024-09-10", action: "Status changed to Under Review", user: "Admin" },
-        { date: "2024-09-20", action: "Status changed to Rejected", user: "Facilities Manager" },
-        { date: "2024-09-21", action: "Archived", user: "Admin" }
-      ],
-      email: "emp3201@company.com"
-    },
-    { 
-      id: 7, 
-      text: "Establish equal pay audits annually to ensure gender pay equity.", 
-      submittedBy: "Employee #4521",
-      submittedDate: "2024-10-25",
-      status: "under-review",
-      priority: "high",
-      notes: [{ text: "Finance team reviewing feasibility", date: "2024-10-26", user: "Admin" }],
-      archived: false,
-      activityLog: [
-        { date: "2024-10-25", action: "Suggestion submitted", user: "System" },
-        { date: "2024-10-26", action: "Status changed to Under Review", user: "Admin" }
-      ],
-      email: "emp4521@company.com"
-    },
-    { 
-      id: 8, 
-      text: "Create a support group for working parents.", 
-      submittedBy: "Anonymous",
-      submittedDate: "2024-10-28",
-      status: "pending",
-      priority: "medium",
-      notes: [],
-      archived: false,
-      activityLog: [
-        { date: "2024-10-28", action: "Suggestion submitted", user: "System" }
-      ],
-      email: "anonymous@company.com"
-    },
-  ]);
+  // Suggestions from backend
+  const [suggestions, setSuggestions] = useState([]);
 
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
-  const handleArchive = (id) => {
-    setSuggestions(
-      suggestions.map((s) =>
-        s.id === id ? { 
-          ...s, 
-          archived: true,
-          activityLog: [...s.activityLog, { date: new Date().toISOString().split('T')[0], action: "Archived", user: "Admin" }]
-        } : s
-      )
-    );
+  // Fetch suggestions from backend on component mount
+  useEffect(() => {
+    fetchSuggestions();
+  }, []);
+
+  const fetchSuggestions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getSuggestions();
+      setSuggestions(data);
+    } catch (err) {
+      console.error("Error fetching suggestions:", err);
+      setError("Failed to load suggestions. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUnarchive = (id) => {
-    setSuggestions(
-      suggestions.map((s) =>
-        s.id === id ? { 
-          ...s, 
-          archived: false,
-          activityLog: [...s.activityLog, { date: new Date().toISOString().split('T')[0], action: "Unarchived", user: "Admin" }]
-        } : s
-      )
-    );
+  const handleArchive = async (id) => {
+    try {
+      await toggleArchive(id);
+      await fetchSuggestions(); // Refresh data
+    } catch (err) {
+      console.error("Error archiving suggestion:", err);
+      alert("Failed to archive suggestion. Please try again.");
+    }
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setSuggestions(
-      suggestions.map((s) =>
-        s.id === id ? { 
-          ...s, 
-          status: newStatus,
-          activityLog: [...s.activityLog, { date: new Date().toISOString().split('T')[0], action: `Status changed to ${newStatus}`, user: "Admin" }]
-        } : s
-      )
-    );
+  const handleUnarchive = async (id) => {
+    try {
+      await toggleArchive(id);
+      await fetchSuggestions(); // Refresh data
+    } catch (err) {
+      console.error("Error unarchiving suggestion:", err);
+      alert("Failed to unarchive suggestion. Please try again.");
+    }
   };
 
-  const handlePriorityChange = (id, newPriority) => {
-    setSuggestions(
-      suggestions.map((s) =>
-        s.id === id ? { 
-          ...s, 
-          priority: newPriority,
-          activityLog: [...s.activityLog, { date: new Date().toISOString().split('T')[0], action: `Priority changed to ${newPriority}`, user: "Admin" }]
-        } : s
-      )
-    );
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const suggestion = suggestions.find(s => s.id === id);
+      await updateSuggestion(id, { ...suggestion, status: newStatus });
+      await fetchSuggestions(); // Refresh data
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Failed to update status. Please try again.");
+    }
   };
 
-  const handleAddNote = (id) => {
+  const handlePriorityChange = async (id, newPriority) => {
+    try {
+      const suggestion = suggestions.find(s => s.id === id);
+      await updateSuggestion(id, { ...suggestion, priority: newPriority });
+      await fetchSuggestions(); // Refresh data
+    } catch (err) {
+      console.error("Error updating priority:", err);
+      alert("Failed to update priority. Please try again.");
+    }
+  };
+
+  const handleAddNote = async (id) => {
     if (!newNote.trim()) return;
     
-    setSuggestions(
-      suggestions.map((s) =>
-        s.id === id ? { 
-          ...s, 
-          notes: [...s.notes, { text: newNote, date: new Date().toISOString().split('T')[0], user: "Admin" }],
-          activityLog: [...s.activityLog, { date: new Date().toISOString().split('T')[0], action: "Note added", user: "Admin" }]
-        } : s
-      )
-    );
-    setNewNote('');
-    setShowNotesModal(false);
+    try {
+      const suggestion = suggestions.find(s => s.id === id);
+      const updatedNotes = [...(suggestion.notes || []), { text: newNote, date: new Date().toISOString().split('T')[0], user: "Admin" }];
+      await updateSuggestion(id, { ...suggestion, notes: updatedNotes });
+      await fetchSuggestions(); // Refresh data
+      setNewNote('');
+      setShowNotesModal(false);
+    } catch (err) {
+      console.error("Error adding note:", err);
+      alert("Failed to add note. Please try again.");
+    }
   };
 
   const openDetailModal = (suggestion) => {
@@ -246,18 +133,35 @@ const AdminGADSuggestionBox = () => {
     }
   };
 
-  const handleBulkArchive = () => {
+  const handleBulkArchive = async () => {
     if (selectedItems.length === 0) return;
     if (window.confirm(`Archive ${selectedItems.length} suggestion(s)?`)) {
-      selectedItems.forEach(id => handleArchive(id));
-      setSelectedItems([]);
+      try {
+        await Promise.all(selectedItems.map(id => toggleArchive(id)));
+        await fetchSuggestions();
+        setSelectedItems([]);
+      } catch (err) {
+        console.error("Error bulk archiving:", err);
+        alert("Failed to archive some suggestions. Please try again.");
+      }
     }
   };
 
-  const handleBulkStatusChange = (status) => {
+  const handleBulkStatusChange = async (status) => {
     if (selectedItems.length === 0) return;
-    selectedItems.forEach(id => handleStatusChange(id, status));
-    setSelectedItems([]);
+    try {
+      await Promise.all(
+        selectedItems.map(id => {
+          const suggestion = suggestions.find(s => s.id === id);
+          return updateSuggestion(id, { ...suggestion, status });
+        })
+      );
+      await fetchSuggestions();
+      setSelectedItems([]);
+    } catch (err) {
+      console.error("Error bulk status change:", err);
+      alert("Failed to update some suggestions. Please try again.");
+    }
   };
 
   const handleExportCSV = () => {
@@ -371,6 +275,39 @@ const AdminGADSuggestionBox = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      {/* Loading State */}
+      {loading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4">
+            <Loader className="animate-spin text-blue-600" size={48} />
+            <p className="text-gray-700 font-medium">Loading suggestions...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="max-w-7xl mx-auto mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-red-100 rounded-full p-2">
+                <X className="text-red-600" size={20} />
+              </div>
+              <div>
+                <p className="font-medium text-red-900">Error</p>
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+            <button
+              onClick={fetchSuggestions}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto flex gap-6">
         {/* Sidebar */}
         {showSidebar && (
@@ -1093,9 +1030,9 @@ const AdminGADSuggestionBox = () => {
             <div className="p-6 space-y-4">
               {/* Existing Notes */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Existing Notes ({selectedSuggestion.notes.length})</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Existing Notes ({selectedSuggestion.notes?.length || 0})</h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {selectedSuggestion.notes.length > 0 ? (
+                  {selectedSuggestion.notes && selectedSuggestion.notes.length > 0 ? (
                     selectedSuggestion.notes.map((note, idx) => (
                       <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                         <p className="text-sm text-gray-800">{note.text}</p>
@@ -1227,9 +1164,9 @@ const AdminGADSuggestionBox = () => {
 
                   {/* Notes */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Admin Notes ({selectedSuggestion.notes.length})</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Admin Notes ({selectedSuggestion.notes?.length || 0})</label>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {selectedSuggestion.notes.length > 0 ? (
+                      {selectedSuggestion.notes && selectedSuggestion.notes.length > 0 ? (
                         selectedSuggestion.notes.map((note, idx) => (
                           <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                             <p className="text-sm text-gray-800">{note.text}</p>
@@ -1254,21 +1191,25 @@ const AdminGADSuggestionBox = () => {
                       <h3 className="text-sm font-semibold text-gray-900">Activity Log</h3>
                     </div>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {selectedSuggestion.activityLog.map((log, idx) => (
-                        <div key={idx} className="flex gap-3">
-                          <div className="flex flex-col items-center">
-                            <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
-                            {idx < selectedSuggestion.activityLog.length - 1 && (
-                              <div className="w-0.5 h-full bg-gray-300 mt-1"></div>
-                            )}
+                      {selectedSuggestion.activityLog && selectedSuggestion.activityLog.length > 0 ? (
+                        selectedSuggestion.activityLog.map((log, idx) => (
+                          <div key={idx} className="flex gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
+                              {idx < selectedSuggestion.activityLog.length - 1 && (
+                                <div className="w-0.5 h-full bg-gray-300 mt-1"></div>
+                              )}
+                            </div>
+                            <div className="pb-4 flex-1">
+                              <p className="text-sm font-medium text-gray-900">{log.action}</p>
+                              <p className="text-xs text-gray-500">{log.user}</p>
+                              <p className="text-xs text-gray-400">{new Date(log.date).toLocaleDateString()}</p>
+                            </div>
                           </div>
-                          <div className="pb-4 flex-1">
-                            <p className="text-sm font-medium text-gray-900">{log.action}</p>
-                            <p className="text-xs text-gray-500">{log.user}</p>
-                            <p className="text-xs text-gray-400">{new Date(log.date).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No activity recorded</p>
+                      )}
                     </div>
                   </div>
                 </div>
