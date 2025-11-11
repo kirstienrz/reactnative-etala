@@ -19,15 +19,15 @@ const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const heroSlides = [
-    {
-      image: '/assets/carousel/CAROUSEL.png'
-    },
+    // {
+    //   image: '/assets/carousel/CAROUSEL.png'
+    // },
     {
       image: '/assets/carousel/CAROUSEL1.jpg'
     },
-    {
-      image: '/assets/carousel/CAROUSEL2.jpg'
-    }
+    // {
+    //   image: '/assets/carousel/CAROUSEL2.jpg'
+    // }
   ];
 
   const focusAreas = [
@@ -111,7 +111,7 @@ const LandingPage = () => {
   return (
     <main className="bg-white">
       {/* Hero Section */}
-      <section className="relative h-screen bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 overflow-hidden">
+      <section className="relative h-[400px] sm:h-[500px] md:h-[600px] bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 overflow-hidden">
         {heroSlides.map((slide, idx) => (
           <div
             key={idx}
@@ -122,7 +122,7 @@ const LandingPage = () => {
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-violet-900 to-purple-900"></div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/10"></div>
           </div>
         ))}
 
@@ -165,31 +165,6 @@ const LandingPage = () => {
       </section>
 
       {/* Quick Links */}
-      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {quickLinks.map((link, idx) => {
-              const IconComponent = link.component;
-              return (
-                <a
-                  key={idx}
-                  href="#"
-                  className="group text-center p-6 transition-all duration-300 hover:bg-violet-50 rounded-2xl hover:shadow-md hover:-translate-y-1"
-                >
-                  <div className="w-14 h-14 bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center mx-auto mb-4 rounded-full group-hover:from-violet-600 group-hover:to-purple-600 transition-all duration-300 group-hover:scale-110">
-                    <IconComponent className="w-7 h-7 text-violet-700 group-hover:text-white transition-colors" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-800 group-hover:text-violet-700 transition-colors">
-                    {link.name}
-                  </p>
-                </a>
-
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* About Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-8">

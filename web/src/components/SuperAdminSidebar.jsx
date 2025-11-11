@@ -554,10 +554,14 @@ const SuperAdminSidebar = () => {
   return (
     <div className="flex flex-col bg-gray-900 text-white w-64 h-screen">
       {/* Header */}
-      <div className="p-6 border-b border-gray-700">
+      <div
+        className="p-6 border-b border-gray-700 cursor-pointer"
+        onClick={() => navigate("/superadmin/dashboard")}
+      >
         <h1 className="text-xl font-bold text-white">SuperAdmin Panel</h1>
         <p className="text-xs text-gray-400 mt-1">Management Dashboard</p>
       </div>
+
 
       {/* Scrollable Menu */}
       <div
