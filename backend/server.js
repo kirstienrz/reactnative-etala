@@ -89,6 +89,7 @@ app.use("/api/webinars", require("./routes/webinarRouter"));
 app.use("/api/reports", require("./routes/reportRoutes"));
 app.use("/api/suggestions", require("./routes/suggestionRoutes"));
 app.use("/api/news", require("./routes/newsRoutes"));
+app.use("/api/projects", require("./routes/projectRoutes"));
 
 // ✅ SOCKET EVENTS
 io.on("connection", (socket) => {

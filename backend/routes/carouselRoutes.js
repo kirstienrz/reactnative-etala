@@ -1,13 +1,20 @@
 const express = require("express");
-const upload = require("../config/multer");
-const { uploadImage, getAllImages, archiveImage, getArchivedImages, restoreImage } = require("../controllers/carouselController");
+const { uploadCarousel } = require("../config/multer"); // ✅ FIXED
+const {
+  uploadImage,
+  getAllImages,
+  archiveImage,
+  getArchivedImages,
+  restoreImage,
+} = require("../controllers/carouselController");
 
 const router = express.Router();
 
-router.post("/upload", upload.single("image"), uploadImage);
+// ✅ Use uploadCarousel instead of upload
+router.post("/upload", uploadCarousel.single("image"), uploadImage);
 router.get("/", getAllImages);
-router.put("/archive/:id", archiveImage); // ✅ replaced delete with archive
+router.put("/archive/:id", archiveImage);
 router.get("/archived", getArchivedImages);
-router.put("/restore/:id", restoreImage); // ✅ added restore route
+router.put("/restore/:id", restoreImage);
 
 module.exports = router;

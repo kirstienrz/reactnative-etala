@@ -595,7 +595,7 @@ const SuperAdminSidebar = () => {
             <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Hub" to="/superadmin/knowledge" />
             <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
             <SidebarItem icon={<Newspaper size={18} />} label="News & Announcements" to="/superadmin/news" />
-            <SidebarItem icon={<Briefcase size={18} />} label="Projects & Activities" to="/superadmin/projects" />
+            <SidebarItem icon={<Briefcase size={18} />} label="Projects" to="/superadmin/projects" />
             <SidebarItem icon={<DollarSign size={18} />} label="Budget & Programs" to="/superadmin/budget" />
           </SidebarSection>
 
