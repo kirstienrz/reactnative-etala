@@ -236,7 +236,7 @@ const Header = () => {
 
   const menuItems = [
     {
-      title: 'About GAD',
+      title: 'About',
       submenu: ['Mission & Vision', 'Organizational Structure', 'GAD Committee', 'Accomplishments']
     },
     {
