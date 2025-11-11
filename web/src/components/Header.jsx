@@ -237,14 +237,14 @@ const Header = () => {
   const menuItems = [
     {
       title: 'About',
-      submenu: ['Mission & Vision', 'Organizational Structure', 'GAD Committee', 'Accomplishments']
+      submenu: ['Mission & Vision', 'Organizational Structure', 'Accomplishments']
     },
     {
       title: 'Policies',
       submenu: ['Circulars', 'Resolutions', 'Memorandan', 'Office Order']
     },
     {
-      title: 'Programs',
+      title: 'Programs (ano ba nakalagay sa mobile?)',
       submenu: ['Workshops', 'Seminars', 'Advocacy', 'Student Programs']
     },
     {

@@ -1171,8 +1171,6 @@
 // };
 
 // export default AdminProjects;
-
-
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Calendar, Users, Target, Plus, Edit2, Archive, X, Save } from 'lucide-react';
 
@@ -1406,21 +1404,23 @@ const GADProgramsViewer = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 font-sans">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+        {/* Header Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-purple-800 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <Target className="w-8 h-8 text-blue-600" />
                 GAD Programs at Proyekto
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-500 text-sm">
                 Gender and Development Programs Management (SuperAdmin)
               </p>
             </div>
             <button
               onClick={() => openModal('program', 'add')}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 hover:from-purple-700 hover:to-pink-700 transition-all"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 hover:bg-blue-700 transition-all duration-200 shadow-sm"
             >
               <Plus className="w-5 h-5" />
               <span>Add Program</span>
@@ -1428,10 +1428,69 @@ const GADProgramsViewer = () => {
           </div>
         </div>
 
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Programs</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{gadData.length}</p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Target className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Active Projects</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {gadData.reduce((acc, prog) => acc + prog.projects.filter(p => !p.archived).length, 0)}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <Target className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Events</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {gadData.reduce((acc, prog) => acc + prog.projects.reduce((pAcc, proj) => pAcc + proj.events.length, 0), 0)}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-orange-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Archived</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {gadData.filter(prog => prog.archived).length}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                <Archive className="h-5 w-5 text-gray-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Programs List */}
         <div className="space-y-4">
           {gadData.map((program) => (
-            <div key={program.id} className={`bg-white rounded-lg shadow-md overflow-hidden ${program.archived ? 'opacity-60' : ''}`}>
-              <div className="p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+            <div key={program.id} className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${program.archived ? 'opacity-60' : ''}`}>
+              {/* Program Header */}
+              <div className="p-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3 flex-1 cursor-pointer" onClick={() => toggleProgram(program.id)}>
                     {expandedPrograms[program.id] ? <ChevronDown className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
@@ -1440,23 +1499,23 @@ const GADProgramsViewer = () => {
                       <h2 className="text-xl font-bold">
                         {program.name} {program.archived && '(Archived)'}
                       </h2>
-                      <p className="text-purple-100 text-sm">{program.description}</p>
+                      <p className="text-blue-100 text-sm">{program.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="bg-white text-purple-600 px-3 py-1 rounded-full text-sm font-semibold">
+                    <span className="bg-white text-blue-600 px-3 py-1 rounded-full text-sm font-semibold">
                       {program.projects.length} Projects
                     </span>
                     <button
                       onClick={() => openModal('program', 'edit', program)}
-                      className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all"
+                      className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all duration-200"
                       title="Edit Program"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleArchive('program', program.id)}
-                      className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all"
+                      className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all duration-200"
                       title={program.archived ? "Unarchive" : "Archive"}
                     >
                       <Archive className="w-4 h-4" />
@@ -1467,7 +1526,7 @@ const GADProgramsViewer = () => {
                 {expandedPrograms[program.id] && !program.archived && (
                   <button
                     onClick={() => openModal('project', 'add', program)}
-                    className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:bg-opacity-30 transition-all"
+                    className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:bg-opacity-30 transition-all duration-200"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Project</span>
@@ -1475,36 +1534,37 @@ const GADProgramsViewer = () => {
                 )}
               </div>
 
+              {/* Projects List */}
               {expandedPrograms[program.id] && (
-                <div className="p-4 bg-purple-50">
+                <div className="p-6 bg-gray-50">
                   {program.projects.map((project) => (
-                    <div key={project.id} className={`mb-3 last:mb-0 ${project.archived ? 'opacity-60' : ''}`}>
-                      <div className="bg-white rounded-lg shadow-sm">
+                    <div key={project.id} className={`mb-4 last:mb-0 ${project.archived ? 'opacity-60' : ''}`}>
+                      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => toggleProject(project.id)}>
-                              {expandedProjects[project.id] ? <ChevronDown className="w-5 h-5 text-purple-600" /> : <ChevronRight className="w-5 h-5 text-purple-600" />}
+                              {expandedProjects[project.id] ? <ChevronDown className="w-5 h-5 text-blue-600" /> : <ChevronRight className="w-5 h-5 text-blue-600" />}
                               <div>
-                                <h3 className="font-semibold text-purple-800">
+                                <h3 className="font-semibold text-gray-900">
                                   {project.name} {project.archived && '(Archived)'}
                                 </h3>
                                 <p className="text-sm text-gray-600">Budget: {project.budget}</p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <span className="bg-pink-100 text-pink-600 px-2 py-1 rounded text-xs font-semibold">
+                              <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs font-semibold">
                                 {project.events.length} Events
                               </span>
                               <button
                                 onClick={() => openModal('project', 'edit', program, project)}
-                                className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-all"
+                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
                                 title="Edit Project"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleArchive('project', program.id, project.id)}
-                                className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-all"
+                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
                                 title={project.archived ? "Unarchive" : "Archive"}
                               >
                                 <Archive className="w-4 h-4" />
@@ -1515,7 +1575,7 @@ const GADProgramsViewer = () => {
                           {expandedProjects[project.id] && !project.archived && (
                             <button
                               onClick={() => openModal('event', 'add', program, project)}
-                              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:from-purple-700 hover:to-pink-700 transition-all mb-3"
+                              className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:bg-blue-700 transition-all duration-200 mb-3 shadow-sm"
                             >
                               <Plus className="w-4 h-4" />
                               <span>Add Event</span>
@@ -1523,21 +1583,21 @@ const GADProgramsViewer = () => {
                           )}
 
                           {expandedProjects[project.id] && (
-                            <div className="border-t border-purple-200 pt-3 space-y-2">
+                            <div className="border-t border-gray-200 pt-3 space-y-2">
                               {project.events.map((event) => (
-                                <div key={event.id} className={`bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-lg ${event.archived ? 'opacity-60' : ''}`}>
+                                <div key={event.id} className={`bg-gray-50 p-3 rounded-lg border border-gray-200 ${event.archived ? 'opacity-60' : ''}`}>
                                   <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                      <h4 className="font-semibold text-purple-900 mb-1">
+                                      <h4 className="font-semibold text-gray-900 mb-1">
                                         {event.title} {event.archived && '(Archived)'}
                                       </h4>
                                       <div className="text-sm text-gray-700 space-y-1">
                                         <p className="flex items-center">
-                                          <Calendar className="w-4 h-4 mr-2 text-purple-600" />
+                                          <Calendar className="w-4 h-4 mr-2 text-blue-600" />
                                           {event.date}
                                         </p>
                                         <p className="flex items-center">
-                                          <Users className="w-4 h-4 mr-2 text-purple-600" />
+                                          <Users className="w-4 h-4 mr-2 text-blue-600" />
                                           {event.participants} participants
                                         </p>
                                         <p className="text-gray-600">📍 {event.venue}</p>
@@ -1546,14 +1606,14 @@ const GADProgramsViewer = () => {
                                     <div className="flex items-center space-x-2">
                                       <button
                                         onClick={() => openModal('event', 'edit', program, project, event)}
-                                        className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-all"
+                                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
                                         title="Edit Event"
                                       >
                                         <Edit2 className="w-4 h-4" />
                                       </button>
                                       <button
                                         onClick={() => handleArchive('event', program.id, project.id, event.id)}
-                                        className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-all"
+                                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
                                         title={event.archived ? "Unarchive" : "Archive"}
                                       >
                                         <Archive className="w-4 h-4" />
@@ -1574,15 +1634,16 @@ const GADProgramsViewer = () => {
           ))}
         </div>
 
+        {/* Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-gray-200">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-purple-800">
+                  <h3 className="text-xl font-bold text-gray-900">
                     {modalAction === 'add' ? 'Add' : 'Edit'} {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
                   </h3>
-                  <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                  <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 transition-colors">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
@@ -1591,25 +1652,27 @@ const GADProgramsViewer = () => {
                   {modalType === 'program' && (
                     <>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Program Name
                         </label>
                         <input
                           type="text"
                           value={formData.name || ''}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                          placeholder="Enter program name"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Description
                         </label>
                         <textarea
                           value={formData.description || ''}
                           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                           rows="3"
+                          placeholder="Enter program description"
                         />
                       </div>
                     </>
@@ -1618,25 +1681,26 @@ const GADProgramsViewer = () => {
                   {modalType === 'project' && (
                     <>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Project Name
                         </label>
                         <input
                           type="text"
                           value={formData.name || ''}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                          placeholder="Enter project name"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Budget
                         </label>
                         <input
                           type="text"
                           value={formData.budget || ''}
                           onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                           placeholder="₱500,000"
                         />
                       </div>
@@ -1646,48 +1710,51 @@ const GADProgramsViewer = () => {
                   {modalType === 'event' && (
                     <>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Event Title
                         </label>
                         <input
                           type="text"
                           value={formData.title || ''}
                           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                          placeholder="Enter event title"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Date
                         </label>
                         <input
                           type="text"
                           value={formData.date || ''}
                           onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                           placeholder="March 15, 2025"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Participants
                         </label>
                         <input
                           type="number"
                           value={formData.participants || ''}
                           onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                          placeholder="50"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Venue
                         </label>
                         <input
                           type="text"
                           value={formData.venue || ''}
                           onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                          placeholder="Enter venue"
                         />
                       </div>
                     </>
@@ -1696,13 +1763,13 @@ const GADProgramsViewer = () => {
                   <div className="flex space-x-3 pt-4">
                     <button
                       onClick={closeModal}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-all"
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSubmit}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:from-purple-700 hover:to-pink-700 transition-all"
+                      className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-all duration-200 shadow-sm"
                     >
                       <Save className="w-4 h-4" />
                       <span>Save</span>

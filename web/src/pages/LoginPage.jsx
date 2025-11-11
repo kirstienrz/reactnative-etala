@@ -37,70 +37,70 @@ const LoginPage = () => {
     const numbers = pastedText.replace(/\D/g, '').slice(0, 6);
     setPin(numbers);
   };
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  try {
-    // 🔹 BASIC FIELD VALIDATION (client-side trapping)
-    if (!email || (!usePin && (!password || !tupId)) || (usePin && !pin)) {
-      toast.warning("Please fill in all required fields.");
-      setLoading(false);
-      return; // stop the process
-    }
-
-    // 🔹 EMAIL FORMAT CHECK
-    if (!email.endsWith("@etala.com")) {
-      toast.warning("Please use your E-tala email address only.");
-      setLoading(false);
-      return;
-    }
-  let data;
-
-    if (usePin) {
-      if (pin.length !== 6) {
-        throw new Error("PIN must be exactly 6 digits");
+    try {
+      // 🔹 BASIC FIELD VALIDATION (client-side trapping)
+      if (!email || (!usePin && (!password || !tupId)) || (usePin && !pin)) {
+        toast.warning("Please fill in all required fields.");
+        setLoading(false);
+        return; // stop the process
       }
-      data = await verifyPin(email, pin);
-    } else {
-      if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
-        throw new Error("TUPT ID must be in format: TUPT-XX-XXXX");
+
+      // 🔹 EMAIL FORMAT CHECK
+      if (!email.endsWith("@etala.com")) {
+        toast.warning("Please use your E-tala email address only.");
+        setLoading(false);
+        return;
       }
-      data = await login(email, password, tupId);
-    }
+      let data;
 
-    dispatch(loginSuccess({ token: data.token, role: data.role }));
-
-    toast.success("Login successful!");
-
-    if (data.role === "superadmin") navigate("/superadmin/dashboard");
-    else if (data.role === "admin") navigate("/admin/dashboard");
-    else navigate("/user/dashboard");
-
-  } catch (err) {
-    // ✅ Custom error handling
-    if (err.response) {
-      const { status, data } = err.response;
-
-      if (status === 403 && data?.msg?.toLowerCase().includes("deactivated")) {
-        toast.error("Your account has been deactivated. Please contact the administrator.");
-      } else if (status === 403 && data?.msg?.toLowerCase().includes("archived")) {
-        toast.error("Your account is archived. Please contact support.");
-      } else if (status === 400) {
-        toast.error(data?.msg || "Invalid credentials. Please try again.");
+      if (usePin) {
+        if (pin.length !== 6) {
+          throw new Error("PIN must be exactly 6 digits");
+        }
+        data = await verifyPin(email, pin);
       } else {
-        toast.error(data?.msg || "Login failed. Please try again later.");
+        if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
+          throw new Error("TUPT ID must be in format: TUPT-XX-XXXX");
+        }
+        data = await login(email, password, tupId);
       }
-    } else {
-      toast.error("Network error. Please check your connection.");
-    }
 
-    setError(err.message || "Invalid credentials");
-  } finally {
-    setLoading(false);
-  }
-};
+      dispatch(loginSuccess({ token: data.token, role: data.role }));
+
+      toast.success("Login successful!");
+
+      if (data.role === "superadmin") navigate("/superadmin/dashboard");
+      else if (data.role === "admin") navigate("/admin/dashboard");
+      else navigate("/user/dashboard");
+
+    } catch (err) {
+      // ✅ Custom error handling
+      if (err.response) {
+        const { status, data } = err.response;
+
+        if (status === 403 && data?.msg?.toLowerCase().includes("deactivated")) {
+          toast.error("Your account has been deactivated. Please contact the administrator.");
+        } else if (status === 403 && data?.msg?.toLowerCase().includes("archived")) {
+          toast.error("Your account is archived. Please contact support.");
+        } else if (status === 400) {
+          toast.error(data?.msg || "Invalid credentials. Please try again.");
+        } else {
+          toast.error(data?.msg || "Login failed. Please try again later.");
+        }
+      } else {
+        toast.error("Network error. Please check your connection.");
+      }
+
+      setError(err.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
@@ -116,14 +116,21 @@ const handleLogin = async (e) => {
         <div className="bg-white backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-gray-200">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
-              <Lock className="w-10 h-10 text-white" />
-            </div>
+            <img
+              src="/assets/logo.jpg"
+              alt="Logo"
+              className="w-20 h-20 object-cover"
+            />
           </div>
 
+
           {/* Title */}
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">Welcome Back</h2>
-          <p className="text-center text-gray-500 mb-8">TUP Taguig - GAD Portal</p>
+          <h2 className="text-3xl font-semibold text-center text-gray-900 mb-2">
+            Welcome to the GAD Portal
+          </h2>
+          <p className="text-center text-gray-600 mb-8">
+            Technological University of the Philippines – Taguig
+          </p>
 
           {/* Toggle */}
           <div className="flex justify-center mb-6">

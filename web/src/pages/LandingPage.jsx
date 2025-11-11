@@ -276,7 +276,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-8">
           <div className="text-center mb-16">
             <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">What We Do</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Focus Areas</h2>
+            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">HARYETTT INFAGRAPHICS NALANG DITO</h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">Comprehensive programs addressing gender equality across all university operations</p>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
