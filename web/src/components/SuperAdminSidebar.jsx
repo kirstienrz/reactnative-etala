@@ -595,7 +595,7 @@ const SuperAdminSidebar = () => {
           {/* CONTENT MANAGEMENT */}
           <SidebarSection title="Content Management">
             <SidebarItem icon={<Image size={18} />} label="Carousel" to="/superadmin/carousel" />
-            <SidebarItem icon={<CalendarDays size={18} />} label="Events" to="/superadmin/events" />
+            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
             <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Hub" to="/superadmin/knowledge" />
             <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
             <SidebarItem icon={<Newspaper size={18} />} label="News & Announcements" to="/superadmin/news" />

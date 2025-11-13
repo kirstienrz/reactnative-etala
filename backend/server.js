@@ -91,6 +91,8 @@ app.use("/api/suggestions", require("./routes/suggestionRoutes"));
 app.use("/api/news", require("./routes/newsRoutes"));
 app.use("/api/projects", require("./routes/projectRoutes"));
 
+app.use("/api/programs", require("./routes/programRoutes"));
+
 // ✅ SOCKET EVENTS
 io.on("connection", (socket) => {
   console.log("🟢 Client connected:", socket.id);
