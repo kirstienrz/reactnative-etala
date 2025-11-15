@@ -404,7 +404,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-8">
           <div className="text-center mb-16">
             <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Connect</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Our Network</h2>
+            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Announcement nalang siguro to??</h2>
           </div>
           <div className="space-y-6">
             {network.map((item, idx) => (

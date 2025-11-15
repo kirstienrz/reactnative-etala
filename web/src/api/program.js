@@ -1,231 +1,103 @@
-import API from "./config";
+import API from "./config"; // axios instance with baseURL & headers
 
-// Program API calls
-export const getPrograms = async () => {
-  try {
-    const response = await API.get('/programs');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching programs:', error);
-    throw error;
-  }
+// ========================================
+// 📊 PROGRAMS MANAGEMENT ROUTES
+// ========================================
+
+// 📋 GET all programs (with optional filters)
+export const getAllPrograms = async (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.year) params.append('year', filters.year);
+  if (filters.status) params.append('status', filters.status);
+  if (filters.search) params.append('search', filters.search);
+  if (filters.includeArchived) params.append('includeArchived', 'true');
+  
+  const res = await API.get(`/programs?${params.toString()}`);
+  return res.data;
 };
 
-export const getArchivedPrograms = async () => {
-  try {
-    const response = await API.get('/programs/archived');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching archived programs:', error);
-    throw error;
-  }
+// 📄 GET single program by ID
+export const getProgram = async (id) => {
+  const res = await API.get(`/programs/${id}`);
+  return res.data;
 };
 
-export const getProgramStats = async () => {
-  try {
-    const response = await API.get('/programs/stats');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching program stats:', error);
-    throw error;
-  }
-};
-
+// ➕ CREATE new program
 export const createProgram = async (programData) => {
-  try {
-    const response = await API.post('/programs', programData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating program:', error);
-    throw error;
-  }
+  const res = await API.post("/programs", programData);
+  return res.data;
 };
 
+// ✏️ UPDATE program
 export const updateProgram = async (id, programData) => {
-  try {
-    console.log('Updating program:', { id, programData });
-    const response = await API.put(`/programs/${id}`, programData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating program:', error);
-    throw error;
-  }
+  const res = await API.put(`/programs/${id}`, programData);
+  return res.data;
 };
 
-export const archiveProgram = async (id) => {
-  try {
-    console.log('Archiving program:', id);
-    const response = await API.patch(`/programs/${id}/archive`);
-    return response.data;
-  } catch (error) {
-    console.error('Error archiving program:', error);
-    throw error;
-  }
-};
-
-export const restoreProgram = async (id) => {
-  try {
-    console.log('Restoring program:', id);
-    const response = await API.patch(`/programs/${id}/restore`);
-    return response.data;
-  } catch (error) {
-    console.error('Error restoring program:', error);
-    throw error;
-  }
-};
-
-export const updateProgramStatus = async (id, status) => {
-  try {
-    console.log('Updating program status:', { id, status });
-    const response = await API.patch(`/programs/${id}/status`, { status });
-    return response.data;
-  } catch (error) {
-    console.error('Error updating program status:', error);
-    throw error;
-  }
-};
-
+// 🗑️ DELETE program
 export const deleteProgram = async (id) => {
-  try {
-    console.log('Deleting program:', id);
-    const response = await API.delete(`/programs/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting program:', error);
-    throw error;
-  }
+  const res = await API.delete(`/programs/${id}`);
+  return res.data;
 };
 
-// Project API calls
+// 🗃️ ARCHIVE/UNARCHIVE program
+export const toggleArchiveProgram = async (id) => {
+  const res = await API.patch(`/programs/${id}/archive`);
+  return res.data;
+};
+
+// ========================================
+// 🎯 PROJECT MANAGEMENT ROUTES
+// ========================================
+
+// ➕ ADD project to program
 export const addProject = async (programId, projectData) => {
-  try {
-    console.log('Adding project:', { programId, projectData });
-    const response = await API.post(`/programs/${programId}/projects`, projectData);
-    return response.data;
-  } catch (error) {
-    console.error('Error adding project:', error);
-    throw error;
-  }
+  const res = await API.post(`/programs/${programId}/projects`, projectData);
+  return res.data;
 };
 
+// ✏️ UPDATE project
 export const updateProject = async (programId, projectId, projectData) => {
-  try {
-    console.log('Updating project:', { programId, projectId, projectData });
-    const response = await API.put(`/programs/${programId}/projects/${projectId}`, projectData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating project:', error);
-    throw error;
-  }
+  const res = await API.put(`/programs/${programId}/projects/${projectId}`, projectData);
+  return res.data;
 };
 
-export const archiveProject = async (programId, projectId) => {
-  try {
-    console.log('Archiving project:', { programId, projectId });
-    const response = await API.patch(`/programs/${programId}/projects/${projectId}/archive`);
-    return response.data;
-  } catch (error) {
-    console.error('Error archiving project:', error);
-    throw error;
-  }
+// 🗑️ DELETE project
+export const deleteProject = async (programId, projectId) => {
+  const res = await API.delete(`/programs/${programId}/projects/${projectId}`);
+  return res.data;
 };
 
-export const restoreProject = async (programId, projectId) => {
-  try {
-    console.log('Restoring project:', { programId, projectId });
-    const response = await API.patch(`/programs/${programId}/projects/${projectId}/restore`);
-    return response.data;
-  } catch (error) {
-    console.error('Error restoring project:', error);
-    throw error;
-  }
+// 🗃️ ARCHIVE/UNARCHIVE project
+export const toggleArchiveProject = async (programId, projectId) => {
+  const res = await API.patch(`/programs/${programId}/projects/${projectId}/archive`);
+  return res.data;
 };
 
-// Event API calls
+// ========================================
+// 📅 EVENT MANAGEMENT ROUTES
+// ========================================
+
+// ➕ ADD event to project
 export const addEvent = async (programId, projectId, eventData) => {
-  try {
-    console.log('Adding event:', { programId, projectId, eventData });
-    const response = await API.post(`/programs/${programId}/projects/${projectId}/events`, eventData);
-    return response.data;
-  } catch (error) {
-    console.error('Error adding event:', error);
-    throw error;
-  }
+  const res = await API.post(`/programs/${programId}/projects/${projectId}/events`, eventData);
+  return res.data;
 };
 
+// ✏️ UPDATE event
 export const updateEvent = async (programId, projectId, eventId, eventData) => {
-  try {
-    console.log('Updating event:', { programId, projectId, eventId, eventData });
-    const response = await API.put(`/programs/${programId}/projects/${projectId}/events/${eventId}`, eventData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating event:', error);
-    throw error;
-  }
+  const res = await API.put(`/programs/${programId}/projects/${projectId}/events/${eventId}`, eventData);
+  return res.data;
 };
 
-export const archiveEvent = async (programId, projectId, eventId) => {
-  try {
-    console.log('Archiving event:', { programId, projectId, eventId });
-    const response = await API.patch(`/programs/${programId}/projects/${projectId}/events/${eventId}/archive`);
-    return response.data;
-  } catch (error) {
-    console.error('Error archiving event:', error);
-    throw error;
-  }
+// 🗑️ DELETE event
+export const deleteEvent = async (programId, projectId, eventId) => {
+  const res = await API.delete(`/programs/${programId}/projects/${projectId}/events/${eventId}`);
+  return res.data;
 };
 
-export const restoreEvent = async (programId, projectId, eventId) => {
-  try {
-    console.log('Restoring event:', { programId, projectId, eventId });
-    const response = await API.patch(`/programs/${programId}/projects/${projectId}/events/${eventId}/restore`);
-    return response.data;
-  } catch (error) {
-    console.error('Error restoring event:', error);
-    throw error;
-  }
-};
-
-// Utility functions for filtering
-export const getProgramsByYear = async (year) => {
-  try {
-    const response = await API.get(`/programs?year=${year}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching programs by year:', error);
-    throw error;
-  }
-};
-
-export const getProgramsByStatus = async (status) => {
-  try {
-    const response = await API.get(`/programs?status=${status}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching programs by status:', error);
-    throw error;
-  }
-};
-
-// Bulk operations
-export const bulkArchivePrograms = async (programIds) => {
-  try {
-    const archivePromises = programIds.map(id => archiveProgram(id));
-    const results = await Promise.allSettled(archivePromises);
-    return results;
-  } catch (error) {
-    console.error('Error in bulk archive:', error);
-    throw error;
-  }
-};
-
-export const bulkRestorePrograms = async (programIds) => {
-  try {
-    const restorePromises = programIds.map(id => restoreProgram(id));
-    const results = await Promise.allSettled(restorePromises);
-    return results;
-  } catch (error) {
-    console.error('Error in bulk restore:', error);
-    throw error;
-  }
+// 🗃️ ARCHIVE/UNARCHIVE event
+export const toggleArchiveEvent = async (programId, projectId, eventId) => {
+  const res = await API.patch(`/programs/${programId}/projects/${projectId}/events/${eventId}/archive`);
+  return res.data;
 };

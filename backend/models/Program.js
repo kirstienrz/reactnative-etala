@@ -3,21 +3,21 @@ const mongoose = require('mongoose');
 const eventSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true,
+    required: [true, 'Event title is required'],
     trim: true
   },
   date: {
     type: String,
-    required: true
+    required: [true, 'Event date is required']
   },
   participants: {
     type: Number,
-    required: true,
-    min: 1
+    default: 0,
+    min: [0, 'Participants cannot be negative']
   },
   venue: {
     type: String,
-    required: true,
+    required: [true, 'Event venue is required'],
     trim: true
   },
   status: {
@@ -29,21 +29,19 @@ const eventSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 const projectSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, 'Project name is required'],
     trim: true
   },
   year: {
     type: Number,
-    required: true,
-    min: 2000,
-    max: 2100
+    required: [true, 'Project year is required'],
+    min: [2000, 'Year must be 2000 or later'],
+    max: [2100, 'Year must be 2100 or earlier']
   },
   status: {
     type: String,
@@ -55,26 +53,24 @@ const projectSchema = new mongoose.Schema({
     default: false
   },
   events: [eventSchema]
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 const programSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, 'Program name is required'],
     trim: true
   },
   description: {
     type: String,
-    required: true,
+    required: [true, 'Program description is required'],
     trim: true
   },
   year: {
     type: Number,
-    required: true,
-    min: 2000,
-    max: 2100
+    required: [true, 'Program year is required'],
+    min: [2000, 'Year must be 2000 or later'],
+    max: [2100, 'Year must be 2100 or earlier']
   },
   status: {
     type: String,
@@ -86,8 +82,10 @@ const programSchema = new mongoose.Schema({
     default: false
   },
   projects: [projectSchema]
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
+
+// Indexes for better query performance
+programSchema.index({ year: -1, status: 1 });
+programSchema.index({ name: 'text', description: 'text' });
 
 module.exports = mongoose.model('Program', programSchema);
