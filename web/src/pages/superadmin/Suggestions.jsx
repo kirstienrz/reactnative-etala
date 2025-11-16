@@ -299,7 +299,7 @@ const AdminGADSuggestionBox = () => {
                 </button>
               </div>
 
-              {/* Recently Viewed */}
+              {/* Recently Viewed
               <div className="mb-6">
                 <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Recently Viewed</h4>
                 <div className="space-y-2">
@@ -321,7 +321,7 @@ const AdminGADSuggestionBox = () => {
                     <p className="text-xs text-gray-400 italic">No recent views</p>
                   )}
                 </div>
-              </div>
+              </div> */}
 
               {/* Quick Stats */}
               <div className="mb-6">

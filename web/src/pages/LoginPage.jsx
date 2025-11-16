@@ -93,7 +93,7 @@ const LoginPage = () => {
           toast.error(data?.msg || "Login failed. Please try again later.");
         }
       } else {
-        toast.error("Network error. Please check your connection.");
+        toast.error("Invalid. Please try again");
       }
 
       setError(err.message || "Invalid credentials");
@@ -173,7 +173,7 @@ const LoginPage = () => {
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
-                    type="text"
+                    type="password"
                     inputMode="numeric"
                     placeholder="• • • • • •"
                     value={pin}

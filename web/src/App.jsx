@@ -7,6 +7,8 @@ import Layout from "./components/Layout";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 
+import FloatingChatbot from "./components/FloatingChatbot";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import SuperAdminLayout from "./components/SuperAdminLayout";
@@ -71,6 +73,8 @@ const App = () => {
               <Route path="/user/dashboard" element={<UserDashboard />} />
             </Route>
           </Routes>
+          <FloatingChatbot />
+
         </Layout>
         <ToastContainer
           position="top-right"
