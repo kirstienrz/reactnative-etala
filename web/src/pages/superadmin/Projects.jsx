@@ -60,53 +60,118 @@ const GADProgramsHybrid = () => {
     }
   };
 
-  const handleSave = async () => {
-  try {
-    let savedProgramId = selectedProgram?._id;
-    
-    if (modalType === 'program') {
-      if (formData._id) {
-        await updateProgram(formData._id, formData);
-        savedProgramId = formData._id;
-      } else {
-        const response = await createProgram(formData);
-        if (response.success) {
-          savedProgramId = response.data._id;
+  // Check if event is overdue
+  const isEventOverdue = (event) => {
+    if (event.status === 'completed' || event.status === 'cancelled') return false;
+
+    const eventDate = new Date(event.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
+
+    return eventDate < today;
+  };
+
+  // Get overdue badge
+  const OverdueBadge = () => (
+    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border bg-red-100 text-red-800 border-red-200">
+      <Clock className="w-3 h-3 mr-1" />
+      Overdue
+    </span>
+  );
+
+  // Check if all events in program are completed
+  const canMarkProgramComplete = (program) => {
+    if (!program.projects || program.projects.length === 0) return false;
+
+    const allEvents = program.projects.flatMap(p => p.events || []);
+    if (allEvents.length === 0) return false;
+
+    return allEvents.every(event => event.status === 'completed');
+  };
+
+  // Auto-suggest program completion// Auto-suggest program completion
+  const handleCheckCompletion = async (program) => {
+    const allEventsComplete = canMarkProgramComplete(program);
+
+    if (allEventsComplete && program.status !== 'completed') {
+      if (window.confirm('All events are completed. Mark this program as completed?')) {
+        try {
+          // Update program status
+          await updateProgram(program._id, { ...program, status: 'completed' });
+
+          // ⬇️ SAME LOGIC AS handleSave - Refresh and update selected
+          const response = await getAllPrograms();
+          if (response.success) {
+            setPrograms(response.data);
+
+            // Find and set the updated program as selected
+            const updatedProgram = response.data.find(p => p._id === program._id);
+            if (updatedProgram) {
+              setSelectedProgram(updatedProgram);
+            }
+          }
+
+          // Optional: Show success message
+          alert('Program marked as completed successfully!');
+        } catch (err) {
+          console.error('Error updating program:', err);
+          alert('Error updating program. Please try again.');
         }
       }
-    } else if (modalType === 'project') {
-      if (formData._id) {
-        await updateProject(selectedProgram._id, formData._id, formData);
-      } else {
-        await addProject(selectedProgram._id, formData);
-      }
-    } else if (modalType === 'event') {
-      const projectId = formData.projectId;
-      if (formData._id) {
-        await updateEvent(selectedProgram._id, projectId, formData._id, formData);
-      } else {
-        await addEvent(selectedProgram._id, projectId, formData);
-      }
+    } else if (!allEventsComplete) {
+      alert('Not all events are completed yet.');
+    } else {
+      alert('Program is already marked as completed.');
     }
-    
-    // Refresh all programs
-    const response = await getAllPrograms();
-    if (response.success) {
-      setPrograms(response.data);
-      
-      // Find and set the updated program as selected
-      const updatedProgram = response.data.find(p => p._id === savedProgramId);
-      if (updatedProgram) {
-        setSelectedProgram(updatedProgram);
+  };
+
+  const handleSave = async () => {
+    try {
+      let savedProgramId = selectedProgram?._id;
+
+      if (modalType === 'program') {
+        if (formData._id) {
+          await updateProgram(formData._id, formData);
+          savedProgramId = formData._id;
+        } else {
+          const response = await createProgram(formData);
+          if (response.success) {
+            savedProgramId = response.data._id;
+          }
+        }
+      } else if (modalType === 'project') {
+        if (formData._id) {
+          await updateProject(selectedProgram._id, formData._id, formData);
+        } else {
+          await addProject(selectedProgram._id, formData);
+        }
+      } else if (modalType === 'event') {
+        const projectId = formData.projectId;
+        if (formData._id) {
+          await updateEvent(selectedProgram._id, projectId, formData._id, formData);
+        } else {
+          await addEvent(selectedProgram._id, projectId, formData);
+        }
       }
+
+      // Refresh all programs
+      const response = await getAllPrograms();
+      if (response.success) {
+        setPrograms(response.data);
+
+        // Find and set the updated program as selected
+        const updatedProgram = response.data.find(p => p._id === savedProgramId);
+        if (updatedProgram) {
+          setSelectedProgram(updatedProgram);
+        }
+      }
+
+      setShowModal(false);
+      setFormData({});
+    } catch (err) {
+      console.error('Error saving:', err);
     }
-    
-    setShowModal(false);
-    setFormData({});
-  } catch (err) {
-    console.error('Error saving:', err);
-  }
-};
+  };
 
   // Get unique years
   const availableYears = useMemo(() => {
@@ -156,8 +221,9 @@ const GADProgramsHybrid = () => {
     setExpandedYears(prev => ({ ...prev, [year]: !prev[year] }));
   };
 
+  // Add this to your getStats function
   const getStats = (program) => {
-    if (!program) return { totalProjects: 0, completedProjects: 0, totalEvents: 0, completedEvents: 0 };
+    if (!program) return { totalProjects: 0, completedProjects: 0, totalEvents: 0, completedEvents: 0, overdueEvents: 0 };
 
     const projects = program.projects || [];
     const totalProjects = projects.length;
@@ -167,7 +233,10 @@ const GADProgramsHybrid = () => {
     const totalEvents = events.length;
     const completedEvents = events.filter(e => e.status === 'completed').length;
 
-    return { totalProjects, completedProjects, totalEvents, completedEvents };
+    // ⬇️ ADD THIS: Count overdue events
+    const overdueEvents = events.filter(e => isEventOverdue(e)).length;
+
+    return { totalProjects, completedProjects, totalEvents, completedEvents, overdueEvents };
   };
 
   const StatusBadge = ({ status }) => {
@@ -359,28 +428,59 @@ const GADProgramsHybrid = () => {
                 )}
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                title="Card View"
-              >
-                <BarChart3 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('timeline')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'timeline' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                title="Timeline View"
-              >
-                <List className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                title="Kanban View"
-              >
-                <Kanban className="w-5 h-5" />
-              </button>
+
+            {/* ⬇️ ADD BUTTONS HERE */}
+            <div className="flex items-center gap-2">
+              {/* Edit Program Button */}
+              {selectedProgram && (
+                <button
+                  onClick={() => {
+                    setShowModal(true);
+                    setModalType('program');
+                    setFormData({ ...selectedProgram });
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Program
+                </button>
+              )}
+
+              {/* Mark Complete Button (only show if all events done) */}
+              {selectedProgram && canMarkProgramComplete(selectedProgram) && selectedProgram.status !== 'completed' && (
+                <button
+                  onClick={() => handleCheckCompletion(selectedProgram)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Mark Complete
+                </button>
+              )}
+
+              {/* View Mode Buttons */}
+              <div className="flex items-center space-x-2 border-l pl-2 ml-2">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+                  title="Card View"
+                >
+                  <BarChart3 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('timeline')}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'timeline' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+                  title="Timeline View"
+                >
+                  <List className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+                  title="Kanban View"
+                >
+                  <Kanban className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -424,6 +524,77 @@ const GADProgramsHybrid = () => {
                       {stats.totalProjects > 0 ? Math.round((stats.completedProjects / stats.totalProjects) * 100) : 0}%
                     </div>
                   </div>
+                  {stats.overdueEvents > 0 && (
+                    <div className="bg-white p-4 rounded-lg border border-amber-200">
+                      <div className="text-sm text-gray-500 mb-1">Overdue Events</div>
+                      <div className="text-2xl font-bold text-amber-600">
+                        {stats.overdueEvents}
+                      </div>
+                      <p className="text-xs text-amber-600 mt-1">Need attention</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* After the stats cards, before the completion banner */}
+              {stats && stats.overdueEvents > 0 && (
+                <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg shadow-sm">
+                  <div className="flex items-start">
+                    <Clock className="w-5 h-5 text-amber-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-amber-900">
+                        ⚠️ Overdue Events Detected
+                      </h3>
+                      <p className="text-xs text-amber-700 mt-1">
+                        You have {stats.overdueEvents} event{stats.overdueEvents > 1 ? 's' : ''} that are past their scheduled date but not marked as completed.
+                        Please review and update their status.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Optional: Auto-scroll to first overdue event
+                        const firstOverdueEvent = selectedProgram.projects
+                          .flatMap(p => p.events || [])
+                          .find(e => isEventOverdue(e));
+
+                        if (firstOverdueEvent) {
+                          alert(`First overdue event: ${firstOverdueEvent.title}`);
+                        }
+                      }}
+                      className="ml-4 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors flex-shrink-0"
+                    >
+                      Review Events
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ⬇️ ADD THIS NOTIFICATION BANNER HERE */}
+              {stats && stats.completedEvents === stats.totalEvents && stats.totalEvents > 0 && selectedProgram.status !== 'completed' && (
+                <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg shadow-sm">
+                  <div className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-green-900">
+                        🎉 All Events Completed!
+                      </h3>
+                      <p className="text-xs text-green-700 mt-1">
+                        All {stats.totalEvents} events in this program have been marked as completed.
+                        You may now update the program status to "Completed" when all documentation and reports are finalized.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowModal(true);
+                        setModalType('program');
+                        setFormData({ ...selectedProgram, status: 'completed' });
+                      }}
+                      className="ml-4 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 flex-shrink-0"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Mark Complete
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -431,6 +602,7 @@ const GADProgramsHybrid = () => {
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-gray-900">Projects</h2>
+                  {/* ... rest of your code ... */}
                   <button
                     onClick={() => {
                       setShowModal(true);
@@ -466,7 +638,7 @@ const GADProgramsHybrid = () => {
                               <div className="flex-1">
                                 <div className="flex items-center space-x-3 mb-2">
                                   <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                                  <StatusBadge status={project.status} />
+                                  {/* <StatusBadge status={project.status} /> */}
                                   <span className="text-xs text-gray-500">{project.year}</span>
                                 </div>
                                 <div className="flex items-center space-x-4 text-sm text-gray-600">
@@ -519,11 +691,21 @@ const GADProgramsHybrid = () => {
                                       <div className="flex items-center space-x-2 mb-2">
                                         <h5 className="font-medium text-gray-900">{event.title}</h5>
                                         <StatusBadge status={event.status} />
+
+                                        {/* ⬇️ ADD OVERDUE BADGE */}
+                                        {isEventOverdue(event) && <OverdueBadge />}
                                       </div>
                                       <div className="text-sm text-gray-600 space-y-1">
                                         <p className="flex items-center">
                                           <Calendar className="w-4 h-4 mr-2 text-blue-600" />
                                           {event.date}
+
+                                          {/* ⬇️ ADD OVERDUE WARNING TEXT */}
+                                          {isEventOverdue(event) && (
+                                            <span className="ml-2 text-xs text-red-600 font-medium">
+                                              (Needs status update)
+                                            </span>
+                                          )}
                                         </p>
                                         <p className="flex items-center">
                                           <Users className="w-4 h-4 mr-2 text-blue-600" />
