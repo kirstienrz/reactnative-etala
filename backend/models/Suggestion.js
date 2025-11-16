@@ -1,15 +1,24 @@
 const mongoose = require("mongoose");
 
-const suggestionSchema = new mongoose.Schema({
+const SuggestionSchema = new mongoose.Schema({
+  id: { type: Number, required: true, unique: true }, // frontend uses numeric ID
   text: { type: String, required: true },
   submittedBy: { type: String, required: true },
-  email: { type: String },
-  priority: { type: String, enum: ["low", "medium", "high"], default: "medium" },
-  status: { type: String, enum: ["new", "in progress", "resolved"], default: "new" },
-  archived: { type: Boolean, default: false },
-  notes: [{ text: String, date: { type: Date, default: Date.now } }],
-  activityLog: [{ message: String, date: { type: Date, default: Date.now } }],
   submittedDate: { type: Date, default: Date.now },
+
+  status: {
+    type: String,
+    enum: ["pending", "under-review", "approved", "rejected", "implemented"],
+    default: "pending"
+  },
+
+  priority: {
+    type: String,
+    enum: ["high", "medium", "low"],
+    default: "low"
+  },
+
+  archived: { type: Boolean, default: false }
 });
 
-module.exports = mongoose.model("Suggestion", suggestionSchema);
+module.exports = mongoose.model("Suggestion", SuggestionSchema);

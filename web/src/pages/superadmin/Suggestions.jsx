@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Archive, Eye, Filter, Search, Calendar, User, Tag, CheckCircle, Clock, ArchiveX, Download, Mail, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
+import { Archive, Eye, Filter, Search, Calendar, User, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
 import { getSuggestions, updateSuggestion, toggleArchive } from "../../api/suggestion";
 
 const AdminGADSuggestionBox = () => {
@@ -9,15 +9,10 @@ const AdminGADSuggestionBox = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [showActivityLog, setShowActivityLog] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [showSidebar, setShowSidebar] = useState(true);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [emailContent, setEmailContent] = useState({ subject: '', body: '' });
-  const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -84,22 +79,6 @@ const AdminGADSuggestionBox = () => {
     } catch (err) {
       console.error("Error updating priority:", err);
       alert("Failed to update priority. Please try again.");
-    }
-  };
-
-  const handleAddNote = async (id) => {
-    if (!newNote.trim()) return;
-    
-    try {
-      const suggestion = suggestions.find(s => s.id === id);
-      const updatedNotes = [...(suggestion.notes || []), { text: newNote, date: new Date().toISOString().split('T')[0], user: "Admin" }];
-      await updateSuggestion(id, { ...suggestion, notes: updatedNotes });
-      await fetchSuggestions(); // Refresh data
-      setNewNote('');
-      setShowNotesModal(false);
-    } catch (err) {
-      console.error("Error adding note:", err);
-      alert("Failed to add note. Please try again.");
     }
   };
 
@@ -687,26 +666,6 @@ const AdminGADSuggestionBox = () => {
                             >
                               <Eye size={16} />
                             </button>
-                            <button
-                              onClick={() => {
-                                setSelectedSuggestion(s);
-                                setShowNotesModal(true);
-                              }}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded transition"
-                              title="Add Note"
-                            >
-                              <MessageSquare size={16} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedSuggestion(s);
-                                setShowEmailModal(true);
-                              }}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded transition"
-                              title="Send Email"
-                            >
-                              <Mail size={16} />
-                            </button>
                             {!s.archived ? (
                               <button
                                 onClick={() => handleArchive(s.id)}
@@ -915,179 +874,7 @@ const AdminGADSuggestionBox = () => {
         </div>
       )}
 
-      {/* Email Modal */}
-      {showEmailModal && selectedSuggestion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <Mail className="text-green-600" size={24} />
-                Send Email Response
-              </h2>
-              <button 
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailContent({ subject: '', body: '' });
-                }} 
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
-                <input
-                  type="text"
-                  value={selectedSuggestion.email}
-                  disabled
-                  className="w-full border rounded-lg px-3 py-2 bg-gray-50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Re: Suggestion #{selectedSuggestion.id}</label>
-                <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded border">
-                  {selectedSuggestion.text}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-                <input
-                  type="text"
-                  placeholder="Email subject"
-                  className="w-full border rounded-lg px-3 py-2"
-                  value={emailContent.subject}
-                  onChange={(e) => setEmailContent({...emailContent, subject: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Message *</label>
-                <textarea
-                  className="w-full border rounded-lg px-3 py-2"
-                  rows={8}
-                  placeholder="Type your response here..."
-                  value={emailContent.body}
-                  onChange={(e) => setEmailContent({...emailContent, body: e.target.value})}
-                />
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> This is a UI mockup. No actual email will be sent.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-              <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailContent({ subject: '', body: '' });
-                }}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  alert('Email sent successfully! (UI mockup)');
-                  setShowEmailModal(false);
-                  setEmailContent({ subject: '', body: '' });
-                }}
-                className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-              >
-                <Mail size={16} /> Send Email
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Notes Modal */}
-      {showNotesModal && selectedSuggestion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <MessageSquare className="text-purple-600" size={24} />
-                Manage Notes - Suggestion #{selectedSuggestion.id}
-              </h2>
-              <button 
-                onClick={() => {
-                  setShowNotesModal(false);
-                  setNewNote('');
-                }} 
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Existing Notes */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Existing Notes ({selectedSuggestion.notes?.length || 0})</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {selectedSuggestion.notes && selectedSuggestion.notes.length > 0 ? (
-                    selectedSuggestion.notes.map((note, idx) => (
-                      <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <p className="text-sm text-gray-800">{note.text}</p>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <User size={12} /> {note.user}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar size={12} /> {new Date(note.date).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500 italic">No notes yet</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Add New Note */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Add New Note</label>
-                <textarea
-                  className="w-full border rounded-lg px-3 py-2"
-                  rows={4}
-                  placeholder="Type your note here..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-              <button
-                onClick={() => {
-                  setShowNotesModal(false);
-                  setNewNote('');
-                }}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleAddNote(selectedSuggestion.id)}
-                disabled={!newNote.trim()}
-                className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <MessageSquare size={16} /> Add Note
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Detail Modal with Activity Log */}
+      {/* Detail Modal */}
       {showDetailModal && selectedSuggestion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1161,26 +948,6 @@ const AdminGADSuggestionBox = () => {
                       <p className="text-gray-800 leading-relaxed">{selectedSuggestion.text}</p>
                     </div>
                   </div>
-
-                  {/* Notes */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Admin Notes ({selectedSuggestion.notes?.length || 0})</label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {selectedSuggestion.notes && selectedSuggestion.notes.length > 0 ? (
-                        selectedSuggestion.notes.map((note, idx) => (
-                          <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                            <p className="text-sm text-gray-800">{note.text}</p>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                              <span>{note.user}</span>
-                              <span>{new Date(note.date).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500 italic">No notes added yet</p>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Activity Log - Right Side */}
@@ -1216,27 +983,7 @@ const AdminGADSuggestionBox = () => {
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-gray-50 flex justify-between items-center p-6 border-t">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setShowNotesModal(true);
-                    setShowDetailModal(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition"
-                >
-                  <MessageSquare size={16} /> Add Note
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEmailModal(true);
-                    setShowDetailModal(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
-                >
-                  <Mail size={16} /> Send Email
-                </button>
-              </div>
+            <div className="sticky bottom-0 bg-gray-50 flex justify-end p-6 border-t">
               <div className="flex gap-2">
                 {!selectedSuggestion.archived ? (
                   <button

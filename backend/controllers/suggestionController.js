@@ -1,73 +1,69 @@
 const Suggestion = require("../models/Suggestion");
 
-// 🧾 Get all suggestions
+// Auto-increment (simple)
+async function getNextId() {
+  const last = await Suggestion.find().sort({ id: -1 }).limit(1);
+  return last.length === 0 ? 1 : last[0].id + 1;
+}
+
+// GET ALL — used for getSuggestions()
 exports.getSuggestions = async (req, res) => {
   try {
-    const suggestions = await Suggestion.find().sort({ submittedDate: -1 });
-    res.status(200).json(suggestions);
+    const suggestions = await Suggestion.find().sort({ id: 1 });
+    res.json(suggestions);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ error: "Failed to fetch suggestions" });
   }
 };
 
-// ➕ Create new suggestion
+// CREATE (optional)
 exports.createSuggestion = async (req, res) => {
   try {
-    const newSuggestion = new Suggestion(req.body);
-    await newSuggestion.save();
+    const newId = await getNextId();
 
-    // 🔔 Emit real-time update event via socket.io
-    const io = req.app.get("io");
-    io.emit("suggestionUpdated");
-
-    res.status(201).json(newSuggestion);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-};
-
-// ✏️ Update suggestion
-exports.updateSuggestion = async (req, res) => {
-  try {
-    const updated = await Suggestion.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+    const suggestion = new Suggestion({
+      id: newId,
+      text: req.body.text,
+      submittedBy: req.body.submittedBy,
+      priority: req.body.priority || "low"
     });
 
-    const io = req.app.get("io");
-    io.emit("suggestionUpdated");
-
-    res.status(200).json(updated);
+    await suggestion.save();
+    res.json(suggestion);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ error: "Failed to create suggestion" });
   }
 };
 
-// 🗑️ Delete suggestion
-exports.deleteSuggestion = async (req, res) => {
+// UPDATE — used for updateSuggestion(id)
+exports.updateSuggestion = async (req, res) => {
   try {
-    await Suggestion.findByIdAndDelete(req.params.id);
+    const updated = await Suggestion.findOneAndUpdate(
+      { id: req.params.id },
+      req.body,
+      { new: true }
+    );
 
-    const io = req.app.get("io");
-    io.emit("suggestionUpdated");
-
-    res.status(200).json({ message: "Suggestion deleted" });
+    res.json(updated);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ error: "Failed to update suggestion" });
   }
 };
 
-// 📦 Archive / Unarchive suggestion
+// ARCHIVE TOGGLE — used for toggleArchive(id)
 exports.toggleArchive = async (req, res) => {
   try {
-    const suggestion = await Suggestion.findById(req.params.id);
+    const suggestion = await Suggestion.findOne({ id: req.params.id });
+
+    if (!suggestion) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
     suggestion.archived = !suggestion.archived;
     await suggestion.save();
 
-    const io = req.app.get("io");
-    io.emit("suggestionUpdated");
-
-    res.status(200).json(suggestion);
+    res.json({ success: true, archived: suggestion.archived });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ error: "Failed to toggle archive" });
   }
 };

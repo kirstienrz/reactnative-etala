@@ -589,15 +589,12 @@ const SuperAdminSidebar = () => {
             <SidebarItem icon={<FileText size={18} />} label="Report Management" to="/superadmin/reports" />
             <SidebarItem icon={<Repeat size={18} />} label="Referral & Assignment" to="/superadmin/referral" />
             <SidebarItem icon={<MessageSquare size={18} />} label="Messaging System" to="/superadmin/messages" />
-            <SidebarItem icon={<BarChart3 size={18} />} label="Monitoring & Analytics" to="/superadmin/analytics" />
           </SidebarSection>
 
           {/* CONTENT MANAGEMENT */}
           <SidebarSection title="Content Management">
             <SidebarItem icon={<Image size={18} />} label="Carousel" to="/superadmin/carousel" />
-            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
             <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Hub" to="/superadmin/knowledge" />
-            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
             <SidebarItem icon={<Newspaper size={18} />} label="News & Announcements" to="/superadmin/news" />
             <SidebarItem icon={<Briefcase size={18} />} label="Projects" to="/superadmin/projects" />
             <SidebarItem icon={<DollarSign size={18} />} label="Budget & Programs" to="/superadmin/budget" />
@@ -605,6 +602,8 @@ const SuperAdminSidebar = () => {
 
           {/* ADMIN TOOLS */}
           <SidebarSection title="Admin Tools">
+            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
+            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
             <SidebarItem icon={<FileSpreadsheet size={18} />} label="Export Reports" to="/superadmin/exports" />
             <SidebarItem icon={<FileSignature size={18} />} label="Templates" to="/superadmin/templates" />
 

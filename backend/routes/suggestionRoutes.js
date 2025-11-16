@@ -1,18 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const {
-  getSuggestions,
-  createSuggestion,
-  updateSuggestion,
-  deleteSuggestion,
-  toggleArchive,
-} = require("../controllers/suggestionController");
+const controller = require("../controllers/suggestionController");
 
-// Base route: /api/suggestions
-router.get("/", getSuggestions);
-router.post("/", createSuggestion);
-router.put("/:id", updateSuggestion);
-router.delete("/:id", deleteSuggestion);
-router.patch("/:id/archive", toggleArchive);
+// GET ALL
+router.get("/", controller.getSuggestions);
+
+// CREATE
+router.post("/", controller.createSuggestion);
+
+// UPDATE
+router.put("/:id", controller.updateSuggestion);
+
+// ARCHIVE / UNARCHIVE
+router.patch("/:id/archive", controller.toggleArchive);
 
 module.exports = router;

@@ -1,76 +1,96 @@
+// backend/seed/seedSuggestions.js
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const Suggestion = require("./models/Suggestion.js");
+require("dotenv").config();
 
-dotenv.config();
+// ---- Suggestion Schema (same as backend) ----
+const suggestionSchema = new mongoose.Schema({
+  id: Number,
+  text: String,
+  submittedBy: String,
+  submittedDate: String,
+  status: String,
+  priority: String,
+  archived: Boolean
+});
 
-// ✅ Connect to MongoDB using .env
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err);
-    process.exit(1);
-  });
+const Suggestion = mongoose.model("Suggestion", suggestionSchema);
 
-// ✅ Sample suggestions
-const suggestions = [
+// ---- SAMPLE DATA FOR SEEDING ----
+const seedData = [
   {
-    text: "Add a GAD orientation for new students and faculty.",
-    submittedBy: "Maria Santos",
-    email: "maria.santos@example.com",
+    id: 1,
+    text: "Provide more GAD training sessions for students.",
+    submittedBy: "Jane D.",
+    submittedDate: "2025-01-12",
+    status: "pending",
     priority: "high",
-    status: "new",
-    archived: false,
-    notes: [{ text: "Forwarded to the GAD Office for review." }],
-    activityLog: [{ message: "Suggestion received and logged." }],
+    archived: false
   },
   {
-    text: "Install more lights near the women’s comfort room area.",
-    submittedBy: "Juan Dela Cruz",
-    email: "juan.dc@example.com",
+    id: 2,
+    text: "Create a safe space lounge for women.",
+    submittedBy: "Mark C.",
+    submittedDate: "2025-02-05",
+    status: "under-review",
     priority: "medium",
-    status: "in progress",
-    archived: false,
-    notes: [{ text: "Request approved by admin and sent to facilities." }],
-    activityLog: [{ message: "Reviewed by facilities committee." }],
+    archived: false
   },
   {
-    text: "Host a seminar about gender equality awareness next semester.",
-    submittedBy: "Ana Reyes",
-    email: "ana.reyes@example.com",
+    id: 3,
+    text: "More awareness campaigns about gender equality.",
+    submittedBy: "Anonymous",
+    submittedDate: "2025-02-17",
+    status: "approved",
     priority: "low",
-    status: "resolved",
-    archived: true,
-    notes: [{ text: "Completed during GAD Week 2025." }],
-    activityLog: [{ message: "Marked as completed and archived." }],
+    archived: false
   },
   {
-    text: "Provide gender-neutral restrooms around campus.",
-    submittedBy: "Carlos Perez",
-    email: "carlos.perez@example.com",
+    id: 4,
+    text: "Implement reporting hotline for harassment cases.",
+    submittedBy: "Carlos R.",
+    submittedDate: "2025-03-01",
+    status: "rejected",
     priority: "high",
-    status: "new",
-    archived: false,
-    notes: [],
-    activityLog: [{ message: "Waiting for admin review." }],
+    archived: false
   },
+  {
+    id: 5,
+    text: "Add monthly seminar about emotional well-being.",
+    submittedBy: "Maria S.",
+    submittedDate: "2025-03-10",
+    status: "implemented",
+    priority: "medium",
+    archived: false
+  },
+  {
+    id: 6,
+    text: "Archive test sample.",
+    submittedBy: "Tester",
+    submittedDate: "2025-01-10",
+    status: "approved",
+    priority: "low",
+    archived: true
+  }
 ];
 
-// ✅ Insert function
-const seedSuggestions = async () => {
+// ---- SEED FUNCTION ----
+async function seed() {
   try {
-    await Suggestion.deleteMany(); // clear old data
+    console.log("Connecting to MongoDB...");
+    await mongoose.connect(process.env.MONGO_URI);
 
-    await Suggestion.insertMany(suggestions);
-    console.log("🌱 GAD Suggestions seeded successfully!");
+    console.log("Clearing existing data...");
+    await Suggestion.deleteMany({});
 
-    process.exit(); // ✅ exit after seeding
-  } catch (error) {
-    console.error("❌ Error seeding suggestions:", error);
+    console.log("Inserting seed data...");
+    await Suggestion.insertMany(seedData);
+
+    console.log("Seeding complete!");
+    process.exit(0);
+  } catch (err) {
+    console.error("Seeding error:", err);
     process.exit(1);
   }
-};
+}
 
-// 🚀 Run the function
-seedSuggestions();
+seed();
