@@ -1,44 +1,108 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { Plus, RefreshCcw, User, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, RefreshCcw, Calendar as CalendarIcon, X } from "lucide-react";
+import { getAllCalendarEvents, createCalendarEvent } from "../../api/calendar"; // Your API
 
 export default function SuperAdminCalendarUI() {
-  const [events, setEvents] = useState([
-    {
-      title: "Project Kickoff",
-      start: "2025-11-12T09:00:00",
-      end: "2025-11-12T10:30:00",
-      color: "#2563eb", // blue-600
-    },
-    {
-      title: "Program Planning",
-      start: "2025-11-13T13:00:00",
-      end: "2025-11-13T15:00:00",
-      color: "#3b82f6", // blue-500
-    },
-    {
-      title: "Event Coordination Meeting",
-      start: "2025-11-14",
-      color: "#60a5fa", // blue-400
-    },
-    {
-      title: "Team Review",
-      start: "2025-11-15T11:00:00",
-      end: "2025-11-15T12:00:00",
-      color: "#2563eb", // blue-600
-    },
-  ]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({});
+  const [stats, setStats] = useState({
+    total: 0,
+    thisMonth: 0,
+    upcoming: 0,
+    completed: 0
+  });
+
+  // Fetch events on mount
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await getAllCalendarEvents();
+      
+      if (response.success) {
+        setEvents(response.data);
+        calculateStats(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = (eventData) => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const total = eventData.length;
+    const thisMonth = eventData.filter(event => {
+      const eventDate = new Date(event.start);
+      return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
+    }).length;
+
+    const upcoming = eventData.filter(event => {
+      const eventDate = new Date(event.start);
+      return eventDate > now;
+    }).length;
+
+    const completed = eventData.filter(event => {
+      return event.extendedProps?.status === 'completed';
+    }).length;
+
+    setStats({ total, thisMonth, upcoming, completed });
+  };
 
   const handleDateClick = (info) => {
-    alert(`Clicked date: ${info.dateStr}`);
+    setShowModal(true);
+    setFormData({
+      start: info.dateStr,
+      end: info.dateStr,
+      allDay: true,
+      type: 'consultation'
+    });
   };
 
   const handleEventClick = (info) => {
-    alert(`Event: ${info.event.title}`);
+    const event = info.event;
+    alert(`
+      Event: ${event.title}
+      Type: ${event.extendedProps.type || 'program_event'}
+      ${event.extendedProps.venue ? `Venue: ${event.extendedProps.venue}` : ''}
+      ${event.extendedProps.location ? `Location: ${event.extendedProps.location}` : ''}
+    `);
   };
+
+  const handleSaveEvent = async () => {
+    try {
+      await createCalendarEvent(formData);
+      await fetchEvents(); // Refresh events
+      setShowModal(false);
+      setFormData({});
+    } catch (error) {
+      console.error("Error saving event:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading calendar...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans">
@@ -49,13 +113,27 @@ export default function SuperAdminCalendarUI() {
             <CalendarIcon className="w-8 h-8 text-blue-600" />
             Superadmin Calendar
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Manage Programs, Projects, and Events</p>
+          <p className="text-gray-500 text-sm mt-1">Manage Programs, Projects, Events, Holidays & Consultations</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium">
+          <button 
+            onClick={fetchEvents}
+            className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
+          >
             <RefreshCcw size={18} /> Refresh
           </button>
-          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm">
+          <button 
+            onClick={() => {
+              setShowModal(true);
+              setFormData({
+                start: new Date().toISOString().split('T')[0],
+                end: new Date().toISOString().split('T')[0],
+                allDay: true,
+                type: 'consultation'
+              });
+            }}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm"
+          >
             <Plus size={18} /> New Schedule
           </button>
         </div>
@@ -67,7 +145,7 @@ export default function SuperAdminCalendarUI() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Total Events</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">12</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
               <CalendarIcon className="h-5 w-5 text-blue-600" />
@@ -79,7 +157,7 @@ export default function SuperAdminCalendarUI() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">This Month</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">4</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.thisMonth}</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
               <CalendarIcon className="h-5 w-5 text-green-600" />
@@ -91,7 +169,7 @@ export default function SuperAdminCalendarUI() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Upcoming</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">3</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.upcoming}</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
               <CalendarIcon className="h-5 w-5 text-orange-600" />
@@ -103,11 +181,34 @@ export default function SuperAdminCalendarUI() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Completed</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">8</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.completed}</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
               <CalendarIcon className="h-5 w-5 text-gray-600" />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Legend for Color Coding */}
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Event Types:</h3>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-red-500"></div>
+            <span className="text-sm text-gray-600">Holiday</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gray-500"></div>
+            <span className="text-sm text-gray-600">Not Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-purple-500"></div>
+            <span className="text-sm text-gray-600">Consultation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-blue-500"></div>
+            <span className="text-sm text-gray-600">Program Event</span>
           </div>
         </div>
       </div>
@@ -123,13 +224,9 @@ export default function SuperAdminCalendarUI() {
             right: "dayGridMonth,timeGridWeek,timeGridDay",
           }}
           height="75vh"
-          events={events}
+          events={events} // ⬅️ This now contains ALL events (program + calendar)
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          // Custom styling to match profile theme
-          eventBackgroundColor="#3b82f6"
-          eventBorderColor="#2563eb"
-          eventTextColor="#ffffff"
           dayMaxEvents={true}
           slotMinTime="06:00:00"
           slotMaxTime="22:00:00"
@@ -153,27 +250,95 @@ export default function SuperAdminCalendarUI() {
         />
       </div>
 
-      {/* Quick Actions */}
-      <div className="mt-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <User className="w-5 h-5 text-blue-600" />
-          Quick Actions
-        </h3>
-        <div className="flex flex-wrap gap-3">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 text-sm font-medium">
-            Create Event
-          </button>
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 text-sm font-medium">
-            Export Calendar
-          </button>
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 text-sm font-medium">
-            Share Calendar
-          </button>
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 text-sm font-medium">
-            Set Reminder
-          </button>
+      {/* Modal for Adding New Event */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Add Calendar Event</h3>
+                <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Event Title"
+                  value={formData.title || ''}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                
+                <select
+                  value={formData.type || 'consultation'}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="holiday">Holiday</option>
+                  <option value="not_available">Not Available</option>
+                  <option value="consultation">Consultation</option>
+                </select>
+
+                <input
+                  type="date"
+                  value={formData.start || ''}
+                  onChange={(e) => setFormData({ ...formData, start: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+
+                <input
+                  type="date"
+                  value={formData.end || ''}
+                  onChange={(e) => setFormData({ ...formData, end: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+
+                <input
+                  type="text"
+                  placeholder="Location (optional)"
+                  value={formData.location || ''}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+
+                <textarea
+                  placeholder="Description (optional)"
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  rows="3"
+                />
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.allDay || false}
+                    onChange={(e) => setFormData({ ...formData, allDay: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">All Day Event</span>
+                </label>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEvent}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
