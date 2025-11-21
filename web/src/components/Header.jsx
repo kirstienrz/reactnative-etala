@@ -244,12 +244,12 @@ const Header = () => {
       submenu: ['Circulars', 'Resolutions', 'Memorandan', 'Office Order']
     },
     {
-      title: 'Programs (ano ba nakalagay sa mobile?)',
-      submenu: ['Workshops', 'Seminars', 'Advocacy', 'Student Programs']
+      title: 'GAD Projects',
+      submenu: []
     },
     {
       title: 'Resources',
-      submenu: ['Handbook', 'Knowledge Hub', 'Suggestion Box']
+      submenu: ['Handbook', 'Knowledge Hub', 'Suggestion Box', 'Infographics']
     },
     {
       title: 'Contact',

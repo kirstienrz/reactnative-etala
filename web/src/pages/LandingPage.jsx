@@ -271,34 +271,51 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Focus Areas */}
-      <section className="py-28 bg-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">What We Do</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">HARYETTT INFAGRAPHICS NALANG DITO</h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">Comprehensive programs addressing gender equality across all university operations</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {focusAreas.map((area, idx) => (
-              <div
-                key={idx}
-                className="group bg-white p-8 border-2 border-slate-200 hover:border-violet-400 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="flex items-start gap-6 mb-6">
-                  <span className="text-3xl font-black text-white bg-gradient-to-br from-violet-600 to-purple-600 w-16 h-16 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">{area.code}</span>
-                  <h3 className="text-2xl font-bold text-slate-900 pt-2">{area.name}</h3>
-                </div>
-                <p className="text-slate-600 leading-relaxed mb-6">{area.description}</p>
-                <a href="#" className="text-violet-700 font-bold hover:text-violet-800 inline-flex items-center gap-2 transition-colors group-hover:gap-3">
-                  Learn more
-                  <ArrowRight className="w-5 h-5" />
-                </a>
+      {/* Gender and Development Infographics Section */}
+<section className="py-28 bg-gradient-to-b from-slate-50 to-white">
+  <div className="max-w-7xl mx-auto px-8">
+    <div className="text-center mb-16">
+      <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Data Visualization</span>
+      <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Gender and Development Infographics</h2>
+      <p className="text-xl text-slate-600 max-w-3xl mx-auto">Visual representation of our institutional progress and gender equality initiatives</p>
+    </div>
+    
+    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+      {focusAreas.map((area, idx) => (
+        <div
+          key={idx}
+          className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
+        >
+          <div className="h-40 bg-gradient-to-br from-violet-600 to-purple-700 relative overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white text-center p-6">
+                <div className="text-3xl font-black mb-2">{area.code}</div>
+                <div className="text-base font-semibold tracking-wide">{area.name}</div>
               </div>
-            ))}
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <p className="text-slate-700 text-sm leading-relaxed mb-6">{area.description}</p>
+          </div>
+          
+          <div className="px-6 pb-6">
+            <a href="#" className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg">
+              View Infographic
+              <ArrowRight className="w-4 h-4" />
+            </a>
           </div>
         </div>
-      </section>
+      ))}
+    </div>
+    
+    <div className="text-center mt-16">
+      <button className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg">
+        View All Infographics
+      </button>
+    </div>
+  </div>
+</section>
 
       {/* Stats Section */}
       <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">

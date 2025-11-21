@@ -167,6 +167,12 @@ const reportSchema = new mongoose.Schema({
     enum: ["Pending", "Reviewed", "In Progress", "Resolved", "Closed"],
     default: "Pending" 
   },
+  caseStatus: {
+    type: String,
+    enum: ["For Queuing", "For Interview", "For Appointment", "For Referral"],
+    default: "For Queuing"
+  },
+
   submittedAt: { type: Date, default: Date.now },
   lastUpdated: { type: Date, default: Date.now },
   archived: { type: Boolean, default: false },

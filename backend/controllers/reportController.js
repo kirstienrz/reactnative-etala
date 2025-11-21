@@ -174,12 +174,10 @@ const getReportById = async (req, res) => {
 // ✅ ADMIN: Update report status + add timeline
 const updateReportStatus = async (req, res) => {
   try {
-    const { status, remarks } = req.body;
+    const { status, remarks, caseStatus } = req.body;
+
     const validStatuses = ["Pending", "Reviewed", "In Progress", "Resolved", "Closed"];
-    
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ success: false, message: "Invalid status." });
-    }
+    const validCaseStatuses = ["For Queuing", "For Interview", "For Appointment", "For Referral"];
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, message: "Invalid report ID format." });
@@ -189,14 +187,36 @@ const updateReportStatus = async (req, res) => {
     if (!report)
       return res.status(404).json({ success: false, message: "Report not found." });
 
-    report.status = status;
-    report.lastUpdated = new Date();
-    report.timeline.push({
-      action: `Status updated to ${status}`,
-      performedBy: req.user.id,
-      remarks: remarks || "",
-    });
+    // Update main status if provided
+    if (status) {
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ success: false, message: "Invalid status." });
+      }
 
+      report.status = status;
+      report.timeline.push({
+        action: `Status updated to ${status}`,
+        performedBy: req.user.id,
+        remarks: remarks || "",
+      });
+    }
+
+    // Update caseStatus if provided
+    if (caseStatus) {
+      if (!validCaseStatuses.includes(caseStatus)) {
+        return res.status(400).json({ success: false, message: "Invalid case status." });
+      }
+
+      report.caseStatus = caseStatus;
+      report.timeline.push({
+        action: `Case status updated to ${caseStatus}`,
+        performedBy: req.user.id,
+        remarks: remarks || "",
+        caseStatus
+      });
+    }
+
+    report.lastUpdated = new Date();
     await report.save();
 
     res.status(200).json({
@@ -213,6 +233,7 @@ const updateReportStatus = async (req, res) => {
     });
   }
 };
+
 
 // ✅ ADMIN: Add referral record
 const addReferral = async (req, res) => {

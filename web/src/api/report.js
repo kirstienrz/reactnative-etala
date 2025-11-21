@@ -17,8 +17,12 @@ export const getReportById = async (id) => {
 };
 
 // 🔄 UPDATE report status
-export const updateReportStatus = async (id, status) => {
-  const res = await API.put(`/reports/admin/${id}/status`, { status });
+export const updateReportStatus = async (id, status, remarks = "", caseStatus = null) => {
+  const res = await API.put(`/reports/admin/${id}/status`, {
+    status,
+    remarks,
+    caseStatus
+  });
   return res.data;
 };
 
