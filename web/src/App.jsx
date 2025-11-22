@@ -33,6 +33,17 @@ import BudgetPage from "./pages/superadmin/Budget";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserDashboard from "./pages/user/Dashboard";
+import MissionVision from "./pages/public/MissionVision";
+import Organization from "./pages/public/Organization";
+import Accomplishment from "./pages/public/Accomplishment";
+import Policies from "./pages/public/Policies";
+import Projects from "./pages/public/Projects";
+import Handbook from "./pages/public/Handbook";
+import Knowledge from "./pages/public/Knowledge";
+import PlanAndBudget from "./pages/public/PlanAndBudget";
+import CommitteeReport from "./pages/public/CommitteeReport";
+import SuggestionBox from "./pages/public/SuggestionBox";
+import Infographics from "./pages/public/Infographics";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -44,6 +55,17 @@ const App = () => {
         <Layout>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/Mission-Vision" element={<MissionVision />} />
+            <Route path="/Organization" element={<Organization />} />
+            <Route path="/Accomplishment" element={<Accomplishment />} />
+            <Route path="/Policies" element={<Policies />} />
+            <Route path="/Projects" element={<Projects />} />
+            <Route path="/Handbook" element={<Handbook />} />
+            <Route path="/Knowledge" element={<Knowledge />} />
+            <Route path="/PlanAndBudget" element={<PlanAndBudget />} />
+            <Route path="/CommitteeReport" element={<CommitteeReport />} />
+            <Route path="/SuggestionBox" element={<SuggestionBox />} />
+            <Route path="/Infographics" element={<Infographics />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>

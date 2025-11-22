@@ -235,27 +235,42 @@ const Header = () => {
   };
 
   const menuItems = [
-    {
-      title: 'About',
-      submenu: ['Mission & Vision', 'Organizational Structure', 'Accomplishments']
-    },
-    {
-      title: 'Policies',
-      submenu: ['Circulars', 'Resolutions', 'Memorandan', 'Office Order']
-    },
-    {
-      title: 'GAD Projects',
-      submenu: []
-    },
-    {
-      title: 'Resources',
-      submenu: ['Handbook', 'Knowledge Hub', 'Suggestion Box', 'Infographics']
-    },
-    {
-      title: 'Contact',
-      submenu: []
-    }
-  ];
+  {
+     title: 'About',
+    submenu: [
+      { title: 'Mission & Vision', path: '/Mission-Vision' },
+      { title: 'Organizational Structure', path: '/Organization' },
+      { title: 'Accomplishments', path: '/Accomplishment' }
+    ]
+  },
+  {
+    title: 'Programs & Policies',
+    submenu: [
+      { title: 'Policies', path: '/Policies' },
+      { title: 'Plan and Budget', path: '/PlanAndBudget' },
+      { title: 'Committee Report', path: '/CommitteeReport' }
+    ]
+  },
+  {
+    title: 'GAD Projects',
+    path: '/Projects',
+    submenu: []
+  },
+  {
+    title: 'Resources',
+    submenu: [
+      { title: 'Handbook', path: '/Handbook' },
+      { title: 'Knowledge Hub', path: '/Knowledge' },
+      { title: 'Infographics', path: '/Infographics' },
+      { title: 'Suggestion Box', path: '/SuggestionBox' }
+    ]
+  },
+  {
+    title: 'Contact',
+    submenu: []
+  }
+];
+
 
   const dashboardLink =
     role === "superadmin"
@@ -331,8 +346,8 @@ const Header = () => {
                       onMouseEnter={() => setOpenDropdown(item.title)}
                       onMouseLeave={() => setOpenDropdown('')}
                     >
-                      <a
-                        href={`#${item.title.toLowerCase().replace(' ', '-')}`}
+                     <a
+                        href={item.path ? item.path : `#${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                         className="flex items-center gap-1 px-4 py-2 text-gray-700 hover:text-purple-700 hover:bg-purple-50 rounded transition-all font-medium no-underline"
                       >
                         {item.title}
@@ -355,10 +370,10 @@ const Header = () => {
                           {item.submenu.map((subitem, subindex) => (
                             <li key={subindex}>
                               <a
-                                href={`#${subitem.toLowerCase().replace(/\s+/g, '-')}`}
+                                href={subitem.path ? subitem.path : `#${subitem.title.toLowerCase().replace(/\s+/g, '-')}`}
                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors no-underline"
                               >
-                                {subitem}
+                                {subitem.title}
                               </a>
                             </li>
                           ))}
