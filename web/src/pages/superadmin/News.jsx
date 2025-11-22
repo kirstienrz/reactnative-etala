@@ -37,9 +37,10 @@ const AdminNewsAnnouncements = () => {
     title: "",
     date: "",
     content: "",
-    imageUrl: "",
     link: "",
+    file: null, // for image upload
   });
+
 
   // Fetch all on mount
   useEffect(() => {
@@ -78,6 +79,7 @@ const AdminNewsAnnouncements = () => {
         content: "",
         imageUrl: "",
         link: "",
+        file: null,
       });
     }
     setShowModal(true);
@@ -92,6 +94,7 @@ const AdminNewsAnnouncements = () => {
       content: "",
       imageUrl: "",
       link: "",
+      file: null,
     });
   };
 
@@ -102,14 +105,14 @@ const AdminNewsAnnouncements = () => {
         return;
       }
 
-      const payload = {
-        title: formData.title,
-        content: formData.content,
-        imageUrl: formData.imageUrl,
-        link: formData.link,
-      };
-
       if (modalType === "news") {
+        const payload = new FormData();
+        payload.append("title", formData.title);
+        payload.append("content", formData.content);
+        if (formData.date) payload.append("date", formData.date);
+        if (formData.link) payload.append("link", formData.link);
+        if (formData.file) payload.append("image", formData.file); // matches backend req.file
+
         if (editingItem) {
           await updateNews(editingItem._id || editingItem.id, payload);
         } else {
@@ -117,6 +120,13 @@ const AdminNewsAnnouncements = () => {
         }
         await fetchNews();
       } else {
+        // Announcements remain text-only
+        const payload = {
+          title: formData.title,
+          content: formData.content,
+          link: formData.link,
+        };
+
         if (editingItem) {
           await updateAnnouncement(editingItem._id || editingItem.id, payload);
         } else {
@@ -131,6 +141,7 @@ const AdminNewsAnnouncements = () => {
       alert("Something went wrong while saving.");
     }
   };
+
 
   const handleDelete = async (type, id) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
@@ -368,18 +379,21 @@ const AdminNewsAnnouncements = () => {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Image URL
+                        Image
                       </label>
                       <input
-                        type="text"
-                        placeholder="https://example.com/image.jpg"
-                        className="w-full border rounded-lg px-3 py-2"
-                        value={formData.imageUrl}
+                        type="file"
+                        accept="image/*"
                         onChange={(e) =>
-                          setFormData({ ...formData, imageUrl: e.target.value })
+                          setFormData({ ...formData, file: e.target.files[0] })
                         }
+                        className="w-full border rounded-lg px-3 py-2"
                       />
+                      {formData.file && (
+                        <p className="mt-2 text-sm text-gray-500">{formData.file.name}</p>
+                      )}
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         External Link

@@ -30,6 +30,7 @@ import ExportsPage from "./pages/superadmin/Exports";
 import TemplatesPage from "./pages/superadmin/Templates";
 import ProjectsPage from "./pages/superadmin/Projects";
 import BudgetPage from "./pages/superadmin/Budget";
+import InfographicsPage from "./pages/superadmin/Infographics";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserDashboard from "./pages/user/Dashboard";
@@ -85,6 +86,7 @@ const App = () => {
               <Route path="/superadmin/templates" element={<TemplatesPage />} />
               <Route path="/superadmin/projects" element={<ProjectsPage />} />
               <Route path="/superadmin/budget" element={<BudgetPage />} />
+              <Route path="/superadmin/infographics" element={<InfographicsPage />} />
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>

@@ -598,6 +598,8 @@ const SuperAdminSidebar = () => {
             <SidebarItem icon={<Newspaper size={18} />} label="News & Announcements" to="/superadmin/news" />
             <SidebarItem icon={<Briefcase size={18} />} label="Projects" to="/superadmin/projects" />
             <SidebarItem icon={<DollarSign size={18} />} label="Budget & Programs" to="/superadmin/budget" />
+            <SidebarItem icon={<BarChart3 size={18} />} label="Infographics" to="/superadmin/infographics" />
+
           </SidebarSection>
 
           {/* ADMIN TOOLS */}

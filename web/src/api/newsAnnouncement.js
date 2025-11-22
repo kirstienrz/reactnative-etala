@@ -1,4 +1,3 @@
-// api/newsAnnouncements.js
 import API from "./config";
 
 // =========================
@@ -9,13 +8,36 @@ export const getNews = async () => {
   return res.data;
 };
 
-export const createNews = async (data) => {
-  const res = await API.post("/news", data);
+export const getArchivedNews = async () => {
+  const res = await API.get("/news/archived");
   return res.data;
 };
 
-export const updateNews = async (id, data) => {
-  const res = await API.put(`/news/${id}`, data);
+export const createNews = async (formData) => {
+  const res = await API.post("/news", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res.data;
+};
+
+export const updateNews = async (id, formData) => {
+  const res = await API.put(`/news/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res.data;
+};
+
+export const archiveNews = async (id) => {
+  const res = await API.patch(`/news/${id}/archive`);
+  return res.data;
+};
+
+export const restoreNews = async (id) => {
+  const res = await API.patch(`/news/${id}/restore`);
   return res.data;
 };
 
