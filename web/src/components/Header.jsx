@@ -252,7 +252,7 @@ const Header = () => {
     ]
   },
   {
-    title: 'GAD Projects',
+    title: 'Projects',
     path: '/Projects',
     submenu: []
   },

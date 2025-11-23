@@ -171,7 +171,7 @@ useEffect(() => {
     },
     {
       id: 5,
-      title: "GAD Projects",
+      title: "Projects",
       icon: Layers,
       color: "#EA580C",
     },
@@ -257,7 +257,7 @@ useEffect(() => {
       case "Accomplishment Report":
         navigation.navigate("AccomplishmentPage");
         break;
-      case "GAD Projects":
+      case "Projects":
         navigation.navigate("GADProjectsPage");
         break;
       case "Committee Report":
