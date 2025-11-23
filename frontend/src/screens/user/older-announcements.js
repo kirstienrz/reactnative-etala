@@ -1,40 +1,72 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
+import { getAnnouncements } from "../../api/announcement"; // ← IMPORT API
 
 export default function OlderAnnouncements({ navigation }) {
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const data = await getAnnouncements();
+      setAnnouncements(data);
+    } catch (error) {
+      console.log("Failed to load announcements:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ArrowLeft size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Older Announcements</Text>
-        <View style={{ width: 24 }} /> 
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.scroll}>
-        <View style={styles.card}>
-          <Text style={styles.date}>Oct 10, 2025</Text>
-          <Text style={styles.text}>The GAD Committee will hold an orientation for new members.</Text>
+      {/* Loading State */}
+      {loading ? (
+        <View style={{ marginTop: 40, alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#6B7280" />
+          <Text style={{ marginTop: 10, color: "#6B7280" }}>Loading...</Text>
         </View>
+      ) : (
+        <ScrollView style={styles.scroll}>
+          {announcements.map((item) => (
+            <View key={item._id} style={styles.card}>
+              <Text style={styles.date}>
+                {new Date(item.date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Text>
 
-        <View style={styles.card}>
-          <Text style={styles.date}>Sept 25, 2025</Text>
-          <Text style={styles.text}>Gender Awareness Workshop successfully concluded last week!</Text>
-        </View>
+              {/* 🔥 Title in bold */}
+              <Text style={styles.title}>{item.title}</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.date}>Sept 1, 2025</Text>
-          <Text style={styles.text}>New handbook updates are now available in the Resources section.</Text>
-        </View>
-      </ScrollView>
+              {/* Content */}
+              <Text style={styles.text}>{item.content}</Text>
+            </View>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
@@ -59,6 +91,12 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 20,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 6,
   },
   card: {
     backgroundColor: "#FFFFFF",

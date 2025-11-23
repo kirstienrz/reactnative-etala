@@ -5,7 +5,7 @@ import * as SecureStore from "expo-secure-store";
 // const API_BASE_URL = "http://192.168.254.162:5000/api"; 
 // const API_BASE_URL = "http://192.168.1.8:5000/api"; 
 
-const API_BASE_URL = "http://192.168.254.162:5000/api"; 
+const API_BASE_URL = "http://192.168.1.9:5000/api"; 
 // const API_BASE_URL = "http://10.226.166.194:5000/api"; 
 // For iOS simulator: http://localhost:5000/api
 // For physical device: replace with your PC's IP
