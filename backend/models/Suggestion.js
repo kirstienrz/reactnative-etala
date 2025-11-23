@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const SuggestionSchema = new mongoose.Schema({
   id: { type: Number, required: true, unique: true }, // frontend uses numeric ID
   text: { type: String, required: true },
-  submittedBy: { type: String, required: true },
+  submittedBy: { type: String, required: false },
   submittedDate: { type: Date, default: Date.now },
 
   status: {

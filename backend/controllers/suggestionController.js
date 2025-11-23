@@ -21,19 +21,29 @@ exports.createSuggestion = async (req, res) => {
   try {
     const newId = await getNextId();
 
+    // Set priority automatically to "low"
+    let priority = "low"; 
+
+    // Only allow admin to override if they pass priority
+    if (req.body.isAdmin && req.body.priority) {
+      priority = req.body.priority;
+    }
+
     const suggestion = new Suggestion({
       id: newId,
       text: req.body.text,
       submittedBy: req.body.submittedBy,
-      priority: req.body.priority || "low"
+      priority: priority
     });
 
     await suggestion.save();
     res.json(suggestion);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create suggestion" });
+    console.error(err);
+    res.status(500).json({ error: "Failed to create suggestion", details: err.message });
   }
 };
+
 
 // UPDATE — used for updateSuggestion(id)
 exports.updateSuggestion = async (req, res) => {

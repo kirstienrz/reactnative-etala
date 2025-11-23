@@ -146,7 +146,7 @@ const UserGADPrograms = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>GAD Programs</Text>
+        <Text style={styles.headerTitle}>Programs</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={expandAll} style={styles.actionButton}>
             <Text style={styles.actionButtonText}>Expand All</Text>
