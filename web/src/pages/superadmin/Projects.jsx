@@ -691,16 +691,12 @@ const GADProgramsHybrid = () => {
                                       <div className="flex items-center space-x-2 mb-2">
                                         <h5 className="font-medium text-gray-900">{event.title}</h5>
                                         <StatusBadge status={event.status} />
-
-                                        {/* ⬇️ ADD OVERDUE BADGE */}
                                         {isEventOverdue(event) && <OverdueBadge />}
                                       </div>
                                       <div className="text-sm text-gray-600 space-y-1">
                                         <p className="flex items-center">
                                           <Calendar className="w-4 h-4 mr-2 text-blue-600" />
                                           {event.date}
-
-                                          {/* ⬇️ ADD OVERDUE WARNING TEXT */}
                                           {isEventOverdue(event) && (
                                             <span className="ml-2 text-xs text-red-600 font-medium">
                                               (Needs status update)
@@ -712,6 +708,13 @@ const GADProgramsHybrid = () => {
                                           {event.participants} participants
                                         </p>
                                         <p className="text-gray-600">📍 {event.venue}</p>
+
+                                        {/* ⬇️ DAGDAG ITO PARA IPAKITA ANG DESCRIPTION */}
+                                        {event.description && (
+                                          <p className="text-gray-600 mt-2 text-sm bg-white p-2 rounded border">
+                                            📝 {event.description}
+                                          </p>
+                                        )}
                                       </div>
                                     </div>
                                     <button
@@ -829,6 +832,16 @@ const GADProgramsHybrid = () => {
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
+
+                    {/* ⬇️ ITO NA ANG DESCRIPTION FIELD - DAGDAG ITO */}
+                    <textarea
+                      placeholder="Event Description"
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      rows="3"
+                    />
+
                     <input
                       type="date"
                       value={formData.date || ''}

@@ -3,6 +3,8 @@ const Program = require('../models/Program');
 
 // @desc    Get all calendar events (holidays, consultations, program events)
 // @route   GET /api/calendar/events
+// @access  Public// @desc    Get all calendar events (holidays, consultations, program events)
+// @route   GET /api/calendar/events
 // @access  Public
 const getAllCalendarEvents = async (req, res) => {
   try {
@@ -38,7 +40,12 @@ const getAllCalendarEvents = async (req, res) => {
                 projectName: project.name,
                 venue: event.venue,
                 participants: event.participants,
-                status: event.status
+                status: event.status,
+                // ⬇️ ADD DESCRIPTION HERE!
+                description: event.description || '',
+                // ⬇️ ADD OTHER FIELDS IF NEEDED
+                date: event.date,
+                _id: event._id
               }
             });
           }
@@ -64,6 +71,16 @@ const getAllCalendarEvents = async (req, res) => {
     
     const allEvents = [...formattedCalendarEvents, ...programEvents];
     
+    // ⬇️ ADD DEBUG LOG
+    console.log('📊 Calendar Events Summary:');
+    console.log('- Calendar Events:', formattedCalendarEvents.length);
+    console.log('- Program Events:', programEvents.length);
+    console.log('- Total Events:', allEvents.length);
+    
+    // Check if program events have description
+    const eventsWithDesc = programEvents.filter(e => e.extendedProps.description);
+    console.log('- Program Events with Description:', eventsWithDesc.length);
+    
     res.status(200).json({
       success: true,
       count: allEvents.length,
@@ -77,7 +94,6 @@ const getAllCalendarEvents = async (req, res) => {
     });
   }
 };
-
 // @desc    Create calendar event (holiday, consultation, not available)
 // @route   POST /api/calendar/events
 // @access  Private

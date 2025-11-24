@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { X, Calendar as CalendarIcon, Clock, MapPin, Users, Info } from 'lucide-react-native';
 import { getAllCalendarEvents } from '../../api/calendar';
@@ -22,14 +22,32 @@ export default function UserCalendar() {
       setLoading(true);
       const response = await getAllCalendarEvents();
 
+      console.log('📊 API Response:', response);
+
       if (response.success) {
         const formatted = {};
         const rawData = [];
 
         response.data.forEach(event => {
           if (event.type !== 'consultation') {
-            // Store raw event data
-            rawData.push(event);
+            // ✅ FLATTEN THE DATA - extract extendedProps to top level
+            const flattenedEvent = {
+              _id: event._id,
+              title: event.title,
+              start: event.start,
+              type: event.type,
+              // ✅ Extract ALL data from extendedProps
+              description: event.extendedProps?.description || '',
+              venue: event.extendedProps?.venue || '',
+              location: event.extendedProps?.location || '',
+              participants: event.extendedProps?.participants || 0,
+              programId: event.extendedProps?.programId,
+              projectId: event.extendedProps?.projectId
+            };
+
+            console.log('📅 Flattened Event:', flattenedEvent); // DEBUG
+
+            rawData.push(flattenedEvent);
 
             // Format for calendar marking
             if (!formatted[event.start]) {
@@ -46,18 +64,42 @@ export default function UserCalendar() {
           }
         });
 
+        console.log('📝 Events with descriptions:', rawData.filter(e => e.description).length);
+        console.log('📝 Total events:', rawData.length);
+
         setEvents(formatted);
-        setRawEvents(rawData);
+        setRawEvents(rawData); // ✅ Now contains flattened data
       }
     } catch (err) {
-      console.error(err);
+      console.error('❌ Error fetching events:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Now handleEventPress can access properties directly
+  const handleEventPress = (event) => {
+    console.log('🔍 Event pressed:', {
+      title: event.title,
+      description: event.description,
+      venue: event.venue,
+      location: event.location,
+      participants: event.participants,
+      hasDescription: !!event.description
+    });
+
+    setSelectedEvent({
+      ...event,
+      // Already flattened, no need for extendedProps
+      description: event.description || 'No description available',
+      location: event.venue || event.location || 'No location specified',
+      participants: event.participants || 0
+    });
+    setShowModal(true);
+  };
+
   const getEventColor = (type) => {
-    switch(type) {
+    switch (type) {
       case 'holiday': return '#DC2626';
       case 'not_available': return '#6B7280';
       case 'program_event': return '#1F2937';
@@ -66,7 +108,7 @@ export default function UserCalendar() {
   };
 
   const getEventTypeLabel = (type) => {
-    switch(type) {
+    switch (type) {
       case 'holiday': return 'Holiday';
       case 'not_available': return 'Not Available';
       case 'program_event': return 'Program Event';
@@ -75,7 +117,7 @@ export default function UserCalendar() {
   };
 
   const getEventTypeBadgeColor = (type) => {
-    switch(type) {
+    switch (type) {
       case 'holiday': return { bg: '#FEE2E2', text: '#DC2626' };
       case 'not_available': return { bg: '#F3F4F6', text: '#6B7280' };
       case 'program_event': return { bg: '#E5E7EB', text: '#1F2937' };
@@ -86,15 +128,34 @@ export default function UserCalendar() {
   const handleDayPress = (day) => {
     const dateString = day.dateString;
     setSelectedDate(dateString);
-    
+
     // Get all events for this date
     const dayEvents = rawEvents.filter(event => event.start === dateString);
+
+    console.log('📅 Selected date events:', dayEvents.map(e => ({ // DEBUG
+      title: e.title,
+      description: e.description,
+      hasDesc: !!e.description
+    })));
+
     setSelectedDayEvents(dayEvents);
   };
 
-  const handleEventPress = (event) => {
-    setSelectedEvent(event);
-    setShowModal(true);
+
+  // ⬇️ ADD DEBUG BUTTON
+  const showDebugInfo = () => {
+    const eventsWithDesc = rawEvents.filter(e => e.description);
+    const eventsWithoutDesc = rawEvents.filter(e => !e.description);
+
+    Alert.alert(
+      '🔍 Debug Information',
+      `Total Events: ${rawEvents.length}\n` +
+      `With Description: ${eventsWithDesc.length}\n` +
+      `Without Description: ${eventsWithoutDesc.length}\n\n` +
+      `Selected Date: ${selectedDate || 'None'}\n` +
+      `Events on Selected Date: ${selectedDayEvents.length}`,
+      [{ text: 'OK' }]
+    );
   };
 
   if (loading) {
@@ -110,8 +171,14 @@ export default function UserCalendar() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <CalendarIcon size={28} color="#111827" />
-        <Text style={styles.headerTitle}>Calendar</Text>
+        <View style={styles.headerLeft}>
+          <CalendarIcon size={28} color="#111827" />
+          <Text style={styles.headerTitle}>Calendar</Text>
+        </View>
+        {/* ⬇️ ADD DEBUG BUTTON */}
+        <TouchableOpacity onPress={showDebugInfo} style={styles.debugButton}>
+          <Text style={styles.debugButtonText}>🔍</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -171,13 +238,19 @@ export default function UserCalendar() {
         {/* Selected Day Events */}
         {selectedDate && (
           <View style={styles.eventsSection}>
-            <Text style={styles.eventsSectionTitle}>
-              Events on {new Date(selectedDate).toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric', 
-                year: 'numeric' 
-              })}
-            </Text>
+            <View style={styles.eventsHeader}>
+              <Text style={styles.eventsSectionTitle}>
+                Events on {new Date(selectedDate).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </Text>
+              {/* ⬇️ SHOW EVENT COUNT */}
+              <Text style={styles.eventCount}>
+                {selectedDayEvents.length} event{selectedDayEvents.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
 
             {selectedDayEvents.length === 0 ? (
               <View style={styles.noEventsCard}>
@@ -188,6 +261,8 @@ export default function UserCalendar() {
               <View style={styles.eventsList}>
                 {selectedDayEvents.map((event) => {
                   const badgeColors = getEventTypeBadgeColor(event.type);
+                  const hasDescription = !!event.description;
+
                   return (
                     <TouchableOpacity
                       key={event._id}
@@ -198,17 +273,33 @@ export default function UserCalendar() {
                       <View style={styles.eventHeader}>
                         <View style={styles.eventTitleContainer}>
                           <Text style={styles.eventTitle}>{event.title}</Text>
-                          <View style={[styles.eventTypeBadge, { backgroundColor: badgeColors.bg }]}>
-                            <Text style={[styles.eventTypeText, { color: badgeColors.text }]}>
-                              {getEventTypeLabel(event.type)}
-                            </Text>
+                          <View style={styles.eventBadges}>
+                            <View style={[styles.eventTypeBadge, { backgroundColor: badgeColors.bg }]}>
+                              <Text style={[styles.eventTypeText, { color: badgeColors.text }]}>
+                                {getEventTypeLabel(event.type)}
+                              </Text>
+                            </View>
+                            {/* ⬇️ SHOW DESCRIPTION INDICATOR */}
+                            {hasDescription && (
+                              <View style={styles.hasDescriptionBadge}>
+                                <Text style={styles.hasDescriptionText}>📝</Text>
+                              </View>
+                            )}
                           </View>
                         </View>
                       </View>
 
-                      {event.description && (
-                        <Text style={styles.eventDescription} numberOfLines={2}>
-                          {event.description}
+                      {/* ⬇️ FIXED DESCRIPTION DISPLAY */}
+                      {/* ⬇️ SIGURADUHING string ang ilalagay */}
+                      {hasDescription ? (
+                        <View style={styles.descriptionContainer}>
+                          <Text style={styles.eventDescription}>
+                            {String(event.description || '')}  {/* ✅ Force to string */}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.noDescriptionText}>
+                          No description available
                         </Text>
                       )}
 
@@ -229,6 +320,10 @@ export default function UserCalendar() {
 
                       <View style={styles.eventFooter}>
                         <Text style={styles.tapToView}>Tap to view details</Text>
+                        {/* ⬇️ SHOW DEBUG INFO */}
+                        <Text style={styles.debugInfo}>
+                          ID: {event._id?.substring(0, 8)}...
+                        </Text>
                       </View>
                     </TouchableOpacity>
                   );
@@ -260,11 +355,11 @@ export default function UserCalendar() {
                 <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                   <View style={styles.modalSection}>
                     <View style={[
-                      styles.eventTypeBadge, 
+                      styles.eventTypeBadge,
                       { backgroundColor: getEventTypeBadgeColor(selectedEvent.type).bg }
                     ]}>
                       <Text style={[
-                        styles.eventTypeText, 
+                        styles.eventTypeText,
                         { color: getEventTypeBadgeColor(selectedEvent.type).text }
                       ]}>
                         {getEventTypeLabel(selectedEvent.type)}
@@ -272,15 +367,19 @@ export default function UserCalendar() {
                     </View>
                   </View>
 
-                  {selectedEvent.description && (
-                    <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <Info size={18} color="#374151" />
-                        <Text style={styles.modalSectionTitle}>Description</Text>
-                      </View>
-                      <Text style={styles.modalText}>{selectedEvent.description}</Text>
+                  <View style={styles.modalSection}>
+                    <View style={styles.modalSectionHeader}>
+                      <Info size={18} color="#374151" />
+                      <Text style={styles.modalSectionTitle}>Description</Text>
                     </View>
-                  )}
+                    <Text style={styles.modalText}>
+                      {selectedEvent.description || 'No description available'}
+                    </Text>
+                    {/* ⬇️ SHOW DEBUG IN MODAL */}
+                    <Text style={styles.debugModalText}>
+                      Description length: {selectedEvent.description?.length || 0} characters
+                    </Text>
+                  </View>
 
                   <View style={styles.modalSection}>
                     <View style={styles.modalSectionHeader}>
@@ -297,28 +396,33 @@ export default function UserCalendar() {
                     </Text>
                   </View>
 
-                  {selectedEvent.location && (
+                  {/* ✅ ONLY render if may value */}
+                  {selectedEvent?.location ? (
                     <View style={styles.modalSection}>
                       <View style={styles.modalSectionHeader}>
                         <MapPin size={18} color="#374151" />
                         <Text style={styles.modalSectionTitle}>Location</Text>
                       </View>
-                      <Text style={styles.modalText}>{selectedEvent.location}</Text>
+                      <Text style={styles.modalText}>
+                        {String(selectedEvent.location)}
+                      </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {selectedEvent.participants && (
-                    <View style={styles.modalSection}>
-                      <View style={styles.modalSectionHeader}>
-                        <Users size={18} color="#374151" />
-                        <Text style={styles.modalSectionTitle}>Participants</Text>
-                      </View>
-                      <Text style={styles.modalText}>{selectedEvent.participants} people</Text>
-                    </View>
-                  )}
+                  {selectedEvent?.participants ? (
+  <View style={styles.modalSection}>
+    <View style={styles.modalSectionHeader}>
+      <Users size={18} color="#374151" />
+      <Text style={styles.modalSectionTitle}>Participants</Text>
+    </View>
+    <Text style={styles.modalText}>
+      {selectedEvent.participants} people  {/* ✅ Already a string */}
+    </Text>
+  </View>
+) : null}
                 </ScrollView>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.modalCloseButton}
                   onPress={() => setShowModal(false)}
                 >
@@ -352,16 +456,30 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 20,
-    gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     backgroundColor: '#FFFFFF'
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#111827'
+  },
+  debugButton: {
+    padding: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8
+  },
+  debugButtonText: {
+    fontSize: 16,
+    fontWeight: '600'
   },
   calendarCard: {
     backgroundColor: '#FFFFFF',
@@ -411,11 +529,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20
   },
+  eventsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12
+  },
   eventsSectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 12
+    flex: 1
+  },
+  eventCount: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '600'
   },
   noEventsCard: {
     backgroundColor: '#FFFFFF',
@@ -456,6 +585,11 @@ const styles = StyleSheet.create({
     color: '#111827',
     flex: 1
   },
+  eventBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
   eventTypeBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -467,11 +601,34 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5
   },
+  hasDescriptionBadge: {
+    padding: 4,
+    backgroundColor: '#D1FAE5',
+    borderRadius: 4
+  },
+  hasDescriptionText: {
+    fontSize: 10,
+    fontWeight: '600'
+  },
+  descriptionContainer: {
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#1F2937',
+    marginBottom: 12
+  },
   eventDescription: {
     fontSize: 14,
     color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 12
+    lineHeight: 20
+  },
+  noDescriptionText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginBottom: 12,
+    textAlign: 'center'
   },
   eventDetails: {
     gap: 8,
@@ -496,6 +653,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     fontStyle: 'italic'
+  },
+  debugInfo: {
+    fontSize: 10,
+    color: '#D1D5DB',
+    marginTop: 4
   },
   modalOverlay: {
     flex: 1,
@@ -552,6 +714,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#111827',
     lineHeight: 22
+  },
+  debugModalText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 4
   },
   modalCloseButton: {
     backgroundColor: '#1F2937',

@@ -6,6 +6,11 @@ const eventSchema = new mongoose.Schema({
     required: [true, 'Event title is required'],
     trim: true
   },
+  description: {  // ← ADD THIS
+    type: String,
+    trim: true,
+    default: ''
+  },
   date: {
     type: String,
     required: [true, 'Event date is required']

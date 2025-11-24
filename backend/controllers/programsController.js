@@ -402,7 +402,15 @@ exports.addEvent = async (req, res) => {
       });
     }
     
-    project.events.push(req.body);
+    // Add extended description fields if not provided
+    const eventData = {
+      ...req.body,
+      extendedDescription: req.body.extendedDescription || '',
+      tags: req.body.tags || [],
+      eventDetails: req.body.eventDetails || {}
+    };
+    
+    project.events.push(eventData);
     await program.save();
     
     const newEvent = project.events[project.events.length - 1];

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet } from 'react-native';
-import { Calendar, Users, Clock, ChevronDown, ChevronRight, Search } from 'lucide-react-native';
+import { Calendar, Users, Clock, ChevronDown, ChevronRight, Search, FileText } from 'lucide-react-native';
 import { getAllPrograms } from '../../api/program';
 
 const UserGADPrograms = () => {
@@ -317,6 +317,16 @@ const UserGADPrograms = () => {
                                               <Clock size={14} color="#6B7280" />
                                               <Text style={styles.eventDetailText}>{event.venue}</Text>
                                             </View>
+
+                                            {/* ⬇️ ADDED DESCRIPTION FIELD */}
+                                            {event.description && (
+                                              <View style={styles.eventDetail}>
+                                                <FileText size={14} color="#6B7280" />
+                                                <Text style={styles.eventDescriptionText}>
+                                                  {event.description}
+                                                </Text>
+                                              </View>
+                                            )}
                                           </View>
                                         </View>
                                       ))}
@@ -597,12 +607,21 @@ const styles = StyleSheet.create({
   },
   eventDetail: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8
   },
   eventDetailText: {
     fontSize: 13,
-    color: '#6B7280'
+    color: '#6B7280',
+    flex: 1
+  },
+  // ⬇️ ADDED STYLE FOR DESCRIPTION TEXT
+  eventDescriptionText: {
+    fontSize: 13,
+    color: '#6B7280',
+    flex: 1,
+    lineHeight: 18,
+    fontStyle: 'italic'
   }
 });
 
