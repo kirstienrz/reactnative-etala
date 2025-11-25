@@ -348,7 +348,7 @@ const Header = () => {
                     >
                      <a
                         href={item.path ? item.path : `#${item.title.toLowerCase().replace(/\s+/g, '-')}`}
-                        className="flex items-center gap-1 px-4 py-2 text-gray-700 hover:text-purple-700 hover:bg-purple-50 rounded transition-all font-medium no-underline"
+                        className="flex items-center gap-1 px-2.5 py-2 text-gray-700 hover:text-purple-700 hover:bg-purple-50 rounded transition-all font-medium no-underline"
                       >
                         {item.title}
                         {item.submenu.length > 0 && (

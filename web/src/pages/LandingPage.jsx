@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,11 +14,88 @@ import {
   BookOpenCheck,
   MessageSquare,
   GraduationCap,
-  Sparkles
+  Sparkles,
+  Bell, Calendar, X
 } from 'lucide-react';
+import { getInfographics } from "../api/infographics";
+import { getNews, getAnnouncements } from "../api/newsAnnouncement";
+
+const InfographicModal = ({ image, onClose }) => {
+  if (!image) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black bg-opacity-90 z-[10000] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <img
+        src={image}
+        alt="Infographic Fullscreen"
+        className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <button
+        onClick={onClose}
+        className="absolute top-6 right-6 text-white p-2 rounded-full bg-black/30 hover:bg-black/60 shadow-md transition"
+      >
+        <X className="w-6 h-6" />
+      </button>
+    </div>,
+    document.body
+  );
+};
 
 const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [infographics, setInfographics] = useState([]);
+  const [newsItems, setNewsItems] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchInfographics = async () => {
+      try {
+        const data = await getInfographics();
+        setInfographics(data.slice(0, 8)); // store dynamic data
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchInfographics();
+  }, []);
+  
+  useEffect(() => {
+  const fetchNews = async () => {
+    try {
+      const data = await getNews(); // fetch non-archived news
+      setNewsItems(data.slice(0, 3)); // only top 3 latest
+    } catch (err) {
+      console.error("Failed to fetch news:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchNews();
+}, []);
+
+useEffect(() => {
+  const fetchAnnouncements = async () => {
+    try {
+      const data = await getAnnouncements();
+      setAnnouncements(data.slice(0, 3)); // only top 3 latest
+    } catch (err) {
+      console.error("Failed to fetch announcements:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAnnouncements();
+}, []);
+
 
   const heroSlides = [
     // {
@@ -29,33 +108,6 @@ const LandingPage = () => {
     //   image: '/assets/carousel/CAROUSEL2.jpg'
     // }
   ];
-
-  const focusAreas = [
-    { name: 'Gender Mainstreaming', code: 'GM', description: 'Integrating gender perspectives into all institutional operations and policies.' },
-    { name: 'Policy & Advocacy', code: 'PA', description: 'Developing and implementing gender-responsive policies and advocacy initiatives.' },
-    { name: 'Programs & Projects', code: 'PP', description: 'Executing targeted programs that address gender issues and advance equality.' },
-    { name: 'Research & Development', code: 'RD', description: 'Conducting research to inform evidence-based gender equality strategies.' }
-  ];
-
-  const news = [
-    {
-      date: '10 October, 2025',
-      title: 'Women\'s Month Celebration: Empowering Women in STEM',
-      image: '/assets/carousel/CAROUSEL.png'
-    },
-    {
-      date: '28 September, 2025',
-      title: 'GAD Training Workshop for Faculty and Staff',
-      image: '/assets/carousel/CAROUSEL1.jpg'
-    },
-    {
-      date: '15 September, 2025',
-      title: 'Gender-Responsive Research Forum 2025',
-      image: '/assets/carousel/CAROUSEL2.jpg'
-    }
-  ];
-
-  const network = ['GAD Committee', 'GAD Focal Persons', 'Partner Organizations'];
 
   const departments = [
     {
@@ -271,7 +323,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Gender and Development Infographics Section */}
+{/* Gender and Development Infographics Section */}
 <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
   <div className="max-w-7xl mx-auto px-8">
     <div className="text-center mb-16">
@@ -281,41 +333,58 @@ const LandingPage = () => {
     </div>
     
     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-      {focusAreas.map((area, idx) => (
-        <div
-          key={idx}
-          className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
-        >
-          <div className="h-40 bg-gradient-to-br from-violet-600 to-purple-700 relative overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white text-center p-6">
-                <div className="text-3xl font-black mb-2">{area.code}</div>
-                <div className="text-base font-semibold tracking-wide">{area.name}</div>
-              </div>
+      {infographics.length === 0 ? (
+        <p className="col-span-full text-center text-slate-600">No infographics available</p>
+      ) : (
+        infographics.map((item) => (
+          <div
+            key={item._id}
+            className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
+          >
+            <div className="h-40 relative overflow-hidden cursor-pointer" onClick={() => setFullscreenImage(item.imageUrl)}>
+              <img
+                src={item.imageUrl}
+                alt={item.title}
+                className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300"
+              />
+            </div>
+
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
+              <p className="text-sm text-slate-700 leading-relaxed">
+                Uploaded: {new Date(item.uploadDate).toLocaleDateString()}
+              </p>
+            </div>
+
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => setFullscreenImage(item.imageUrl)}
+                className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg"
+              >
+                View Infographic
+              </button>
             </div>
           </div>
-          
-          <div className="p-6">
-            <p className="text-slate-700 text-sm leading-relaxed mb-6">{area.description}</p>
-          </div>
-          
-          <div className="px-6 pb-6">
-            <a href="#" className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg">
-              View Infographic
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
-    
+
+    {/* Fullscreen modal for these infographics */}
+    {fullscreenImage && (
+      <InfographicModal image={fullscreenImage} onClose={() => setFullscreenImage(null)} />
+    )}
+
     <div className="text-center mt-16">
-      <button className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg">
+      <button 
+        className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
+        onClick={() => navigate("Infographics")}
+      >
         View All Infographics
       </button>
     </div>
   </div>
 </section>
+
 
       {/* Stats Section */}
       <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
@@ -343,21 +412,35 @@ const LandingPage = () => {
 
       {/* News Section */}
       <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Updates</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Latest News</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {news.map((item, idx) => (
+      <div className="max-w-7xl mx-auto px-8">
+        {/* Section Header */}
+        <div className="text-center mb-16">
+          <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Updates</span>
+          <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Latest News</h2>
+        </div>
+
+        {/* News Grid */}
+        <div className="grid md:grid-cols-3 gap-8">
+          {loading ? (
+            <p className="col-span-full text-center py-16 text-slate-600">Loading news...</p>
+          ) : newsItems.length === 0 ? (
+            <p className="col-span-full text-center text-slate-600">No news available</p>
+          ) : (
+            newsItems.map((item) => (
               <a
-                key={idx}
-                href="#"
+                key={item._id}
+                href={item.link || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="group bg-white overflow-hidden border-2 border-slate-200 hover:border-violet-400 hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-2"
               >
                 <div className="h-56 bg-slate-200 overflow-hidden relative">
-                  {item.image ? (
-                    <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
                   ) : (
                     <div className="w-full h-full bg-slate-300 flex items-center justify-center">
                       <span className="text-slate-500 font-medium">News Image</span>
@@ -374,10 +457,20 @@ const LandingPage = () => {
                   </span>
                 </div>
               </a>
-            ))}
-          </div>
+            ))
+          )}
         </div>
-      </section>
+
+        {/* "See All News and Articles" Button */}
+        <div className="text-center mt-16">
+          <button
+            className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
+          >
+            See All News and Articles
+          </button>
+        </div>
+      </div>
+    </section>
 
       {/* Resources Section */}
       <section className="py-28 bg-white">
@@ -416,35 +509,65 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Network Section */}
-      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Connect</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Announcement nalang siguro to??</h2>
-          </div>
-          <div className="space-y-6">
-            {network.map((item, idx) => (
-              <a
-                key={idx}
-                href="#"
-                className="group bg-gradient-to-r from-violet-600 to-purple-600 p-8 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 text-white flex items-center justify-between shadow-lg hover:shadow-2xl hover:scale-[1.02]"
+{/* Announcements Section */}
+ <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
+      <div className="max-w-7xl mx-auto px-8">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">
+            Updates
+          </span>
+          <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">
+            Latest Announcements
+          </h2>
+          <p className="text-xl text-slate-600">
+            Stay updated with our latest news and information
+          </p>
+        </div>
+
+        {/* Announcements List */}
+        <div className="space-y-6">
+          {loading ? (
+            <p className="text-center py-16 text-slate-600">Loading announcements...</p>
+          ) : announcements.length === 0 ? (
+            <p className="text-center text-slate-600">No announcements available</p>
+          ) : (
+            announcements.map((announcement) => (
+              <div
+                key={announcement._id}
+                className="group bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 hover:border-violet-400 p-8 transition-all duration-300 shadow-md hover:shadow-2xl hover:scale-[1.01]"
               >
-                <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors backdrop-blur-sm group-hover:scale-110 transition-transform">
-                    <Users className="w-10 h-10 text-white" />
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Bell className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors">
+                        {announcement.title}
+                      </h3>
+                    </div>
+                    <p className="text-slate-700 text-lg leading-relaxed">{announcement.content}</p>
                   </div>
-                  <div>
-                    <h3 className="text-3xl font-bold mb-2">{item}</h3>
-                    <p className="text-violet-100 text-lg">Connect and collaborate with our team</p>
+                  <div className="flex items-center gap-2 text-slate-500 text-sm md:flex-col md:items-end">
+                    <Calendar className="w-4 h-4" />
+                    <span className="font-medium">{announcement.date}</span>
                   </div>
                 </div>
-                <ArrowRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
-              </a>
-            ))}
-          </div>
+              </div>
+            ))
+          )}
         </div>
-      </section>
+
+        {/* See Older Announcements Button */}
+        <div className="text-center mt-12">
+          <button className="group inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105">
+            <span>See Older Announcements</span>
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      </div>
+    </section>
 
       {/* CTA Section */}
       <section className="py-28 bg-gradient-to-br from-slate-900 via-violet-900 to-purple-900 relative overflow-hidden">
