@@ -5,10 +5,17 @@ import { saveItem, getItem } from "../utils/storage"; // ✅ import your SecureS
 export const loginUser = async (email, password, tupId) => {
   const res = await API.post("/auth/login", { email, password, tupId });
 
-  // ✅ Save email and token for future PIN login
+  // Save email for PIN login
   await saveItem("email", email);
+
+  // Save token
   if (res.data.token) {
     await saveItem("token", res.data.token);
+  }
+
+  // Save role (IMPORTANT for role-based UI)
+  if (res.data.user && res.data.user.role) {
+    await saveItem("role", res.data.user.role);
   }
 
   return res.data;

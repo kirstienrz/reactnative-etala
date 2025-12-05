@@ -1,11 +1,27 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { logoutUser } from "../../api/auth"; // ← ADD THIS
 
 export default function SuperAdminDashboard({ setUser }) {
   const handleLogout = async () => {
-    await SecureStore.deleteItemAsync("user"); // clear saved user object
-    setUser(null); // update App.js state -> auto redirect
+    try {
+      // Optional: Call backend logout
+      await logoutUser();
+
+      // Clear all saved data
+      await SecureStore.deleteItemAsync("token");
+      await SecureStore.deleteItemAsync("role");
+      await SecureStore.deleteItemAsync("email");
+      await SecureStore.deleteItemAsync("user");
+
+      // Redirect user back to login
+      setUser(null);
+
+    } catch (error) {
+      console.log("Logout error:", error);
+      Alert.alert("Logout Failed", "Something went wrong while logging out.");
+    }
   };
 
   const confirmLogout = () => {

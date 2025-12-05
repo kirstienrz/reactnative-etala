@@ -2,7 +2,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
 // Change this to your backend address
-const API_BASE_URL = "http://192.168.254.162:5000/api"; 
+const API_BASE_URL = "http://192.168.1.3:5000/api"; 
 // const API_BASE_URL = "http://192.168.1.8:5000/api"; 
 
 // const API_BASE_URL = "http://192.168.1.9:5000/api"; 

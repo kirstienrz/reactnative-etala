@@ -72,36 +72,51 @@ export default function PinLoginScreen({ navigation }) {
 
   // Handle PIN Login
   const handlePinLogin = async () => {
-    if (!email) {
-      Alert.alert("Error", "No email found. Please log in again.");
-      navigation.replace("LoginScreen");
-      return;
-    }
+  if (!email) {
+    Alert.alert("Error", "No email found. Please log in again.");
+    navigation.replace("LoginScreen");
+    return;
+  }
 
-    if (pin.length !== 6) {
-      Alert.alert("Invalid PIN", "Please enter a 6-digit PIN.");
-      return;
-    }
+  if (pin.length !== 6) {
+    Alert.alert("Invalid PIN", "Please enter a 6-digit PIN.");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const response = await pinLogin(pin);
-      if (response.token) {
-        await SecureStore.setItemAsync("token", response.token);
-        navigation.replace("UserHome");
-      } else {
-        Alert.alert("Error", "Incorrect PIN. Try again.");
-        setPin("");
-        focusInput();
+  try {
+    const response = await pinLogin(pin);
+
+    if (response.token) {
+      // Save token
+      await SecureStore.setItemAsync("token", response.token);
+
+      // Save role for later
+      if (response.role) {
+        await SecureStore.setItemAsync("role", response.role);
       }
-    } catch (error) {
-      console.error("PIN Login Error:", error);
-      Alert.alert("Error", "Unable to log in with PIN.");
-    } finally {
-      setLoading(false);
+
+      // Navigate based on role
+      if (response.role === "superadmin") {
+        navigation.replace("SuperadminDashboard");
+      } else if (response.role === "admin") {
+        navigation.replace("SuperadminDashboard");
+      } else {
+        navigation.replace("UserHome");
+      }
+    } else {
+      Alert.alert("Error", "Incorrect PIN. Try again.");
+      setPin("");
+      focusInput();
     }
-  };
+  } catch (error) {
+    console.error("PIN Login Error:", error);
+    Alert.alert("Error", "Unable to log in with PIN.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Switch Account
   // Switch Account (with confirmation)
