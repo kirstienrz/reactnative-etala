@@ -1,159 +1,273 @@
-import React from 'react';
-import { Folder, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Calendar, Users, Clock, ChevronDown, ChevronRight, Search, 
+  FileText, Filter, CalendarDays, BarChart3, Target, Users2, 
+  ChevronLeft, ChevronRight as ChevronRightIcon, Eye, MapPin, UserCheck 
+} from 'lucide-react';
+import { getAllPrograms } from '../../api/program';
 
-const Projects = () => {
-  const projects = [
-    {
-      title: 'Gender Sensitivity Training Program',
-      description: 'Comprehensive training modules designed to enhance awareness and understanding of gender issues among faculty, staff, and students.',
-      link: '/projects/gender-sensitivity-training',
-      image: '/assets/projects/gender-training.jpg'
-    },
-    {
-      title: 'Women in STEM Initiative',
-      description: 'Programs and activities aimed at encouraging and supporting women in Science, Technology, Engineering, and Mathematics fields.',
-      link: '/projects/women-in-stem',
-      image: '/assets/projects/women-stem.jpg'
-    },
-    {
-      title: 'Safe Campus Campaign',
-      description: 'Multi-faceted initiative to create and maintain safe, respectful spaces throughout the university campus.',
-      link: '/projects/safe-campus',
-      image: '/assets/projects/safe-campus.jpg'
-    },
-    {
-      title: 'Gender-Responsive Budget Allocation',
-      description: 'Framework for integrating gender perspectives into institutional budgeting and resource allocation processes.',
-      link: '/projects/gender-responsive-budget',
-      image: '/assets/projects/budget.jpg'
-    },
-    {
-      title: 'Leadership Development for Women',
-      description: 'Capacity-building programs designed to develop leadership skills and competencies among female students and employees.',
-      link: '/projects/leadership-development',
-      image: '/assets/projects/leadership.jpg'
-    },
-    {
-      title: 'Gender and Development Research',
-      description: 'Institutional research initiatives examining gender issues, gaps, and opportunities within the university context.',
-      link: '/projects/gad-research',
-      image: '/assets/projects/research.jpg'
-    },
-    {
-      title: 'Community Outreach and Extension',
-      description: 'Programs extending GAD advocacy and services to partner communities and external stakeholders.',
-      link: '/projects/community-outreach',
-      image: '/assets/projects/outreach.jpg'
-    },
-    {
-      title: 'Gender Audit and Assessment',
-      description: 'Systematic evaluation of institutional policies, programs, and practices from a gender perspective.',
-      link: '/projects/gender-audit',
-      image: '/assets/projects/audit.jpg'
+const UserGADPrograms = () => {
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [yearFilter, setYearFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [expandedYears, setExpandedYears] = useState(new Set());
+  const [expandedPrograms, setExpandedPrograms] = useState(new Set());
+  const [expandedProjects, setExpandedProjects] = useState(new Set());
+  const [selectedProgram, setSelectedProgram] = useState(null);
+
+  useEffect(() => {
+    fetchPrograms();
+  }, []);
+
+  useEffect(() => {
+    const currentYear = new Date().getFullYear().toString();
+    if (programs.length > 0 && !expandedYears.size) {
+      setExpandedYears(new Set([currentYear]));
+
+      const yearPrograms = programs.filter(p => p.year === parseInt(currentYear));
+      if (yearPrograms.length > 0) {
+        setExpandedPrograms(new Set([yearPrograms[0]._id]));
+        setSelectedProgram(yearPrograms[0]);
+      }
     }
-  ];
+  }, [programs]);
+
+  const fetchPrograms = async () => {
+    try {
+      setLoading(true);
+      const response = await getAllPrograms({
+        year: yearFilter !== 'all' ? yearFilter : undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        search: searchTerm || undefined
+      });
+      if (response.success) setPrograms(response.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleYear = (year) => {
+    setExpandedYears(prev => {
+      const newSet = new Set(prev);
+      newSet.has(year) ? newSet.delete(year) : newSet.add(year);
+      return newSet;
+    });
+  };
+
+  const toggleProgram = (programId, program) => {
+    setSelectedProgram(program);
+    setExpandedPrograms(prev => {
+      const newSet = new Set(prev);
+      newSet.has(programId) ? newSet.delete(programId) : newSet.add(programId);
+      return newSet;
+    });
+  };
+
+  const toggleProject = (projectId) => {
+    setExpandedProjects(prev => {
+      const newSet = new Set(prev);
+      newSet.has(projectId) ? newSet.delete(projectId) : newSet.add(projectId);
+      return newSet;
+    });
+  };
+
+  const StatusBadge = ({ status }) => {
+    const config = {
+      upcoming: { color: 'bg-purple-100 text-purple-800', border: 'border-purple-200', label: 'Upcoming' },
+      ongoing: { color: 'bg-green-100 text-green-800', border: 'border-green-200', label: 'Ongoing' },
+      completed: { color: 'bg-blue-100 text-blue-800', border: 'border-blue-200', label: 'Completed' },
+      cancelled: { color: 'bg-red-100 text-red-800', border: 'border-red-200', label: 'Cancelled' }
+    };
+    const conf = config[status] || config.ongoing;
+
+    return (
+      <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold border ${conf.color} ${conf.border}`}>
+        {conf.label}
+      </span>
+    );
+  };
+
+  const filteredPrograms = useMemo(() => {
+    return programs.filter(p => {
+      const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesYear = yearFilter === 'all' || p.year === parseInt(yearFilter);
+      const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+      return matchesSearch && matchesYear && matchesStatus;
+    });
+  }, [programs, searchTerm, yearFilter, statusFilter]);
+
+  const programsByYear = useMemo(() => {
+    const grouped = {};
+    filteredPrograms.forEach(program => {
+      const year = program.year || 'No Year';
+      if (!grouped[year]) grouped[year] = [];
+      grouped[year].push(program);
+    });
+    return grouped;
+  }, [filteredPrograms]);
+
+  const sortedYears = useMemo(() => {
+    return Object.keys(programsByYear).sort((a, b) => Number(b) - Number(a));
+  }, [programsByYear]);
 
   return (
     <main className="bg-white min-h-screen">
-      {/* Hero Section */}
-      <section className="relative py-32 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
-        
-        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
-          <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-            GAD Programs and Projects
-          </h1>
-          <div className="w-24 h-1 bg-gradient-to-r from-violet-400 to-purple-400 mx-auto mb-8"></div>
-          <p className="text-lg text-violet-200 max-w-3xl mx-auto leading-relaxed">
-            Strategic initiatives advancing gender equality and inclusive development at Technological University of the Philippines - Taguig
-          </p>
-        </div>
+
+      {/* ===================== */}
+      {/* BEAUTIFUL HERO HEADER */}
+      {/* ===================== */}
+      <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 text-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')]"></div>
+
+        <h1 className="text-5xl font-bold text-white mb-4">GAD Programs</h1>
+        <p className="text-violet-200 text-lg max-w-2xl mx-auto">
+          View all institutional Gender and Development programs, activities, and accomplishments.
+        </p>
       </section>
 
-      {/* Overview Section */}
-      <section className="py-20 bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-8">
-          <h2 className="text-3xl font-bold text-slate-900 mb-6">Program Overview</h2>
-          <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed space-y-4">
-            <p>
-              The GAD Office implements a diverse portfolio of programs and projects designed to promote gender equality, empower marginalized sectors, and create an inclusive institutional environment. These initiatives align with the university's strategic goals and national GAD mandates.
-            </p>
-            <p>
-              Our programs are evidence-based, regularly evaluated, and designed to create sustainable impact. They address various dimensions of gender and development including capacity building, policy advocacy, research, and community engagement.
-            </p>
-            <p>
-              Each project is implemented in collaboration with relevant departments, committees, and stakeholders to ensure comprehensive reach and effective outcomes.
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* ===================== */}
+      {/* FILTER + SEARCH BAR  */}
+      {/* ===================== */}
+      <section className="py-10 bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
 
-      {/* Projects Section */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-8">
-          <h2 className="text-3xl font-bold text-slate-900 mb-12">Active Programs and Projects</h2>
-          
-          <div className="space-y-6">
-            {projects.map((project, idx) => (
-              <a
-                key={idx}
-                href={project.link}
-                className="block bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-violet-400 hover:shadow-lg transition-all duration-300 group"
+            {/* Search */}
+            <div className="w-full lg:w-1/3 relative">
+              <Search className="absolute left-3 top-3 text-slate-400" size={20} />
+              <input
+                type="text"
+                className="w-full border border-slate-300 rounded-lg pl-10 px-4 py-2.5 focus:border-violet-500 focus:ring-violet-500"
+                placeholder="Search programs..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-4 w-full lg:w-auto">
+
+              {/* Year */}
+              <select
+                className="border border-slate-300 rounded-lg px-4 py-2.5 focus:border-violet-500"
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
               >
-                <div className="flex flex-col md:flex-row">
-                  {/* Image */}
-                  <div className="md:w-72 h-56 md:h-auto bg-gradient-to-br from-slate-200 to-slate-300 flex-shrink-0 overflow-hidden relative">
-                    <img 
-                      src={project.image} 
-                      alt={project.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                    <div className="hidden w-full h-full items-center justify-center absolute inset-0">
-                      <div className="w-20 h-20 bg-gradient-to-br from-violet-600 to-purple-600 rounded-full flex items-center justify-center">
-                        <Folder className="w-10 h-10 text-white" />
-                      </div>
-                    </div>
-                  </div>
+                <option value="all">All Years</option>
+                {sortedYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
 
-                  {/* Content */}
-                  <div className="p-8 flex-1 flex items-center">
-                    <div className="flex items-start justify-between gap-6 w-full">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-violet-700 transition-colors">
-                          {project.title}
-                        </h3>
-                        <p className="text-slate-600 leading-relaxed">
-                          {project.description}
-                        </p>
-                      </div>
+              {/* Status */}
+              <select
+                className="border border-slate-300 rounded-lg px-4 py-2.5 focus:border-violet-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Status</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
 
-                      <div className="inline-flex items-center gap-2 text-violet-600 font-medium text-sm flex-shrink-0 group-hover:gap-3 transition-all">
-                        View Details
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer Note */}
-      <section className="py-16 bg-white border-t border-slate-200">
-        <div className="max-w-5xl mx-auto px-8 text-center">
-          <p className="text-slate-600 leading-relaxed">
-            For more information about our programs or partnership opportunities, please contact the GAD Office at <a href="mailto:gad@tup.edu.ph" className="text-violet-600 hover:underline font-medium">gad@tup.edu.ph</a>
-          </p>
+      {/* ===================== */}
+      {/* PROGRAMS LIST (Knowledge-style Cards) */}
+      {/* ===================== */}
+      <section className="py-14 bg-slate-50">
+        <div className="max-w-6xl mx-auto px-6 space-y-10">
+
+          {sortedYears.map(year => (
+            <div key={year} className="space-y-4">
+
+              {/* Year Divider */}
+              <div 
+                onClick={() => toggleYear(year)}
+                className="flex items-center justify-between cursor-pointer bg-white border border-slate-200 px-6 py-4 rounded-xl hover:border-violet-400 transition"
+              >
+                <h2 className="text-2xl font-bold text-slate-900">{year}</h2>
+                {expandedYears.has(year)
+                  ? <ChevronDown className="text-slate-500" />
+                  : <ChevronRight className="text-slate-500" />}
+              </div>
+
+              {/* Programs Inside */}
+              {expandedYears.has(year) && (
+                <div className="space-y-6">
+                  {programsByYear[year].map(program => (
+                    <article
+                      key={program._id}
+                      className="bg-white border border-slate-200 rounded-xl p-6 hover:border-violet-400 hover:shadow-lg transition cursor-pointer"
+                      onClick={() => toggleProgram(program._id, program)}
+                    >
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-semibold text-slate-900">{program.name}</h3>
+                        <StatusBadge status={program.status} />
+                      </div>
+
+                      <p className="text-slate-600 line-clamp-2">{program.description}</p>
+
+                      {expandedPrograms.has(program._id) && (
+                        <div className="mt-6 border-t pt-4 space-y-4">
+
+                          {/* Program Details */}
+                          <div className="flex flex-wrap gap-6 text-slate-600 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={18} />
+                              {program.date || "No Date"}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Users2 size={18} />
+                              {program.target || "No Target"}
+                            </div>
+                          </div>
+
+                          {/* Projects List */}
+                          {program.projects?.map(project => (
+                            <div key={project._id}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleProject(project._id); }}
+                                className="flex justify-between items-center w-full text-left text-slate-800 font-medium mt-2"
+                              >
+                                {project.title}
+                                {expandedProjects.has(project._id)
+                                  ? <ChevronDown />
+                                  : <ChevronRight />}
+                              </button>
+
+                              {expandedProjects.has(project._id) && (
+                                <div className="pl-4 mt-2 text-slate-600 text-sm space-y-1">
+                                  <p>{project.description}</p>
+                                  <p className="flex items-center gap-1"><Clock size={16} /> {project.time}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                        </div>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+
+            </div>
+          ))}
         </div>
       </section>
     </main>
   );
 };
 
-export default Projects;
+export default UserGADPrograms;

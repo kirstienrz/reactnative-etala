@@ -1,0 +1,20 @@
+export default function Inbox() {
+  return (
+    <div className="min-h-screen bg-gray-50 py-10 px-4">
+      <div className="max-w-4xl mx-auto">
+
+        <h1 className="text-3xl font-bold text-purple-900 mb-3">
+          Inbox
+        </h1>
+        <p className="text-gray-600 mb-6">
+          Messages and announcements.
+        </p>
+
+        <div className="bg-white p-6 rounded-xl shadow border border-gray-100">
+          <p>No messages yet.</p>
+        </div>
+
+      </div>
+    </div>
+  );
+}

@@ -33,7 +33,13 @@ import BudgetPage from "./pages/superadmin/Budget";
 import InfographicsPage from "./pages/superadmin/Infographics";
 
 import AdminDashboard from "./pages/admin/Dashboard";
+
+
 import UserDashboard from "./pages/user/Dashboard";
+import UserProfile from "./pages/user/Profile";
+import UserInbox from "./pages/user/Inbox";
+import UserReports from "./pages/user/Reports";
+
 import MissionVision from "./pages/public/MissionVision";
 import Organization from "./pages/public/Organization";
 import Accomplishment from "./pages/public/Accomplishment";
@@ -48,6 +54,7 @@ import Infographics from "./pages/public/Infographics";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Reports from "./pages/user/Reports";
 
 const App = () => {
   return (
@@ -95,6 +102,9 @@ const App = () => {
 
             <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
               <Route path="/user/dashboard" element={<UserDashboard />} />
+              <Route path="/user/profile" element={<UserProfile />} />
+              <Route path="/user/inbox" element={<UserInbox />} />
+              <Route path="/user/reports" element={<UserReports />} />
             </Route>
           </Routes>
           <FloatingChatbot />

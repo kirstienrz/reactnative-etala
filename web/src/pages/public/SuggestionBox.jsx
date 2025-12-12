@@ -1,221 +1,203 @@
 import React, { useState } from 'react';
-import { MessageSquare, Send, CheckCircle } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle, Lock, AlertCircle } from 'lucide-react';
+import { createSuggestion } from '../../api/suggestion';
 
-const SuggestionBox = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    category: '',
-    subject: '',
-    message: '',
-    anonymous: false
-  });
-  const [submitted, setSubmitted] = useState(false);
+const GADSuggestionBox = () => {
+  const [newSuggestion, setNewSuggestion] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState('');
 
-  const categories = [
-    'General Feedback',
-    'Policy Suggestions',
-    'Program Ideas',
-    'Campus Safety',
-    'Gender Equality Concerns',
-    'Other'
-  ];
+  const handleSubmit = async () => {
+    if (!newSuggestion.trim()) {
+      setShowError('Please enter a suggestion before submitting.');
+      return;
+    }
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    try {
+      setLoading(true);
+      setShowError('');
+      await createSuggestion({ text: newSuggestion });
+      setNewSuggestion('');
+      setShowSuccess(true);
+
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setShowError('Failed to submit suggestion. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Suggestion submitted:', formData);
-    setSubmitted(true);
-    
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({
-        name: '',
-        email: '',
-        category: '',
-        subject: '',
-        message: '',
-        anonymous: false
-      });
-    }, 3000);
-  };
+  const characterCount = newSuggestion.length;
+  const maxCharacters = 500;
+  const isNearLimit = characterCount > maxCharacters * 0.9;
+  const isOverLimit = characterCount > maxCharacters;
 
   return (
     <main className="bg-white min-h-screen">
-      {/* Hero Section */}
+
+      {/* HERO SECTION – MATCHED WITH KNOWLEDGE UI */}
       <section className="relative py-32 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
-        
-        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
-          <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-            Suggestion Box
+        <div className="absolute inset-0 opacity-20 
+          bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')]">
+        </div>
+
+        <div className="max-w-4xl mx-auto px-8 text-center relative z-10">
+          <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+            GAD Suggestion Box
           </h1>
           <div className="w-24 h-1 bg-gradient-to-r from-violet-400 to-purple-400 mx-auto mb-8"></div>
-          <p className="text-lg text-violet-200 max-w-3xl mx-auto leading-relaxed">
-            Share your ideas, feedback, and suggestions to help improve our GAD programs
+          <p className="text-lg text-violet-200 max-w-2xl mx-auto">
+            Your voice matters. Help us create a safer, more empowering environment.
           </p>
         </div>
       </section>
 
-      {/* Overview Section */}
-      <section className="py-20 bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-8">
-          <h2 className="text-3xl font-bold text-slate-900 mb-6">We Value Your Input</h2>
-          <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed">
-            <p>
-              The GAD Office welcomes your suggestions and feedback. Share your ideas to help us improve our programs and better serve the university community.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Form Section */}
+      {/* MAIN CONTENT */}
       <section className="py-20 bg-slate-50">
-        <div className="max-w-3xl mx-auto px-8">
-          {submitted ? (
-            <div className="bg-white border border-green-200 rounded-lg p-12 text-center">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-10 h-10 text-green-600" />
+        <div className="max-w-6xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-3 gap-12">
+
+          {/* LEFT SIDE – SUGGESTION FORM */}
+          <div className="lg:col-span-2 space-y-10">
+
+            {/* Success */}
+            {showSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span className="text-green-700 font-medium">Suggestion submitted successfully!</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-3">Thank You!</h3>
-              <p className="text-slate-600 text-lg">
-                Your suggestion has been submitted successfully. We appreciate your feedback and will review it carefully.
-              </p>
+            )}
+
+            {/* Error */}
+            {showError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <span className="text-red-700">{showError}</span>
+              </div>
+            )}
+
+            {/* Suggestion Input */}
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Your Suggestion</h2>
+
+              <textarea
+                placeholder="Share your ideas, concerns, or recommendations..."
+                value={newSuggestion}
+                onChange={(e) => {
+                  setNewSuggestion(e.target.value);
+                  setShowError('');
+                }}
+                className="w-full h-52 p-4 border border-slate-300 rounded-xl
+                           focus:ring-2 focus:ring-violet-500 focus:border-transparent
+                           text-slate-700 resize-none"
+                maxLength={maxCharacters}
+              />
+
+              <div className="flex justify-between items-center mt-3 text-sm">
+                <span className="text-slate-500">
+                  Your submission is <strong>anonymous</strong>.
+                </span>
+                <span
+                  className={`font-medium ${
+                    isOverLimit
+                      ? 'text-red-600'
+                      : isNearLimit
+                      ? 'text-amber-600'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  {characterCount} / {maxCharacters}
+                </span>
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={loading || isOverLimit}
+                className={`w-full mt-6 p-4 rounded-xl font-semibold flex items-center justify-center gap-3 shadow
+                  ${
+                    loading || isOverLimit
+                      ? 'bg-slate-400 cursor-not-allowed'
+                      : 'bg-violet-700 hover:bg-violet-800 text-white'
+                  }
+                `}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin h-5 w-5 border-b-2 border-white rounded-full" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 text-white" />
+                    Submit Suggestion
+                  </>
+                )}
+              </button>
             </div>
-          ) : (
-            <div className="bg-white border border-slate-200 rounded-lg p-8">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 bg-violet-100 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="w-6 h-6 text-violet-600" />
+
+            {/* Privacy Card */}
+            <div className="bg-white rounded-2xl p-6 shadow border border-slate-200">
+              <div className="flex items-start gap-4">
+                <Lock className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-slate-800 mb-1">Anonymous & Confidential</h3>
+                  <p className="text-slate-600">
+                    Your identity will never be recorded. The committee reviews all submissions with respect and confidentiality.
+                  </p>
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900">Submit a Suggestion</h2>
               </div>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE – GUIDELINES */}
+          <aside>
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 sticky top-20">
+              <h2 className="text-xl font-bold text-slate-900 mb-6">Guidelines</h2>
 
               <div className="space-y-6">
-                {/* Anonymous Option */}
-                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
-                  <input
-                    type="checkbox"
-                    id="anonymous"
-                    name="anonymous"
-                    checked={formData.anonymous}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-violet-600 border-slate-300 rounded focus:ring-violet-500"
-                  />
-                  <label htmlFor="anonymous" className="text-sm text-slate-700 font-medium">
-                    Submit anonymously (your contact information will not be recorded)
-                  </label>
-                </div>
-
-                {/* Contact Information - Hidden if anonymous */}
-                {!formData.anonymous && (
-                  <div className="space-y-6">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        placeholder="Your full name"
-                      />
+                {[
+                  { num: 1, title: 'Be Respectful', text: 'Provide constructive feedback.' },
+                  { num: 2, title: 'Be Specific', text: 'Give clear, actionable suggestions.' },
+                  { num: 3, title: 'Stay GAD-Focused', text: 'Align with gender and development goals.' },
+                  { num: 4, title: 'Offer Solutions', text: 'Not just problems — give possible improvements.' }
+                ].map((i) => (
+                  <div key={i.num} className="flex items-start gap-4">
+                    <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
+                      <span className="text-violet-700 font-bold">{i.num}</span>
                     </div>
-
                     <div>
-                      <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        placeholder="your.email@example.com"
-                      />
+                      <h4 className="font-semibold text-slate-800">{i.title}</h4>
+                      <p className="text-slate-600 text-sm">{i.text}</p>
                     </div>
                   </div>
-                )}
+                ))}
+              </div>
 
-                {/* Category */}
-                <div>
-                  <label htmlFor="category" className="block text-sm font-semibold text-slate-700 mb-2">
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Subject */}
-                <div>
-                  <label htmlFor="subject" className="block text-sm font-semibold text-slate-700 mb-2">
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                    placeholder="Brief summary of your suggestion"
-                  />
-                </div>
-
-                {/* Message */}
-                <div>
-                  <label htmlFor="message" className="block text-sm font-semibold text-slate-700 mb-2">
-                    Your Suggestion
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    rows="8"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
-                    placeholder="Please provide detailed information about your suggestion..."
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  onClick={handleSubmit}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-700 transition-colors"
-                >
-                  <Send className="w-5 h-5" />
-                  Submit Suggestion
-                </button>
+              <div className="mt-8 border-t pt-6">
+                <h3 className="font-semibold text-slate-900 mb-3">What Happens Next?</h3>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li>• Reviewed by GAD Committee</li>
+                  <li>• Discussed in meetings</li>
+                  <li>• Evaluated for implementation</li>
+                  <li>• Integrated into improvements</li>
+                </ul>
               </div>
             </div>
-          )}
+          </aside>
         </div>
       </section>
 
+      {/* FOOTER */}
+      <footer className="bg-slate-900 text-white py-14 text-center">
+        <h3 className="text-2xl font-bold mb-3">Your Voice Matters</h3>
+        <p className="text-slate-300 max-w-xl mx-auto">
+          Every suggestion helps us build a safer and more inclusive community.
+        </p>
+      </footer>
     </main>
   );
 };
 
-export default SuggestionBox;
+export default GADSuggestionBox;
