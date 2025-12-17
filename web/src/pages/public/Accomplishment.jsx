@@ -1,13 +1,28 @@
-import React from 'react';
-import { Download } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Download } from "lucide-react";
+import { getAccomplishments } from "../../api/accomplishments"; // Axios API call
 
 const Accomplishment = () => {
-  const accomplishmentYears = [
-    { year: '2024', file: '/assets/accomplishments/2024.pdf' },
-    { year: '2023', file: '/assets/accomplishments/2023.pdf' },
-    { year: '2022', file: '/assets/accomplishments/2022.pdf' },
-    { year: '2021', file: '/assets/accomplishments/2021.pdf' }
-  ];
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const data = await getAccomplishments(); // GET /api/accomplishments
+      setReports(data);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load accomplishment reports.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="bg-white min-h-screen">
@@ -24,23 +39,33 @@ const Accomplishment = () => {
       {/* Reports Section */}
       <section className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-8">
+          {loading && <p className="text-center text-gray-500">Loading...</p>}
+          {error && <p className="text-center text-red-500">{error}</p>}
+
           <div className="space-y-4">
-            {accomplishmentYears.map((item, idx) => (
+            {!loading && !error && reports.length === 0 && (
+              <p className="text-center text-gray-500">No reports available.</p>
+            )}
+
+            {reports.map((report) => (
               <a
-                key={idx}
-                href={item.file}
+                key={report._id}
+                href={report.fileUrl} // Cloudinary PDF URL
+                target="_blank"
+                rel="noopener noreferrer"
                 download
-                className="group flex items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300"
+                className="group flex flex-col md:flex-row items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300"
               >
-                <div>
+                <div className="flex-1">
                   <h3 className="text-2xl font-bold text-slate-900 mb-1">
-                    {item.year} Annual Accomplishment Report
+                    {report.title} ({report.year})
                   </h3>
-                  <p className="text-slate-500 text-sm">
-                    GAD Office - TUP Taguig
+                  <p className="text-slate-400 text-xs">
+                    Uploaded At: {new Date(report.createdAt).toLocaleDateString()}{" "}
+                    {new Date(report.createdAt).toLocaleTimeString()}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 text-violet-600 font-semibold group-hover:gap-4 transition-all">
+                <div className="flex items-center gap-3 text-violet-600 font-semibold mt-4 md:mt-0 group-hover:gap-4 transition-all">
                   <span>Download</span>
                   <Download className="w-5 h-5" />
                 </div>
