@@ -93,6 +93,7 @@ app.use("/api/projects", require("./routes/projectRoutes"));
 app.use("/api/calendar", require("./routes/calendarRoutes"));
 app.use("/api/programs", require("./routes/programsRoutes"));
 app.use("/api/infographics", require("./routes/infographicRoutes"));
+app.use("/api/accomplishments", require("./routes/accomplishmentRoutes"));
 
 // ✅ SOCKET EVENTS
 io.on("connection", (socket) => {
