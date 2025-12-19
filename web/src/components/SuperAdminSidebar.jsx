@@ -84,6 +84,7 @@ const SuperAdminSidebar = () => {
             <SidebarItem icon={<DollarSign size={18} />} label="Budget & Programs" to="/superadmin/budget" />
             <SidebarItem icon={<BarChart3 size={18} />} label="Infographics" to="/superadmin/infographics" />
             <SidebarItem icon={<Award size={18} />} label="Accomplishments" to="/superadmin/accomplishments" />
+            <SidebarItem icon={<FileText size={18} />} label="Policies & Issuances" to="/superadmin/policies" />
 
           </SidebarSection>
 

@@ -1,44 +1,3 @@
-// const multer = require("multer");
-// const { CloudinaryStorage } = require("multer-storage-cloudinary");
-// const cloudinary = require("./cloudinary");
-
-// // ✅ Carousel storage (you already have)
-// const carouselStorage = new CloudinaryStorage({
-//   cloudinary,
-//   params: {
-//     folder: "gadportal_carousel",
-//     allowed_formats: ["jpg", "png", "jpeg"],
-//   },
-// });
-// const uploadCarousel = multer({ storage: carouselStorage });
-
-// // ✅ Reports storage (you already have)
-// const reportStorage = new CloudinaryStorage({
-//   cloudinary,
-//   params: {
-//     folder: "gadportal_reports",
-//     allowed_formats: ["jpg", "png", "jpeg", "pdf", "mp4"],
-//   },
-// });
-// const uploadReport = multer({ storage: reportStorage });
-
-// // ✅ New: GAD Projects storage
-// const projectStorage = new CloudinaryStorage({
-//   cloudinary,
-//   params: {
-//     folder: "gadportal_projects", // separate folder
-//     allowed_formats: ["jpg", "png", "jpeg"],
-//   },
-// });
-// const uploadProject = multer({ storage: projectStorage });
-
-// // Export all
-// module.exports = {
-//   uploadCarousel,
-//   uploadReport,
-//   uploadProject,
-// };
-
 
 const multer = require("multer");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
@@ -95,6 +54,24 @@ const uploadAccomplishment = multer({
 });
 
 /* =========================
+   POLICIES & ISSUANCES (DOCUMENTS)
+========================= */
+const documentStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "gadportal_documents",
+    resource_type: "raw", // ✅ REQUIRED for PDF/DOC/DOCX
+    allowed_formats: ["pdf", "doc", "docx"],
+  },
+});
+
+const uploadDocument = multer({
+  storage: documentStorage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+});
+
+
+/* =========================
    EXPORTS
 ========================= */
 module.exports = {
@@ -102,5 +79,6 @@ module.exports = {
   uploadProject,
   uploadAccomplishment,
   uploadReport,
+  uploadDocument,
 
 };

@@ -30,7 +30,7 @@ const Organizational = () => {
               Structure Overview
             </span>
             <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">
-              GAD Office Hierarchy
+              Office Hierarchy
             </h2>
           </div>
 
@@ -54,7 +54,7 @@ const Organizational = () => {
                   Organizational Chart
                 </h3>
                 <p className="text-lg text-slate-500 max-w-md">
-                  GAD Office organizational structure and hierarchy
+                  Office organizational structure and hierarchy
                 </p>
               </div>
             </div>

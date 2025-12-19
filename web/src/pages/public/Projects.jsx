@@ -124,7 +124,7 @@ const UserGADPrograms = () => {
       <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 text-center relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')]"></div>
 
-        <h1 className="text-5xl font-bold text-white mb-4">GAD Programs</h1>
+        <h1 className="text-5xl font-bold text-white mb-4">Programs</h1>
         <p className="text-violet-200 text-lg max-w-2xl mx-auto">
           View all institutional Gender and Development programs, activities, and accomplishments.
         </p>

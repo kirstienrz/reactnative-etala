@@ -41,7 +41,7 @@ const UserKnowledgeHub = () => {
     <main className="bg-white min-h-screen">
       {/* Hero Section */}
       <section className="relative py-32 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 text-center text-white">
-        <h1 className="text-5xl lg:text-6xl font-bold mb-4">GAD Knowledge Hub</h1>
+        <h1 className="text-5xl lg:text-6xl font-bold mb-4">Knowledge Hub</h1>
         <p className="max-w-3xl mx-auto text-lg">
           Explore articles, webinars, and resources on gender and development topics.
         </p>

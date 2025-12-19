@@ -46,7 +46,7 @@ const GADSuggestionBox = () => {
 
         <div className="max-w-4xl mx-auto px-8 text-center relative z-10">
           <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
-            GAD Suggestion Box
+            Suggestion Box
           </h1>
           <div className="w-24 h-1 bg-gradient-to-r from-violet-400 to-purple-400 mx-auto mb-8"></div>
           <p className="text-lg text-violet-200 max-w-2xl mx-auto">
