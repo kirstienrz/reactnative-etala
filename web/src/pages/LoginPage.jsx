@@ -70,7 +70,17 @@ const LoginPage = () => {
         data = await login(email, password, tupId);
       }
 
-      dispatch(loginSuccess({ token: data.token, role: data.role }));
+      dispatch(loginSuccess({
+        token: data.token,
+        role: data.role,
+        department: data.department,  // ✅ add this
+        user: {
+          id: data.id,       // 🔹 API user id
+          name: data.name,   // 🔹 API user name
+          role: data.role,
+          department: data.department
+        }
+      }));
 
       toast.success("Login successful!");
 

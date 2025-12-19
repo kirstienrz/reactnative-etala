@@ -2,24 +2,28 @@ import React from "react";
 import { useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
-import Header from "../components/Header"; // ✅ Import actual Header component
-import Footer from "../components/Footer"; // ✅ Import actual Footer component
+import AdminSidebar from "../components/AdminSidebar";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const Layout = ({ children }) => {
-  const { user } = useSelector((state) => state.auth);
+  const { user, role, department } = useSelector((state) => state.auth);
   const location = useLocation();
 
-  const isSuperAdmin = user?.role === "superadmin";
+  const effectiveRole = (user?.role || role)?.toLowerCase();
+  const effectiveDepartment = (user?.department || department)?.toLowerCase();
+
+  const isSuperAdmin = effectiveRole === "superadmin";
   const isSuperAdminRoute = location.pathname.startsWith("/superadmin");
 
-  // 🔒 If superadmin or in superadmin routes — hide header/footer and use sidebar layout
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const isAdmin = ["osa", "hr", "depthead"].includes(effectiveDepartment);
+
+  // ================= SUPER ADMIN LAYOUT =================
   if (isSuperAdmin || isSuperAdminRoute) {
     return (
       <div className="flex h-screen w-screen overflow-hidden">
-        {/* Sidebar */}
-        <SuperAdminSidebar />
-
-        {/* Main Content */}
+        <SuperAdminSidebar userName={user?.name} />
         <main className="flex-1 bg-white p-6 overflow-y-auto">
           {children}
         </main>
@@ -27,12 +31,27 @@ const Layout = ({ children }) => {
     );
   }
 
-  // 🌐 Default layout for normal users or not logged in
+  // ================= ADMIN LAYOUT =================
+  if (isAdminRoute && isAdmin) {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden">
+        <AdminSidebar
+          role={effectiveDepartment}
+          userName={user?.name}
+        />
+        <main className="flex-1 p-6 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // ================= DEFAULT USER LAYOUT =================
   return (
     <>
-      <Header />  {/* ✅ show actual Header component */}
+      <Header />
       <main className="min-h-[80vh] bg-gray-50">{children}</main>
-      <Footer />  {/* ✅ show actual Footer component */}
+      <Footer />
     </>
   );
 };

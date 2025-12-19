@@ -32,8 +32,11 @@ import ProjectsPage from "./pages/superadmin/Projects";
 import BudgetPage from "./pages/superadmin/Budget";
 import InfographicsPage from "./pages/superadmin/Infographics";
 import AccomplishmentsPage from "./pages/superadmin/Accomplishments";
-import AdminDashboard from "./pages/admin/Dashboard";
 
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProfile from "./pages/admin/Profile";
+import AdminCases from "./pages/admin/Cases";
+import AdminInbox from "./pages/admin/Inbox";
 
 import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
@@ -99,6 +102,9 @@ const App = () => {
 
             <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/profile" element={<AdminProfile />} />
+              <Route path="/admin/cases" element={<AdminCases />} />
+              <Route path="/admin/inbox" element={<AdminInbox />} />
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
