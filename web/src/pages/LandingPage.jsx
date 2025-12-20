@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { getInfographics } from "../api/infographics";
 import { getNews, getAnnouncements } from "../api/newsAnnouncement";
+import { getAllCalendarEvents } from "../api/calendar";
+
 
 const InfographicModal = ({ image, onClose }) => {
   if (!image) return null;
@@ -53,6 +55,40 @@ const LandingPage = () => {
   const [loading, setLoading] = useState(true);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const navigate = useNavigate();
+  
+const [calendarEvents, setCalendarEvents] = useState([]);
+const [calendarLoading, setCalendarLoading] = useState(true);
+
+useEffect(() => {
+  const fetchCalendarEvents = async () => {
+    try {
+      const res = await getAllCalendarEvents();
+
+      if (res.success) {
+        // EVENTS / PROGRAM / PROJECT LANG
+        const filtered = res.data.filter(event =>
+          ["program_event", "event", "project"].includes(
+            event.extendedProps?.type
+          )
+        );
+
+        // sort by date (optional but nice)
+        filtered.sort(
+          (a, b) => new Date(a.start) - new Date(b.start)
+        );
+
+        setCalendarEvents(filtered.slice(0, 5)); // top 5 only (landing page)
+      }
+    } catch (err) {
+      console.error("Failed to fetch calendar events", err);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  fetchCalendarEvents();
+}, []);
+
 
   useEffect(() => {
     const fetchInfographics = async () => {
@@ -65,36 +101,36 @@ const LandingPage = () => {
     };
     fetchInfographics();
   }, []);
-  
+
   useEffect(() => {
-  const fetchNews = async () => {
-    try {
-      const data = await getNews(); // fetch non-archived news
-      setNewsItems(data.slice(0, 3)); // only top 3 latest
-    } catch (err) {
-      console.error("Failed to fetch news:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchNews = async () => {
+      try {
+        const data = await getNews(); // fetch non-archived news
+        setNewsItems(data.slice(0, 3)); // only top 3 latest
+      } catch (err) {
+        console.error("Failed to fetch news:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchNews();
-}, []);
+    fetchNews();
+  }, []);
 
-useEffect(() => {
-  const fetchAnnouncements = async () => {
-    try {
-      const data = await getAnnouncements();
-      setAnnouncements(data.slice(0, 3)); // only top 3 latest
-    } catch (err) {
-      console.error("Failed to fetch announcements:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        const data = await getAnnouncements();
+        setAnnouncements(data.slice(0, 3)); // only top 3 latest
+      } catch (err) {
+        console.error("Failed to fetch announcements:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchAnnouncements();
-}, []);
+    fetchAnnouncements();
+  }, []);
 
 
   const heroSlides = [
@@ -323,154 +359,205 @@ useEffect(() => {
         </div>
       </section>
 
-{/* Gender and Development Infographics Section */}
-<section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-  <div className="max-w-7xl mx-auto px-8">
-    <div className="text-center mb-16">
-      <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Data Visualization</span>
-      <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Gender and Development Infographics</h2>
-      <p className="text-xl text-slate-600 max-w-3xl mx-auto">Visual representation of our institutional progress and gender equality initiatives</p>
-    </div>
-    
-    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-      {infographics.length === 0 ? (
-        <p className="col-span-full text-center text-slate-600">No infographics available</p>
-      ) : (
-        infographics.map((item) => (
-          <div
-            key={item._id}
-            className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
-          >
-            <div className="h-40 relative overflow-hidden cursor-pointer" onClick={() => setFullscreenImage(item.imageUrl)}>
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300"
-              />
-            </div>
-
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-              <p className="text-sm text-slate-700 leading-relaxed">
-                Uploaded: {new Date(item.uploadDate).toLocaleDateString()}
-              </p>
-            </div>
-
-            <div className="px-6 pb-6">
-              <button
-                onClick={() => setFullscreenImage(item.imageUrl)}
-                className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg"
-              >
-                View Infographic
-              </button>
-            </div>
+      {/* Gender and Development Infographics Section */}
+      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="text-center mb-16">
+            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Data Visualization</span>
+            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Gender and Development Infographics</h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">Visual representation of our institutional progress and gender equality initiatives</p>
           </div>
-        ))
-      )}
-    </div>
 
-    {/* Fullscreen modal for these infographics */}
-    {fullscreenImage && (
-      <InfographicModal image={fullscreenImage} onClose={() => setFullscreenImage(null)} />
-    )}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {infographics.length === 0 ? (
+              <p className="col-span-full text-center text-slate-600">No infographics available</p>
+            ) : (
+              infographics.map((item) => (
+                <div
+                  key={item._id}
+                  className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
+                >
+                  <div className="h-40 relative overflow-hidden cursor-pointer" onClick={() => setFullscreenImage(item.imageUrl)}>
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300"
+                    />
+                  </div>
 
-    <div className="text-center mt-16">
-      <button 
-        className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
-        onClick={() => navigate("Infographics")}
-      >
-        View All Infographics
-      </button>
-    </div>
-  </div>
-</section>
+                  <div className="p-6">
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      Uploaded: {new Date(item.uploadDate).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <div className="px-6 pb-6">
+                    <button
+                      onClick={() => setFullscreenImage(item.imageUrl)}
+                      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg"
+                    >
+                      View Infographic
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Fullscreen modal for these infographics */}
+          {fullscreenImage && (
+            <InfographicModal image={fullscreenImage} onClose={() => setFullscreenImage(null)} />
+          )}
+
+          <div className="text-center mt-16">
+            <button
+              className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
+              onClick={() => navigate("Infographics")}
+            >
+              View All Infographics
+            </button>
+          </div>
+        </div>
+      </section>
 
 
       {/* Stats Section */}
       <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
         <div className="max-w-7xl mx-auto px-8">
-          <h2 className="text-5xl lg:text-6xl font-black text-white mb-4 text-center">Our Impact</h2>
-          <p className="text-xl text-violet-200 text-center mb-16 max-w-2xl mx-auto">Making a difference through dedicated programs and initiatives</p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { num: '50+', label: 'GAD Activities' },
-              { num: '2,000+', label: 'Beneficiaries' },
-              { num: '15', label: 'Active Programs' },
-              { num: '100%', label: 'Compliance Rate' }
-            ].map((stat, idx) => (
-              <div
-                key={idx}
-                className="text-center p-8 bg-white/10 border-2 border-white/20 backdrop-blur-sm hover:bg-white/15 hover:scale-105 transition-all duration-300"
-              >
-                <h3 className="text-6xl font-black bg-gradient-to-r from-violet-300 to-purple-300 bg-clip-text text-transparent mb-3">{stat.num}</h3>
-                <p className="text-violet-100 text-lg font-semibold">{stat.label}</p>
-              </div>
-            ))}
+          <h2 className="text-5xl lg:text-6xl font-black text-white mb-4 text-center">
+            Calendar of Events
+          </h2>
+          <p className="text-xl text-violet-200 text-center mb-16 max-w-3xl mx-auto">
+            Upcoming programs, projects, and activities
+          </p>
+
+          <div className="space-y-6 max-w-4xl mx-auto">
+            {calendarLoading ? (
+              <p className="text-center text-violet-200">
+                Loading events...
+              </p>
+            ) : calendarEvents.length === 0 ? (
+              <p className="text-center text-violet-200">
+                No upcoming events
+              </p>
+            ) : (
+              calendarEvents.map((event, idx) => {
+                const date = new Date(event.start);
+                const day = date.getDate();
+                const month = date
+                  .toLocaleString("default", { month: "short" })
+                  .toUpperCase();
+
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-6 p-6 bg-white/10 border-2 border-white/20 backdrop-blur-sm 
+                     hover:bg-white/15 hover:scale-[1.02] transition-all duration-300"
+                  >
+                    <div className="w-20 h-20 flex flex-col items-center justify-center 
+                          bg-violet-500/20 rounded-lg text-white font-black">
+                      <span className="text-2xl">{day}</span>
+                      <span className="text-sm tracking-widest">{month}</span>
+                    </div>
+
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold text-white mb-2">
+                        {event.title}
+                      </h3>
+                      <p className="text-violet-200 text-sm mb-3">
+                        {date.toLocaleDateString()} •{" "}
+                        {event.extendedProps?.location || "—"}
+                      </p>
+
+                      <span className="inline-block px-3 py-1 rounded-full 
+                             bg-violet-500/20 text-violet-200 text-sm font-medium">
+                        {event.extendedProps?.type}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
+          <div className="text-center mt-16">
+            <button
+              onClick={() => navigate("/Calendar")}
+              className="inline-flex items-center gap-3 
+               border-2 border-white/30 text-white 
+               px-10 py-4 bg-white/10 hover:bg-white/20 
+               transition-all duration-300 font-bold 
+               hover:scale-105 backdrop-blur-md"
+            >
+              <Calendar className="w-5 h-5" />
+              View Full Calendar
+            </button>
+          </div>
+
         </div>
       </section>
 
       {/* News Section */}
       <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-      <div className="max-w-7xl mx-auto px-8">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Updates</span>
-          <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Latest News</h2>
-        </div>
+        <div className="max-w-7xl mx-auto px-8">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Updates</span>
+            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Latest News</h2>
+          </div>
 
-        {/* News Grid */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {loading ? (
-            <p className="col-span-full text-center py-16 text-slate-600">Loading news...</p>
-          ) : newsItems.length === 0 ? (
-            <p className="col-span-full text-center text-slate-600">No news available</p>
-          ) : (
-            newsItems.map((item) => (
-              <a
-                key={item._id}
-                href={item.link || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group bg-white overflow-hidden border-2 border-slate-200 hover:border-violet-400 hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-2"
-              >
-                <div className="h-56 bg-slate-200 overflow-hidden relative">
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-slate-300 flex items-center justify-center">
-                      <span className="text-slate-500 font-medium">News Image</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-                <div className="p-6 flex-1 flex flex-col">
-                  <p className="text-sm text-violet-600 font-bold mb-3 uppercase tracking-wide">{item.date}</p>
-                  <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-violet-700 transition-colors leading-snug flex-1">{item.title}</h3>
-                  <span className="text-violet-700 font-bold inline-flex items-center gap-2 group-hover:gap-3 transition-all">
-                    Read more
-                    <ArrowRight className="w-5 h-5" />
-                  </span>
-                </div>
-              </a>
-            ))
-          )}
-        </div>
+          {/* News Grid */}
+          <div className="grid md:grid-cols-3 gap-8">
+            {loading ? (
+              <p className="col-span-full text-center py-16 text-slate-600">Loading news...</p>
+            ) : newsItems.length === 0 ? (
+              <p className="col-span-full text-center text-slate-600">No news available</p>
+            ) : (
+              newsItems.map((item) => (
+                <a
+                  key={item._id}
+                  href={item.link || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-white overflow-hidden border-2 border-slate-200 hover:border-violet-400 hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-2"
+                >
+                  <div className="h-56 bg-slate-200 overflow-hidden relative">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-300 flex items-center justify-center">
+                        <span className="text-slate-500 font-medium">News Image</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <p className="text-sm text-violet-600 font-bold mb-3 uppercase tracking-wide">{item.date}</p>
+                    <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-violet-700 transition-colors leading-snug flex-1">{item.title}</h3>
+                    <span className="text-violet-700 font-bold inline-flex items-center gap-2 group-hover:gap-3 transition-all">
+                      Read more
+                      <ArrowRight className="w-5 h-5" />
+                    </span>
+                  </div>
+                </a>
+              ))
+            )}
+          </div>
 
-        {/* "See All News and Articles" Button */}
-        <div className="text-center mt-16">
-          <button
-            className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
-          >
-            See All News and Articles
-          </button>
+          {/* "See All News and Articles" Button */}
+          <div className="text-center mt-16">
+            <button
+              className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
+            >
+              See All News and Articles
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
       {/* Resources Section */}
       <section className="py-28 bg-white">
@@ -509,65 +596,65 @@ useEffect(() => {
         </div>
       </section>
 
-{/* Announcements Section */}
- <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-      <div className="max-w-7xl mx-auto px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">
-            Updates
-          </span>
-          <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">
-            Latest Announcements
-          </h2>
-          <p className="text-xl text-slate-600">
-            Stay updated with our latest news and information
-          </p>
-        </div>
+      {/* Announcements Section */}
+      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-7xl mx-auto px-8">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">
+              Updates
+            </span>
+            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">
+              Latest Announcements
+            </h2>
+            <p className="text-xl text-slate-600">
+              Stay updated with our latest news and information
+            </p>
+          </div>
 
-        {/* Announcements List */}
-        <div className="space-y-6">
-          {loading ? (
-            <p className="text-center py-16 text-slate-600">Loading announcements...</p>
-          ) : announcements.length === 0 ? (
-            <p className="text-center text-slate-600">No announcements available</p>
-          ) : (
-            announcements.map((announcement) => (
-              <div
-                key={announcement._id}
-                className="group bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 hover:border-violet-400 p-8 transition-all duration-300 shadow-md hover:shadow-2xl hover:scale-[1.01]"
-              >
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Bell className="w-6 h-6 text-white" />
+          {/* Announcements List */}
+          <div className="space-y-6">
+            {loading ? (
+              <p className="text-center py-16 text-slate-600">Loading announcements...</p>
+            ) : announcements.length === 0 ? (
+              <p className="text-center text-slate-600">No announcements available</p>
+            ) : (
+              announcements.map((announcement) => (
+                <div
+                  key={announcement._id}
+                  className="group bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 hover:border-violet-400 p-8 transition-all duration-300 shadow-md hover:shadow-2xl hover:scale-[1.01]"
+                >
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Bell className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors">
+                          {announcement.title}
+                        </h3>
                       </div>
-                      <h3 className="text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors">
-                        {announcement.title}
-                      </h3>
+                      <p className="text-slate-700 text-lg leading-relaxed">{announcement.content}</p>
                     </div>
-                    <p className="text-slate-700 text-lg leading-relaxed">{announcement.content}</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-500 text-sm md:flex-col md:items-end">
-                    <Calendar className="w-4 h-4" />
-                    <span className="font-medium">{announcement.date}</span>
+                    <div className="flex items-center gap-2 text-slate-500 text-sm md:flex-col md:items-end">
+                      <Calendar className="w-4 h-4" />
+                      <span className="font-medium">{announcement.date}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
 
-        {/* See Older Announcements Button */}
-        <div className="text-center mt-12">
-          <button className="group inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105">
-            <span>See Older Announcements</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          {/* See Older Announcements Button */}
+          <div className="text-center mt-12">
+            <button className="group inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105">
+              <span>See Older Announcements</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
       {/* CTA Section */}
       <section className="py-28 bg-gradient-to-br from-slate-900 via-violet-900 to-purple-900 relative overflow-hidden">

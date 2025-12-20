@@ -55,6 +55,7 @@ import PlanAndBudget from "./pages/public/PlanAndBudget";
 import CommitteeReport from "./pages/public/CommitteeReport";
 import SuggestionBox from "./pages/public/SuggestionBox";
 import Infographics from "./pages/public/Infographics";
+import Calendar from "./pages/public/Calendar";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -78,6 +79,7 @@ const App = () => {
             <Route path="/CommitteeReport" element={<CommitteeReport />} />
             <Route path="/SuggestionBox" element={<SuggestionBox />} />
             <Route path="/Infographics" element={<Infographics />} />
+            <Route path="/Calendar" element={<Calendar />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>
