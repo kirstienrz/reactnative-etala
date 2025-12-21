@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Search, Bell, User, ChevronRight, AlertCircle, FileText, Users, Clock, TrendingUp, CheckCircle, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [user, setUser] = useState({ name: "User", role: "Case Worker" });
     const [stats, setStats] = useState({
         totalCases: 0,
@@ -70,9 +72,27 @@ export default function Dashboard() {
     ];
 
     const quickActions = [
-        { title: "File New Case", subtitle: "Register a new GAD case", icon: FileText, color: "#0056D2" },
-        { title: "View Reports", subtitle: "Access case analytics", icon: TrendingUp, color: "#10B981" },
-        { title: "Pending Actions", subtitle: `${stats.pendingCases} cases need attention`, icon: AlertCircle, color: "#F59E0B" },
+        {
+            title: "File New Case",
+            subtitle: "Register a new GAD case",
+            icon: FileText,
+            color: "#0056D2",
+            path: "/user/report",
+        },
+        {
+            title: "View Reports",
+            subtitle: "Access case analytics",
+            icon: TrendingUp,
+            color: "#10B981",
+            path: "/user/reports",
+        },
+        {
+            title: "Pending Actions",
+            subtitle: `${stats.pendingCases} cases need attention`,
+            icon: AlertCircle,
+            color: "#F59E0B",
+            path: "/user/reports",
+        },
     ];
 
     return (
@@ -152,7 +172,10 @@ export default function Dashboard() {
                         {quickActions.map((action, i) => {
                             const Icon = action.icon;
                             return (
-                                <div key={i} style={{
+                                <div
+                                key={i}
+                                onClick={() => navigate(action.path)}
+                                style={{
                                     background: "#fff",
                                     border: "1px solid #E0E0E0",
                                     borderRadius: 8,

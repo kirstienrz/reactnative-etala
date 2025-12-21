@@ -43,6 +43,7 @@ import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
 import UserInbox from "./pages/user/Inbox";
 import UserReports from "./pages/user/Reports";
+import UserReporting from "./pages/user/Report";
 
 import MissionVision from "./pages/public/MissionVision";
 import Organization from "./pages/public/Organization";
@@ -59,7 +60,6 @@ import Calendar from "./pages/public/Calendar";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Reports from "./pages/user/Reports";
 
 const App = () => {
   return (
@@ -116,6 +116,7 @@ const App = () => {
               <Route path="/user/profile" element={<UserProfile />} />
               <Route path="/user/inbox" element={<UserInbox />} />
               <Route path="/user/reports" element={<UserReports />} />
+              <Route path="/user/report" element={<UserReporting />} />
             </Route>
           </Routes>
           <FloatingChatbot />
