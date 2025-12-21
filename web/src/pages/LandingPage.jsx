@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import {
   ChevronLeft,
@@ -55,39 +55,39 @@ const LandingPage = () => {
   const [loading, setLoading] = useState(true);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const navigate = useNavigate();
-  
-const [calendarEvents, setCalendarEvents] = useState([]);
-const [calendarLoading, setCalendarLoading] = useState(true);
 
-useEffect(() => {
-  const fetchCalendarEvents = async () => {
-    try {
-      const res = await getAllCalendarEvents();
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarLoading, setCalendarLoading] = useState(true);
 
-      if (res.success) {
-        // EVENTS / PROGRAM / PROJECT LANG
-        const filtered = res.data.filter(event =>
-          ["program_event", "event", "project"].includes(
-            event.extendedProps?.type
-          )
-        );
+  useEffect(() => {
+    const fetchCalendarEvents = async () => {
+      try {
+        const res = await getAllCalendarEvents();
 
-        // sort by date (optional but nice)
-        filtered.sort(
-          (a, b) => new Date(a.start) - new Date(b.start)
-        );
+        if (res.success) {
+          // EVENTS / PROGRAM / PROJECT LANG
+          const filtered = res.data.filter(event =>
+            ["program_event", "event", "project"].includes(
+              event.extendedProps?.type
+            )
+          );
 
-        setCalendarEvents(filtered.slice(0, 5)); // top 5 only (landing page)
+          // sort by date (optional but nice)
+          filtered.sort(
+            (a, b) => new Date(a.start) - new Date(b.start)
+          );
+
+          setCalendarEvents(filtered.slice(0, 5)); // top 5 only (landing page)
+        }
+      } catch (err) {
+        console.error("Failed to fetch calendar events", err);
+      } finally {
+        setCalendarLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch calendar events", err);
-    } finally {
-      setCalendarLoading(false);
-    }
-  };
+    };
 
-  fetchCalendarEvents();
-}, []);
+    fetchCalendarEvents();
+  }, []);
 
 
   useEffect(() => {
@@ -372,38 +372,44 @@ useEffect(() => {
             {infographics.length === 0 ? (
               <p className="col-span-full text-center text-slate-600">No infographics available</p>
             ) : (
-              infographics.map((item) => (
-                <div
-                  key={item._id}
-                  className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
-                >
-                  <div className="h-40 relative overflow-hidden cursor-pointer" onClick={() => setFullscreenImage(item.imageUrl)}>
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title}
-                      className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300"
-                    />
-                  </div>
-
-                  <div className="p-6">
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      Uploaded: {new Date(item.uploadDate).toLocaleDateString()}
-                    </p>
-                  </div>
-
-                  <div className="px-6 pb-6">
-                    <button
+              infographics
+                .slice(0, 4) // only 4 latest infographics
+                .map((item) => (
+                  <div
+                    key={item._id}
+                    className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
+                  >
+                    <div
+                      className="h-40 relative overflow-hidden cursor-pointer"
                       onClick={() => setFullscreenImage(item.imageUrl)}
-                      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg"
                     >
-                      View Infographic
-                    </button>
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300"
+                      />
+                    </div>
+
+                    <div className="p-6">
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        Uploaded: {new Date(item.uploadDate).toLocaleDateString()}
+                      </p>
+                    </div>
+
+                    <div className="px-6 pb-6">
+                      <button
+                        onClick={() => setFullscreenImage(item.imageUrl)}
+                        className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg"
+                      >
+                        View Infographic
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
             )}
           </div>
+
 
           {/* Fullscreen modal for these infographics */}
           {fullscreenImage && (
@@ -439,48 +445,53 @@ useEffect(() => {
               </p>
             ) : calendarEvents.length === 0 ? (
               <p className="text-center text-violet-200">
-                No upcoming events
+                No events
               </p>
             ) : (
-              calendarEvents.map((event, idx) => {
-                const date = new Date(event.start);
-                const day = date.getDate();
-                const month = date
-                  .toLocaleString("default", { month: "short" })
-                  .toUpperCase();
+              calendarEvents
+                .slice()
+                .sort((a, b) => new Date(b.start) - new Date(a.start)) // pinaka-bago first
+                .slice(0, 3) // 3 lang
+                .map((event, idx) => {
+                  const date = new Date(event.start);
+                  const day = date.getDate();
+                  const month = date
+                    .toLocaleString("default", { month: "short" })
+                    .toUpperCase();
 
-                return (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-6 p-6 bg-white/10 border-2 border-white/20 backdrop-blur-sm 
-                     hover:bg-white/15 hover:scale-[1.02] transition-all duration-300"
-                  >
-                    <div className="w-20 h-20 flex flex-col items-center justify-center 
-                          bg-violet-500/20 rounded-lg text-white font-black">
-                      <span className="text-2xl">{day}</span>
-                      <span className="text-sm tracking-widest">{month}</span>
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-6 p-6 bg-white/10 border-2 border-white/20 backdrop-blur-sm 
+           hover:bg-white/15 hover:scale-[1.02] transition-all duration-300"
+                    >
+                      <div className="w-20 h-20 flex flex-col items-center justify-center 
+                bg-violet-500/20 rounded-lg text-white font-black">
+                        <span className="text-2xl">{day}</span>
+                        <span className="text-sm tracking-widest">{month}</span>
+                      </div>
+
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                          {event.title}
+                        </h3>
+                        <p className="text-violet-200 text-sm mb-3">
+                          {date.toLocaleDateString()} •{" "}
+                          {event.extendedProps?.location || "—"}
+                        </p>
+
+                        <span className="inline-block px-3 py-1 rounded-full 
+                   bg-violet-500/20 text-violet-200 text-sm font-medium">
+                          {event.extendedProps?.type}
+                        </span>
+                      </div>
                     </div>
-
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-white mb-2">
-                        {event.title}
-                      </h3>
-                      <p className="text-violet-200 text-sm mb-3">
-                        {date.toLocaleDateString()} •{" "}
-                        {event.extendedProps?.location || "—"}
-                      </p>
-
-                      <span className="inline-block px-3 py-1 rounded-full 
-                             bg-violet-500/20 text-violet-200 text-sm font-medium">
-                        {event.extendedProps?.type}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })
             )}
+
           </div>
-          <div className="text-center mt-16">
+          <div className="text-center  mt-16">
             <button
               onClick={() => navigate("/Calendar")}
               className="inline-flex items-center gap-3 
@@ -583,13 +594,16 @@ useEffect(() => {
                 Explore our vibrant campus through these images! From the facilities to beautiful green spaces, our campus provides an inspiring environment for learning, collaboration, and student life. Enjoy a glimpse of the places that make our university unique!
               </p>
               <div className="flex flex-wrap gap-4">
-                <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-4 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold inline-flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
-                  <BookOpen className="w-5 h-5" />
-                  View Gallery
-                </button>
-                <button className="border-2 border-violet-600 text-violet-700 px-8 py-4 bg-white hover:bg-violet-50 transition-all duration-300 font-bold hover:scale-105">
-                  Virtual Tour
-                </button>
+                <a
+                  href="https://www.tupt.edu.ph/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-4 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold inline-flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
+                    Visit Site
+                  </button>
+                </a>
+
               </div>
             </div>
           </div>
@@ -670,11 +684,12 @@ useEffect(() => {
               If you’ve experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and improved.
             </p>
 
-            {/* Updated Button */}
-            <button className="group bg-white text-violet-900 px-12 py-5 hover:bg-violet-50 transition-all duration-300 font-black text-lg inline-flex items-center gap-3 shadow-2xl hover:shadow-3xl hover:scale-105">
-              Report Now
-              <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-            </button>
+            <Link to="/login">
+              <button className="group bg-white text-violet-900 px-12 py-5 hover:bg-violet-50 transition-all duration-300 font-black text-lg inline-flex items-center gap-3 shadow-2xl hover:shadow-3xl hover:scale-105">
+                Report Now
+                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </Link>
           </div>
         </div>
       </section>
