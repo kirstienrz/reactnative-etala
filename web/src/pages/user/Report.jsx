@@ -402,18 +402,6 @@ const ReportForm = () => {
               }}>
                 Anonymous Report
               </h3>
-              <div style={{
-                marginLeft: '12px',
-                padding: '4px 8px',
-                backgroundColor: styles.colors.lightBackground,
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: '600',
-                color: styles.colors.primary,
-                letterSpacing: '0.5px'
-              }}>
-                RECOMMENDED
-              </div>
             </div>
             <ul style={styles.featureList}>
               <li>Your identity remains confidential</li>
@@ -445,12 +433,26 @@ const ReportForm = () => {
             <User size={28} color={!isAnonymous ? 'white' : styles.colors.textSecondary} />
           </div>
           <div style={styles.anonymityContent}>
-            <h3 style={{
-              ...styles.anonymityTitle,
-              color: !isAnonymous ? styles.colors.primary : styles.colors.textPrimary
-            }}>
+            <div style={{display: 'flex', alignItems: 'center', marginBottom: '12px'}}>
+              <h3 style={{
+                ...styles.anonymityTitle,
+                color: isAnonymous ? styles.colors.primary : styles.colors.textPrimary
+              }}>
               Identified Report
             </h3>
+              <div style={{
+                marginLeft: '12px',
+                padding: '4px 8px',
+                backgroundColor: styles.colors.lightBackground,
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: '600',
+                color: styles.colors.primary,
+                letterSpacing: '0.5px'
+              }}>
+                RECOMMENDED
+              </div>
+              </div>
             <ul style={styles.featureList}>
               <li>Enables follow-up support</li>
               <li>Access to full services</li>

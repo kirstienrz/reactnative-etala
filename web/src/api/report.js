@@ -32,6 +32,15 @@ export const getUserReports = async () => {
   return res.data;
 };
 
+// Fetch current user's reports with optional search, filter, and pagination
+export const getUserReportsWithParams = async ({ page = 1, limit = 10, search = "", status = "" }) => {
+  const res = await API.get("/reports/user/all", {
+    params: { page, limit, search, status }
+  });
+  return res.data;
+};
+
+
 // 📄 Get a single report by ID (user's own)
 export const getUserReportById = async (reportId) => {
   const res = await API.get(`/reports/user/${reportId}`);
