@@ -12,21 +12,34 @@ export default function Reports() {
 
   const limit = 5;
 
-  const fetchReports = async () => {
-    setLoading(true);
-    try {
-      const res = await getUserReportsWithParams({ page, limit, search, status: statusFilter });
-      const reportsData = res?.data || [];
-      setReports(reportsData);
-      setTotalPages(Math.ceil(reportsData.length / limit));
-    } catch (err) {
-      console.error(err);
-      setReports([]);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchReports = async () => {
+  setLoading(true);
+  try {
+    const res = await getUserReportsWithParams({ 
+      page, 
+      limit, 
+      search, 
+      status: statusFilter 
+    });
+
+    // Backend now returns { data: reports, total }
+    const reportsData = res?.data || [];
+    const total = res?.total || reportsData.length;
+
+    setReports(reportsData);
+    setTotalPages(Math.ceil(total / limit));
+  } catch (err) {
+    console.error(err);
+    setReports([]);
+    setTotalPages(1);
+  } finally {
+    setLoading(false);
+  }
+};
+useEffect(() => {
+  setPage(1);
+}, [search, statusFilter]);
+
 
   useEffect(() => {
     fetchReports();

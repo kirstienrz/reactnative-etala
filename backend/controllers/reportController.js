@@ -73,21 +73,45 @@ const createReport = async (req, res) => {
 // ✅ USER: Get all their reports
 const getUserReports = async (req, res) => {
   try {
-    const reports = await Report.find({
+    const { page = 1, limit = 10, status = "", search = "" } = req.query;
+
+    const query = {
       createdBy: req.user.id,
       archived: { $ne: true },
-    }).sort({ submittedAt: -1 });
+    };
 
-    res.status(200).json({ success: true, data: reports });
+    if (status) query.status = status; // <- this is the missing piece
+
+    if (search) {
+      query.$or = [
+        { ticketNumber: { $regex: search, $options: "i" } },
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const reports = await Report.find(query)
+      .sort({ submittedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Report.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: reports,
+      total,
+    });
   } catch (error) {
     console.error("Get User Reports Error:", error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: "Failed to fetch reports.",
-      error: error.message 
+      error: error.message,
     });
   }
 };
+
 
 // ✅ USER: Get single report
 const getUserReportById = async (req, res) => {

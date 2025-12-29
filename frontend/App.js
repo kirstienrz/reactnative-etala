@@ -141,21 +141,21 @@ export default function App() {
               <Stack.Screen name="SuggestionBox" component={SuggestionBox} options={{ title: "Suggestion Box" }} />
 
               {/* Bottom Navigation */}
-              <Stack.Screen name="ReportHistoryScreen">
+              <Stack.Screen name="ReportHistoryScreen"options={{ headerShown: false }}>
                 {(props) => (
                   <ProtectedRoute {...props} allowedRoles={["user", "admin", "superadmin"]}>
                     <ReportHistoryScreen {...props} />
                   </ProtectedRoute>
                 )}
               </Stack.Screen>
-              <Stack.Screen name="ReportDetails">
+              <Stack.Screen name="ReportDetails" options={{ headerShown: false }}>
                 {(props) => (
                   <ProtectedRoute {...props} allowedRoles={["user", "admin", "superadmin"]}>
                     <ReportDetailsScreen {...props} />
                   </ProtectedRoute>
                 )}
               </Stack.Screen>
-              <Stack.Screen name="ReportScreen">
+              <Stack.Screen name="ReportScreen" options={{ headerShown: false }}>
                 {(props) => (
                   <ProtectedRoute {...props} allowedRoles={["user", "admin", "superadmin"]}>
                     <ReportScreen {...props} />

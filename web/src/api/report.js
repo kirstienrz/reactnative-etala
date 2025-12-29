@@ -33,12 +33,34 @@ export const getUserReports = async () => {
 };
 
 // Fetch current user's reports with optional search, filter, and pagination
-export const getUserReportsWithParams = async ({ page = 1, limit = 10, search = "", status = "" }) => {
-  const res = await API.get("/reports/user/all", {
-    params: { page, limit, search, status }
-  });
-  return res.data;
+export const getUserReportsWithParams = async ({
+  page = 1,
+  limit = 10,
+  search = "",
+  status = "",
+}) => {
+  try {
+    // Only send params that have values
+    const params = {};
+    if (page) params.page = page;
+    if (limit) params.limit = limit;
+    if (search) params.search = search;
+    if (status) params.status = status;
+
+    const res = await API.get("/reports/user/all", { params });
+
+    // Ensure response has consistent structure
+    return {
+      data: res.data?.data || [],
+      total: res.data?.total || 0,
+      success: res.data?.success || false,
+    };
+  } catch (err) {
+    console.error("Error fetching user reports:", err);
+    return { data: [], total: 0, success: false };
+  }
 };
+
 
 
 // 📄 Get a single report by ID (user's own)

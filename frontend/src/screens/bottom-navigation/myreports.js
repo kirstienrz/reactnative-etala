@@ -50,7 +50,7 @@ const MyReportsScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await getUserReports();
-      console.log('API Response:', response);
+      // console.log('API Response:', response);
       
       if (response.success && response.data) {
         setReports(response.data);

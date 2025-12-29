@@ -22,7 +22,7 @@ const ReportDetailsScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
       const response = await getUserReportById(reportId);
-      console.log('Report data:', response); // Debug log
+      // console.log('Report data:', response); // Debug log
       
       // ✅ Fixed: Backend returns { success: true, data: report }
       if (response.success && response.data) {
