@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { 
+import {
   MessageSquare, Send, Share2, X, Eye, Archive, RefreshCw,
   Search, Filter, Calendar, FileText, AlertCircle, CheckCircle,
   Clock, XCircle, ChevronDown, Download, Users, UserCheck, ClipboardList
 } from "lucide-react";
 
-import { 
-  getAllReports, getArchivedReports, getReportById, 
-  updateReportStatus, archiveReport, restoreReport, addReferral 
+import {
+  getAllReports, getArchivedReports, getReportById,
+  updateReportStatus, archiveReport, restoreReport, addReferral
 } from "../../api/report";
 
 const AdminReports = () => {
@@ -15,7 +15,7 @@ const AdminReports = () => {
   const [reports, setReports] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [caseStatusFilter, setCaseStatusFilter] = useState("All");
@@ -23,7 +23,7 @@ const AdminReports = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -31,19 +31,23 @@ const AdminReports = () => {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
-  
+
   const [newStatus, setNewStatus] = useState("");
   const [newCaseStatus, setNewCaseStatus] = useState("");
   const [statusRemarks, setStatusRemarks] = useState("");
   const [caseStatusRemarks, setCaseStatusRemarks] = useState("");
   const [referralDept, setReferralDept] = useState("");
   const [referralNote, setReferralNote] = useState("");
-  
+
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
 
   useEffect(() => {
     fetchReports();
   }, []);
+
+  const handleMessageUser = (user) => {
+    console.log("Message this user:", user);
+  };
 
   const fetchReports = async () => {
     setLoading(true);
@@ -52,10 +56,10 @@ const AdminReports = () => {
         getAllReports(),
         getArchivedReports()
       ]);
-      
+
       if (activeRes.success) setReports(activeRes.data || []);
       else showToast(activeRes.message || "Failed to fetch active reports", "error");
-      
+
       if (archivedRes.success) setArchivedReports(archivedRes.data || []);
       else console.error("Archived reports fetch failed:", archivedRes);
     } catch (error) {
@@ -232,19 +236,19 @@ const AdminReports = () => {
   )];
 
   const filteredReports = (activeTab === "active" ? reports : archivedReports).filter(r => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       r.ticketNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.incidentDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.createdBy?.tupId || "").toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "All" || r.status === statusFilter;
     const matchesCaseStatus = caseStatusFilter === "All" || r.caseStatus === caseStatusFilter;
     const matchesCategory = categoryFilter === "All" || r.incidentTypes?.includes(categoryFilter);
-    
+
     const reportDate = new Date(r.submittedAt);
     const matchesDateFrom = !dateFrom || reportDate >= new Date(dateFrom);
     const matchesDateTo = !dateTo || reportDate <= new Date(dateTo + "T23:59:59");
-    
+
     return matchesSearch && matchesStatus && matchesCaseStatus && matchesCategory && matchesDateFrom && matchesDateTo;
   });
 
@@ -256,13 +260,23 @@ const AdminReports = () => {
     dateTo
   ].filter(Boolean).length;
 
+  const InfoItem = ({ label, value }) => {
+    if (!value) return null;
+    return (
+      <div>
+        <label className="text-gray-600 text-xs">{label}</label>
+        <p className="text-gray-900 text-sm">{value}</p>
+      </div>
+    );
+  };
+
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Toast Notification */}
       {toast.show && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg ${
-          toast.type === "error" ? "bg-red-500" : "bg-green-500"
-        } text-white`}>
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
+          } text-white`}>
           {toast.type === "error" ? <XCircle size={20} /> : <CheckCircle size={20} />}
           {toast.message}
         </div>
@@ -289,11 +303,10 @@ const AdminReports = () => {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
-              showFilters || activeFilterCount > 0
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+            className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${showFilters || activeFilterCount > 0
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
           >
             <Filter size={20} />
             Filters
@@ -397,21 +410,19 @@ const AdminReports = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab("active")}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === "active"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                }`}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === "active"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                  }`}
               >
                 Active Reports ({reports.length})
               </button>
               <button
                 onClick={() => setActiveTab("archived")}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === "archived"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                }`}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === "archived"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                  }`}
               >
                 Archived ({archivedReports.length})
               </button>
@@ -569,7 +580,7 @@ const AdminReports = () => {
                 <X size={24} className="text-gray-500" />
               </button>
             </div>
-            
+
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -668,9 +679,106 @@ const AdminReports = () => {
                             <p className="text-gray-900">{selectedReport.createdBy.email}</p>
                           </div>
                         )}
+                        {/* ✅ MESSAGE USER BUTTON */}
+                        <div className="col-span-2 mt-3">
+                          <button
+                            onClick={() => handleMessageUser(selectedReport.createdBy)}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                          >
+                            <MessageSquare size={16} />
+                            Message User
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
+
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
+                      Victim / Reporter Details
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InfoItem label="Last Name" value={selectedReport.lastName} />
+                      <InfoItem label="First Name" value={selectedReport.firstName} />
+                      <InfoItem label="Middle Name" value={selectedReport.middleName} />
+                      <InfoItem label="Alias" value={selectedReport.alias} />
+                      <InfoItem label="Sex" value={selectedReport.sex} />
+                      <InfoItem label="Date of Birth" value={selectedReport.dateOfBirth} />
+                      <InfoItem label="Age" value={selectedReport.age} />
+                      <InfoItem label="Civil Status" value={selectedReport.civilStatus} />
+                      <InfoItem label="Educational Attainment" value={selectedReport.educationalAttainment} />
+                      <InfoItem label="Nationality" value={selectedReport.nationality} />
+                      <InfoItem label="Occupation" value={selectedReport.occupation} />
+                      <InfoItem label="Religion" value={selectedReport.religion} />
+                      <InfoItem label="Region" value={selectedReport.region} />
+                      <InfoItem label="Province" value={selectedReport.province} />
+                      <InfoItem label="City / Municipality" value={selectedReport.cityMun} />
+                      <InfoItem label="Barangay" value={selectedReport.barangay} />
+                      <InfoItem label="Disability" value={selectedReport.disability} />
+                      <InfoItem label="Number of Children" value={selectedReport.numberOfChildren} />
+                      <InfoItem label="Ages of Children" value={selectedReport.agesOfChildren} />
+                    </div>
+                  </div>
+
+
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
+                      Guardian Information
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InfoItem label="Last Name" value={selectedReport.guardianLastName} />
+                      <InfoItem label="First Name" value={selectedReport.guardianFirstName} />
+                      <InfoItem label="Middle Name" value={selectedReport.guardianMiddleName} />
+                      <InfoItem label="Relationship" value={selectedReport.guardianRelationship} />
+                      <InfoItem label="Contact" value={selectedReport.guardianContact} />
+                      <InfoItem label="Region" value={selectedReport.guardianRegion} />
+                      <InfoItem label="Province" value={selectedReport.guardianProvince} />
+                      <InfoItem label="City / Municipality" value={selectedReport.guardianCityMun} />
+                      <InfoItem label="Barangay" value={selectedReport.guardianBarangay} />
+                    </div>
+                  </div>
+
+
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
+                      Perpetrator Information
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InfoItem label="Last Name" value={selectedReport.perpLastName} />
+                      <InfoItem label="First Name" value={selectedReport.perpFirstName} />
+                      <InfoItem label="Middle Name" value={selectedReport.perpMiddleName} />
+                      <InfoItem label="Alias" value={selectedReport.perpAlias} />
+                      <InfoItem label="Sex" value={selectedReport.perpSex} />
+                      <InfoItem label="Age" value={selectedReport.perpAge} />
+                      <InfoItem label="Relationship to Victim" value={selectedReport.perpRelationship} />
+                      <InfoItem label="Occupation" value={selectedReport.perpOccupation} />
+                      <InfoItem label="Religion" value={selectedReport.perpReligion} />
+                      <InfoItem label="Region" value={selectedReport.perpRegion} />
+                      <InfoItem label="Province" value={selectedReport.perpProvince} />
+                      <InfoItem label="City / Municipality" value={selectedReport.perpCityMun} />
+                      <InfoItem label="Barangay" value={selectedReport.perpBarangay} />
+                    </div>
+                  </div>
+
+
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
+                      Services & Referrals
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InfoItem label="Crisis Intervention" value={selectedReport.crisisIntervention ? "Yes" : "No"} />
+                      <InfoItem label="Protection Order" value={selectedReport.protectionOrder ? "Yes" : "No"} />
+                      <InfoItem label="Refer to SWDO" value={selectedReport.referToSWDO ? "Yes" : "No"} />
+                      <InfoItem label="Healthcare Referral" value={selectedReport.referToHealthcare ? "Yes" : "No"} />
+                      <InfoItem label="Law Enforcement Referral" value={selectedReport.referToLawEnforcement ? "Yes" : "No"} />
+                      <InfoItem label="Other Referral" value={selectedReport.referToOther ? "Yes" : "No"} />
+                    </div>
+                  </div>
+
 
                   {/* Incident Information */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">

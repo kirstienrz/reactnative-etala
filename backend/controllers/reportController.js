@@ -151,7 +151,7 @@ const getAllReports = async (req, res) => {
         select: "tupId firstName lastName email role",
         options: { strictPopulate: false }
       })
-      .sort({ submittedAt: -1 });
+      .sort({ submittedAt: 1 });
 
     res.status(200).json({ success: true, data: reports });
   } catch (error) {
