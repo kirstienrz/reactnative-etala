@@ -764,7 +764,7 @@ const AdminReports = () => {
                   </div>
 
 
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  {/* <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Services & Referrals
                     </h3>
@@ -777,7 +777,7 @@ const AdminReports = () => {
                       <InfoItem label="Law Enforcement Referral" value={selectedReport.referToLawEnforcement ? "Yes" : "No"} />
                       <InfoItem label="Other Referral" value={selectedReport.referToOther ? "Yes" : "No"} />
                     </div>
-                  </div>
+                  </div> */}
 
 
                   {/* Incident Information */}
