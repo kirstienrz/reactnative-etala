@@ -462,9 +462,9 @@ const AdminReports = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
-                    </th>
+                    </th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Case Status
                     </th>
@@ -501,12 +501,12 @@ const AdminReports = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      {/* <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(report.status)}`}>
                           {getStatusIcon(report.status)}
                           {report.status}
                         </span>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {report.caseStatus ? (
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
@@ -583,11 +583,11 @@ const AdminReports = () => {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div>
                 {/* Left Column - Basic Info */}
-                <div className="lg:col-span-1 space-y-6">
+                <div>
                   {/* Status Cards */}
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  {/* <div className="bg-gray-50 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-3">Current Status</h3>
                     <div className="space-y-3">
                       <div>
@@ -609,7 +609,7 @@ const AdminReports = () => {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Timeline */}
                   {selectedReport.timeline?.length > 0 && (
@@ -680,7 +680,7 @@ const AdminReports = () => {
                           </div>
                         )}
                         {/* ✅ MESSAGE USER BUTTON */}
-                        <div className="col-span-2 mt-3">
+                        {/* <div className="col-span-2 mt-3">
                           <button
                             onClick={() => handleMessageUser(selectedReport.createdBy)}
                             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
@@ -688,7 +688,7 @@ const AdminReports = () => {
                             <MessageSquare size={16} />
                             Message User
                           </button>
-                        </div>
+                        </div> */}
                       </div>
                     )}
                   </div>
@@ -831,7 +831,7 @@ const AdminReports = () => {
             {/* Footer Actions */}
             <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
               <div className="flex flex-col sm:flex-row gap-3">
-                <button
+                {/* <button
                   onClick={() => {
                     setNewStatus(selectedReport.status);
                     setShowStatusModal(true);
@@ -840,8 +840,8 @@ const AdminReports = () => {
                 >
                   <RefreshCw size={18} />
                   Update Report Status
-                </button>
-                <button
+                </button> */}
+                {/* <button
                   onClick={() => {
                     setNewCaseStatus(selectedReport.caseStatus || "");
                     setShowCaseStatusModal(true);
@@ -850,14 +850,17 @@ const AdminReports = () => {
                 >
                   <ClipboardList size={18} />
                   Update Case Status
-                </button>
-                <button
-                  onClick={() => setShowReferralModal(true)}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Share2 size={18} />
-                  Add Referral
-                </button>
+                </button> */}
+                {selectedReport.caseStatus === "For Interview" && (
+                  <button
+                    onClick={() => setShowReferralModal(true)}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Share2 size={18} />
+                    Refer
+                  </button>
+                )}
+
                 {!selectedReport.archived ? (
                   <button
                     onClick={() => setShowArchiveModal(true)}
