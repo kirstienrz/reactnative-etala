@@ -662,10 +662,14 @@ const LandingPage = () => {
 
           {/* See Older Announcements Button */}
           <div className="text-center mt-12">
-            <button className="group inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105">
+            <button
+              onClick={() => navigate("/announcements")}
+              className="group inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105"
+            >
               <span>See Older Announcements</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
+
           </div>
         </div>
       </section>

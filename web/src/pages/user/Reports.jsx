@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getUserReportsWithParams } from "../../api/report";
+import { getUserReportsWithParams, discloseIdentity } from "../../api/report";
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
@@ -9,36 +9,38 @@ export default function Reports() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [editableFields, setEditableFields] = useState({});
+
 
   const limit = 5;
 
-const fetchReports = async () => {
-  setLoading(true);
-  try {
-    const res = await getUserReportsWithParams({ 
-      page, 
-      limit, 
-      search, 
-      status: statusFilter 
-    });
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const res = await getUserReportsWithParams({
+        page,
+        limit,
+        search,
+        status: statusFilter
+      });
 
-    // Backend now returns { data: reports, total }
-    const reportsData = res?.data || [];
-    const total = res?.total || reportsData.length;
+      // Backend now returns { data: reports, total }
+      const reportsData = res?.data || [];
+      const total = res?.total || reportsData.length;
 
-    setReports(reportsData);
-    setTotalPages(Math.ceil(total / limit));
-  } catch (err) {
-    console.error(err);
-    setReports([]);
-    setTotalPages(1);
-  } finally {
-    setLoading(false);
-  }
-};
-useEffect(() => {
-  setPage(1);
-}, [search, statusFilter]);
+      setReports(reportsData);
+      setTotalPages(Math.ceil(total / limit));
+    } catch (err) {
+      console.error(err);
+      setReports([]);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
 
 
   useEffect(() => {
@@ -68,7 +70,30 @@ useEffect(() => {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [selectedReport]);
+  }, [selectedReport]); const handleReveal = async (reportId) => {
+    // Prompt for password
+    const password = prompt("Enter your password to disclose your identity:");
+    if (!password) return alert("Password is required.");
+
+    const confirmAction = window.confirm(
+      "Are you sure you want to reveal your identity for this report? This action cannot be undone."
+    );
+    if (!confirmAction) return;
+
+    try {
+      setLoading(true);
+      await discloseIdentity(reportId, password); // call updated API
+      alert("Your report is now revealed. Authorized personnel can see your info.");
+      fetchReports(); // refresh the list
+      setSelectedReport(null);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to reveal the report. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-3 sm:px-4 md:px-6 lg:px-8">
@@ -119,13 +144,12 @@ useEffect(() => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-bold text-gray-900">#{report.ticketNumber}</span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                          report.status === 'Resolved' ? 'bg-green-100 text-green-800' :
+                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${report.status === 'Resolved' ? 'bg-green-100 text-green-800' :
                           report.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                          report.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                          report.status === 'Closed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-purple-100 text-purple-800'
-                        }`}>
+                            report.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                              report.status === 'Closed' ? 'bg-gray-100 text-gray-800' :
+                                'bg-purple-100 text-purple-800'
+                          }`}>
                           {report.status}
                         </span>
                       </div>
@@ -198,13 +222,12 @@ useEffect(() => {
                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                           Report #{selectedReport.ticketNumber}
                         </h2>
-                        <span className={`px-2 py-1 text-xs sm:text-sm rounded-full font-medium flex-shrink-0 ${
-                          selectedReport.status === 'Resolved' ? 'bg-green-100 text-green-800' :
+                        <span className={`px-2 py-1 text-xs sm:text-sm rounded-full font-medium flex-shrink-0 ${selectedReport.status === 'Resolved' ? 'bg-green-100 text-green-800' :
                           selectedReport.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                          selectedReport.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                          selectedReport.status === 'Closed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-purple-100 text-purple-800'
-                        }`}>
+                            selectedReport.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                              selectedReport.status === 'Closed' ? 'bg-gray-100 text-gray-800' :
+                                'bg-purple-100 text-purple-800'
+                          }`}>
                           {selectedReport.status}
                         </span>
                       </div>
@@ -435,9 +458,9 @@ useEffect(() => {
                               <div key={idx} className="border rounded-lg overflow-hidden group hover:shadow-md transition-shadow">
                                 {file.type === "image" ? (
                                   <div className="aspect-square relative overflow-hidden bg-gray-100">
-                                    <img 
-                                      src={file.uri} 
-                                      alt={file.fileName} 
+                                    <img
+                                      src={file.uri}
+                                      alt={file.fileName}
                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                                       loading="lazy"
                                     />
@@ -464,16 +487,76 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Modal Footer - Sticky */}
-                <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => setSelectedReport(null)}
-                      className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-colors font-medium text-sm sm:text-base w-full sm:w-auto"
-                    >
-                      Close Report
-                    </button>
+                {/* // Add inside modal body for victim info fields
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Full Name</label>
+                    <input
+                      type="text"
+                      disabled={selectedReport.isAnonymous}
+                      value={editableFields.fullName ?? `${selectedReport.firstName || ''} ${selectedReport.middleName || ''} ${selectedReport.lastName || ''}`.trim()}
+                      onChange={(e) => setEditableFields(prev => ({ ...prev, fullName: e.target.value }))}
+                      className={`mt-1 w-full p-2 border rounded-lg text-gray-900 ${selectedReport.isAnonymous ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    />
                   </div>
+                  <div>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Alias</label>
+                    <input
+                      type="text"
+                      disabled={selectedReport.isAnonymous}
+                      value={editableFields.alias ?? selectedReport.alias}
+                      onChange={(e) => setEditableFields(prev => ({ ...prev, alias: e.target.value }))}
+                      className={`mt-1 w-full p-2 border rounded-lg text-gray-900 ${selectedReport.isAnonymous ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Contact</label>
+                    <input
+                      type="text"
+                      disabled={selectedReport.isAnonymous}
+                      value={editableFields.guardianContact ?? selectedReport.guardianContact}
+                      onChange={(e) => setEditableFields(prev => ({ ...prev, guardianContact: e.target.value }))}
+                      className={`mt-1 w-full p-2 border rounded-lg text-gray-900 ${selectedReport.isAnonymous ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    />
+                  </div>
+                </div> */}
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setSelectedReport(null)}
+                    className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-colors font-medium text-sm sm:text-base w-full sm:w-auto"
+                  >
+                    Close Report
+                  </button>
+
+                  {selectedReport.isAnonymous ? (
+                    <button
+                      onClick={() => handleReveal(selectedReport._id)}
+                      className="px-4 sm:px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 active:bg-purple-800 transition-colors font-medium text-sm sm:text-base w-full sm:w-auto"
+                    >
+                      Disclose Identity
+                    </button>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        try {
+                          setLoading(true);
+                          await updateReportByUser(selectedReport._id, editableFields);
+                          alert("Report updated successfully!");
+                          fetchReports();
+                          setSelectedReport(null);
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to update report. Please try again.");
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors font-medium text-sm sm:text-base w-full sm:w-auto"
+                    >
+                      Save Changes
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

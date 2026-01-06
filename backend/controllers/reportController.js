@@ -1,5 +1,7 @@
 const Report = require("../models/report");
+const User = require("../models/User");
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 // ✅ Utility: Generate unique ticket number
 const generateTicketNumber = (isAnonymous) => {
@@ -367,6 +369,97 @@ const restoreReport = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to restore report.", error: error.message });
   }
 };
+ const discloseReport = async (req, res) => {
+  try {
+    const reportId = req.params.id;
+    const userId = req.user.id; // from auth middleware
+    const { password } = req.body;
+
+    if (!password) return res.status(400).json({ message: "Password is required" });
+
+    // Check user role
+    if (req.user.role !== "user") {
+      return res.status(403).json({ message: "Only users can disclose their own report" });
+    }
+
+    // Verify user password
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: "Incorrect password" });
+
+    // Fetch report
+    const report = await Report.findById(reportId);
+    if (!report) return res.status(404).json({ message: "Report not found" });
+
+    // Ensure ownership
+    if (report.createdBy.toString() !== userId) {
+      return res.status(403).json({ message: "You can only disclose your own report" });
+    }
+
+    // Update isAnonymous
+    report.isAnonymous = false;
+    await report.save();
+
+    res.json({ message: "Identity revealed", report });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const updateReportByUser = async (req, res) => {
+  try {
+    const reportId = req.params.id;
+    const userId = req.user._id;
+    const updates = req.body;
+
+    const report = await Report.findOne({ _id: reportId, createdBy: userId });
+    if (!report) return res.status(404).json({ message: "Report not found" });
+
+    if (report.isAnonymous)
+      return res.status(400).json({ message: "Disclose identity first before editing" });
+
+    if (report.hasEdited)
+      return res.status(400).json({ message: "You can only edit once" });
+
+    // ✅ Allowed fields for editing (everything except incidentDescription & incidentTypes)
+    const editableFields = [
+      "lastName","firstName","middleName","alias","sex","dateOfBirth","age","civilStatus",
+      "educationalAttainment","nationality","passportNo","occupation","religion",
+      "region","province","cityMun","barangay","disability","numberOfChildren","agesOfChildren",
+      "guardianLastName","guardianFirstName","guardianMiddleName","guardianRelationship",
+      "guardianRegion","guardianProvince","guardianCityMun","guardianBarangay","guardianContact",
+      "perpLastName","perpFirstName","perpMiddleName","perpAlias","perpSex","perpDateOfBirth","perpAge",
+      "perpCivilStatus","perpEducation","perpNationality","perpPassport","perpOccupation","perpReligion",
+      "perpRegion","perpProvince","perpCityMun","perpBarangay","perpRelationship",
+      "perpGuardianLastName","perpGuardianFirstName","perpGuardianMiddleName","perpGuardianRelationship",
+      "perpGuardianRegion","perpGuardianProvince","perpGuardianCityMun","perpGuardianBarangay","perpGuardianContact",
+      "crisisIntervention","protectionOrder","referToSWDO","swdoDate","swdoServices",
+      "referToHealthcare","healthcareDate","healthcareProvider","healthcareServices",
+      "referToLawEnforcement","lawDate","lawAgency","referToOther","otherDate","otherProvider","otherService",
+      "attachments","additionalNotes"
+    ];
+
+    // Only apply allowed fields
+    editableFields.forEach(field => {
+      if (updates[field] !== undefined) {
+        report[field] = updates[field];
+      }
+    });
+
+    report.hasEdited = true; // mark as edited
+    report.lastUpdated = new Date();
+
+    await report.save();
+
+    return res.json({ message: "Report updated successfully", report });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 module.exports = {
   createReport,
@@ -379,4 +472,6 @@ module.exports = {
   archiveReport,
   getArchivedReports,
   restoreReport,
+  discloseReport,
+  updateReportByUser,
 };

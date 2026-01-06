@@ -14,6 +14,8 @@ const {
   archiveReport,
   getArchivedReports,
   restoreReport,
+  discloseReport,      // ✅ new controller
+  updateReportByUser,  // ✅ new controller
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -33,6 +35,15 @@ router.get("/user/all", auth(["user", "admin"]), getUserReports);
 
 // 📌 Get single report (owned by user)
 router.get("/user/:id", auth(["user", "admin"]), getUserReportById);
+
+// 📌 Disclose identity (user only)
+router.patch("/user/disclose/:id", auth(["user", "admin"]), discloseReport);
+
+// 📌 Update report (after disclosing, editable fields only)
+router.patch("/user/update/:id", auth(["user", "admin"]), updateReportByUser);
+
+router.post("/:id/reveal", auth(["user"]), discloseReport);
+
 
 // ===================================================================
 // 🧑‍💼 ADMIN ROUTES
@@ -58,5 +69,7 @@ router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);
 
 // 📌 Restore archived report
 router.put("/admin/:id/restore", auth(["admin", "superadmin"]), restoreReport);
+
+
 
 module.exports = router;

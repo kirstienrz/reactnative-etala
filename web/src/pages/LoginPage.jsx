@@ -19,10 +19,35 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleTupIdChange = (e) => {
-    let value = e.target.value.toUpperCase();
-    value = value.replace(/[^A-Z0-9-]/g, '');
-    setTupId(value);
-  };
+  let value = e.target.value.toUpperCase();
+
+  // alisin lahat ng hindi letter/number
+  value = value.replace(/[^A-Z0-9]/g, "");
+
+  // siguraduhin na nagsisimula sa TUPT
+  if (!value.startsWith("TUPT")) {
+    value = "TUPT" + value.replace(/^TUPT/, "");
+  }
+
+  // tanggalin muna ang TUPT para ma-format yung numbers
+  let rest = value.replace("TUPT", "");
+
+  // limit sa 6 characters (XX + XXXX)
+  rest = rest.slice(0, 6);
+
+  let formatted = "TUPT";
+
+  if (rest.length >= 1) {
+    formatted += "-" + rest.slice(0, 2);
+  }
+
+  if (rest.length >= 3) {
+    formatted += "-" + rest.slice(2, 6);
+  }
+
+  setTupId(formatted);
+};
+
 
   const handlePinChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
