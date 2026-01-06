@@ -676,7 +676,6 @@ const AdminReports = () => {
                           </div>
                         )}
                         {/* ✅ MESSAGE USER BUTTON */}
-<<<<<<< HEAD
                         {selectedReport.createdBy && (
                           <div className="col-span-2 mt-3">
                             <button
@@ -688,17 +687,6 @@ const AdminReports = () => {
                             </button>
                           </div>
                         )}
-=======
-                         <div className="col-span-2 mt-3">
-                          <button
-                            onClick={() => handleMessageUser(selectedReport.createdBy)}
-                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
-                          >
-                            <MessageSquare size={16} />
-                            Message User
-                          </button>
-                        </div>
->>>>>>> 77d1389feca5d1ed82944591c897c4a752e508af
                       </div>
                     )}
                   </div>
