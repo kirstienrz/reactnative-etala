@@ -20,6 +20,7 @@ import UserManagementPage from "./pages/superadmin/UserManagement";
 import ReportsPage from "./pages/superadmin/Reports";
 import ReferralPage from "./pages/superadmin/Referral";
 import MessagesPage from "./pages/superadmin/Messages";
+import ChatDetailsPage from "./pages/superadmin/ChatDetails";
 import AnalyticsPage from "./pages/superadmin/Analytics";
 import CarouselPage from "./pages/superadmin/Carousel";
 import EventsPage from "./pages/superadmin/Events";
@@ -42,6 +43,7 @@ import AdminInbox from "./pages/admin/Inbox";
 import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
 import UserInbox from "./pages/user/Inbox";
+import UserChatDetailsPage from "./pages/user/UserChatDetails";
 import UserReports from "./pages/user/Reports";
 import UserReporting from "./pages/user/Report";
 
@@ -91,6 +93,7 @@ const App = () => {
               <Route path="/superadmin/reports" element={<ReportsPage />} />
               <Route path="/superadmin/referral" element={<ReferralPage />} />
               <Route path="/superadmin/messages" element={<MessagesPage />} />
+              <Route path="/superadmin/chat" element={<ChatDetailsPage />} />
               <Route path="/superadmin/analytics" element={<AnalyticsPage />} />
               <Route path="/superadmin/carousel" element={<CarouselPage />} />
               <Route path="/superadmin/events" element={<EventsPage />} />
@@ -117,6 +120,7 @@ const App = () => {
               <Route path="/user/dashboard" element={<UserDashboard />} />
               <Route path="/user/profile" element={<UserProfile />} />
               <Route path="/user/inbox" element={<UserInbox />} />
+              <Route path="/user/chat" element={<UserChatDetailsPage />} />
               <Route path="/user/reports" element={<UserReports />} />
               <Route path="/user/report" element={<UserReporting />} />
             </Route>

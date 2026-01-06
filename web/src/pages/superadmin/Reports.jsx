@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MessageSquare, Send, Share2, X, Eye, Archive, RefreshCw,
   Search, Filter, Calendar, FileText, AlertCircle, CheckCircle,
@@ -10,7 +11,10 @@ import {
   updateReportStatus, archiveReport, restoreReport, addReferral
 } from "../../api/report";
 
+import { createOrGetChat } from "../../api/chat";
+
 const AdminReports = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("active");
   const [reports, setReports] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
@@ -45,8 +49,34 @@ const AdminReports = () => {
     fetchReports();
   }, []);
 
-  const handleMessageUser = (user) => {
-    console.log("Message this user:", user);
+  const handleMessageUser = async (user) => {
+    try {
+      console.log("💬 Starting chat with user:", user);
+      
+      // Extract user ID
+      const userId = user._id || user.id;
+      
+      if (!userId) {
+        showToast("Unable to message user: User ID not found", "error");
+        return;
+      }
+
+      // Create or get existing chat
+      const chat = await createOrGetChat(userId);
+      console.log("✅ Chat created/retrieved:", chat);
+
+      // Navigate to chat screen with user details
+      navigate('/superadmin/chat', {
+        state: {
+          chatId: chat._id || chat.id,
+          receiverId: userId,
+          receiverName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.tupId || "User",
+        }
+      });
+    } catch (error) {
+      console.error("❌ Error creating/getting chat:", error);
+      showToast(`Failed to start chat: ${error.message}`, "error");
+    }
   };
 
   const fetchReports = async () => {
@@ -462,9 +492,6 @@ const AdminReports = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
                     </th>
-                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Case Status
                     </th>
@@ -501,12 +528,6 @@ const AdminReports = () => {
                           )}
                         </div>
                       </td>
-                      {/* <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(report.status)}`}>
-                          {getStatusIcon(report.status)}
-                          {report.status}
-                        </span>
-                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {report.caseStatus ? (
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
@@ -586,31 +607,6 @@ const AdminReports = () => {
               <div>
                 {/* Left Column - Basic Info */}
                 <div>
-                  {/* Status Cards */}
-                  {/* <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Current Status</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm text-gray-600 mb-1 block">Report Status</label>
-                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${getStatusColor(selectedReport.status)}`}>
-                          {getStatusIcon(selectedReport.status)}
-                          {selectedReport.status}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600 mb-1 block">Case Status</label>
-                        {selectedReport.caseStatus ? (
-                          <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${getCaseStatusColor(selectedReport.caseStatus)}`}>
-                            {getCaseStatusIcon(selectedReport.caseStatus)}
-                            {selectedReport.caseStatus}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-sm">Not Set</span>
-                        )}
-                      </div>
-                    </div>
-                  </div> */}
-
                   {/* Timeline */}
                   {selectedReport.timeline?.length > 0 && (
                     <div className="bg-gray-50 rounded-lg p-4">
@@ -680,15 +676,17 @@ const AdminReports = () => {
                           </div>
                         )}
                         {/* ✅ MESSAGE USER BUTTON */}
-                        {/* <div className="col-span-2 mt-3">
-                          <button
-                            onClick={() => handleMessageUser(selectedReport.createdBy)}
-                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
-                          >
-                            <MessageSquare size={16} />
-                            Message User
-                          </button>
-                        </div> */}
+                        {selectedReport.createdBy && (
+                          <div className="col-span-2 mt-3">
+                            <button
+                              onClick={() => handleMessageUser(selectedReport.createdBy)}
+                              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                            >
+                              <MessageSquare size={16} />
+                              Message User
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

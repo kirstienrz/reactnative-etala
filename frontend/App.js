@@ -19,6 +19,7 @@ import SetPinScreen from "./src/screens/SetPinScreen";
 import PinLoginScreen from "./src/screens/PinLoginScreen";
 import StartupScreen from "./src/screens/StartupScreen";
 import UserHome from "./src/screens/user/home";
+import Resources from "./src/screens/user/resourcesView";
 import OlderAnnouncements from "./src/screens/user/older-announcements";
 import ConfirmPinScreen from "./src/screens/ConfirmPinScreen";
 import AuthLoadingScreen from "./src/screens/AuthLoadingScreen";
@@ -139,6 +140,7 @@ export default function App() {
               <Stack.Screen name="Handbook" component={Handbook} options={{ title: "Handbook" }} />
               <Stack.Screen name="KnowledgeHub" component={KnowledgeHub} options={{ title: "Knowledge Hub" }} />
               <Stack.Screen name="SuggestionBox" component={SuggestionBox} options={{ title: "Suggestion Box" }} />
+              <Stack.Screen name="Resources" component={Resources} />
 
               {/* Bottom Navigation */}
               <Stack.Screen name="ReportHistoryScreen"options={{ headerShown: false }}>

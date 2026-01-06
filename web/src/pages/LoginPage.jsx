@@ -73,10 +73,10 @@ const LoginPage = () => {
       dispatch(loginSuccess({
         token: data.token,
         role: data.role,
-        department: data.department,  // ✅ add this
+        department: data.department,
         user: {
-          id: data.id,       // 🔹 API user id
-          name: data.name,   // 🔹 API user name
+          _id: data.id,      // ✅ Use _id to match MongoDB convention
+          name: data.name,
           role: data.role,
           department: data.department
         }
