@@ -4,6 +4,8 @@ import {
   Upload, X, Image as ImageIcon, Video, Info, Shield, AlertCircle, FileText, Lock
 } from 'lucide-react';
 import { createReport } from '../../api/report';
+import { generateReportPDF } from '../../utils/generateReportPDF';
+
 
 const ReportForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -170,86 +172,103 @@ const ReportForm = () => {
     }));
   };
 
-  const handleSubmit = async () => {
-    // Validate before submitting
-    if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
-      showAlert('Required', 'Please confirm all statements before submitting.');
-      return;
-    }
+ const handleSubmit = async () => {
+  // Validate before submitting
+  if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
+    showAlert('Required', 'Please confirm all statements before submitting.');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const submitData = new FormData();
-      submitData.append('isAnonymous', String(isAnonymous));
-      
-      // Append all form data
-      Object.keys(formData).forEach(key => {
-        if (key === 'attachments') return;
-        const value = formData[key];
-        if (Array.isArray(value)) {
-          value.forEach(item => submitData.append(`${key}[]`, item));
-        } else if (typeof value === 'boolean') {
-          submitData.append(key, value.toString());
-        } else if (value !== '' && value !== null && value !== undefined) {
-          submitData.append(key, value.toString());
-        }
-      });
-      
-      // Append attachments
-      formData.attachments.forEach(attachment => {
-        submitData.append('attachments', attachment.file);
-      });
-      
-      const response = await createReport(submitData);
-      
-      // Clear saved progress
-      await clearProgress();
-      
-      showAlert(
-        'Report Submitted Successfully',
-        `Your report has been received.\n\nTicket Number: ${response.ticketNumber || 'TUP-' + Date.now().toString().slice(-8)}\n\nPlease save this number for tracking your report.`
-      );
-      
-      // Reset form
-      setCurrentStep(1);
-      setIsAnonymous(false);
-      setFormData({
-        lastName: '', firstName: '', middleName: '', alias: '', sex: '',
-        dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
-        nationality: '', passportNo: '', occupation: '', religion: '',
-        region: '', province: '', cityMun: '', barangay: '',
-        disability: '', numberOfChildren: '', agesOfChildren: '',
-        guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
-        guardianRelationship: '', guardianRegion: '', guardianProvince: '',
-        guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-        reporterRole: '', tupRole: '', anonymousGender: '', anonymousDepartment: '',
-        perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
-        perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
-        perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
-        perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
-        perpBarangay: '', perpRelationship: '',
-        perpGuardianLastName: '', perpGuardianFirstName: '', perpGuardianMiddleName: '',
-        perpGuardianRelationship: '', perpGuardianRegion: '', perpGuardianProvince: '',
-        perpGuardianCityMun: '', perpGuardianBarangay: '', perpGuardianContact: '',
-        incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
-        incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
-        placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
-        witnessAccount: '', witnessDate: '',
-        attachments: [], additionalNotes: '', confirmAccuracy: false,
-        confirmConfidentiality: false,
-      });
-      
-    } catch (error) {
-      console.error('Submit error:', error);
-      let errorMessage = 'Failed to submit report. Please try again.';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+  setLoading(true);
+  try {
+    const submitData = new FormData();
+    submitData.append('isAnonymous', String(isAnonymous));
+    
+    // Append all form data
+    Object.keys(formData).forEach(key => {
+      if (key === 'attachments') return;
+      const value = formData[key];
+      if (Array.isArray(value)) {
+        value.forEach(item => submitData.append(`${key}[]`, item));
+      } else if (typeof value === 'boolean') {
+        submitData.append(key, value.toString());
+      } else if (value !== '' && value !== null && value !== undefined) {
+        submitData.append(key, value.toString());
       }
-      showAlert('Error', errorMessage);
-    } finally {
-      setLoading(false);
+    });
+    
+    // Append attachments
+    formData.attachments.forEach(attachment => {
+      submitData.append('attachments', attachment.file);
+    });
+    
+    // ✅ SUBMIT REPORT
+    const response = await createReport(submitData);
+
+    // ============================
+    // 🧾 PDF DOWNLOAD (RIGHT HERE)
+    // ============================
+    const ticketNumber =
+      response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+
+    generateReportPDF({
+      formData,     // use current form data (NOT reset yet)
+      ticketNumber,
+      isAnonymous,
+    });
+
+    // ============================
+    // CLEAR & FEEDBACK
+    // ============================
+    await clearProgress();
+
+    showAlert(
+      'Report Submitted Successfully',
+      `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy of your report has been downloaded as a PDF.`
+    );
+    
+    // ============================
+    // RESET FORM (LAST STEP)
+    // ============================
+    setCurrentStep(1);
+    setIsAnonymous(false);
+    setFormData({
+      lastName: '', firstName: '', middleName: '', alias: '', sex: '',
+      dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
+      nationality: '', passportNo: '', occupation: '', religion: '',
+      region: '', province: '', cityMun: '', barangay: '',
+      disability: '', numberOfChildren: '', agesOfChildren: '',
+      guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
+      guardianRelationship: '', guardianRegion: '', guardianProvince: '',
+      guardianCityMun: '', guardianBarangay: '', guardianContact: '',
+      reporterRole: '', tupRole: '', anonymousGender: '', anonymousDepartment: '',
+      perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
+      perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
+      perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
+      perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
+      perpBarangay: '', perpRelationship: '',
+      perpGuardianLastName: '', perpGuardianFirstName: '', perpGuardianMiddleName: '',
+      perpGuardianRelationship: '', perpGuardianRegion: '', perpGuardianProvince: '',
+      perpGuardianCityMun: '', perpGuardianBarangay: '', perpGuardianContact: '',
+      incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+      incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
+      placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
+      witnessAccount: '', witnessDate: '',
+      attachments: [], additionalNotes: '', confirmAccuracy: false,
+      confirmConfidentiality: false,
+    });
+
+  } catch (error) {
+    console.error('Submit error:', error);
+    let errorMessage = 'Failed to submit report. Please try again.';
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
     }
-  };
+    showAlert('Error', errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const validateStep = () => {
     if (currentStep === 1) {

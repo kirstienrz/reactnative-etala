@@ -48,7 +48,7 @@ const Header = () => {
       submenu: [
         { title: 'Policies', path: '/Policies' },
         { title: 'Plan and Budget', path: '/PlanAndBudget' },
-        { title: 'Committee Report', path: '/CommitteeReport' }
+        // { title: 'Committee Report', path: '/CommitteeReport' }
       ]
     },
     {

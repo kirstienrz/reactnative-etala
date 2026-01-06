@@ -31,6 +31,7 @@ const GADProgramsHybrid = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
   const [formData, setFormData] = useState({});
+  const [formErrors, setFormErrors] = useState({});
 
   // Fetch on mount
   useEffect(() => {
@@ -90,42 +91,52 @@ const GADProgramsHybrid = () => {
   };
 
   // Auto-suggest program completion// Auto-suggest program completion
-  const handleCheckCompletion = async (program) => {
-    const allEventsComplete = canMarkProgramComplete(program);
+  // const handleCheckCompletion = async (program) => {
+  //   const allEventsComplete = canMarkProgramComplete(program);
 
-    if (allEventsComplete && program.status !== 'completed') {
-      if (window.confirm('All events are completed. Mark this program as completed?')) {
-        try {
-          // Update program status
-          await updateProgram(program._id, { ...program, status: 'completed' });
+  //   if (allEventsComplete && program.status !== 'completed') {
+  //     if (window.confirm('All events are completed. Mark this program as completed?')) {
+  //       try {
+  //         // Update program status
+  //         await updateProgram(program._id, { ...program, status: 'completed' });
 
-          // ⬇️ SAME LOGIC AS handleSave - Refresh and update selected
-          const response = await getAllPrograms();
-          if (response.success) {
-            setPrograms(response.data);
+  //         // ⬇️ SAME LOGIC AS handleSave - Refresh and update selected
+  //         const response = await getAllPrograms();
+  //         if (response.success) {
+  //           setPrograms(response.data);
 
-            // Find and set the updated program as selected
-            const updatedProgram = response.data.find(p => p._id === program._id);
-            if (updatedProgram) {
-              setSelectedProgram(updatedProgram);
-            }
-          }
+  //           // Find and set the updated program as selected
+  //           const updatedProgram = response.data.find(p => p._id === program._id);
+  //           if (updatedProgram) {
+  //             setSelectedProgram(updatedProgram);
+  //           }
+  //         }
 
-          // Optional: Show success message
-          alert('Program marked as completed successfully!');
-        } catch (err) {
-          console.error('Error updating program:', err);
-          alert('Error updating program. Please try again.');
-        }
-      }
-    } else if (!allEventsComplete) {
-      alert('Not all events are completed yet.');
-    } else {
-      alert('Program is already marked as completed.');
-    }
-  };
+  //         // Optional: Show success message
+  //         alert('Program marked as completed successfully!');
+  //       } catch (err) {
+  //         console.error('Error updating program:', err);
+  //         alert('Error updating program. Please try again.');
+  //       }
+  //     }
+  //   } else if (!allEventsComplete) {
+  //     alert('Not all events are completed yet.');
+  //   } else {
+  //     alert('Program is already marked as completed.');
+  //   }
+  // };
 
   const handleSave = async () => {
+    const errors = {};
+    if (!formData.name) errors.name = 'Program Name is required';
+    if (!formData.description) errors.description = 'Description is required';
+    if (!formData.year) errors.year = 'Year is required';
+    // if (!formData.status) errors.status = 'Status is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return; // stop saving
+    }
     try {
       let savedProgramId = selectedProgram?._id;
 
@@ -148,7 +159,15 @@ const GADProgramsHybrid = () => {
       } else if (modalType === 'event') {
         const projectId = formData.projectId;
         if (formData._id) {
-          await updateEvent(selectedProgram._id, projectId, formData._id, formData);
+          await updateEvent(selectedProgram._id, formData.projectId, formData._id, {
+            status: formData.status,
+            title: formData.title,
+            date: formData.date,
+            participants: formData.participants,
+            venue: formData.venue,
+            description: formData.description
+          });
+
         } else {
           await addEvent(selectedProgram._id, projectId, formData);
         }
@@ -500,10 +519,10 @@ const GADProgramsHybrid = () => {
               {/* Stats Cards */}
               {stats && (
                 <div className="grid grid-cols-4 gap-4 mb-6">
-                  <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  {/* <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="text-sm text-gray-500 mb-1">Program Status</div>
                     <StatusBadge status={selectedProgram.status} />
-                  </div>
+                  </div> */}
                   <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="text-sm text-gray-500 mb-1">Projects</div>
                     <div className="text-2xl font-bold text-gray-900 mb-2">
@@ -578,10 +597,10 @@ const GADProgramsHybrid = () => {
                       <h3 className="text-sm font-semibold text-green-900">
                         🎉 All Events Completed!
                       </h3>
-                      <p className="text-xs text-green-700 mt-1">
+                      {/* <p className="text-xs text-green-700 mt-1">
                         All {stats.totalEvents} events in this program have been marked as completed.
                         You may now update the program status to "Completed" when all documentation and reports are finalized.
-                      </p>
+                      </p> */}
                     </div>
                     <button
                       onClick={() => {
@@ -760,39 +779,83 @@ const GADProgramsHybrid = () => {
               <div className="space-y-4">
                 {modalType === 'program' && (
                   <>
-                    <input
-                      type="text"
-                      placeholder="Program Name"
-                      value={formData.name || ''}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <textarea
-                      placeholder="Description"
-                      value={formData.description || ''}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      rows="3"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Year"
-                      value={formData.year || ''}
-                      onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <select
-                      value={formData.status || 'ongoing'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="upcoming">Upcoming</option>
-                      <option value="ongoing">Ongoing</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                    {/* Program Name */}
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        placeholder="Program Name *"
+                        value={formData.name || ''}
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          setFormErrors({ ...formErrors, name: null }); // clear error kapag nag-type
+                        }}
+                        className={`w-full px-4 py-2 border rounded-lg outline-none
+          ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
+                      />
+                      {formErrors.name && (
+                        <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    <div className="mb-3">
+                      <textarea
+                        placeholder="Description *"
+                        value={formData.description || ''}
+                        onChange={(e) => {
+                          setFormData({ ...formData, description: e.target.value });
+                          setFormErrors({ ...formErrors, description: null });
+                        }}
+                        className={`w-full px-4 py-2 border rounded-lg outline-none
+          ${formErrors.description ? 'border-red-500' : 'border-gray-300'}`}
+                        rows={3}
+                      />
+                      {formErrors.description && (
+                        <p className="text-xs text-red-600 mt-1">{formErrors.description}</p>
+                      )}
+                    </div>
+
+                    {/* Year */}
+                    <div className="mb-3">
+                      <input
+                        type="number"
+                        placeholder="Year *"
+                        value={formData.year || ''}
+                        onChange={(e) => {
+                          setFormData({ ...formData, year: parseInt(e.target.value) });
+                          setFormErrors({ ...formErrors, year: null });
+                        }}
+                        className={`w-full px-4 py-2 border rounded-lg outline-none
+          ${formErrors.year ? 'border-red-500' : 'border-gray-300'}`}
+                      />
+                      {formErrors.year && (
+                        <p className="text-xs text-red-600 mt-1">{formErrors.year}</p>
+                      )}
+                    </div>
+
+                    {/* Status */}
+                    {/* <div className="mb-3">
+                      <select
+                        value={formData.status || 'ongoing'}
+                        onChange={(e) => {
+                          setFormData({ ...formData, status: e.target.value });
+                          setFormErrors({ ...formErrors, status: null });
+                        }}
+                        className={`w-full px-4 py-2 border rounded-lg outline-none
+          ${formErrors.status ? 'border-red-500' : 'border-gray-300'}`}
+                      >
+                        <option value="upcoming">Upcoming</option>
+                        <option value="ongoing">Ongoing</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                      {formErrors.status && (
+                        <p className="text-xs text-red-600 mt-1">{formErrors.status}</p>
+                      )}
+                    </div> */}
                   </>
                 )}
+
 
                 {modalType === 'project' && (
                   <>
@@ -810,7 +873,7 @@ const GADProgramsHybrid = () => {
                       onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     />
-                    <select
+                    {/* <select
                       value={formData.status || 'ongoing'}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
@@ -819,7 +882,7 @@ const GADProgramsHybrid = () => {
                       <option value="ongoing">Ongoing</option>
                       <option value="completed">Completed</option>
                       <option value="cancelled">Cancelled</option>
-                    </select>
+                    </select> */}
                   </>
                 )}
 
