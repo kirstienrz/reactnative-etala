@@ -3,6 +3,22 @@ import API from "./config"; // axios instance with baseURL & headers
 // 🧍 USER ENDPOINTS
 // =========================================================
 
+// 🟣 Disclose identity (user only) WITH password
+// PATCH /reports/user/disclose/:id
+export const discloseIdentity = async (reportId, password) => {
+  try {
+    const res = await API.patch(`/reports/user/disclose/${reportId}`, { password });
+    return res.data;
+  } catch (err) {
+    console.error("DiscloseIdentity API Error:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+    });
+    throw err;
+  }
+};
+
 // 📝 Create a new report (with attachments)
 export const createReport = async (formData) => {
   try {
@@ -118,3 +134,25 @@ export const restoreReport = async (id) => {
   const res = await API.put(`/reports/admin/${id}/restore`);
   return res.data;
 };
+
+// =========================================================
+// 🧍 USER EDIT / DISCLOSE
+// =========================================================
+
+
+// 🟢 Update report (editable fields only)
+// PATCH /reports/user/update/:id
+export const updateReportByUser = async (reportId, payload) => {
+  try {
+    const res = await API.patch(`/reports/user/update/${reportId}`, payload);
+    return res.data;
+  } catch (err) {
+    console.error("UpdateReportByUser API Error:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+    });
+    throw err;
+  }
+};
+

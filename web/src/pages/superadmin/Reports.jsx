@@ -680,7 +680,7 @@ const AdminReports = () => {
                           </div>
                         )}
                         {/* ✅ MESSAGE USER BUTTON */}
-                        {/* <div className="col-span-2 mt-3">
+                         <div className="col-span-2 mt-3">
                           <button
                             onClick={() => handleMessageUser(selectedReport.createdBy)}
                             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
@@ -688,7 +688,7 @@ const AdminReports = () => {
                             <MessageSquare size={16} />
                             Message User
                           </button>
-                        </div> */}
+                        </div>
                       </div>
                     )}
                   </div>
