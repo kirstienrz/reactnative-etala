@@ -46,6 +46,7 @@ import UserInbox from "./pages/user/Inbox";
 import UserChatDetailsPage from "./pages/user/UserChatDetails";
 import UserReports from "./pages/user/Reports";
 import UserReporting from "./pages/user/Report";
+import InterviewBooking from "./pages/user/Interview";
 
 import MissionVision from "./pages/public/MissionVision";
 import Organization from "./pages/public/Organization";
@@ -125,6 +126,13 @@ const App = () => {
               <Route path="/user/chat" element={<UserChatDetailsPage />} />
               <Route path="/user/reports" element={<UserReports />} />
               <Route path="/user/report" element={<UserReporting />} />
+              <Route
+  path="/user/interview"
+  element={<ProtectedRoute requireInterviewAccess={true} />}
+>
+  <Route index element={<InterviewBooking />} />
+</Route>
+
             </Route>
           </Routes>
           <FloatingChatbot />

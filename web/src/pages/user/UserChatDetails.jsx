@@ -16,6 +16,10 @@ const ChatScreen = () => {
   const [loading, setLoading] = useState(true);
   const [chatId, setChatId] = useState(null);
 
+  const hasInterviewInvite = messages.some(
+    (m) => m.type === "SYSTEM" && m.action === "PROCEED_TO_INTERVIEW"
+  );
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -77,7 +81,7 @@ const ChatScreen = () => {
 
   const handleSend = async (e) => {
     e?.preventDefault();
-    
+
     if (!inputText.trim() || !chatId) return;
 
     const tempMessage = {
@@ -125,10 +129,10 @@ const ChatScreen = () => {
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -148,7 +152,7 @@ const ChatScreen = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-4xl mx-auto">
-        
+
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-3">
@@ -158,11 +162,11 @@ const ChatScreen = () => {
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            
+
             <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
               {receiverName?.charAt(0).toUpperCase() || 'U'}
             </div>
-            
+
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-purple-900">
                 {receiverName || "User"}
@@ -174,7 +178,7 @@ const ChatScreen = () => {
 
         {/* Messages Container */}
         <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden flex flex-col" style={{ height: '600px' }}>
-          
+
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-3">
             {messages.length === 0 ? (
@@ -190,8 +194,36 @@ const ChatScreen = () => {
             ) : (
               <>
                 {messages.map((message) => {
-                  const isMe = 
-                    message.sender?._id === currentUserId || 
+
+                  // ✅ SYSTEM MESSAGE: Proceed to Interview
+                  if (
+                    message.type === "SYSTEM" &&
+                    message.action === "PROCEED_TO_INTERVIEW"
+                  ) {
+                    return (
+                      <div key={message._id} className="flex justify-center my-4">
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-center max-w-sm">
+                          <p className="text-sm font-semibold text-indigo-800 mb-3">
+                            You have been invited to proceed to interview
+                          </p>
+
+                         <button
+  onClick={() => {
+    localStorage.setItem("canAccessInterview", "true"); // ✅ allow access
+    navigate("/user/interview");
+  }}
+  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+>
+  Schedule Interview
+</button>
+
+
+                        </div>
+                      </div>
+                    );
+                  }
+                  const isMe =
+                    message.sender?._id === currentUserId ||
                     message.sender === currentUserId;
 
                   return (
@@ -200,28 +232,25 @@ const ChatScreen = () => {
                       className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                          isMe
+                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${isMe
                             ? 'bg-purple-600 text-white'
                             : 'bg-gray-100 text-gray-900'
-                        } ${message.isTemp ? 'opacity-60' : ''}`}
+                          } ${message.isTemp ? 'opacity-60' : ''}`}
                       >
                         <p className="text-sm break-words whitespace-pre-wrap">
                           {message.content || message.text}
                         </p>
                         <div className="flex items-center justify-between gap-2 mt-1">
                           <span
-                            className={`text-xs ${
-                              isMe ? 'text-purple-200' : 'text-gray-500'
-                            }`}
+                            className={`text-xs ${isMe ? 'text-purple-200' : 'text-gray-500'
+                              }`}
                           >
                             {formatTime(message.createdAt)}
                           </span>
                           {message.isTemp && (
                             <span
-                              className={`text-xs italic ${
-                                isMe ? 'text-purple-200' : 'text-gray-500'
-                              }`}
+                              className={`text-xs italic ${isMe ? 'text-purple-200' : 'text-gray-500'
+                                }`}
                             >
                               Sending...
                             </span>
@@ -257,7 +286,7 @@ const ChatScreen = () => {
                   e.target.style.height = e.target.scrollHeight + 'px';
                 }}
               />
-              
+
               <button
                 type="submit"
                 disabled={!inputText.trim() || sending}

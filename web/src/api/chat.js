@@ -32,20 +32,16 @@ export const getChats = async () => {
 };
 
 // ✉️ Send Message
-export const sendMessage = async (chatId, receiverId, content) => {
-  try {
-    const token = await getItem("token");
-    const res = await API.post(
-      "/chat/message",
-      { chatId, receiverId, content },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return res.data;
-  } catch (error) {
-    console.error("❌ Error sending message:", error.response?.data || error.message);
-    throw error;
-  }
+export const sendMessage = async (chatId, receiverId, content, type, action) => {
+  const token = await getItem("token");
+  const res = await API.post(
+    "/chat/message",
+    { chatId, receiverId, content, type, action },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
 };
+
 
 // 📩 Get Messages in a Chat
 export const getMessages = async (chatId) => {

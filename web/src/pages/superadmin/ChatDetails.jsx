@@ -16,6 +16,12 @@ const ChatScreen = () => {
   const [loading, setLoading] = useState(true);
   const [chatId, setChatId] = useState(null);
 
+  const isSuperAdmin = currentUser?.role === "superadmin";
+
+  const hasInterviewInvite = messages.some(
+    (m) => m.type === "SYSTEM" && m.action === "PROCEED_TO_INTERVIEW"
+  );
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -77,7 +83,7 @@ const ChatScreen = () => {
 
   const handleSend = async (e) => {
     e?.preventDefault();
-    
+
     if (!inputText.trim() || !chatId) return;
 
     const tempMessage = {
@@ -116,6 +122,24 @@ const ChatScreen = () => {
     }
   };
 
+  const sendProceedToInterview = async () => {
+    if (!chatId || !receiverId) return;
+
+    try {
+      // Frontend
+      await sendMessage(chatId, receiverId, "Proceed to Interview", "SYSTEM", "PROCEED_TO_INTERVIEW");
+
+
+
+      const updated = await getMessages(chatId);
+      setMessages(updated);
+    } catch (err) {
+      console.error("Failed to send interview invite", err);
+      alert("Failed to send interview invite");
+    }
+  };
+
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -125,10 +149,10 @@ const ChatScreen = () => {
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -153,12 +177,21 @@ const ChatScreen = () => {
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
-        
+
         <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
           {receiverName?.charAt(0).toUpperCase() || 'U'}
         </div>
-        
+
         <div className="flex-1">
+          {isSuperAdmin && !hasInterviewInvite && (
+            <button
+              onClick={sendProceedToInterview}
+              className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+            >
+              Proceed to Interview
+            </button>
+          )}
+
           <h1 className="text-lg font-semibold text-gray-900">
             {receiverName || "User"}
           </h1>
@@ -181,8 +214,8 @@ const ChatScreen = () => {
         ) : (
           <>
             {messages.map((message) => {
-              const isMe = 
-                message.sender?._id === currentUserId || 
+              const isMe =
+                message.sender?._id === currentUserId ||
                 message.sender === currentUserId;
 
               return (
@@ -191,28 +224,25 @@ const ChatScreen = () => {
                   className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      isMe
+                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${isMe
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-gray-900 border border-gray-200'
-                    } ${message.isTemp ? 'opacity-60' : ''}`}
+                      } ${message.isTemp ? 'opacity-60' : ''}`}
                   >
                     <p className="text-sm break-words whitespace-pre-wrap">
                       {message.content || message.text}
                     </p>
                     <div className="flex items-center justify-between gap-2 mt-1">
                       <span
-                        className={`text-xs ${
-                          isMe ? 'text-indigo-200' : 'text-gray-400'
-                        }`}
+                        className={`text-xs ${isMe ? 'text-indigo-200' : 'text-gray-400'
+                          }`}
                       >
                         {formatTime(message.createdAt)}
                       </span>
                       {message.isTemp && (
                         <span
-                          className={`text-xs italic ${
-                            isMe ? 'text-indigo-200' : 'text-gray-400'
-                          }`}
+                          className={`text-xs italic ${isMe ? 'text-indigo-200' : 'text-gray-400'
+                            }`}
                         >
                           Sending...
                         </span>
@@ -248,7 +278,7 @@ const ChatScreen = () => {
               e.target.style.height = e.target.scrollHeight + 'px';
             }}
           />
-          
+
           <button
             type="submit"
             disabled={!inputText.trim() || sending}

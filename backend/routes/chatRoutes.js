@@ -74,31 +74,47 @@ router.get("/", auth(), async (req, res) => {
 
 // 💬 Send message
 router.post("/message", auth(), async (req, res) => {
-  const { chatId, receiverId, content } = req.body;
+  const { chatId, receiverId, content, type, action } = req.body;
 
   if (!chatId || !receiverId || !content)
     return res.status(400).json({ message: "Missing required fields" });
 
   try {
     const currentUserId = req.user.id;
-    
+
+    if (action === "PROCEED_TO_INTERVIEW") {
+  const existing = await Message.findOne({
+    chat: chatId,
+    action: "PROCEED_TO_INTERVIEW",
+  });
+
+  if (existing) {
+    return res
+      .status(400)
+      .json({ message: "Interview already triggered" });
+  }
+}
+
     const message = await Message.create({
-      sender: currentUserId,
-      receiver: receiverId,
-      chat: chatId,
-      content,
+  sender: currentUserId,
+  receiver: receiverId,
+  chat: chatId,
+  content: content,        // ONLY the string text
+  type: type || "USER",    // e.g., "SYSTEM"
+  action: action || null,  // e.g., "PROCEED_TO_INTERVIEW"
+});
+
+
+    await Chat.findByIdAndUpdate(chatId, {
+      latestMessage: message._id,
+      updatedAt: new Date(),
     });
 
-    // ✅ Update chat's latestMessage AND updatedAt
-    await Chat.findByIdAndUpdate(
-      chatId, 
-      { 
-        latestMessage: message._id,
-        updatedAt: new Date()
-      }
+    const populated = await message.populate(
+      "sender receiver",
+      "firstName lastName email"
     );
-    
-    const populated = await message.populate("sender", "firstName lastName email");
+
     res.json(populated);
   } catch (err) {
     console.error("❌ Error sending message:", err);

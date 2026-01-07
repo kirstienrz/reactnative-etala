@@ -8,9 +8,9 @@ import { getChats, createOrGetChat, getAllUsers } from '../../api/chat';
 const Inbox = () => {
   const navigate = useNavigate();
   const currentUser = useSelector((state) => state.auth.user);
-  
+
   const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
-  
+
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,7 +25,7 @@ const Inbox = () => {
     console.log('Current user from Redux:', currentUser);
     console.log('Extracted user ID:', currentUserId);
     console.log('====================');
-    
+
     if (currentUserId) {
       fetchChats();
     } else {
@@ -39,13 +39,13 @@ const Inbox = () => {
       console.log('📨 Fetching chats for user:', currentUserId);
       const data = await getChats();
       console.log('✅ Chats received:', data);
-      
+
       if (!data || data.length === 0) {
         console.log('ℹ️ No chats returned from API');
         setChats([]);
         return;
       }
-      
+
       const chatsWithMessages = data.filter(chat => chat.latestMessage);
       console.log('💬 Chats with messages:', chatsWithMessages.length);
       setChats(chatsWithMessages);
@@ -63,12 +63,12 @@ const Inbox = () => {
       setLoadingUsers(true);
       const data = await getAllUsers();
       console.log('👥 All users fetched:', data.length);
-      
+
       const otherUsers = data.filter(user => {
         const userId = user._id || user.id;
         return userId !== currentUserId;
       });
-      
+
       console.log('👤 Other users (excluding current):', otherUsers.length);
       setUsers(otherUsers);
       setFilteredUsers(otherUsers);
@@ -78,20 +78,23 @@ const Inbox = () => {
       setLoadingUsers(false);
     }
   };
-
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredUsers(users);
+      // 👈 walang lalabas pag walang tina-type
+      setFilteredUsers([]);
       return;
     }
+
     const query = searchQuery.toLowerCase();
     const filtered = users.filter(user => {
       const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
       const email = user.email?.toLowerCase() || '';
       return fullName.includes(query) || email.includes(query);
     });
+
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
+
 
   const handleNewMessage = () => {
     setShowNewModal(true);
@@ -129,7 +132,7 @@ const Inbox = () => {
     if (!currentUserId || !users || users.length === 0) {
       return users && users.length > 0 ? users[0] : null;
     }
-    
+
     return users.find(user => {
       const userId = user._id || user.id;
       return userId !== currentUserId;
@@ -182,7 +185,7 @@ const Inbox = () => {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-purple-900 mb-3">Inbox</h1>
           <p className="text-gray-600 mb-6">Messages and announcements.</p>
-          
+
           <div className="bg-white p-6 rounded-xl shadow border border-gray-100">
             <div className="text-center py-8">
               <p className="text-lg font-medium text-red-600 mb-2">Unable to load messages</p>
@@ -203,7 +206,7 @@ const Inbox = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-4xl mx-auto">
-        
+
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-3xl font-bold text-purple-900">Inbox</h1>
           <div className="flex items-center gap-3">
@@ -240,10 +243,10 @@ const Inbox = () => {
                 const userName = `${otherUser.firstName} ${otherUser.lastName}`;
                 const latestMessageContent = chat.latestMessage?.content || 'Start a conversation';
                 const timeStamp = chat.updatedAt ? formatTime(chat.updatedAt) : '';
-                
+
                 const messageReceiverId = chat.latestMessage?.receiver?._id || chat.latestMessage?.receiver?.id || chat.latestMessage?.receiver;
-                const isUnread = chat.latestMessage && !chat.latestMessage.read && 
-                               messageReceiverId === currentUserId;
+                const isUnread = chat.latestMessage && !chat.latestMessage.read &&
+                  messageReceiverId === currentUserId;
 
                 return (
                   <div
@@ -309,9 +312,10 @@ const Inbox = () => {
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div className="flex items-center justify-center py-8 text-gray-500">
-                  {searchQuery ? 'No users found' : 'No users available'}
+                  {searchQuery ? 'No users found' : 'Start typing to search users'}
                 </div>
               ) : (
+
                 <div className="divide-y divide-gray-200">
                   {filteredUsers.map((user) => (
                     <div
