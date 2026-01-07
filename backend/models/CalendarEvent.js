@@ -12,19 +12,23 @@ const calendarEventSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
-  start: {
+ start: {
     type: Date,
-    required: [true, 'Start date is required']
-  },
-  end: {
+    required: [true, 'Start date is required'],
+    default: () => new Date() // default ngayon
+},
+end: {
     type: Date,
-    required: [true, 'End date is required']
-  },
+    required: [true, 'End date is required'],
+    default: () => new Date() // default ngayon
+},
+
   type: {
     type: String,
     enum: ['holiday', 'not_available', 'consultation', 'program_event'],
     required: [true, 'Event type is required']
   },
+
   allDay: {
     type: Boolean,
     default: false

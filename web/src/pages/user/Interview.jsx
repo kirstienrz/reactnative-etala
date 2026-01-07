@@ -324,15 +324,38 @@ export default function InterviewBooking() {
 
     const handleSaveBooking = async () => {
         try {
-            await createCalendarEvent(formData);
+            if (!selectedDate) {
+                alert("Please select a valid date.");
+                return;
+            }
+
+            const startDate = new Date(selectedDate);
+            const endDate = new Date(selectedDate);
+            endDate.setHours(23, 59, 59); // Ensure end > start
+
+            const newEvent = {
+                title: "Consultation",
+                type: "consultation",
+                start: startDate,
+                end: endDate,
+                allDay: true,
+                mode: formData.mode
+            };
+
+            await createCalendarEvent(newEvent);
+
+            setEvents(prev => [...prev, newEvent]);
             setShowModal(false);
             setFormData({ title: "Consultation", type: "consultation", mode: "online" });
-            fetchEvents();
+            setSelectedDate(null);
+
             alert("Your consultation is booked!");
         } catch (error) {
-            console.error(error);
+            console.error("Booking error:", error);
+            alert("There was an error booking your consultation.");
         }
     };
+
 
     const dayCellClassNames = (arg) => {
         const date = arg.date;
