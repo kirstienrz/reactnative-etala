@@ -114,6 +114,32 @@ const Contact = () => {
                 Failed to send message. Please try again.
               </p>
             )}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Attach files (optional)
+              </label>
+
+              <div className="flex items-center gap-4">
+                <input
+                  type="file"
+                  multiple
+                  className="block w-full text-sm text-slate-600
+        file:mr-4 file:py-2.5 file:px-5
+        file:rounded-md file:border
+        file:border-slate-300
+        file:bg-white
+        file:text-slate-700
+        file:font-medium
+        hover:file:bg-slate-50
+        cursor-pointer"
+                />
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Accepted file types: PDF, JPG, PNG, DOCX. Max 10MB per file.
+              </p>
+            </div>
+
           </form>
         </div>
       </section>

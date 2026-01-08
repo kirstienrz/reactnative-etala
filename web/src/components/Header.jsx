@@ -43,8 +43,22 @@ const Header = () => {
         { title: 'Accomplishments', path: '/Accomplishment' }
       ]
     },
+     {
+      title: 'Programs and Activities',
+      path: '/Projects',
+      submenu: []
+    },
+     {
+      title: 'Knowledge Hub',
+      submenu: [
+        { title: 'Handbook', path: '/Handbook' },
+        { title: 'Palitan', path: '/Knowledge' },
+        { title: 'Infographics', path: '/Infographics' },
+        { title: 'Suggestion Box', path: '/SuggestionBox' }
+      ]
+    },
     {
-      title: 'Programs & Policies',
+      title: 'Resources',
       submenu: [
         { title: 'Policies', path: '/Policies' },
         { title: 'Plan and Budget', path: '/PlanAndBudget' },
@@ -52,21 +66,14 @@ const Header = () => {
       ]
     },
     {
-      title: 'Projects',
-      path: '/Projects',
+      title: 'Etala',
+      path: '/login',
       submenu: []
     },
+   
+   
     {
-      title: 'Resources',
-      submenu: [
-        { title: 'Handbook', path: '/Handbook' },
-        { title: 'Knowledge Hub', path: '/Knowledge' },
-        { title: 'Infographics', path: '/Infographics' },
-        { title: 'Suggestion Box', path: '/SuggestionBox' }
-      ]
-    },
-    {
-      title: 'Contact',
+      title: 'Contact Us',
       path: '/Contact',
       submenu: []
     }
@@ -208,14 +215,14 @@ const Header = () => {
             )}
 
             {/* Login Button */}
-            {!isLoggedIn && (
+            {/* {!isLoggedIn && (
               <Link
                 to="/login"
                 className="ml-2 px-5 py-2 bg-purple-700 text-white rounded-lg shadow hover:bg-purple-800 transition-all font-medium no-underline hover:shadow-md"
               >
                 Login
               </Link>
-            )}
+            )} */}
           </div>
         </div>
       </div>

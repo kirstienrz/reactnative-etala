@@ -17,6 +17,10 @@ export default function SuperAdminCalendarUI() {
     upcoming: 0,
     completed: 0
   });
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
 
   // Fetch events on mount
   useEffect(() => {
@@ -27,7 +31,7 @@ export default function SuperAdminCalendarUI() {
     try {
       setLoading(true);
       const response = await getAllCalendarEvents();
-      
+
       if (response.success) {
         setEvents(response.data);
         calculateStats(response.data);
@@ -38,6 +42,22 @@ export default function SuperAdminCalendarUI() {
       setLoading(false);
     }
   };
+
+  const filteredEvents = events.filter((event) => {
+  const searchText = search.toLowerCase();
+
+  const name = event.extendedProps?.userName?.toLowerCase() || "";
+  const email = event.extendedProps?.userEmail?.toLowerCase() || "";
+
+  const matchesSearch =
+    name.includes(searchText) || email.includes(searchText);
+
+  const matchesType =
+    typeFilter === "all" || event.type === typeFilter;
+
+  return matchesSearch && matchesType;
+});
+
 
   const calculateStats = (eventData) => {
     const now = new Date();
@@ -116,13 +136,13 @@ export default function SuperAdminCalendarUI() {
           <p className="text-gray-500 text-sm mt-1">Manage Programs, Projects, Events, Holidays & Consultations</p>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={fetchEvents}
             className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
           >
             <RefreshCcw size={18} /> Refresh
           </button>
-          <button 
+          <button
             onClick={() => {
               setShowModal(true);
               setFormData({
@@ -152,7 +172,7 @@ export default function SuperAdminCalendarUI() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -164,7 +184,7 @@ export default function SuperAdminCalendarUI() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -176,7 +196,7 @@ export default function SuperAdminCalendarUI() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -212,6 +232,7 @@ export default function SuperAdminCalendarUI() {
           </div>
         </div>
       </div>
+
 
       {/* Calendar Container */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
@@ -269,7 +290,7 @@ export default function SuperAdminCalendarUI() {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
-                
+
                 <select
                   value={formData.type || 'consultation'}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
@@ -339,6 +360,86 @@ export default function SuperAdminCalendarUI() {
           </div>
         </div>
       )}
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4 flex flex-wrap gap-3 items-center">
+        <input
+          type="text"
+          placeholder="Search name or email"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-3 py-2 border rounded-lg w-64"
+        />
+
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="px-3 py-2 border rounded-lg"
+        >
+          <option value="all">All Types</option>
+          <option value="consultation">Consultation</option>
+          <option value="holiday">Holiday</option>
+          <option value="program_event">Program</option>
+        </select>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border rounded-lg"
+        >
+          <option value="all">All Status</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-5 py-3 text-left">Date</th>
+              <th className="px-5 py-3 text-left">Type</th>
+              <th className="px-5 py-3 text-left">Booked By</th>
+              <th className="px-5 py-3 text-left">Email</th>
+              <th className="px-5 py-3 text-left">Mode</th>
+              <th className="px-5 py-3 text-left">Status</th>
+            </tr>
+          </thead>
+
+         <tbody>
+  {filteredEvents.map((event) => (
+    <tr key={event._id} className="hover:bg-gray-50">
+      <td className="px-4 py-2">
+        {new Date(event.start).toLocaleDateString()}
+      </td>
+
+      <td className="px-4 py-2 capitalize">
+        {event.type}
+      </td>
+
+      <td className="px-4 py-2 font-medium">
+        {event.extendedProps?.userName || "—"}
+      </td>
+
+      <td className="px-4 py-2">
+        {event.extendedProps?.userEmail || "—"}
+      </td>
+
+      <td className="px-4 py-2 capitalize">
+        {event.extendedProps?.mode || "—"}
+      </td>
+
+      <td className="px-4 py-2">
+        <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700">
+          {event.extendedProps?.status || "upcoming"}
+        </span>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
+        </table>
+      </div>
+
     </div>
   );
 }

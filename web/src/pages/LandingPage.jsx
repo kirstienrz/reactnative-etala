@@ -252,68 +252,72 @@ const LandingPage = () => {
         </div>
       </section>
       {/* Quick Links */}
-      {/* About Section */}
-      <section className="py-20 bg-white">
+      
+
+        {/* News Section */}
+      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-block mb-4">
-                <span className="text-sm font-bold text-violet-600 tracking-wider uppercase">Who We Are</span>
-              </div>
-              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6 leading-tight">About GAD Office</h2>
-              <div className="w-20 h-1 bg-gradient-to-r from-violet-600 to-purple-600 mb-6"></div>
-              <div className="space-y-5 text-slate-700 text-base leading-relaxed mb-8">
-                <p>The Gender and Development (GAD) Office of TUP Taguig is committed to promoting gender equality and women's empowerment within the university community.</p>
-                <p>We implement programs, policies, and activities that address gender issues, eliminate discrimination, and ensure equal opportunities for all students, faculty, and staff regardless of gender.</p>
-              </div>
-              <div className="flex gap-4">
-                <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-3 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105">
-                  Learn More
-                </button>
-                <button className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-bold hover:scale-105">
-                  Contact Us
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <div className="h-72 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about.jpg"
-                    alt="GAD Office Team"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="h-56 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about3.jpg"
-                    alt="GAD Activities"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-              <div className="space-y-6 pt-12">
-                <div className="h-56 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about2.jpg"
-                    alt="Gender Equality Workshop"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="h-72 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about1.jpg"
-                    alt="Community Outreach"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            </div>
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Updates</span>
+            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Latest News</h2>
+          </div>
+
+          {/* News Grid */}
+          <div className="grid md:grid-cols-3 gap-8">
+            {loading ? (
+              <p className="col-span-full text-center py-16 text-slate-600">Loading news...</p>
+            ) : newsItems.length === 0 ? (
+              <p className="col-span-full text-center text-slate-600">No news available</p>
+            ) : (
+              newsItems.map((item) => (
+                <a
+                  key={item._id}
+                  href={item.link || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-white overflow-hidden border-2 border-slate-200 hover:border-violet-400 hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-2"
+                >
+                  <div className="h-56 bg-slate-200 overflow-hidden relative">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-300 flex items-center justify-center">
+                        <span className="text-slate-500 font-medium">News Image</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <p className="text-sm text-violet-600 font-bold mb-3 uppercase tracking-wide">{item.date}</p>
+                    <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-violet-700 transition-colors leading-snug flex-1">{item.title}</h3>
+                    <span className="text-violet-700 font-bold inline-flex items-center gap-2 group-hover:gap-3 transition-all">
+                      Read more
+                      <ArrowRight className="w-5 h-5" />
+                    </span>
+                  </div>
+                </a>
+              ))
+            )}
+          </div>
+
+          {/* "See All News and Articles" Button */}
+          <div className="text-center mt-16">
+            <button
+              className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
+            >
+              See All News and Articles
+            </button>
           </div>
         </div>
       </section>
 
-      {/* University Departments Section */}
+
+      {/* University Departments Section
       <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-8">
           <div className="text-center mb-16">
@@ -357,7 +361,7 @@ const LandingPage = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Gender and Development Infographics Section */}
       <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
@@ -508,70 +512,71 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* News Section */}
-      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
+
+      {/* About Section */}
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-8">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Updates</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Latest News</h2>
-          </div>
-
-          {/* News Grid */}
-          <div className="grid md:grid-cols-3 gap-8">
-            {loading ? (
-              <p className="col-span-full text-center py-16 text-slate-600">Loading news...</p>
-            ) : newsItems.length === 0 ? (
-              <p className="col-span-full text-center text-slate-600">No news available</p>
-            ) : (
-              newsItems.map((item) => (
-                <a
-                  key={item._id}
-                  href={item.link || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group bg-white overflow-hidden border-2 border-slate-200 hover:border-violet-400 hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-2"
-                >
-                  <div className="h-56 bg-slate-200 overflow-hidden relative">
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-slate-300 flex items-center justify-center">
-                        <span className="text-slate-500 font-medium">News Image</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <p className="text-sm text-violet-600 font-bold mb-3 uppercase tracking-wide">{item.date}</p>
-                    <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-violet-700 transition-colors leading-snug flex-1">{item.title}</h3>
-                    <span className="text-violet-700 font-bold inline-flex items-center gap-2 group-hover:gap-3 transition-all">
-                      Read more
-                      <ArrowRight className="w-5 h-5" />
-                    </span>
-                  </div>
-                </a>
-              ))
-            )}
-          </div>
-
-          {/* "See All News and Articles" Button */}
-          <div className="text-center mt-16">
-            <button
-              className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
-            >
-              See All News and Articles
-            </button>
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="inline-block mb-4">
+                <span className="text-sm font-bold text-violet-600 tracking-wider uppercase">Who We Are</span>
+              </div>
+              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6 leading-tight">About GAD Office</h2>
+              <div className="w-20 h-1 bg-gradient-to-r from-violet-600 to-purple-600 mb-6"></div>
+              <div className="space-y-5 text-slate-700 text-base leading-relaxed mb-8">
+                <p>The Gender and Development (GAD) Office of TUP Taguig is committed to promoting gender equality and women's empowerment within the university community.</p>
+                <p>We implement programs, policies, and activities that address gender issues, eliminate discrimination, and ensure equal opportunities for all students, faculty, and staff regardless of gender.</p>
+              </div>
+              <div className="flex gap-4">
+                <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-3 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105">
+                  Learn More
+                </button>
+                <button className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-bold hover:scale-105">
+                  Contact Us
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <div className="h-72 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
+                  <img
+                    src="/assets/about/about.jpg"
+                    alt="GAD Office Team"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="h-56 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
+                  <img
+                    src="/assets/about/about3.jpg"
+                    alt="GAD Activities"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              <div className="space-y-6 pt-12">
+                <div className="h-56 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
+                  <img
+                    src="/assets/about/about2.jpg"
+                    alt="Gender Equality Workshop"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="h-72 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
+                  <img
+                    src="/assets/about/about1.jpg"
+                    alt="Community Outreach"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
+    
       {/* Resources Section */}
-      <section className="py-28 bg-white">
+      {/* <section className="py-28 bg-white">
         <div className="max-w-7xl mx-auto px-8">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <div className="relative">
@@ -608,7 +613,7 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Announcements Section */}
       <section className="py-28 bg-gradient-to-b from-slate-50 to-white">

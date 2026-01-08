@@ -9,7 +9,7 @@ const Program = require('../models/Program');
 const getAllCalendarEvents = async (req, res) => {
   try {
     const { startDate, endDate, type } = req.query;
-    
+
     const query = {};
     if (type) query.type = type;
     if (startDate || endDate) {
@@ -17,13 +17,13 @@ const getAllCalendarEvents = async (req, res) => {
       if (startDate) query.start.$gte = new Date(startDate);
       if (endDate) query.start.$lte = new Date(endDate);
     }
-    
+
     const calendarEvents = await CalendarEvent.find(query);
-    
+
     // Get program events
     const programs = await Program.find({ archived: false });
     const programEvents = [];
-    
+
     programs.forEach(program => {
       program.projects.forEach(project => {
         project.events.forEach(event => {
@@ -52,7 +52,7 @@ const getAllCalendarEvents = async (req, res) => {
         });
       });
     });
-    
+
     // Format calendar events
     const formattedCalendarEvents = calendarEvents.map(event => ({
       id: event._id,
@@ -65,22 +65,24 @@ const getAllCalendarEvents = async (req, res) => {
         type: event.type,
         description: event.description,
         location: event.location,
-        notes: event.notes
+        notes: event.notes,
+        userId: event.userId   // ✅ ADD THIS
       }
+
     }));
-    
+
     const allEvents = [...formattedCalendarEvents, ...programEvents];
-    
+
     // ⬇️ ADD DEBUG LOG
     console.log('📊 Calendar Events Summary:');
     console.log('- Calendar Events:', formattedCalendarEvents.length);
     console.log('- Program Events:', programEvents.length);
     console.log('- Total Events:', allEvents.length);
-    
+
     // Check if program events have description
     const eventsWithDesc = programEvents.filter(e => e.extendedProps.description);
     console.log('- Program Events with Description:', eventsWithDesc.length);
-    
+
     res.status(200).json({
       success: true,
       count: allEvents.length,
@@ -97,14 +99,34 @@ const getAllCalendarEvents = async (req, res) => {
 // @desc    Create calendar event (holiday, consultation, not available)
 // @route   POST /api/calendar/events
 // @access  Private
+
 const createCalendarEvent = async (req, res) => {
   try {
+    const { type, userId } = req.body;
+
+    // ✅ ONE-TIME BOOKING CHECK (consultation only)
+    if (type === 'consultation' && userId) {
+      const existingBooking = await CalendarEvent.findOne({
+        type: 'consultation',
+        userId,
+        status: { $ne: 'cancelled' }
+      });
+
+      if (existingBooking) {
+        return res.status(400).json({
+          success: false,
+          message: 'You already booked a consultation.'
+        });
+      }
+    }
+
     const event = await CalendarEvent.create(req.body);
-    
+
     res.status(201).json({
       success: true,
       data: event
     });
+
   } catch (error) {
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
@@ -114,7 +136,7 @@ const createCalendarEvent = async (req, res) => {
         errors: messages
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Server Error',
@@ -133,14 +155,14 @@ const updateCalendarEvent = async (req, res) => {
       req.body,
       { new: true, runValidators: true }
     );
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: event
@@ -160,14 +182,14 @@ const updateCalendarEvent = async (req, res) => {
 const deleteCalendarEvent = async (req, res) => {
   try {
     const event = await CalendarEvent.findByIdAndDelete(req.params.id);
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       message: 'Event deleted successfully',

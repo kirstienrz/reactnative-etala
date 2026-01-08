@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Send, ArrowLeft, Loader2 } from "lucide-react";
 import { sendMessage, getMessages, createOrGetChat } from "../../api/chat";
+import { getAllCalendarEvents } from "../../api/calendar";
 
 const ChatScreen = () => {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ const ChatScreen = () => {
   const [loading, setLoading] = useState(true);
   const [chatId, setChatId] = useState(null);
 
+  const [hasScheduledInterview, setHasScheduledInterview] = useState(false);
+
+
   const hasInterviewInvite = messages.some(
     (m) => m.type === "SYSTEM" && m.action === "PROCEED_TO_INTERVIEW"
   );
@@ -25,6 +29,24 @@ const ChatScreen = () => {
 
   // Get params from location state
   const { receiverId, receiverName, chatId: existingChatId } = location.state || {};
+  const checkInterviewSchedule = async () => {
+    try {
+      const res = await getAllCalendarEvents();
+
+      if (res?.success) {
+        const hasBooking = res.data.some(
+          (e) =>
+            e.extendedProps?.type === "consultation" &&
+            e.extendedProps?.userId === currentUserId &&
+            e.extendedProps?.status !== "cancelled"
+        );
+
+        setHasScheduledInterview(hasBooking);
+      }
+    } catch (err) {
+      console.error("Failed to check interview schedule", err);
+    }
+  };
 
   useEffect(() => {
     console.log('📱 Current User ID:', currentUserId);
@@ -71,6 +93,8 @@ const ChatScreen = () => {
       const messagesData = await getMessages(chatDataId);
       console.log("📩 Messages loaded:", messagesData.length);
       setMessages(messagesData);
+      await checkInterviewSchedule();
+
     } catch (error) {
       console.error("❌ Error initializing chat:", error);
       alert("Failed to load chat");
@@ -206,16 +230,21 @@ const ChatScreen = () => {
                           <p className="text-sm font-semibold text-indigo-800 mb-3">
                             You have been invited to proceed to interview
                           </p>
-
-                         <button
-  onClick={() => {
-    localStorage.setItem("canAccessInterview", "true"); // ✅ allow access
-    navigate("/user/interview");
-  }}
-  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
->
-  Schedule Interview
-</button>
+                          {!hasScheduledInterview ? (
+                            <button
+                              onClick={() => {
+                                localStorage.setItem("canAccessInterview", "true");
+                                navigate("/user/interview");
+                              }}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                            >
+                              Schedule Interview
+                            </button>
+                          ) : (
+                            <p className="text-sm text-green-700 font-semibold">
+                              ✔ Interview already scheduled
+                            </p>
+                          )}
 
 
                         </div>
@@ -233,8 +262,8 @@ const ChatScreen = () => {
                     >
                       <div
                         className={`max-w-[70%] rounded-2xl px-4 py-2 ${isMe
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-gray-100 text-gray-900'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 text-gray-900'
                           } ${message.isTemp ? 'opacity-60' : ''}`}
                       >
                         <p className="text-sm break-words whitespace-pre-wrap">

@@ -29,6 +29,15 @@ end: {
     required: [true, 'Event type is required']
   },
 
+  userId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+  required: function () {
+    return this.type === 'consultation';
+  }
+},
+
+
   allDay: {
     type: Boolean,
     default: false
@@ -127,6 +136,13 @@ end: {
     projectId: mongoose.Schema.Types.ObjectId,
     eventId: mongoose.Schema.Types.ObjectId
   },
+  extendedProps: {
+  userName: { type: String, trim: true, default: 'Unknown' },
+  userEmail: { type: String, trim: true, default: 'N/A' },
+  mode: { type: String, enum: ['online', 'face_to_face'], default: 'online' },
+  status: { type: String, enum: ['upcoming', 'completed', 'cancelled'], default: 'upcoming' }
+},
+
   // Visibility settings
   isPublic: {
     type: Boolean,

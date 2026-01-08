@@ -1198,7 +1198,7 @@ return (
                         </div>
                       )}
 
-                      {!selectedReport.isAnonymous && (
+                      {/* {!selectedReport.isAnonymous && (
                         <button
                           onClick={async () => {
                             try {
@@ -1218,7 +1218,7 @@ return (
                         >
                           Save Changes
                         </button>
-                      )}
+                      )} */}
                     </div>
                   </div>
                 </div>
