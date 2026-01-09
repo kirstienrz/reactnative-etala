@@ -1,273 +1,371 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Calendar, Users, Clock, ChevronDown, ChevronRight, Search, 
-  FileText, Filter, CalendarDays, BarChart3, Target, Users2, 
-  ChevronLeft, ChevronRight as ChevronRightIcon, Eye, MapPin, UserCheck 
-} from 'lucide-react';
-import { getAllPrograms } from '../../api/program';
+// import React, { useEffect, useState } from "react";
+// import { useSelector } from "react-redux";
+// import FullCalendar from "@fullcalendar/react";
+// import dayGridPlugin from "@fullcalendar/daygrid";
+// import timeGridPlugin from "@fullcalendar/timegrid";
+// import interactionPlugin from "@fullcalendar/interaction";
+// import { Calendar as CalendarIcon } from "lucide-react";
+// import { getAllCalendarEvents } from "../../api/calendar";
 
-const UserGADPrograms = () => {
-  const [programs, setPrograms] = useState([]);
+// export default function SuperAdminCalendarRedux() {
+//   const [loading, setLoading] = useState(true);
+//   const [events, setEvents] = useState([]);
+//   const [upcomingEvents, setUpcomingEvents] = useState([]);
+//   const [pastEvents, setPastEvents] = useState([]);
+
+//   // ✅ Correct: Get role from authSlice instead of userSlice
+//   const userRole = useSelector((state) => state.auth.role) || "user";
+
+//   useEffect(() => {
+//     fetchEvents();
+//   }, [userRole]); // refetch if role changes
+
+//   // 🔐 ROLE-BASED FILTER
+//  // Test muna sa console kung ano ang laman ng extendedProps
+// const filterByRole = (allEvents) => {
+//   console.log("=== EVENT INSPECTION ===");
+  
+//   // Check ang structure ng consultation events
+//   allEvents.forEach((event, index) => {
+//     if (event.title?.includes("Consultation")) {
+//       console.log(`Consultation Event ${index}:`, {
+//         title: event.title,
+//         extendedProps: event.extendedProps,
+//         typeFromExtProps: event.extendedProps?.type,
+//         fullEvent: event
+//       });
+//     }
+//   });
+  
+//   if (userRole === "superadmin") return allEvents;
+  
+//   // Simple working filter
+//   return allEvents.filter(e => e.extendedProps?.type !== "consultation");
+// };
+
+//   const fetchEvents = async () => {
+//   try {
+//     setLoading(true);
+//     const res = await getAllCalendarEvents();
+
+//     console.log("User role:", userRole); // ✅ Check role
+//     console.log("Raw data from API:", res.data); // ✅ Check lahat ng data
+    
+//     if (res?.success && Array.isArray(res.data)) {
+//       const now = new Date();
+
+//       // Apply role filter
+//       const roleFiltered = filterByRole(res.data);
+      
+//       console.log("After filtering:", roleFiltered); // ✅ Check kung filtered na
+
+//       // Separate upcoming vs past
+//       const upcoming = roleFiltered.filter((e) => new Date(e.start) >= now);
+//       const past = roleFiltered.filter((e) => new Date(e.start) < now);
+
+//       setEvents(roleFiltered);
+//       setUpcomingEvents(upcoming);
+//       setPastEvents(past);
+//     }
+//   } catch (err) {
+//     console.error("Error fetching calendar events:", err);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+//   if (loading) {
+//     return (
+//       <div className="min-h-screen flex items-center justify-center bg-gray-50">
+//         <div className="text-center">
+//           <div className="animate-spin h-12 w-12 rounded-full border-b-2 border-blue-600 mx-auto"></div>
+//           <p className="mt-4 text-gray-600">Loading calendar data...</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-gray-50 p-6 space-y-10">
+
+//       {/* ===================== */}
+//       {/* UPCOMING EVENTS */}
+//       {/* ===================== */}
+//       <section className="bg-white rounded-xl border shadow-sm p-6">
+//         <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
+//           <CalendarIcon className="w-6 h-6 text-green-600" />
+//           Upcoming Events
+//         </h2>
+
+//         {upcomingEvents.length === 0 ? (
+//           <p className="text-gray-500">No upcoming events.</p>
+//         ) : (
+//           <div className="space-y-4">
+//             {upcomingEvents.map((event) => (
+//               <div
+//                 key={event._id}
+//                 className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
+//               >
+//                 <div>
+//                   <p className="font-semibold text-gray-900">{event.title}</p>
+//                   <p className="text-sm text-gray-500">
+//                     {new Date(event.start).toLocaleString()}
+//                   </p>
+//                   {event.extendedProps?.location && (
+//                     <p className="text-sm text-gray-500">
+//                       {event.extendedProps.location}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+//                   Upcoming
+//                 </span>
+//               </div>
+//             ))}
+//           </div>
+//         )}
+//       </section>
+
+//       {/* ===================== */}
+//       {/* CALENDAR VIEW */}
+//       {/* ===================== */}
+//       <section className="bg-white rounded-xl border shadow-sm p-6">
+//         <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
+//           <CalendarIcon className="w-6 h-6 text-blue-600" />
+//           Calendar
+//         </h2>
+
+//         <FullCalendar
+//           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+//           initialView="dayGridMonth"
+//           height="70vh"
+//           events={events} // filtered by role
+//           headerToolbar={{
+//             left: "prev,next today",
+//             center: "title",
+//             right: "dayGridMonth,timeGridWeek,timeGridDay",
+//           }}
+//           nowIndicator={true}
+//           dayMaxEvents={true}
+//           eventDisplay="block"
+//         />
+//       </section>
+
+//       {/* ===================== */}
+//       {/* PAST EVENTS */}
+//       {/* ===================== */}
+//       <section className="bg-white rounded-xl border shadow-sm p-6">
+//         <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
+//           <CalendarIcon className="w-6 h-6 text-gray-600" />
+//           Past Events
+//         </h2>
+
+//         {pastEvents.length === 0 ? (
+//           <p className="text-gray-500">No past events.</p>
+//         ) : (
+//           <div className="overflow-x-auto">
+//             <table className="min-w-full text-sm">
+//               <thead className="bg-gray-50 border-b">
+//                 <tr>
+//                   <th className="px-4 py-3 text-left">Date</th>
+//                   <th className="px-4 py-3 text-left">Title</th>
+//                   <th className="px-4 py-3 text-left">Type</th>
+//                   <th className="px-4 py-3 text-left">Location</th>
+//                 </tr>
+//               </thead>
+//               <tbody>
+//                 {pastEvents.map((event) => (
+//                   <tr key={event._id} className="border-b hover:bg-gray-50">
+//                     <td className="px-4 py-2">
+//                       {new Date(event.start).toLocaleDateString()}
+//                     </td>
+//                     <td className="px-4 py-2 font-medium">{event.title}</td>
+//                     <td className="px-4 py-2 capitalize">{event.type}</td>
+//                     <td className="px-4 py-2">
+//                       {event.extendedProps?.location || "—"}
+//                     </td>
+//                   </tr>
+//                 ))}
+//               </tbody>
+//             </table>
+//           </div>
+//         )}
+//       </section>
+//     </div>
+//   );
+// }
+import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { getAllCalendarEvents } from "../../api/calendar";
+
+export default function SuperAdminCalendarRedux() {
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [yearFilter, setYearFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [expandedYears, setExpandedYears] = useState(new Set());
-  const [expandedPrograms, setExpandedPrograms] = useState(new Set());
-  const [expandedProjects, setExpandedProjects] = useState(new Set());
-  const [selectedProgram, setSelectedProgram] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState([]);
+
+  // ✅ Get role from auth
+  const userRole = useSelector((state) => state.auth.role) || "user";
 
   useEffect(() => {
-    fetchPrograms();
-  }, []);
+    fetchEvents();
+  }, [userRole]);
 
-  useEffect(() => {
-    const currentYear = new Date().getFullYear().toString();
-    if (programs.length > 0 && !expandedYears.size) {
-      setExpandedYears(new Set([currentYear]));
+  // 🔐 SIMPLE & CORRECT ROLE-BASED FILTER
+  const filterByRole = (allEvents) => {
+    if (userRole === "superadmin") return allEvents;
+    
+    // Hide consultation events for non-superadmin
+    return allEvents.filter((e) => e.extendedProps?.type !== "consultation");
+  };
 
-      const yearPrograms = programs.filter(p => p.year === parseInt(currentYear));
-      if (yearPrograms.length > 0) {
-        setExpandedPrograms(new Set([yearPrograms[0]._id]));
-        setSelectedProgram(yearPrograms[0]);
-      }
-    }
-  }, [programs]);
-
-  const fetchPrograms = async () => {
+  const fetchEvents = async () => {
     try {
       setLoading(true);
-      const response = await getAllPrograms({
-        year: yearFilter !== 'all' ? yearFilter : undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        search: searchTerm || undefined
-      });
-      if (response.success) setPrograms(response.data);
+      const res = await getAllCalendarEvents();
+
+      if (res?.success && Array.isArray(res.data)) {
+        const now = new Date();
+
+        // Apply role filter
+        const roleFiltered = filterByRole(res.data);
+
+        // Separate upcoming vs past
+        const upcoming = roleFiltered.filter((e) => new Date(e.start) >= now);
+        const past = roleFiltered.filter((e) => new Date(e.start) < now);
+
+        setEvents(roleFiltered);
+        setUpcomingEvents(upcoming);
+        setPastEvents(past);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching calendar events:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleYear = (year) => {
-    setExpandedYears(prev => {
-      const newSet = new Set(prev);
-      newSet.has(year) ? newSet.delete(year) : newSet.add(year);
-      return newSet;
-    });
-  };
-
-  const toggleProgram = (programId, program) => {
-    setSelectedProgram(program);
-    setExpandedPrograms(prev => {
-      const newSet = new Set(prev);
-      newSet.has(programId) ? newSet.delete(programId) : newSet.add(programId);
-      return newSet;
-    });
-  };
-
-  const toggleProject = (projectId) => {
-    setExpandedProjects(prev => {
-      const newSet = new Set(prev);
-      newSet.has(projectId) ? newSet.delete(projectId) : newSet.add(projectId);
-      return newSet;
-    });
-  };
-
-  const StatusBadge = ({ status }) => {
-    const config = {
-      upcoming: { color: 'bg-purple-100 text-purple-800', border: 'border-purple-200', label: 'Upcoming' },
-      ongoing: { color: 'bg-green-100 text-green-800', border: 'border-green-200', label: 'Ongoing' },
-      completed: { color: 'bg-blue-100 text-blue-800', border: 'border-blue-200', label: 'Completed' },
-      cancelled: { color: 'bg-red-100 text-red-800', border: 'border-red-200', label: 'Cancelled' }
-    };
-    const conf = config[status] || config.ongoing;
-
+  if (loading) {
     return (
-      <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold border ${conf.color} ${conf.border}`}>
-        {conf.label}
-      </span>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 rounded-full border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading calendar data...</p>
+        </div>
+      </div>
     );
-  };
-
-  const filteredPrograms = useMemo(() => {
-    return programs.filter(p => {
-      const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesYear = yearFilter === 'all' || p.year === parseInt(yearFilter);
-      const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-      return matchesSearch && matchesYear && matchesStatus;
-    });
-  }, [programs, searchTerm, yearFilter, statusFilter]);
-
-  const programsByYear = useMemo(() => {
-    const grouped = {};
-    filteredPrograms.forEach(program => {
-      const year = program.year || 'No Year';
-      if (!grouped[year]) grouped[year] = [];
-      grouped[year].push(program);
-    });
-    return grouped;
-  }, [filteredPrograms]);
-
-  const sortedYears = useMemo(() => {
-    return Object.keys(programsByYear).sort((a, b) => Number(b) - Number(a));
-  }, [programsByYear]);
+  }
 
   return (
-    <main className="bg-white min-h-screen">
+    <div className="min-h-screen bg-gray-50 p-6 space-y-10">
 
-      {/* ===================== */}
-      {/* BEAUTIFUL HERO HEADER */}
-      {/* ===================== */}
-      <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 text-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')]"></div>
+      {/* UPCOMING EVENTS */}
+      <section className="bg-white rounded-xl border shadow-sm p-6">
+        <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
+          <CalendarIcon className="w-6 h-6 text-green-600" />
+          Upcoming Events
+        </h2>
 
-        <h1 className="text-5xl font-bold text-white mb-4">Programs</h1>
-        <p className="text-violet-200 text-lg max-w-2xl mx-auto">
-          View all institutional Gender and Development programs, activities, and accomplishments.
-        </p>
-      </section>
-
-      {/* ===================== */}
-      {/* FILTER + SEARCH BAR  */}
-      {/* ===================== */}
-      <section className="py-10 bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-
-            {/* Search */}
-            <div className="w-full lg:w-1/3 relative">
-              <Search className="absolute left-3 top-3 text-slate-400" size={20} />
-              <input
-                type="text"
-                className="w-full border border-slate-300 rounded-lg pl-10 px-4 py-2.5 focus:border-violet-500 focus:ring-violet-500"
-                placeholder="Search programs..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex gap-4 w-full lg:w-auto">
-
-              {/* Year */}
-              <select
-                className="border border-slate-300 rounded-lg px-4 py-2.5 focus:border-violet-500"
-                value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
+        {upcomingEvents.length === 0 ? (
+          <p className="text-gray-500">No upcoming events.</p>
+        ) : (
+          <div className="space-y-4">
+            {upcomingEvents.map((event) => (
+              <div
+                key={event.id || event._id} // ✅ ADD KEY
+                className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
               >
-                <option value="all">All Years</option>
-                {sortedYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-
-              {/* Status */}
-              <select
-                className="border border-slate-300 rounded-lg px-4 py-2.5 focus:border-violet-500"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Status</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===================== */}
-      {/* PROGRAMS LIST (Knowledge-style Cards) */}
-      {/* ===================== */}
-      <section className="py-14 bg-slate-50">
-        <div className="max-w-6xl mx-auto px-6 space-y-10">
-
-          {sortedYears.map(year => (
-            <div key={year} className="space-y-4">
-
-              {/* Year Divider */}
-              <div 
-                onClick={() => toggleYear(year)}
-                className="flex items-center justify-between cursor-pointer bg-white border border-slate-200 px-6 py-4 rounded-xl hover:border-violet-400 transition"
-              >
-                <h2 className="text-2xl font-bold text-slate-900">{year}</h2>
-                {expandedYears.has(year)
-                  ? <ChevronDown className="text-slate-500" />
-                  : <ChevronRight className="text-slate-500" />}
-              </div>
-
-              {/* Programs Inside */}
-              {expandedYears.has(year) && (
-                <div className="space-y-6">
-                  {programsByYear[year].map(program => (
-                    <article
-                      key={program._id}
-                      className="bg-white border border-slate-200 rounded-xl p-6 hover:border-violet-400 hover:shadow-lg transition cursor-pointer"
-                      onClick={() => toggleProgram(program._id, program)}
-                    >
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-semibold text-slate-900">{program.name}</h3>
-                        <StatusBadge status={program.status} />
-                      </div>
-
-                      <p className="text-slate-600 line-clamp-2">{program.description}</p>
-
-                      {expandedPrograms.has(program._id) && (
-                        <div className="mt-6 border-t pt-4 space-y-4">
-
-                          {/* Program Details */}
-                          <div className="flex flex-wrap gap-6 text-slate-600 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={18} />
-                              {program.date || "No Date"}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Users2 size={18} />
-                              {program.target || "No Target"}
-                            </div>
-                          </div>
-
-                          {/* Projects List */}
-                          {program.projects?.map(project => (
-                            <div key={project._id}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); toggleProject(project._id); }}
-                                className="flex justify-between items-center w-full text-left text-slate-800 font-medium mt-2"
-                              >
-                                {project.title}
-                                {expandedProjects.has(project._id)
-                                  ? <ChevronDown />
-                                  : <ChevronRight />}
-                              </button>
-
-                              {expandedProjects.has(project._id) && (
-                                <div className="pl-4 mt-2 text-slate-600 text-sm space-y-1">
-                                  <p>{project.description}</p>
-                                  <p className="flex items-center gap-1"><Clock size={16} /> {project.time}</p>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-
-                        </div>
-                      )}
-                    </article>
-                  ))}
+                <div>
+                  <p className="font-semibold text-gray-900">{event.title}</p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(event.start).toLocaleString()}
+                  </p>
+                  {event.extendedProps?.location && (
+                    <p className="text-sm text-gray-500">
+                      {event.extendedProps.location}
+                    </p>
+                  )}
                 </div>
-              )}
-
-            </div>
-          ))}
-        </div>
+                <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                  Upcoming
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
-    </main>
-  );
-};
 
-export default UserGADPrograms;
+      {/* CALENDAR VIEW */}
+      <section className="bg-white rounded-xl border shadow-sm p-6">
+        <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
+          <CalendarIcon className="w-6 h-6 text-blue-600" />
+          Calendar
+        </h2>
+
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          height="70vh"
+          events={events}
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay",
+          }}
+          nowIndicator={true}
+          dayMaxEvents={true}
+          eventDisplay="block"
+        />
+      </section>
+
+      {/* PAST EVENTS */}
+      <section className="bg-white rounded-xl border shadow-sm p-6">
+        <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
+          <CalendarIcon className="w-6 h-6 text-gray-600" />
+          Past Events
+        </h2>
+
+        {pastEvents.length === 0 ? (
+          <p className="text-gray-500">No past events.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Title</th>
+                  <th className="px-4 py-3 text-left">Type</th>
+                  <th className="px-4 py-3 text-left">Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pastEvents.map((event) => (
+                  <tr 
+                    key={event.id || event._id} // ✅ ADD KEY
+                    className="border-b hover:bg-gray-50"
+                  >
+                    <td className="px-4 py-2">
+                      {new Date(event.start).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2 font-medium">{event.title}</td>
+                    <td className="px-4 py-2 capitalize">
+                      {event.extendedProps?.type || "event"}
+                    </td>
+                    <td className="px-4 py-2">
+                      {event.extendedProps?.location || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

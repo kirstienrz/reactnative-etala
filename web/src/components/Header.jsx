@@ -11,7 +11,7 @@ const Header = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isLoggedIn, role } = useSelector((state) => state.auth);
-  
+
   // Reference for dropdown to close when clicking outside
   const userDropdownRef = useRef(null);
 
@@ -43,18 +43,23 @@ const Header = () => {
         { title: 'Accomplishments', path: '/Accomplishment' }
       ]
     },
-     {
+    {
       title: 'Programs and Activities',
       path: '/Projects',
       submenu: []
     },
-     {
+    {
       title: 'Knowledge Hub',
       submenu: [
-        { title: 'Handbook', path: '/Handbook' },
-        { title: 'Palitan', path: '/Knowledge' },
+        // { title: 'Handbook', path: '/Handbook' },
+        { title: 'Sex-Disaggregated Education Data', path: '/SexDisaggregated' },
         { title: 'Infographics', path: '/Infographics' },
-        { title: 'Suggestion Box', path: '/SuggestionBox' }
+        { title: 'Brochures', path: '/Brochures' },
+        { title: 'Pictures', path: '/Pictures' },
+        { title: 'Videos', path: '/Knowledge' },
+        { title: 'Posters', path: '/Posters' },
+        { title: 'Research', path: '/Research' },
+
       ]
     },
     {
@@ -62,6 +67,9 @@ const Header = () => {
       submenu: [
         { title: 'Policies', path: '/Policies' },
         { title: 'Plan and Budget', path: '/PlanAndBudget' },
+        { title: 'Accomplishment Report', path: '/AccomplishmentReport' },
+        { title: 'Suggestion Box', path: '/SuggestionBox' }
+
         // { title: 'Committee Report', path: '/CommitteeReport' }
       ]
     },
@@ -70,8 +78,8 @@ const Header = () => {
       path: '/login',
       submenu: []
     },
-   
-   
+
+
     {
       title: 'Contact Us',
       path: '/Contact',
@@ -119,9 +127,9 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-4 no-underline group">
             <div className="w-14 h-14 flex-shrink-0 overflow-hidden rounded-full shadow-sm">
-              <img 
-                src="/assets/logo.jpg" 
-                alt="GAD Logo" 
+              <img
+                src="/assets/logo.jpg"
+                alt="GAD Logo"
                 className="w-full h-full object-cover"
                 onError={(e) => e.target.style.display = 'none'}
               />

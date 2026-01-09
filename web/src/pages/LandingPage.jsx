@@ -252,67 +252,133 @@ const LandingPage = () => {
         </div>
       </section>
       {/* Quick Links */}
-      
 
-        {/* News Section */}
-      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
+      <section className="py-32 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
+        <div className="max-w-7xl mx-auto px-10">
+          <div className="grid lg:grid-cols-2 gap-24 items-center">
+
+            {/* Left side - Logo */}
+            <div className="flex justify-center lg:justify-start">
+              <div className="relative">
+                <img
+                  src="/assets/about/logo.png"
+                  alt="GAD Office Logo"
+                  className="w-full max-w-xl h-auto object-contain drop-shadow-2xl"
+                />
+              </div>
+            </div>
+
+            {/* Right side - Content */}
+            <div>
+              <h2 className="text-6xl lg:text-7xl font-black text-slate-900 mb-10 leading-tight">
+                GAD Agenda
+              </h2>
+
+              <div className="space-y-8 text-slate-700 text-xl leading-relaxed mb-12">
+                <p>
+                  The GAD Office promotes gender equality and women's empowerment,
+                  a unified approach to developing human capital, and initiatives aligned
+                  with sustainability goals. It underscores data-driven decisions, global
+                  competitiveness through inclusivity, and strong governance and
+                  institutional systems.
+                </p>
+              </div>
+
+              <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-14 py-5 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-xl">
+                Know more about GAD Office
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+      <section className="py-40 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-10">
           {/* Section Header */}
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Updates</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Latest News</h2>
+          <div className="flex items-end justify-between mb-24 border-b-4 border-violet-600 pb-8">
+            <h2 className="text-6xl font-black text-slate-800">Press Releases</h2>
+            <button className="text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors flex items-center gap-3">
+              View All <ArrowRight className="w-7 h-7" />
+            </button>
           </div>
 
-          {/* News Grid */}
-          <div className="grid md:grid-cols-3 gap-8">
-            {loading ? (
-              <p className="col-span-full text-center py-16 text-slate-600">Loading news...</p>
-            ) : newsItems.length === 0 ? (
-              <p className="col-span-full text-center text-slate-600">No news available</p>
-            ) : (
-              newsItems.map((item) => (
-                <a
+          {/* Press Releases Grid */}
+          {loading ? (
+            <div className="text-center py-32">
+              <div className="inline-block animate-spin rounded-full h-20 w-20 border-4 border-violet-200 border-t-violet-600"></div>
+              <p className="mt-8 text-slate-600 text-2xl">Loading press releases...</p>
+            </div>
+          ) : newsItems.length === 0 ? (
+            <div className="text-center py-32 bg-white rounded-xl border-2 border-dashed border-slate-300">
+              <p className="text-slate-600 text-2xl">No press releases available</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-12">
+              {newsItems.map((item) => (
+                <div
                   key={item._id}
-                  href={item.link || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group bg-white overflow-hidden border-2 border-slate-200 hover:border-violet-400 hover:shadow-2xl transition-all duration-300 flex flex-col hover:-translate-y-2"
+                  className="bg-white shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col"
                 >
-                  <div className="h-56 bg-slate-200 overflow-hidden relative">
+                  {/* Image */}
+                  <div className="h-80 bg-slate-200 overflow-hidden">
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
                         alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full bg-slate-300 flex items-center justify-center">
-                        <span className="text-slate-500 font-medium">News Image</span>
+                        <svg
+                          className="w-20 h-20 text-slate-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                          />
+                        </svg>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <p className="text-sm text-violet-600 font-bold mb-3 uppercase tracking-wide">{item.date}</p>
-                    <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-violet-700 transition-colors leading-snug flex-1">{item.title}</h3>
-                    <span className="text-violet-700 font-bold inline-flex items-center gap-2 group-hover:gap-3 transition-all">
-                      Read more
-                      <ArrowRight className="w-5 h-5" />
-                    </span>
-                  </div>
-                </a>
-              ))
-            )}
-          </div>
 
-          {/* "See All News and Articles" Button */}
-          <div className="text-center mt-16">
-            <button
-              className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
-            >
-              See All News and Articles
-            </button>
-          </div>
+                  {/* Content */}
+                  <div className="flex flex-1">
+                    {/* Date Badge */}
+                    <div className="bg-violet-600 text-white p-8 flex flex-col items-center justify-center w-28 flex-shrink-0">
+                      <div className="text-4xl font-bold leading-none">
+                        {item.date.split(' ')[1] || '01'}
+                      </div>
+                      <div className="text-base font-semibold mt-2">
+                        {item.date.split(' ')[0] || 'Jan'}
+                      </div>
+                    </div>
+
+                    {/* Text Content */}
+                    <div className="p-8 flex flex-col flex-1">
+                      <h3 className="text-2xl font-bold text-slate-800 mb-6 line-clamp-3 leading-snug flex-1">
+                        {item.title}
+                      </h3>
+                      <a
+                        href={item.link || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors"
+                      >
+                        Read More
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -363,77 +429,9 @@ const LandingPage = () => {
         </div>
       </section> */}
 
-      {/* Gender and Development Infographics Section */}
-      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Data Visualization</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">Gender and Development Infographics</h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">Visual representation of our institutional progress and gender equality initiatives</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {infographics.length === 0 ? (
-              <p className="col-span-full text-center text-slate-600">No infographics available</p>
-            ) : (
-              infographics
-                .slice(0, 4) // only 4 latest infographics
-                .map((item) => (
-                  <div
-                    key={item._id}
-                    className="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
-                  >
-                    <div
-                      className="h-40 relative overflow-hidden cursor-pointer"
-                      onClick={() => setFullscreenImage(item.imageUrl)}
-                    >
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300"
-                      />
-                    </div>
-
-                    <div className="p-6">
-                      <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                      <p className="text-sm text-slate-700 leading-relaxed">
-                        Uploaded: {new Date(item.uploadDate).toLocaleDateString()}
-                      </p>
-                    </div>
-
-                    <div className="px-6 pb-6">
-                      <button
-                        onClick={() => setFullscreenImage(item.imageUrl)}
-                        className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 inline-flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg"
-                      >
-                        View Infographic
-                      </button>
-                    </div>
-                  </div>
-                ))
-            )}
-          </div>
-
-
-          {/* Fullscreen modal for these infographics */}
-          {fullscreenImage && (
-            <InfographicModal image={fullscreenImage} onClose={() => setFullscreenImage(null)} />
-          )}
-
-          <div className="text-center mt-16">
-            <button
-              className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-semibold hover:scale-105 rounded-lg shadow-md hover:shadow-lg"
-              onClick={() => navigate("Infographics")}
-            >
-              View All Infographics
-            </button>
-          </div>
-        </div>
-      </section>
-
 
       {/* Stats Section */}
-      <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
+      {/* <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
         <div className="max-w-7xl mx-auto px-8">
           <h2 className="text-5xl lg:text-6xl font-black text-white mb-4 text-center">
             Calendar of Events
@@ -510,11 +508,11 @@ const LandingPage = () => {
           </div>
 
         </div>
-      </section>
+      </section> */}
 
 
       {/* About Section */}
-      <section className="py-20 bg-white">
+      {/* <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -572,9 +570,9 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
-    
+
       {/* Resources Section */}
       {/* <section className="py-28 bg-white">
         <div className="max-w-7xl mx-auto px-8">
@@ -615,90 +613,27 @@ const LandingPage = () => {
         </div>
       </section> */}
 
-      {/* Announcements Section */}
-      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">
-              Updates
-            </span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">
-              Latest Announcements
+      {/* CTA Section */}
+      {/* Report Section with ACHIEVE-style UI */}
+      <section className="py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
+        <div className="max-w-7xl mx-auto px-10">
+          <div className="text-center max-w-5xl mx-auto">
+
+            <h2 className="text-6xl lg:text-7xl font-black text-slate-900 mb-12 leading-tight">
+              Report an Issue
             </h2>
-            <p className="text-xl text-slate-600">
-              Stay updated with our latest news and information
-            </p>
-          </div>
 
-          {/* Announcements List */}
-          <div className="space-y-6">
-            {loading ? (
-              <p className="text-center py-16 text-slate-600">Loading announcements...</p>
-            ) : announcements.length === 0 ? (
-              <p className="text-center text-slate-600">No announcements available</p>
-            ) : (
-              announcements.map((announcement) => (
-                <div
-                  key={announcement._id}
-                  className="group bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 hover:border-violet-400 p-8 transition-all duration-300 shadow-md hover:shadow-2xl hover:scale-[1.01]"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Bell className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors">
-                          {announcement.title}
-                        </h3>
-                      </div>
-                      <p className="text-slate-700 text-lg leading-relaxed">{announcement.content}</p>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm md:flex-col md:items-end">
-                      <Calendar className="w-4 h-4" />
-                      <span className="font-medium">{announcement.date}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+            <div className="space-y-8 text-slate-700 text-2xl leading-relaxed mb-16">
+              <p>
+                If you've experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and improved.
+              </p>
+            </div>
 
-          {/* See Older Announcements Button */}
-          <div className="text-center mt-12">
-            <button
-              onClick={() => navigate("/announcements")}
-              className="group inline-flex items-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105"
-            >
-              <span>See Older Announcements</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-16 py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-2xl inline-flex items-center gap-4">
+              Report Now
+              <ArrowRight className="w-7 h-7" />
             </button>
 
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-28 bg-gradient-to-br from-slate-900 via-violet-900 to-purple-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30"></div>
-
-        <div className="max-w-7xl mx-auto px-8 relative z-10">
-          <div className="text-center">
-            <span className="inline-block px-4 py-2 bg-white/10 border border-white/20 backdrop-blur-sm text-violet-200 text-sm font-bold tracking-wider uppercase mb-6">
-              Your Voice Matters
-            </span>
-            <h2 className="text-5xl lg:text-6xl font-black text-white mb-6">Report an Issue</h2>
-            <p className="text-xl text-violet-200 mb-12 max-w-2xl mx-auto leading-relaxed">
-              If you’ve experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and improved.
-            </p>
-
-            <Link to="/login">
-              <button className="group bg-white text-violet-900 px-12 py-5 hover:bg-violet-50 transition-all duration-300 font-black text-lg inline-flex items-center gap-3 shadow-2xl hover:shadow-3xl hover:scale-105">
-                Report Now
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
           </div>
         </div>
       </section>
