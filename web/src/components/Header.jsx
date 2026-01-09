@@ -40,7 +40,7 @@ const Header = () => {
       submenu: [
         { title: 'Mission & Vision', path: '/Mission-Vision' },
         { title: 'Organizational Structure', path: '/Organization' },
-        { title: 'Accomplishments', path: '/Accomplishment' }
+        // { title: 'Accomplishments', path: '/Accomplishment' }
       ]
     },
     {
@@ -65,7 +65,7 @@ const Header = () => {
       submenu: [
         { title: 'Policies', path: '/Policies' },
         { title: 'Plan and Budget', path: '/PlanAndBudget' },
-        { title: 'Accomplishment Report', path: '/AccomplishmentReport' },
+        { title: 'Accomplishment Report', path: '/Accomplishment' },
         { title: 'Suggestion Box', path: '/SuggestionBox' }
 
         // { title: 'Committee Report', path: '/CommitteeReport' }

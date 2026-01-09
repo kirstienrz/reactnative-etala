@@ -45,6 +45,7 @@ app.use("/api/documents", require("./routes/documentRoutes"));
 app.use("/api/budgets", require("./routes/budgetProgramRoutes"));
 app.use("/api/org-chart", require("./routes/organizationalRoutes"));
 app.use("/api/albums", require("./routes/albumRoutes"));
+app.use("/api/research", require("./routes/researchRoutes"));
 // ✅ SOCKET EVENTS
 io.on("connection", (socket) => {
   console.log("🟢 Client connected:", socket.id);
