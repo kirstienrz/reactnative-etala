@@ -53,11 +53,9 @@ const Header = () => {
       submenu: [
         // { title: 'Handbook', path: '/Handbook' },
         { title: 'Sex-Disaggregated Education Data', path: '/SexDisaggregated' },
-        { title: 'Infographics', path: '/Infographics' },
-        { title: 'Brochures', path: '/Brochures' },
-        { title: 'Pictures', path: '/Pictures' },
+        { title: 'Infographics & Posters', path: '/Infographics' },
+        { title: 'Gallery', path: '/album' },
         { title: 'Videos', path: '/Knowledge' },
-        { title: 'Posters', path: '/Posters' },
         { title: 'Research', path: '/Research' },
 
       ]

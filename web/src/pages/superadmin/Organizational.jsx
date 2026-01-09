@@ -1111,9 +1111,9 @@ export default function OrgChartManagement() {
                 <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-200">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+                            <h5 className="text-3xl font-bold text-gray-900 mb-2">
                                 Organizational Chart Management
-                            </h1>
+                            </h5>
                             <p className="text-gray-600 mt-2">
                                 Manage and organize your organizational structure charts
                             </p>

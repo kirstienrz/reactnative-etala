@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Users,
@@ -19,6 +18,10 @@ import {
   Briefcase,
   DollarSign,
   Award,
+  ChevronDown,
+  ChevronRight,
+  Video,
+  File
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "../store/authSlice";
@@ -26,13 +29,24 @@ import { logout } from "../store/authSlice";
 const SuperAdminSidebar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [expandedMenus, setExpandedMenus] = useState({
+    knowledgeHub: false,
+    // Add other expandable menus here if needed
+  });
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
-      dispatch(logout()); // ✅ Clears Redux state and localStorage
+      dispatch(logout());
       alert("Logged out successfully!");
-      navigate("/login"); // ✅ Redirect to login
+      navigate("/login");
     }
+  };
+
+  const toggleMenu = (menu) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menu]: !prev[menu]
+    }));
   };
 
   return (
@@ -45,7 +59,6 @@ const SuperAdminSidebar = () => {
         <h1 className="text-xl font-bold text-white">SuperAdmin Panel</h1>
         <p className="text-xs text-gray-400 mt-1">Management Dashboard</p>
       </div>
-
 
       {/* Scrollable Menu */}
       <div
@@ -78,25 +91,74 @@ const SuperAdminSidebar = () => {
           {/* CONTENT MANAGEMENT */}
           <SidebarSection title="Content Management">
             <SidebarItem icon={<Image size={18} />} label="Carousel" to="/superadmin/carousel" />
-            <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Hub" to="/superadmin/knowledge" />
+
+            {/* KNOWLEDGE HUB WITH SUBMENU */}
+            <div className="mb-1">
+              <button
+                onClick={() => toggleMenu('knowledgeHub')}
+                className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-all duration-200"
+              >
+                <div className="flex items-center gap-3">
+                  <BookOpen size={18} />
+                  <span>Knowledge Hub</span>
+                </div>
+                {expandedMenus.knowledgeHub ?
+                  <ChevronDown size={16} /> :
+                  <ChevronRight size={16} />
+                }
+              </button>
+
+              {/* Submenu Items */}
+              {expandedMenus.knowledgeHub && (
+                <div className="ml-7 mt-1 space-y-1 border-l border-gray-700 pl-3">
+                  <SidebarItem
+                    icon={<BarChart3 size={16} />} // Sex-Disaggregated Data icon
+                    label="Sex-Disaggregated Data"
+                    to="/superadmin/sexDisaggregated"
+                    indent={true}
+                  />
+                  <SidebarItem
+                    icon={<Image size={16} />} // Infographics icon (changed from Video)
+                    label="Infographics & Posters"
+                    to="/superadmin/infographics"
+                    indent={true}
+                  />
+                  <SidebarItem
+                    icon={<Image size={16} />} // Gallery icon
+                    label="Gallery"
+                    to="/superadmin/gallery"
+                    indent={true}
+                  />
+                  <SidebarItem
+                    icon={<Video size={16} />} // Videos icon (stays as Video)
+                    label="Videos"
+                    to="/superadmin/knowledge"
+                    indent={true}
+                  />
+                  <SidebarItem
+                    icon={<BookOpen size={16} />} // Research icon
+                    label="Research"
+                    to="/superadmin/research"
+                    indent={true}
+                  />
+                </div>
+              )}
+            </div>
+
             <SidebarItem icon={<Newspaper size={18} />} label="News & Announcements" to="/superadmin/news" />
             <SidebarItem icon={<Briefcase size={18} />} label="Projects" to="/superadmin/projects" />
             <SidebarItem icon={<DollarSign size={18} />} label="Budget & Programs" to="/superadmin/budget" />
-            <SidebarItem icon={<BarChart3 size={18} />} label="Infographics" to="/superadmin/infographics" />
             <SidebarItem icon={<Award size={18} />} label="Accomplishments" to="/superadmin/accomplishments" />
             <SidebarItem icon={<FileText size={18} />} label="Policies & Issuances" to="/superadmin/policies" />
             <SidebarItem icon={<FileSpreadsheet size={18} />} label="Organizational Chart" to="/superadmin/organizational" />
             <SidebarItem icon={<Image size={18} />} label="Highlights" to="/superadmin/highlights" />
-
           </SidebarSection>
 
           {/* ADMIN TOOLS */}
           <SidebarSection title="Admin Tools">
             <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
             <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
-            {/* <SidebarItem icon={<FileSpreadsheet size={18} />} label="Export Reports" to="/superadmin/exports" /> */}
             <SidebarItem icon={<FileSignature size={18} />} label="Templates" to="/superadmin/templates" />
-
           </SidebarSection>
         </nav>
       </div>
@@ -115,8 +177,8 @@ const SuperAdminSidebar = () => {
   );
 };
 
-// Reusable components
-const SidebarItem = ({ icon, label, to }) => (
+// Updated SidebarItem to support indentation
+const SidebarItem = ({ icon, label, to, indent = false }) => (
   <li>
     <NavLink
       to={to}
@@ -124,7 +186,7 @@ const SidebarItem = ({ icon, label, to }) => (
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
           ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
           : "text-gray-300 hover:bg-gray-800 hover:text-white"
-        }`
+        } ${indent ? 'ml-2' : ''}`
       }
     >
       {icon}
