@@ -6,7 +6,7 @@ import API from "./config"; // axios instance with baseURL & headers
 
 // 📋 GET all active org chart images
 export const getOrgChartImages = async () => {
-  const res = await API.get("/org-chart");
+  const res = await API.get("/org-chart/images");
   return res.data;
 };
 

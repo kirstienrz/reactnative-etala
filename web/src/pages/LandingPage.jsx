@@ -20,7 +20,7 @@ import {
 import { getInfographics } from "../api/infographics";
 import { getNews, getAnnouncements } from "../api/newsAnnouncement";
 import { getAllCalendarEvents } from "../api/calendar";
-
+import HighlightsSection from '../components/Highlights';
 
 const InfographicModal = ({ image, onClose }) => {
   if (!image) return null;
@@ -89,7 +89,6 @@ const LandingPage = () => {
     fetchCalendarEvents();
   }, []);
 
-
   useEffect(() => {
     const fetchInfographics = async () => {
       try {
@@ -132,17 +131,10 @@ const LandingPage = () => {
     fetchAnnouncements();
   }, []);
 
-
   const heroSlides = [
-    // {
-    //   image: '/assets/carousel/CAROUSEL.png'
-    // },
     {
       image: '/assets/carousel/CAROUSEL1.jpg'
     },
-    // {
-    //   image: '/assets/carousel/CAROUSEL2.jpg'
-    // }
   ];
 
   const departments = [
@@ -251,8 +243,9 @@ const LandingPage = () => {
           ))}
         </div>
       </section>
-      {/* Quick Links */}
 
+
+      {/* GAD Agenda Section */}
       <section className="py-32 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
         <div className="max-w-7xl mx-auto px-10">
           <div className="grid lg:grid-cols-2 gap-24 items-center">
@@ -293,7 +286,10 @@ const LandingPage = () => {
         </div>
       </section>
 
+        {/* Highlights Section - Added after Hero */}
+      <HighlightsSection />
 
+      {/* Press Releases Section */}
       <section className="py-40 bg-slate-50">
         <div className="max-w-7xl mx-auto px-10">
           {/* Section Header */}
@@ -382,243 +378,12 @@ const LandingPage = () => {
         </div>
       </section>
 
+    
 
-      {/* University Departments Section
-      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Our Departments</span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">University Departments</h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">Discover our academic departments and their contributions to gender and development initiatives</p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {departments.map((dept, idx) => (
-              <a
-                key={idx}
-                href="#"
-                className="group relative overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col bg-white border-2 border-slate-100 hover:border-violet-300 hover:-translate-y-2"
-              >
-                <div className="relative h-56 overflow-hidden">
-                  {dept.image ? (
-                    <img src={dept.image} alt={dept.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full bg-slate-300 flex items-center justify-center">
-                      <span className="text-slate-500 font-medium">Department Image</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                </div>
-
-                <div className={`bg-gradient-to-br ${dept.color} p-6 flex-1 flex flex-col justify-between text-white`}>
-                  <div>
-                    <span className="inline-block text-xs font-bold mb-3 tracking-wider bg-white/20 px-3 py-1 backdrop-blur-sm">
-                      {dept.code}
-                    </span>
-                    <h3 className="text-xl font-bold mb-2 leading-tight">{dept.name}</h3>
-                  </div>
-                  <div className="border-t border-white/30 pt-4 mt-4">
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all">
-                      Explore Department
-                      <ArrowRight className="w-4 h-4" />
-                    </span>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section> */}
-
-
-      {/* Stats Section */}
-      {/* <section className="py-28 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
-        <div className="max-w-7xl mx-auto px-8">
-          <h2 className="text-5xl lg:text-6xl font-black text-white mb-4 text-center">
-            Calendar of Events
-          </h2>
-          <p className="text-xl text-violet-200 text-center mb-16 max-w-3xl mx-auto">
-            Upcoming programs, projects, and activities
-          </p>
-
-          <div className="space-y-6 max-w-4xl mx-auto">
-            {calendarLoading ? (
-              <p className="text-center text-violet-200">
-                Loading events...
-              </p>
-            ) : calendarEvents.length === 0 ? (
-              <p className="text-center text-violet-200">
-                No events
-              </p>
-            ) : (
-              calendarEvents
-                .slice()
-                .sort((a, b) => new Date(b.start) - new Date(a.start)) // pinaka-bago first
-                .slice(0, 3) // 3 lang
-                .map((event, idx) => {
-                  const date = new Date(event.start);
-                  const day = date.getDate();
-                  const month = date
-                    .toLocaleString("default", { month: "short" })
-                    .toUpperCase();
-
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-6 p-6 bg-white/10 border-2 border-white/20 backdrop-blur-sm 
-           hover:bg-white/15 hover:scale-[1.02] transition-all duration-300"
-                    >
-                      <div className="w-20 h-20 flex flex-col items-center justify-center 
-                bg-violet-500/20 rounded-lg text-white font-black">
-                        <span className="text-2xl">{day}</span>
-                        <span className="text-sm tracking-widest">{month}</span>
-                      </div>
-
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-white mb-2">
-                          {event.title}
-                        </h3>
-                        <p className="text-violet-200 text-sm mb-3">
-                          {date.toLocaleDateString()} •{" "}
-                          {event.extendedProps?.location || "—"}
-                        </p>
-
-                        <span className="inline-block px-3 py-1 rounded-full 
-                   bg-violet-500/20 text-violet-200 text-sm font-medium">
-                          {event.extendedProps?.type}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-            )}
-
-          </div>
-          <div className="text-center  mt-16">
-            <button
-              onClick={() => navigate("/Calendar")}
-              className="inline-flex items-center gap-3 
-               border-2 border-white/30 text-white 
-               px-10 py-4 bg-white/10 hover:bg-white/20 
-               transition-all duration-300 font-bold 
-               hover:scale-105 backdrop-blur-md"
-            >
-              <Calendar className="w-5 h-5" />
-              View Full Calendar
-            </button>
-          </div>
-
-        </div>
-      </section> */}
-
-
-      {/* About Section */}
-      {/* <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-block mb-4">
-                <span className="text-sm font-bold text-violet-600 tracking-wider uppercase">Who We Are</span>
-              </div>
-              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6 leading-tight">About GAD Office</h2>
-              <div className="w-20 h-1 bg-gradient-to-r from-violet-600 to-purple-600 mb-6"></div>
-              <div className="space-y-5 text-slate-700 text-base leading-relaxed mb-8">
-                <p>The Gender and Development (GAD) Office of TUP Taguig is committed to promoting gender equality and women's empowerment within the university community.</p>
-                <p>We implement programs, policies, and activities that address gender issues, eliminate discrimination, and ensure equal opportunities for all students, faculty, and staff regardless of gender.</p>
-              </div>
-              <div className="flex gap-4">
-                <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-3 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl hover:scale-105">
-                  Learn More
-                </button>
-                <button className="border-2 border-violet-600 text-violet-700 px-8 py-3 bg-white hover:bg-violet-50 transition-all duration-300 font-bold hover:scale-105">
-                  Contact Us
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <div className="h-72 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about.jpg"
-                    alt="GAD Office Team"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="h-56 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about3.jpg"
-                    alt="GAD Activities"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-              <div className="space-y-6 pt-12">
-                <div className="h-56 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about2.jpg"
-                    alt="Gender Equality Workshop"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="h-72 bg-slate-200 shadow-xl overflow-hidden border-4 border-white hover:scale-105 transition-transform duration-300">
-                  <img
-                    src="/assets/about/about1.jpg"
-                    alt="Community Outreach"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section> */}
-
-
-      {/* Resources Section */}
-      {/* <section className="py-28 bg-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-br from-violet-200 to-purple-200 -z-10"></div>
-              <div className="h-[500px] bg-slate-200 shadow-2xl overflow-hidden border-8 border-white">
-                <img
-                  src="/assets/campus.png"
-                  alt="University Campus"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-            <div>
-              <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">Explore</span>
-              <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6 leading-tight">
-                Our University Campus
-              </h2>
-              <div className="w-20 h-1 bg-gradient-to-r from-violet-600 to-purple-600 mb-8"></div>
-              <p className="text-lg text-slate-700 mb-10 leading-relaxed">
-                Explore our vibrant campus through these images! From the facilities to beautiful green spaces, our campus provides an inspiring environment for learning, collaboration, and student life. Enjoy a glimpse of the places that make our university unique!
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <a
-                  href="https://www.tupt.edu.ph/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-4 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold inline-flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
-                    Visit Site
-                  </button>
-                </a>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      </section> */}
-
-      {/* CTA Section */}
-      {/* Report Section with ACHIEVE-style UI */}
+      {/* Report Section */}
       <section className="py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
         <div className="max-w-7xl mx-auto px-10">
           <div className="text-center max-w-5xl mx-auto">
-
             <h2 className="text-6xl lg:text-7xl font-black text-slate-900 mb-12 leading-tight">
               Report an Issue
             </h2>
@@ -633,11 +398,17 @@ const LandingPage = () => {
               Report Now
               <ArrowRight className="w-7 h-7" />
             </button>
-
           </div>
         </div>
       </section>
 
+      {/* Infographic Modal */}
+      {fullscreenImage && (
+        <InfographicModal 
+          image={fullscreenImage} 
+          onClose={() => setFullscreenImage(null)} 
+        />
+      )}
     </main>
   );
 };
