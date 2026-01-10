@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MessageSquare, Send, Share2, X, Eye, Archive, RefreshCw,
@@ -45,6 +45,9 @@ const AdminReports = () => {
   const [referralDept, setReferralDept] = useState("");
   const [referralNote, setReferralNote] = useState("");
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+
+  const dropdownRefs = useRef({});
 
   const [readReports, setReadReports] = useState(() => {
     const stored = localStorage.getItem('adminReadReports');
@@ -59,7 +62,7 @@ const AdminReports = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (openDropdown && !event.target.closest('.dropdown-container')) {
+      if (openDropdown && !event.target.closest('.dropdown-trigger') && !event.target.closest('.dropdown-menu')) {
         setOpenDropdown(null);
       }
     };
@@ -70,6 +73,17 @@ const AdminReports = () => {
   useEffect(() => {
     localStorage.setItem('adminReadReports', JSON.stringify(readReports));
   }, [readReports]);
+
+  // Update dropdown position when it opens
+  useEffect(() => {
+    if (openDropdown && dropdownRefs.current[openDropdown]) {
+      const buttonRect = dropdownRefs.current[openDropdown].getBoundingClientRect();
+      setDropdownPosition({
+        top: buttonRect.bottom + 4,
+        left: buttonRect.right - 192 // 192px = w-48 width
+      });
+    }
+  }, [openDropdown]);
 
   const markAsRead = (reportId) => {
     if (!readReports.includes(reportId)) {
@@ -592,291 +606,15 @@ const AdminReports = () => {
                           {new Date(report.submittedAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="relative dropdown-container">
+                          <div className="relative">
                             <button
+                              ref={(el) => (dropdownRefs.current[report._id] = el)}
                               onClick={() => setOpenDropdown(openDropdown === report._id ? null : report._id)}
-                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="dropdown-trigger p-2 hover:bg-gray-100 rounded-lg transition-colors"
                               title="Actions"
                             >
                               <MoreVertical size={18} className="text-gray-600" />
                             </button>
-                            
-                            {openDropdown === report._id && (
-                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                                <button
-                                  onClick={() => {
-                                    handleViewDetails(report._id);
-                                    setOpenDropdown(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Eye size={16} />
-                                  View Details
-                                </button>
-                                
-                                <button
-                                  onClick={() => {
-                                    handleMessageUser(report);
-                                    setOpenDropdown(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <MessageSquare size={16} />
-                                  Message User
-                                </button>
-                                
-                                {isReportRead(report._id) ? (
-                                  <button
-                                    onClick={() => {
-                                      markAsUnread(report._id);
-                                      showToast("Marked as unread", "success");
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <Mail size={16} />
-                                    Mark as Unread
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      markAsRead(report._id);
-                                      showToast("Marked as read", "success");
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <CheckCircle size={16} />
-                                    Mark as Read
-                                  </button>
-                                )}
-                                
-                                <button
-                                  onClick={() => {
-                                    setSelectedReport(report);
-                                    setNewCaseStatus(report.caseStatus || "");
-                                    setShowCaseStatusModal(true);
-                                    setOpenDropdown(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Edit size={16} />
-                                  Edit Case Status
-                                </button>
-                                
-                                <div className="border-t border-gray-200 my-1"></div>
-                                
-                                {activeTab === "active" ? (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedReport(report);
-                                      setShowArchiveModal(true);
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                  >
-                                    <Archive size={16} />
-                                    Archive
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedReport(report);
-                                      setShowRestoreModal(true);
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
-                                  >
-                                    <RefreshCw size={16} />
-                                    Restore
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div>
-              <table>
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ticket
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Reporter
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Case Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedReports.map((report) => (
-                      <tr 
-                        key={report._id} 
-                        className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {!isReportRead(report._id) && (
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
-                            {report.ticketNumber}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {report.isAnonymous ? (
-                              <span className="text-gray-500 italic">Anonymous</span>
-                            ) : (
-                              report.createdBy?.tupId || "Unknown User"
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {report.incidentTypes?.slice(0, 2).join(", ") || "N/A"}
-                            {report.incidentTypes?.length > 2 && (
-                              <span className="text-gray-500"> +{report.incidentTypes.length - 2}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {report.caseStatus ? (
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
-                              {getCaseStatusIcon(report.caseStatus)}
-                              {report.caseStatus}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">Not Set</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(report.submittedAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="relative dropdown-container">
-                            <button
-                              onClick={() => setOpenDropdown(openDropdown === report._id ? null : report._id)}
-                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Actions"
-                            >
-                              <MoreVertical size={18} className="text-gray-600" />
-                            </button>
-                            
-                            {openDropdown === report._id && (
-                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                                <button
-                                  onClick={() => {
-                                    handleViewDetails(report._id);
-                                    setOpenDropdown(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Eye size={16} />
-                                  View Details
-                                </button>
-                                
-                                <button
-                                  onClick={() => {
-                                    handleMessageUser(report);
-                                    setOpenDropdown(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <MessageSquare size={16} />
-                                  Message User
-                                </button>
-                                
-                                {isReportRead(report._id) ? (
-                                  <button
-                                    onClick={() => {
-                                      markAsUnread(report._id);
-                                      showToast("Marked as unread", "success");
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <Mail size={16} />
-                                    Mark as Unread
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      markAsRead(report._id);
-                                      showToast("Marked as read", "success");
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <CheckCircle size={16} />
-                                    Mark as Read
-                                  </button>
-                                )}
-                                
-                                <button
-                                  onClick={() => {
-                                    setSelectedReport(report);
-                                    setNewCaseStatus(report.caseStatus || "");
-                                    setShowCaseStatusModal(true);
-                                    setOpenDropdown(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Edit size={16} />
-                                  Edit Case Status
-                                </button>
-                                
-                                <div className="border-t border-gray-200 my-1"></div>
-                                
-                                {activeTab === "active" ? (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedReport(report);
-                                      setShowArchiveModal(true);
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                  >
-                                    <Archive size={16} />
-                                    Archive
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedReport(report);
-                                      setShowRestoreModal(true);
-                                      setOpenDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
-                                  >
-                                    <RefreshCw size={16} />
-                                    Restore
-                                  </button>
-                                )}
-                              </div>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -976,6 +714,117 @@ const AdminReports = () => {
         </div>
       </div>
 
+      {/* Dropdown Menu Portal - Fixed Position Overlay */}
+      {openDropdown && (
+        <div 
+          className="dropdown-menu fixed bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-48"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            zIndex: 1000
+          }}
+        >
+          <button
+            onClick={() => {
+              handleViewDetails(openDropdown);
+              setOpenDropdown(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+          >
+            <Eye size={16} />
+            View Details
+          </button>
+          
+          <button
+            onClick={() => {
+              const report = paginatedReports.find(r => r._id === openDropdown);
+              if (report) handleMessageUser(report);
+              setOpenDropdown(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+          >
+            <MessageSquare size={16} />
+            Message User
+          </button>
+          
+          {isReportRead(openDropdown) ? (
+            <button
+              onClick={() => {
+                markAsUnread(openDropdown);
+                showToast("Marked as unread", "success");
+                setOpenDropdown(null);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Mail size={16} />
+              Mark as Unread
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                markAsRead(openDropdown);
+                showToast("Marked as read", "success");
+                setOpenDropdown(null);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            >
+              <CheckCircle size={16} />
+              Mark as Read
+            </button>
+          )}
+          
+          <button
+            onClick={() => {
+              const report = paginatedReports.find(r => r._id === openDropdown);
+              if (report) {
+                setSelectedReport(report);
+                setNewCaseStatus(report.caseStatus || "");
+                setShowCaseStatusModal(true);
+              }
+              setOpenDropdown(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+          >
+            <Edit size={16} />
+            Edit Case Status
+          </button>
+          
+          <div className="border-t border-gray-200 my-1"></div>
+          
+          {activeTab === "active" ? (
+            <button
+              onClick={() => {
+                const report = paginatedReports.find(r => r._id === openDropdown);
+                if (report) {
+                  setSelectedReport(report);
+                  setShowArchiveModal(true);
+                }
+                setOpenDropdown(null);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+            >
+              <Archive size={16} />
+              Archive
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                const report = paginatedReports.find(r => r._id === openDropdown);
+                if (report) {
+                  setSelectedReport(report);
+                  setShowRestoreModal(true);
+                }
+                setOpenDropdown(null);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+            >
+              <RefreshCw size={16} />
+              Restore
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Enhanced Details Modal */}
       {showDetailsModal && selectedReport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1050,15 +899,6 @@ const AdminReports = () => {
                             </div>
                           )}
                         </div>
-                        {/* <div className="mt-3">
-                          <button
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-                            onClick={() => handleMessageUser(selectedReport)}
-                          >
-                            <MessageSquare size={16} />
-                            Message User
-                          </button>
-                        </div> */}
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-4 text-sm">
