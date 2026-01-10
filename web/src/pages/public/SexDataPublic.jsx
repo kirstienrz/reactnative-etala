@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-    Upload, Trash2, X, RefreshCw, BarChart2, Archive,      // Added for archive icon
-    RotateCcw,    // Added for restore iconDownload, Filter, Folder, FolderArchive } from "lucide-react";
-    Download, Filter, Folder, FolderArchive
-} from "lucide-react";
+import { BarChart2, Download, Filter, Eye } from "lucide-react";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import {
     Chart as ChartJS,
@@ -19,13 +15,8 @@ import {
 } from "chart.js";
 
 import {
-    uploadSexDataExcel,
     getSexDatasets,
-    getSexDatasetById,
-    deleteSexDataset,
-    archiveSexDataset,
-    restoreSexDataset,
-    getArchivedSexDatasets
+    getSexDatasetById
 } from "../../api/sexData";
 
 // Register ChartJS components
@@ -41,35 +32,24 @@ ChartJS.register(
     Title
 );
 
-export default function SexDataAdmin() {
+export default function SexDataViewer() {
     const [datasets, setDatasets] = useState([]);
-    const [archivedDatasets, setArchivedDatasets] = useState([]);
     const [active, setActive] = useState(null);
-    const [file, setFile] = useState(null);
-    const [name, setName] = useState("");
-    const [showModal, setShowModal] = useState(false);
     const [xField, setXField] = useState("");
     const [yField, setYField] = useState("");
-    const [isUploading, setIsUploading] = useState(false);
     const [chartType, setChartType] = useState("bar");
     const [selectedCharts, setSelectedCharts] = useState(["bar"]);
     const [filters, setFilters] = useState({});
     const [showReportOptions, setShowReportOptions] = useState(false);
-    const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
     const chartRef = useRef(null);
 
     const loadDatasets = async () => {
         try {
-            const [activeData, archivedData] = await Promise.all([
-                getSexDatasets(),
-                getArchivedSexDatasets()
-            ]);
+            const activeData = await getSexDatasets();
             setDatasets(Array.isArray(activeData) ? activeData : []);
-            setArchivedDatasets(Array.isArray(archivedData) ? archivedData : []);
         } catch (err) {
             console.error(err);
             setDatasets([]);
-            setArchivedDatasets([]);
         }
     };
 
@@ -87,31 +67,7 @@ export default function SexDataAdmin() {
         }
     }, [active]);
 
-    const uploadExcelFile = async () => {
-        if (!file) return alert("Select Excel file");
-        if (!name.trim()) return alert("Enter dataset name");
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("name", name);
-
-        try {
-            setIsUploading(true);
-            await uploadSexDataExcel(formData);
-            setFile(null);
-            setName("");
-            setShowModal(false);
-            loadDatasets();
-            alert("Dataset uploaded successfully!");
-        } catch (err) {
-            console.error(err);
-            alert("Upload failed: " + (err.message || "Unknown error"));
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const openDataset = async (id, fromArchived = false) => {
+    const openDataset = async (id) => {
         try {
             const data = await getSexDatasetById(id);
             setActive(data);
@@ -143,45 +99,6 @@ export default function SexDataAdmin() {
         } catch (err) {
             console.error(err);
             alert("Failed to load dataset");
-        }
-    };
-
-    const archiveDataset = async (id) => {
-        if (!window.confirm("Archive this dataset?")) return;
-        try {
-            await archiveSexDataset(id);
-            if (active?._id === id) setActive(null);
-            loadDatasets();
-            alert("Dataset archived successfully!");
-        } catch (err) {
-            console.error(err);
-            alert("Failed to archive dataset");
-        }
-    };
-
-    const restoreDataset = async (id) => {
-        if (!window.confirm("Restore this dataset?")) return;
-        try {
-            await restoreSexDataset(id);
-            if (active?._id === id) setActive(null);
-            loadDatasets();
-            alert("Dataset restored successfully!");
-        } catch (err) {
-            console.error(err);
-            alert("Failed to restore dataset");
-        }
-    };
-
-    const removeDataset = async (id) => {
-        if (!window.confirm("Permanently delete this dataset?")) return;
-        try {
-            await deleteSexDataset(id);
-            if (active?._id === id) setActive(null);
-            loadDatasets();
-            alert("Dataset deleted permanently!");
-        } catch (err) {
-            console.error(err);
-            alert("Failed to delete dataset");
         }
     };
 
@@ -246,7 +163,7 @@ export default function SexDataAdmin() {
         }
     };
 
-    // Download Functions (same as before, pero idinagdag ko lang dito)
+    // Download Functions (Read-only for users)
     const downloadCSV = () => {
         if (!active) return;
 
@@ -396,18 +313,14 @@ export default function SexDataAdmin() {
         });
     };
 
-    const currentDatasets = activeTab === "active" ? datasets : archivedDatasets;
-    const hasActiveDatasets = datasets.length > 0;
-    const hasArchivedDatasets = archivedDatasets.length > 0;
-
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
+                {/* Header - Simplified for Users */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Sex Disaggregated Data</h1>
-                        <p className="text-gray-600 mt-1">Upload, view, analyze, and manage datasets</p>
+                        <p className="text-gray-600 mt-1">View and analyze available datasets</p>
                     </div>
                     <div className="flex gap-3">
                         <button
@@ -417,123 +330,41 @@ export default function SexDataAdmin() {
                         >
                             <Download size={16} /> Export
                         </button>
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 text-sm"
-                        >
-                            <Upload size={16} /> Upload Dataset
-                        </button>
                     </div>
                 </div>
 
-                {/* Dataset Tabs */}
-                <div className="mb-6">
-                    <div className="border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8">
-                            <button
-                                onClick={() => setActiveTab("active")}
-                                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === "active"
-                                    ? "border-blue-500 text-blue-600"
-                                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                    }`}
-                            >
-                                <Folder size={16} />
-                                Active Datasets ({datasets.length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("archived")}
-                                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === "archived"
-                                    ? "border-blue-500 text-blue-600"
-                                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                    }`}
-                            >
-                                <FolderArchive size={16} />
-                                Archived Datasets ({archivedDatasets.length})
-                            </button>
-                        </nav>
-                    </div>
-                </div>
-
-                {/* Datasets Grid */}
+                {/* Datasets Grid - View Only */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-                    {currentDatasets.map((d) => (
+                    {datasets.map((d) => (
                         <div
                             key={d._id}
-                            className={`bg-white border rounded-lg p-4 hover:shadow-lg transition flex flex-col justify-between ${activeTab === "archived" ? "opacity-75" : ""}`}
+                            className="bg-white border rounded-lg p-4 hover:shadow-lg transition flex flex-col justify-between"
                         >
                             <div>
                                 <h3 className="font-medium text-gray-800 truncate">{d.name}</h3>
                                 <p className="text-gray-500 text-sm mt-1">
                                     {d.rows?.length || 0} rows, {d.headers?.length || 0} columns
                                 </p>
-                                {activeTab === "archived" && (
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        Archived on: {new Date(d.archivedAt || d.updatedAt).toLocaleDateString()}
-                                    </p>
-                                )}
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Created: {new Date(d.createdAt).toLocaleDateString()}
+                                </p>
                             </div>
                             <div className="flex justify-end gap-2 mt-4">
                                 <button
-                                    onClick={() => openDataset(d._id, activeTab === "archived")}
+                                    onClick={() => openDataset(d._id)}
                                     className="px-3 py-1 bg-blue-500 hover:bg-blue-600 rounded text-white text-xs transition flex items-center gap-1"
                                 >
-                                    View
+                                    <Eye size={12} /> View Data
                                 </button>
-
-                                {activeTab === "active" ? (
-                                    <>
-                                        <button
-                                            onClick={() => archiveDataset(d._id)}
-                                            className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 rounded text-white text-xs transition flex items-center gap-1"
-                                            title="Archive dataset"
-                                        >
-                                            <Archive size={12} /> Archive
-                                        </button>
-                                        <button
-                                            onClick={() => removeDataset(d._id)}
-                                            className="px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-white text-xs transition flex items-center gap-1"
-                                            title="Delete permanently"
-                                        >
-                                            <Trash2 size={12} /> Delete
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => restoreDataset(d._id)}
-                                            className="px-3 py-1 bg-green-500 hover:bg-green-600 rounded text-white text-xs transition flex items-center gap-1"
-                                            title="Restore dataset"
-                                        >
-                                            <RotateCcw size={12} /> Restore
-                                        </button>
-                                        <button
-                                            onClick={() => removeDataset(d._id)}
-                                            className="px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-white text-xs transition flex items-center gap-1"
-                                            title="Delete permanently"
-                                        >
-                                            <Trash2 size={12} /> Delete
-                                        </button>
-                                    </>
-                                )}
                             </div>
-                        </div>                        
+                        </div>
                     ))}
 
-                    {currentDatasets.length === 0 && (
+                    {datasets.length === 0 && (
                         <div className="col-span-full text-center py-12 bg-white rounded-lg border">
-                            {activeTab === "active" ? (
-                                <>
-                                    <BarChart2 size={48} className="mx-auto text-gray-300 mb-4" />
-                                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No active datasets</h3>
-                                    <p className="text-gray-500">Start by uploading a new dataset</p>
-                                </>
-                            ) : (
-                                <>
-                                    <FolderArchive size={48} className="mx-auto text-gray-300 mb-4" />
-                                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No archived datasets</h3>
-                                    <p className="text-gray-500">Archived datasets will appear here</p>
-                                </>
-                            )}
+                            <BarChart2 size={48} className="mx-auto text-gray-300 mb-4" />
+                            <h3 className="text-xl font-semibold text-gray-600 mb-2">No datasets available</h3>
+                            <p className="text-gray-500">Check back later for updated datasets</p>
                         </div>
                     )}
                 </div>
@@ -543,14 +374,7 @@ export default function SexDataAdmin() {
                     <div className="bg-white rounded-lg border p-4 md:p-6 mb-6">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-xl font-bold text-gray-800">{active.name}</h2>
-                                    {active.isArchived && (
-                                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
-                                            Archived
-                                        </span>
-                                    )}
-                                </div>
+                                <h2 className="text-xl font-bold text-gray-800">{active.name}</h2>
                                 <p className="text-gray-600 text-sm">
                                     Showing {getFilteredRows().length} of {active.rows?.length || 0} records
                                 </p>
@@ -639,8 +463,8 @@ export default function SexDataAdmin() {
                                             key={type}
                                             onClick={() => toggleChartSelection(type)}
                                             className={`px-3 py-1 rounded text-xs ${selectedCharts.includes(type)
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                                 }`}
                                         >
                                             {type}
@@ -663,10 +487,11 @@ export default function SexDataAdmin() {
                             </div>
                         </div>
 
-                        {/* Data Table */}
+                        {/* Data Table - Read Only */}
                         <div className="overflow-x-auto">
                             <div className="mb-3">
                                 <h3 className="font-medium text-gray-700">Data Preview</h3>
+                                <p className="text-gray-500 text-sm">This is a read-only view of the dataset</p>
                             </div>
                             <table className="min-w-full border">
                                 <thead className="bg-gray-100">
@@ -679,7 +504,7 @@ export default function SexDataAdmin() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {getFilteredRows().slice(0, 100).map((row, i) => (
+                                    {getFilteredRows().slice(0, 50).map((row, i) => (
                                         <tr key={i} className="border-b hover:bg-gray-50">
                                             {active.headers.map((h) => (
                                                 <td key={`${i}-${h}`} className="px-3 py-2 text-sm text-gray-600 border">
@@ -690,94 +515,11 @@ export default function SexDataAdmin() {
                                     ))}
                                 </tbody>
                             </table>
-                            {getFilteredRows().length > 100 && (
+                            {getFilteredRows().length > 50 && (
                                 <div className="text-sm text-gray-500 mt-2">
-                                    Showing first 100 of {getFilteredRows().length} records
+                                    Showing first 50 of {getFilteredRows().length} records
                                 </div>
                             )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Upload Modal */}
-                {showModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-lg max-w-md w-full p-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold text-gray-800">Upload Dataset</h2>
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    className="text-gray-500 hover:text-gray-700"
-                                >
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Dataset Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter dataset name"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Excel File
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-                                        <input
-                                            type="file"
-                                            accept=".xlsx,.xls"
-                                            onChange={(e) => setFile(e.target.files[0])}
-                                            className="hidden"
-                                            id="fileUpload"
-                                        />
-                                        <label htmlFor="fileUpload" className="cursor-pointer">
-                                            <Upload size={32} className="mx-auto text-gray-400 mb-2" />
-                                            <p className="text-gray-600 font-medium">Click to upload Excel file</p>
-                                            <p className="text-sm text-gray-400 mt-1">.xlsx or .xls format</p>
-                                        </label>
-                                        {file && (
-                                            <p className="text-sm text-blue-600 mt-3">
-                                                Selected: {file.name}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 pt-4">
-                                    <button
-                                        onClick={() => {
-                                            setShowModal(false);
-                                            setFile(null);
-                                            setName("");
-                                        }}
-                                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={uploadExcelFile}
-                                        disabled={!file || !name.trim() || isUploading}
-                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
-                                    >
-                                        {isUploading ? (
-                                            <>
-                                                <RefreshCw size={16} className="animate-spin mr-2" /> Uploading...
-                                            </>
-                                        ) : (
-                                            "Upload Dataset"
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 )}
@@ -792,7 +534,7 @@ export default function SexDataAdmin() {
                                     onClick={() => setShowReportOptions(false)}
                                     className="text-gray-500 hover:text-gray-700"
                                 >
-                                    <X size={24} />
+                                    X
                                 </button>
                             </div>
 
@@ -847,6 +589,6 @@ export default function SexDataAdmin() {
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     );
 }
