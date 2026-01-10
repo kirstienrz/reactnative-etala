@@ -229,6 +229,33 @@ const TicketMessagingSystem = () => {
     loadTickets();
   }, []);
 
+  // 🔥 NEW: Handle pre-selected ticket from navigation (from Reports page)
+  useEffect(() => {
+    const handleNavigationState = async () => {
+      // Get state from navigation (passed from Reports page)
+      const state = window.history.state?.usr;
+      
+      if (state?.selectedTicketNumber && tickets.length > 0) {
+        console.log('🎯 Pre-selecting ticket from navigation:', state.selectedTicketNumber);
+        
+        // Find the ticket in the loaded tickets
+        const ticketToSelect = tickets.find(t => t.ticketNumber === state.selectedTicketNumber);
+        
+        if (ticketToSelect) {
+          console.log('✅ Found ticket, selecting it:', ticketToSelect);
+          await handleSelectTicket(ticketToSelect);
+        } else {
+          console.log('⚠️ Ticket not found in list:', state.selectedTicketNumber);
+        }
+        
+        // Clear the navigation state so it doesn't auto-select on refresh
+        window.history.replaceState({}, document.title);
+      }
+    };
+    
+    handleNavigationState();
+  }, [tickets]); // Run when tickets are loaded
+
   const loadTickets = async () => {
     setLoading(true);
     try {
