@@ -11,7 +11,7 @@ const Header = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isLoggedIn, role } = useSelector((state) => state.auth);
-  
+
   // Reference for dropdown to close when clicking outside
   const userDropdownRef = useRef(null);
 
@@ -40,21 +40,24 @@ const Header = () => {
       submenu: [
         { title: 'Mission & Vision', path: '/Mission-Vision' },
         { title: 'Organizational Structure', path: '/Organization' },
-        { title: 'Accomplishments', path: '/Accomplishment' }
+        // { title: 'Accomplishments', path: '/Accomplishment' }
       ]
     },
-     {
+    {
       title: 'Programs and Activities',
       path: '/Projects',
       submenu: []
     },
-     {
+    {
       title: 'Knowledge Hub',
       submenu: [
-        { title: 'Handbook', path: '/Handbook' },
-        { title: 'Palitan', path: '/Knowledge' },
-        { title: 'Infographics', path: '/Infographics' },
-        { title: 'Suggestion Box', path: '/SuggestionBox' }
+        // { title: 'Handbook', path: '/Handbook' },
+        { title: 'Sex-Disaggregated Education Data', path: '/SexDisaggregated' },
+        { title: 'Infographics & Posters', path: '/Infographics' },
+        { title: 'Gallery', path: '/album' },
+        { title: 'Videos', path: '/Knowledge' },
+        { title: 'Research', path: '/Research' },
+
       ]
     },
     {
@@ -62,6 +65,9 @@ const Header = () => {
       submenu: [
         { title: 'Policies', path: '/Policies' },
         { title: 'Plan and Budget', path: '/PlanAndBudget' },
+        { title: 'Accomplishment Report', path: '/Accomplishment' },
+        { title: 'Suggestion Box', path: '/SuggestionBox' }
+
         // { title: 'Committee Report', path: '/CommitteeReport' }
       ]
     },
@@ -70,8 +76,8 @@ const Header = () => {
       path: '/login',
       submenu: []
     },
-   
-   
+
+
     {
       title: 'Contact Us',
       path: '/Contact',
@@ -91,9 +97,9 @@ const Header = () => {
   // Logged-in menu items for the dropdown
   const loggedInItems = [
     { title: "Dashboard", path: dashboardLink, icon: <LayoutDashboard size={16} /> },
-    { title: "Reports", path: "/user/reports", icon: <FileText size={16} /> },
-    { title: "Inbox", path: "/user/inbox", icon: <Inbox size={16} /> },
-    { title: "My Profile", path: "/user/profile", icon: <User size={16} /> },
+    // { title: "Reports", path: "/user/reports", icon: <FileText size={16} /> },
+    // { title: "Inbox", path: "/user/inbox", icon: <Inbox size={16} /> },
+    // { title: "My Profile", path: "/user/profile", icon: <User size={16} /> },
   ];
 
   const toggleMobileDropdown = (title) => {
@@ -119,9 +125,9 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-4 no-underline group">
             <div className="w-14 h-14 flex-shrink-0 overflow-hidden rounded-full shadow-sm">
-              <img 
-                src="/assets/logo.jpg" 
-                alt="GAD Logo" 
+              <img
+                src="/assets/logo.jpg"
+                alt="GAD Logo"
                 className="w-full h-full object-cover"
                 onError={(e) => e.target.style.display = 'none'}
               />

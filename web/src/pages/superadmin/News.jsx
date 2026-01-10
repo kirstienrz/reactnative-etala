@@ -204,10 +204,10 @@ const AdminNewsAnnouncements = () => {
                 : "text-gray-600 hover:text-gray-900"
               }`}
           >
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <Megaphone size={18} />
               Announcements
-            </div>
+            </div> */}
           </button>
         </div>
 

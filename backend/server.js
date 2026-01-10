@@ -5,6 +5,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const http = require("http"); // 🧩 for socket.io
 const { Server } = require("socket.io"); // 🧩 import socket.io
+const path = require('path'); // ✅ ADD THIS
 
 dotenv.config();
 connectDB();
@@ -22,6 +23,7 @@ app.set("io", io);
 
 app.use(express.json());
 app.use(cors());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ ROUTES
 app.use("/api/auth", require("./routes/authRoutes"));
@@ -43,6 +45,13 @@ app.use("/api/infographics", require("./routes/infographicRoutes"));
 app.use("/api/accomplishments", require("./routes/accomplishmentRoutes"));
 app.use("/api/documents", require("./routes/documentRoutes"));
 app.use("/api/budgets", require("./routes/budgetProgramRoutes"));
+app.use("/api/org-chart", require("./routes/organizationalRoutes"));
+app.use("/api/albums", require("./routes/albumRoutes"));
+app.use("/api/research", require("./routes/researchRoutes"));
+app.use("/api/contact", require("./routes/contactRoutes"));
+
+
+
 // ✅ SOCKET EVENTS
 io.on("connection", (socket) => {
   console.log("🟢 Client connected:", socket.id);

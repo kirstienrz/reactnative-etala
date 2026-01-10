@@ -1,7 +1,33 @@
-import React from 'react';
-import { Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { getOrgChartImages } from '../../api/organizational';
 
 const Organizational = () => {
+  const [latestChart, setLatestChart] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLatestChart();
+  }, []);
+
+  const fetchLatestChart = async () => {
+    try {
+      setLoading(true);
+      const charts = await getOrgChartImages();
+      
+      if (charts.length > 0) {
+        // Get the latest chart (most recent createdAt)
+        const sorted = [...charts].sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        setLatestChart(sorted[0]);
+      }
+    } catch (err) {
+      console.error('Error fetching org chart:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="bg-white min-h-screen">
       {/* Hero Section */}
@@ -23,42 +49,45 @@ const Organizational = () => {
       </section>
 
       {/* Organizational Chart Section */}
-      <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
+      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-16">
-            <span className="text-sm font-bold text-violet-600 tracking-wider uppercase mb-4 inline-block">
-              Structure Overview
-            </span>
-            <h2 className="text-5xl lg:text-6xl font-black text-slate-900 mb-6">
-              Office Hierarchy
-            </h2>
-          </div>
+          
 
-          {/* Org Chart Placeholder */}
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-slate-100">
-            <div className="relative bg-gradient-to-br from-slate-100 to-slate-200 aspect-[16/10] flex items-center justify-center">
-              <img 
-                src="/assets/org-chart.png" 
-                alt="GAD Office Organizational Chart"
-                className="w-full h-full object-contain p-8"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-              <div className="hidden flex-col items-center justify-center text-center p-12">
-                <div className="w-24 h-24 bg-gradient-to-br from-violet-600 to-purple-600 rounded-full flex items-center justify-center mb-6">
-                  <Users className="w-12 h-12 text-white" />
-                </div>
-                <h3 className="text-3xl font-black text-slate-700 mb-4">
-                  Organizational Chart
-                </h3>
-                <p className="text-lg text-slate-500 max-w-md">
-                  Office organizational structure and hierarchy
+          {/* Loading */}
+          {loading && (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600"></div>
+            </div>
+          )}
+
+          {/* Org Chart Display */}
+          {!loading && latestChart && (
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+            
+              <div className="p-8">
+                <img 
+                  src={latestChart.imageUrl} 
+                  alt="GAD Office Organizational Chart"
+                  className="w-full h-auto max-w-4xl mx-auto object-contain"
+                />
+              </div>
+
+                <div className="p-4 bg-slate-50 border-b border-slate-200">
+                <p className="text-center text-slate-600 text-sm">
+                  Current organizational chart
                 </p>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* No Chart */}
+          {!loading && !latestChart && (
+            <div className="text-center py-16">
+              <p className="text-gray-500 text-lg">
+                Organizational chart will be available soon
+              </p>
+            </div>
+          )}
         </div>
       </section>
     </main>

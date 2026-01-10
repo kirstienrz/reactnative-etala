@@ -34,6 +34,9 @@ import BudgetPage from "./pages/superadmin/Budget";
 import InfographicsPage from "./pages/superadmin/Infographics";
 import AccomplishmentsPage from "./pages/superadmin/Accomplishments";
 import PoliciesPage from "./pages/superadmin/Policies";
+import Organizational from "./pages/superadmin/Organizational";
+import GalleryPage from "./pages/superadmin/Gallery";
+import ResearchAdmin from "./pages/superadmin/Research";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProfile from "./pages/admin/Profile";
@@ -62,6 +65,9 @@ import Infographics from "./pages/public/Infographics";
 import Calendar from "./pages/public/Calendar";
 import Contact from "./pages/public/Contact";
 import Announcements from "./pages/public/Announcements";
+import Gallery from "./pages/public/Albums";
+import Research from "./pages/public/Research";
+import News from "./pages/public/News";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -87,6 +93,9 @@ const App = () => {
             <Route path="/Calendar" element={<Calendar />} />
             <Route path="/Contact" element={<Contact />} />
             <Route path="/Announcements" element={<Announcements />} />
+            <Route path="/album" element={<Gallery />} />
+            <Route path="/Research" element={<Research />} />
+            <Route path="/News" element={<News />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>
@@ -110,6 +119,10 @@ const App = () => {
               <Route path="/superadmin/infographics" element={<InfographicsPage />} />
               <Route path="/superadmin/accomplishments" element={<AccomplishmentsPage />} />
               <Route path="/superadmin/policies" element={<PoliciesPage />} />
+              <Route path="/superadmin/organizational" element={<Organizational />} />
+              <Route path="/superadmin/gallery" element={<GalleryPage />} />
+              <Route path="/superadmin/research" element={<ResearchAdmin />} />
+
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>

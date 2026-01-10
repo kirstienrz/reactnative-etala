@@ -1,312 +1,213 @@
 import React, { useEffect, useState } from "react";
-import { Search, Bell, User, ChevronRight, AlertCircle, FileText, Users, Clock, TrendingUp, CheckCircle, AlertTriangle } from "lucide-react";
+import { 
+  FileText, 
+  ListTodo, 
+  Inbox, 
+  User
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const [user, setUser] = useState({ name: "User", role: "Case Worker" });
-    const [stats, setStats] = useState({
-        totalCases: 0,
-        pendingCases: 0,
-        resolvedCases: 0,
-        activeBeneficiaries: 0
-    });
-    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        setLoading(true);
         const timer = setTimeout(() => {
             setUser({ name: "Kirst", role: "GAD Focal Person" });
-            setStats({
-                totalCases: 47,
-                pendingCases: 12,
-                resolvedCases: 35,
-                activeBeneficiaries: 89
-            });
-            setLoading(false);
-        }, 500);
+        }, 300);
         return () => clearTimeout(timer);
     }, []);
 
-    function refreshStats() {
-        setLoading(true);
-        setTimeout(() => {
-            setStats(s => ({
-                ...s,
-                totalCases: s.totalCases + Math.floor(Math.random() * 2),
-                pendingCases: Math.max(0, s.pendingCases - Math.floor(Math.random() * 2)),
-                resolvedCases: s.resolvedCases + Math.floor(Math.random() * 2),
-            }));
-            setLoading(false);
-        }, 400);
-    }
-
-    const recentCases = [
-        { 
-            caseNo: "GAD-2024-001", 
-            type: "Violence Against Women", 
-            status: "Under Investigation", 
-            priority: "High",
-            date: "Dec 1, 2024",
-            badge: "Urgent",
-            color: "#DC2626"
-        },
-        { 
-            caseNo: "GAD-2024-002", 
-            type: "Child Protection", 
-            status: "Counseling Phase", 
-            priority: "Medium",
-            date: "Nov 28, 2024",
-            badge: "Active",
-            color: "#F59E0B"
-        },
-        { 
-            caseNo: "GAD-2024-003", 
-            type: "Economic Empowerment", 
-            status: "Monitoring", 
-            priority: "Low",
-            date: "Nov 25, 2024",
-            badge: "Ongoing",
-            color: "#10B981"
-        },
-    ];
-
-    const quickActions = [
+    // ONLY 4 MAIN FUNCTIONS
+    const mainActions = [
         {
-            title: "File New Case",
-            subtitle: "Register a new GAD case",
+            title: "File a Report",
+            subtitle: "Submit new case or incident",
             icon: FileText,
-            color: "#0056D2",
+            color: "#7C3AED",
             path: "/user/report",
         },
         {
-            title: "View Reports",
-            subtitle: "Access case analytics",
-            icon: TrendingUp,
+            title: "My Reports",
+            subtitle: "View and track your submissions",
+            icon: ListTodo,
             color: "#10B981",
             path: "/user/reports",
         },
         {
-            title: "Pending Actions",
-            subtitle: `${stats.pendingCases} cases need attention`,
-            icon: AlertCircle,
+            title: "Inbox",
+            subtitle: "Check your messages",
+            icon: Inbox,
+            color: "#0EA5E9",
+            path: "/user/inbox",
+        },
+        {
+            title: "Edit Profile",
+            subtitle: "Update your account information",
+            icon: User,
             color: "#F59E0B",
-            path: "/user/reports",
+            path: "/user/profile",
         },
     ];
 
     return (
-        <div style={{ background: "#F5F5F5", minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+        <div style={{ 
+            background: "linear-gradient(135deg, #f6f8ff 0%, #f0f4ff 100%)", 
+            minHeight: "100vh", 
+            fontFamily: "system-ui, -apple-system, sans-serif" 
+        }}>
           
-
             {/* Main Content */}
-            <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px" }}>
+            <div style={{ 
+                maxWidth: 1200, 
+                margin: "0 auto", 
+                padding: "32px 20px",
+                minHeight: "calc(100vh - 80px)",
+                display: "flex",
+                flexDirection: "column"
+            }}>
+                
                 {/* Welcome Banner */}
                 <div style={{
                     background: "linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)",
-                    borderRadius: 8,
-                    padding: "32px",
+                    borderRadius: 16,
+                    padding: "40px 32px",
                     color: "#fff",
-                    marginBottom: 32,
+                    marginBottom: 48,
+                    boxShadow: "0 10px 30px rgba(124, 58, 237, 0.25)",
                 }}>
-                    <h2 style={{ margin: "0 0 8px 0", fontSize: 28, fontWeight: 600 }}>
+                    <h1 style={{ 
+                        margin: "0 0 12px 0", 
+                        fontSize: 36, 
+                        fontWeight: 700,
+                        letterSpacing: "-0.5px"
+                    }}>
                         Welcome back, {user.name}! 👋
-                    </h2>
-                    <p style={{ margin: 0, fontSize: 16, opacity: 0.9 }}>
-                        {user.role} • {stats.pendingCases} cases require your attention today
+                    </h1>
+                    <p style={{ 
+                        margin: 0, 
+                        fontSize: 18, 
+                        opacity: 0.95,
+                        fontWeight: 400
+                    }}>
+                        {user.role} • GAD Reporting System
                     </p>
                 </div>
 
-                {/* Stats Row */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 32 }}>
-                    {[
-                        { label: "Total Cases", value: stats.totalCases, icon: FileText, change: "+3 this month", color: "#7C3AED" },
-                        { label: "Pending Cases", value: stats.pendingCases, icon: Clock, change: "Need action", color: "#F59E0B" },
-                        { label: "Resolved Cases", value: stats.resolvedCases, icon: CheckCircle, change: "74% resolution rate", color: "#10B981" },
-                        { label: "Active Beneficiaries", value: stats.activeBeneficiaries, icon: Users, change: "+7 this week", color: "#0EA5E9" },
-                    ].map((stat, i) => {
-                        const Icon = stat.icon;
-                        return (
-                            <div key={i} style={{
-                                background: "#fff",
-                                border: "1px solid #E0E0E0",
-                                borderRadius: 8,
-                                padding: 20,
-                                transition: "all 0.2s",
-                                cursor: "pointer",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-                                e.currentTarget.style.transform = "translateY(-2px)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = "none";
-                                e.currentTarget.style.transform = "translateY(0)";
-                            }}>
-                                <div style={{
-                                    width: 48,
-                                    height: 48,
-                                    borderRadius: 8,
-                                    background: `${stat.color}15`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    marginBottom: 12,
-                                }}>
-                                    <Icon size={24} color={stat.color} />
-                                </div>
-                                <div style={{ fontSize: 32, fontWeight: 700, color: "#1F1F1F", marginBottom: 4 }}>
-                                    {stat.value}
-                                </div>
-                                <div style={{ fontSize: 14, color: "#666", marginBottom: 8 }}>{stat.label}</div>
-                                <div style={{ fontSize: 12, color: stat.color, fontWeight: 500 }}>{stat.change}</div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Quick Actions */}
-                <div style={{ marginBottom: 32 }}>
-                    <h3 style={{ fontSize: 20, fontWeight: 600, color: "#1F1F1F", marginBottom: 16 }}>Quick Actions</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-                        {quickActions.map((action, i) => {
+                {/* Main Actions Grid - ONLY 4 FUNCTIONS */}
+                <div style={{ flex: 1 }}>
+                    <h2 style={{ 
+                        fontSize: 24, 
+                        fontWeight: 600, 
+                        color: "#1F1F1F", 
+                        marginBottom: 32,
+                        textAlign: "center"
+                    }}>
+                        What would you like to do today?
+                    </h2>
+                    
+                    <div style={{ 
+                        display: "grid", 
+                        gridTemplateColumns: { 
+                            xs: "1fr",
+                            sm: "repeat(2, 1fr)",
+                            md: "repeat(2, 1fr)",
+                            lg: "repeat(4, 1fr)"
+                        }, 
+                        gap: 24,
+                        maxWidth: 1000,
+                        margin: "0 auto"
+                    }}>
+                        {mainActions.map((action, i) => {
                             const Icon = action.icon;
                             return (
                                 <div
-                                key={i}
-                                onClick={() => navigate(action.path)}
-                                style={{
-                                    background: "#fff",
-                                    border: "1px solid #E0E0E0",
-                                    borderRadius: 8,
-                                    padding: 20,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 16,
-                                    cursor: "pointer",
-                                    transition: "all 0.2s",
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.borderColor = action.color;
-                                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.borderColor = "#E0E0E0";
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}>
+                                    key={i}
+                                    onClick={() => navigate(action.path)}
+                                    style={{
+                                        background: "#fff",
+                                        border: "none",
+                                        borderRadius: 20,
+                                        padding: "32px 24px",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        cursor: "pointer",
+                                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+                                        textAlign: "center",
+                                        height: "100%"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = "translateY(-8px)";
+                                        e.currentTarget.style.boxShadow = `0 20px 40px ${action.color}20, 0 8px 30px rgba(0,0,0,0.12)`;
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)";
+                                        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.06)";
+                                    }}
+                                >
                                     <div style={{
-                                        width: 48,
-                                        height: 48,
-                                        borderRadius: 8,
-                                        background: `${action.color}15`,
+                                        width: 80,
+                                        height: 80,
+                                        borderRadius: 20,
+                                        background: `${action.color}10`,
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
+                                        marginBottom: 24,
+                                        border: `2px solid ${action.color}20`
                                     }}>
-                                        <Icon size={24} color={action.color} />
+                                        <Icon size={40} color={action.color} />
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: 15, fontWeight: 600, color: "#1F1F1F", marginBottom: 4 }}>
-                                            {action.title}
-                                        </div>
-                                        <div style={{ fontSize: 13, color: "#666" }}>
-                                            {action.subtitle}
-                                        </div>
-                                    </div>
-                                    <ChevronRight size={20} color="#999" />
+                                    <h3 style={{ 
+                                        fontSize: 20, 
+                                        fontWeight: 700, 
+                                        color: action.color, 
+                                        marginBottom: 8,
+                                        marginTop: 0
+                                    }}>
+                                        {action.title}
+                                    </h3>
+                                    <p style={{ 
+                                        fontSize: 14, 
+                                        color: "#666",
+                                        lineHeight: 1.5,
+                                        margin: 0
+                                    }}>
+                                        {action.subtitle}
+                                    </p>
                                 </div>
                             );
                         })}
                     </div>
-                </div>
 
-                {/* Recent Cases */}
-                <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                        <h3 style={{ fontSize: 20, fontWeight: 600, color: "#1F1F1F", margin: 0 }}>Recent Cases</h3>
-                        <button
-                            onClick={refreshStats}
-                            disabled={loading}
-                            style={{
-                                padding: "8px 16px",
-                                border: "1px solid #E0E0E0",
-                                borderRadius: 6,
-                                background: "#fff",
-                                color: "#666",
-                                fontSize: 14,
-                                fontWeight: 500,
-                                cursor: loading ? "not-allowed" : "pointer",
-                                transition: "all 0.2s",
-                            }}
-                            onMouseEnter={(e) => !loading && (e.currentTarget.style.borderColor = "#7C3AED")}
-                            onMouseLeave={(e) => !loading && (e.currentTarget.style.borderColor = "#E0E0E0")}
-                        >
-                            {loading ? "Refreshing..." : "Refresh"}
-                        </button>
-                    </div>
-                    
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
-                        {recentCases.map((caseItem, i) => (
-                            <div key={i} style={{
-                                background: "#fff",
-                                border: "1px solid #E0E0E0",
-                                borderRadius: 8,
-                                overflow: "hidden",
-                                cursor: "pointer",
-                                transition: "all 0.2s",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
-                                e.currentTarget.style.transform = "translateY(-4px)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = "none";
-                                e.currentTarget.style.transform = "translateY(0)";
-                            }}>
-                                <div style={{
-                                    height: 6,
-                                    background: caseItem.color,
-                                }} />
-                                
-                                <div style={{ padding: 20 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                                        <div>
-                                            <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                                                {caseItem.date}
-                                            </div>
-                                            <div style={{ fontSize: 16, fontWeight: 700, color: "#1F1F1F" }}>
-                                                {caseItem.caseNo}
-                                            </div>
-                                        </div>
-                                        <div style={{
-                                            background: `${caseItem.color}15`,
-                                            color: caseItem.color,
-                                            padding: "4px 12px",
-                                            borderRadius: 4,
-                                            fontSize: 12,
-                                            fontWeight: 600,
-                                        }}>
-                                            {caseItem.badge}
-                                        </div>
-                                    </div>
-                                    
-                                    <div style={{ fontSize: 15, fontWeight: 600, color: "#1F1F1F", marginBottom: 8 }}>
-                                        {caseItem.type}
-                                    </div>
-                                    
-                                    <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
-                                        Status: {caseItem.status}
-                                    </div>
-                                    
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <AlertTriangle size={14} color={caseItem.color} />
-                                        <span style={{ fontSize: 12, color: caseItem.color, fontWeight: 600 }}>
-                                            {caseItem.priority} Priority
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                    {/* Quick Info */}
+                    <div style={{
+                        marginTop: 64,
+                        padding: "32px",
+                        background: "rgba(255, 255, 255, 0.7)",
+                        borderRadius: 20,
+                        border: "1px solid rgba(124, 58, 237, 0.1)",
+                        textAlign: "center"
+                    }}>
+                        <h3 style={{ 
+                            fontSize: 18, 
+                            fontWeight: 600, 
+                            color: "#7C3AED", 
+                            marginBottom: 12 
+                        }}>
+                            Need Help?
+                        </h3>
+                        <p style={{ 
+                            fontSize: 14, 
+                            color: "#666", 
+                            margin: 0,
+                            lineHeight: 1.6
+                        }}>
+                            If you're unsure about reporting or need assistance,<br />
+                            please contact your supervisor or use the help resources.
+                        </p>
                     </div>
                 </div>
             </div>
