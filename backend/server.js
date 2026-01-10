@@ -55,6 +55,7 @@ app.use("/api/org-chart", require("./routes/organizationalRoutes"));
 app.use("/api/albums", require("./routes/albumRoutes"));
 app.use("/api/research", require("./routes/researchRoutes"));
 app.use("/api/contact", require("./routes/contactRoutes"));
+app.use("/api/datasets", require("./routes/datasetRoutes"));
 
 
 

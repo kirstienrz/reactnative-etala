@@ -1,11 +1,9 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
-// Change this to your backend address
-// const API_BASE_URL = "http://192.168.1.9:5000/api"; 
-const API_BASE_URL = "http://192.168.254.162:5000/api"; 
-// For iOS simulator: http://localhost:5000/api
-// For physical device: replace with your PC's IP
+
+const API_BASE_URL = "http://192.168.1.113:5000/api"; 
+
 
 const API = axios.create({
   baseURL: API_BASE_URL,

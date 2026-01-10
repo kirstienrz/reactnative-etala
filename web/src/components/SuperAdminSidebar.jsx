@@ -114,7 +114,7 @@ const SuperAdminSidebar = () => {
                   <SidebarItem
                     icon={<BarChart3 size={16} />} // Sex-Disaggregated Data icon
                     label="Sex-Disaggregated Data"
-                    to="/superadmin/sexDisaggregated"
+                    to="/superadmin/datasets"
                     indent={true}
                   />
                   <SidebarItem

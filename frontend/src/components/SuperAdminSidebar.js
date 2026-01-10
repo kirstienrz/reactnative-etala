@@ -1,5 +1,5 @@
 // SuperAdminDrawer.js
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from "react-native";
 import { createDrawerNavigator, DrawerContentScrollView } from "@react-navigation/drawer";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,8 @@ import { deleteItem } from "../utils/storage";
 import { 
   LogOut, User, Users, FileText, Repeat, MessageSquare, 
   BarChart3, Image, CalendarDays, BookOpen, Lightbulb, 
-  Newspaper, FileSpreadsheet, FileSignature, Briefcase, DollarSign 
+  Newspaper, FileSpreadsheet, FileSignature, Briefcase, DollarSign,
+  ChevronDown, ChevronRight, Video
 } from "lucide-react-native";
 import 'react-native-get-random-values';
 import { Buffer } from 'buffer';
@@ -30,6 +31,12 @@ import Suggestions from "../screens/superadmin/Suggestions";
 import Exports from "../screens/superadmin/Exports";
 import Templates from "../screens/superadmin/Templates";
 
+// Knowledge Hub sub-screens
+import SexDisaggregatedData from "../screens/superadmin/SexDisaggregatedData";
+import Gallery from "../screens/superadmin/Gallery";
+import Research from "../screens/superadmin/Research";
+import Videos from "../screens/superadmin/Videos";
+
 // Placeholder component for unimplemented screens
 const PlaceholderScreen = ({ route }) => (
   <View style={styles.screen}>
@@ -42,6 +49,9 @@ const Drawer = createDrawerNavigator();
 // Custom Drawer content
 function CustomDrawerContent(props) {
   const insets = useSafeAreaInsets();
+  const [expandedMenus, setExpandedMenus] = useState({
+    knowledgeHub: false
+  });
   
   const handleLogout = async () => {
     Alert.alert(
@@ -66,6 +76,13 @@ function CustomDrawerContent(props) {
         },
       ]
     );
+  };
+
+  const toggleMenu = (menuName) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuName]: !prev[menuName]
+    }));
   };
 
   const currentRoute = props.state?.routes[props.state.index]?.name;
@@ -139,13 +156,72 @@ function CustomDrawerContent(props) {
             navigation={props.navigation}
             isActive={currentRoute === "Carousel"}
           />
-          <DrawerItem 
-            icon={<BookOpen size={18} color={currentRoute === "KnowledgeHub" ? "#fff" : "#9CA3AF"} />}
-            label="Knowledge Hub" 
-            screen="KnowledgeHub"
-            navigation={props.navigation}
-            isActive={currentRoute === "KnowledgeHub"}
-          />
+          
+          {/* KNOWLEDGE HUB WITH SUBMENU */}
+          <View style={styles.menuContainer}>
+            <TouchableOpacity
+              style={[styles.menuButton, currentRoute.includes("Knowledge") && styles.menuButtonActive]}
+              onPress={() => toggleMenu('knowledgeHub')}
+            >
+              <View style={styles.menuButtonContent}>
+                <BookOpen size={18} color={currentRoute.includes("Knowledge") ? "#fff" : "#9CA3AF"} />
+                <Text style={[styles.menuButtonText, currentRoute.includes("Knowledge") && styles.menuButtonTextActive]}>
+                  Knowledge Hub
+                </Text>
+              </View>
+              {expandedMenus.knowledgeHub ? 
+                <ChevronDown size={16} color="#9CA3AF" /> : 
+                <ChevronRight size={16} color="#9CA3AF" />
+              }
+            </TouchableOpacity>
+
+            {/* Submenu Items */}
+            {expandedMenus.knowledgeHub && (
+              <View style={styles.submenuContainer}>
+                <DrawerItem 
+                  icon={<BarChart3 size={16} color={currentRoute === "SexDisaggregated" ? "#fff" : "#9CA3AF"} />}
+                  label="Sex-Disaggregated Data"
+                  screen="SexDisaggregated"
+                  navigation={props.navigation}
+                  isActive={currentRoute === "SexDisaggregated"}
+                  indent={true}
+                />
+                <DrawerItem 
+                  icon={<Image size={16} color={currentRoute === "Infographics" ? "#fff" : "#9CA3AF"} />}
+                  label="Infographics & Posters"
+                  screen="Infographics"
+                  navigation={props.navigation}
+                  isActive={currentRoute === "Infographics"}
+                  indent={true}
+                />
+                <DrawerItem 
+                  icon={<Image size={16} color={currentRoute === "Gallery" ? "#fff" : "#9CA3AF"} />}
+                  label="Gallery"
+                  screen="Gallery"
+                  navigation={props.navigation}
+                  isActive={currentRoute === "Gallery"}
+                  indent={true}
+                />
+                <DrawerItem 
+                  icon={<Video size={16} color={currentRoute === "Videos" ? "#fff" : "#9CA3AF"} />}
+                  label="Videos"
+                  screen="Videos"
+                  navigation={props.navigation}
+                  isActive={currentRoute === "Videos"}
+                  indent={true}
+                />
+                <DrawerItem 
+                  icon={<BookOpen size={16} color={currentRoute === "Research" ? "#fff" : "#9CA3AF"} />}
+                  label="Research"
+                  screen="Research"
+                  navigation={props.navigation}
+                  isActive={currentRoute === "Research"}
+                  indent={true}
+                />
+              </View>
+            )}
+          </View>
+          
           <DrawerItem 
             icon={<Newspaper size={18} color={currentRoute === "News" ? "#fff" : "#9CA3AF"} />}
             label="News & Announcements" 
@@ -166,13 +242,6 @@ function CustomDrawerContent(props) {
             screen="Budget"
             navigation={props.navigation}
             isActive={currentRoute === "Budget"}
-          />
-          <DrawerItem 
-            icon={<BarChart3 size={18} color={currentRoute === "Infographics" ? "#fff" : "#9CA3AF"} />}
-            label="Infographics" 
-            screen="Infographics"
-            navigation={props.navigation}
-            isActive={currentRoute === "Infographics"}
           />
         </DrawerSection>
 
@@ -229,9 +298,13 @@ const DrawerSection = ({ title, children }) => (
 );
 
 // Reusable DrawerItem Component
-const DrawerItem = ({ icon, label, screen, navigation, isActive }) => (
+const DrawerItem = ({ icon, label, screen, navigation, isActive, indent = false }) => (
   <TouchableOpacity
-    style={[styles.drawerItem, isActive && styles.drawerItemActive]}
+    style={[
+      styles.drawerItem, 
+      isActive && styles.drawerItemActive,
+      indent && styles.indentedItem
+    ]}
     onPress={() => navigation.navigate(screen)}
   >
     {icon}
@@ -257,10 +330,14 @@ export default function SuperAdminDrawer() {
         <Drawer.Screen name="Reports" component={Reports} options={{ title: "Report Management" }} />
         <Drawer.Screen name="Referral" component={PlaceholderScreen} options={{ title: "Referral & Assignment" }} />
         <Drawer.Screen name="Messages" component={PlaceholderScreen} options={{ title: "Messaging System" }} />
-        <Drawer.Screen name="Infographics" component={Infographics} options={{ title: "Infographics" }} />
+        <Drawer.Screen name="Infographics" component={Infographics} options={{ title: "Infographics & Posters" }} />
         <Drawer.Screen name="Carousel" component={Carousel} options={{ title: "Carousel" }} />
         <Drawer.Screen name="Events" component={Events} options={{ title: "Calendar" }} />
-        <Drawer.Screen name="KnowledgeHub" component={KnowledgeHub} options={{ title: "Knowledge Hub" }} />
+        <Drawer.Screen name="KnowledgeHub" component={KnowledgeHub} options={{ title: "Knowledge Hub Main" }} />
+        <Drawer.Screen name="SexDisaggregated" component={SexDisaggregatedData} options={{ title: "Sex-Disaggregated Data" }} />
+        <Drawer.Screen name="Gallery" component={Gallery} options={{ title: "Gallery" }} />
+        <Drawer.Screen name="Videos" component={Videos} options={{ title: "Videos" }} />
+        <Drawer.Screen name="Research" component={Research} options={{ title: "Research" }} />
         <Drawer.Screen name="Suggestions" component={Suggestions} options={{ title: "Suggestion Box" }} />
         <Drawer.Screen name="News" component={News} options={{ title: "News & Announcements" }} />
         <Drawer.Screen name="Exports" component={Exports} options={{ title: "Export Reports" }} />
@@ -335,6 +412,50 @@ const styles = StyleSheet.create({
   drawerLabelActive: {
     color: "#fff",
     fontWeight: "600",
+  },
+  indentedItem: {
+    marginLeft: 24,
+    paddingHorizontal: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: "#374151",
+  },
+  menuContainer: {
+    marginBottom: 4,
+  },
+  menuButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginBottom: 4,
+    marginHorizontal: 8,
+  },
+  menuButtonActive: {
+    backgroundColor: "#2563EB",
+  },
+  menuButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  menuButtonText: {
+    fontSize: 15,
+    fontWeight: "400",
+    color: "#E5E7EB",
+    marginLeft: 14,
+  },
+  menuButtonTextActive: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  submenuContainer: {
+    marginLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: "#374151",
+    paddingLeft: 8,
+    marginBottom: 8,
   },
   logoutContainer: {
     borderTopWidth: 1,

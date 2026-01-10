@@ -38,6 +38,7 @@ import PoliciesPage from "./pages/superadmin/Policies";
 import Organizational from "./pages/superadmin/Organizational";
 import GalleryPage from "./pages/superadmin/Gallery";
 import ResearchAdmin from "./pages/superadmin/Research";
+import DatasetPage from "./pages/superadmin/sexData";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProfile from "./pages/admin/Profile";
@@ -124,6 +125,7 @@ const App = () => {
               <Route path="/superadmin/organizational" element={<Organizational />} />
               <Route path="/superadmin/gallery" element={<GalleryPage />} />
               <Route path="/superadmin/research" element={<ResearchAdmin />} />
+              <Route path="/superadmin/datasets" element={<DatasetPage />} />
 
             </Route>
 
