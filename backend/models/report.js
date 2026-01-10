@@ -162,11 +162,11 @@ const reportSchema = new mongoose.Schema({
   confirmConfidentiality: { type: Boolean, default: false },
 
   // Metadata
-  // status: { 
-  //   type: String, 
-  //   enum: ["Pending", "Reviewed", "In Progress", "Resolved", "Closed"],
-  //   default: "Pending" 
-  // },
+  status: { 
+    type: String, 
+    enum: ["Pending", "Reviewed", "In Progress", "Resolved", "Closed"],
+    default: "Pending" 
+  },
   caseStatus: {
     type: String,
     enum: ["For Queuing", "For Interview", "For Appointment", "For Referral", "Case Closed"],

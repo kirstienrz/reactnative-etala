@@ -1,7 +1,11 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 const { uploadReport } = require("../config/multer");
 const auth = require("../middleware/auth");
+
+// ✅ Create multer for PDF upload (in-memory storage)
+const pdfUpload = multer({ storage: multer.memoryStorage() });
 
 const {
   createReport,
@@ -10,12 +14,12 @@ const {
   getAllReports,
   getReportById,
   updateReportStatus,
-  // addReferral,          // ✅ new controller
   archiveReport,
   getArchivedReports,
   restoreReport,
-  discloseReport,      // ✅ new controller
-  updateReportByUser,  // ✅ new controller
+  discloseReport,
+  updateReportByUser, 
+  sendReportPDF,
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -42,8 +46,16 @@ router.patch("/user/disclose/:id", auth(["user", "admin"]), discloseReport);
 // 📌 Update report (after disclosing, editable fields only)
 router.patch("/user/update/:id", auth(["user", "admin"]), updateReportByUser);
 
+// 📌 Alternative disclose route
 router.post("/:id/reveal", auth(["user"]), discloseReport);
 
+// ✅ Send PDF via email (user or admin)
+router.post(
+  "/send-pdf", 
+  auth(["user", "admin", "superadmin"]), 
+  pdfUpload.single('pdf'), 
+  sendReportPDF
+);
 
 // ===================================================================
 // 🧑‍💼 ADMIN ROUTES
@@ -61,15 +73,10 @@ router.get("/admin/:id", auth(["admin", "superadmin"]), getReportById);
 // 📌 Update status
 router.put("/admin/:id/status", auth(["admin", "superadmin"]), updateReportStatus);
 
-// 📌 Add referral (auto-updates status to "In Progress")
-// router.post("/admin/:id/referral", auth(["admin", "superadmin"]), addReferral);
-
 // 📌 Archive report
 router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);
 
 // 📌 Restore archived report
 router.put("/admin/:id/restore", auth(["admin", "superadmin"]), restoreReport);
-
-
 
 module.exports = router;

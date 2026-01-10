@@ -1,503 +1,473 @@
 const Report = require("../models/report");
-const User = require("../models/User");
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
 const Ticket = require("../models/Ticket");
+const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
+const mongoose = require("mongoose");
 
-// ✅ Utility: Generate unique ticket number
-const generateTicketNumber = (isAnonymous) => {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const random = Math.floor(Math.random() * 9999).toString().padStart(4, "0");
-  return `ETALA-${isAnonymous ? "ANON" : "ID"}-${year}${month}-${random}`;
-};
-
+/**
+ * Create a new report
+ * @route POST /api/reports/user/create
+ * @access User, Admin
+ */
 const createReport = async (req, res) => {
   try {
-    const { attachments: _, ...reportData } = req.body;
+    const {
+      incidentType,
+      incidentDate,
+      incidentTime,
+      incidentLocation,
+      description,
+      involvedParties,
+      witnesses,
+      desiredOutcome,
+      isAnonymous,
+    } = req.body;
 
-    const isAnonymous = reportData.isAnonymous === "true" || reportData.isAnonymous === true;
-    const ticketNumber = generateTicketNumber(isAnonymous);
+    // Get user ID from authenticated user
+    const userId = req.user.id;
 
-    // ✅ Build attachments (from Cloudinary or upload middleware)
-    const attachmentObjects = req.files?.map((file) => ({
-      uri: file.path,
-      type: file.mimetype.startsWith("video") ? "video" : "image",
-      fileName: file.originalname,
-    })) || [];
+    // Handle file attachments
+    const attachments = req.files ? req.files.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      path: file.path,
+      mimetype: file.mimetype,
+      size: file.size
+    })) : [];
 
-    // ✅ Convert "field[]" formatted arrays
-    const processedData = { ...reportData };
-    Object.keys(processedData).forEach((key) => {
-      if (key.endsWith("[]")) {
-        const cleanKey = key.slice(0, -2);
-        processedData[cleanKey] = Array.isArray(processedData[key])
-          ? processedData[key]
-          : [processedData[key]];
-        delete processedData[key];
-      }
+    // Create report
+    const report = new Report({
+      incidentType,
+      incidentDate,
+      incidentTime,
+      incidentLocation,
+      description,
+      involvedParties: involvedParties ? JSON.parse(involvedParties) : [],
+      witnesses: witnesses ? JSON.parse(witnesses) : [],
+      desiredOutcome,
+      isAnonymous: isAnonymous === "true" || isAnonymous === true,
+      attachments,
+      createdBy: userId,
+      status: "Pending",
     });
 
-    const newReport = new Report({
-      ...processedData,
-      isAnonymous,
-      createdBy: req.user.id,
-      ticketNumber,
-      attachments: attachmentObjects,
-      timeline: [
-        {
-          action: "Report Created",
-          performedBy: req.user.id,
-          remarks: "Initial submission by user",
-        },
-      ],
-    });
+    await report.save();
 
-    await newReport.save();
+    // Get user info for ticket creation
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    // ✅ ===== AUTO-CREATE TICKET =====
-    const displayName = isAnonymous 
-      ? "Anonymous Reporter" 
-      : `${reportData.firstName || ''} ${reportData.lastName || ''}`.trim() || "Unknown User";
+    // Determine display name for ticket
+    let displayName;
+    if (report.isAnonymous) {
+      displayName = "Anonymous User";
+    } else {
+      displayName = `${user.firstName} ${user.lastName}`;
+    }
 
-    const newTicket = new Ticket({
-      ticketNumber: newReport.ticketNumber,
-      reportId: newReport._id,
-      userId: isAnonymous ? null : req.user.id,
-      isAnonymous,
-      displayName,
+    // Create associated ticket
+    const ticket = new Ticket({
+      reportId: report._id,
+      userId: userId,
+      displayName: displayName,
+      isAnonymous: report.isAnonymous,
       status: "Open",
       lastMessageAt: new Date(),
-      unreadCount: {
-        admin: 0,
-        user: 0
-      }
+      lastMessage: description.substring(0, 100),
     });
 
-    await newTicket.save();
+    await ticket.save();
 
-    // ✅ Optional: Create initial system message
-    const Message = require("../models/message"); // Add this import
-    const systemMessage = new Message({
-      ticketNumber: newReport.ticketNumber,
-      sender: "admin",
-      senderName: "System",
-      messageType: "text",
-      content: `Thank you for submitting your report. Your ticket number is ${newReport.ticketNumber}. Our team will review your case shortly.`,
-      isRead: false
-    });
-
-    await systemMessage.save();
-
-    // Update ticket's unread count for user
-    await Ticket.findOneAndUpdate(
-      { ticketNumber: newReport.ticketNumber },
-      { $inc: { "unreadCount.user": 1 } }
-    );
-    // ✅ ===== END AUTO-CREATE TICKET =====
+    // Update report with ticket number
+    report.ticketNumber = ticket.ticketNumber;
+    await report.save();
 
     res.status(201).json({
       success: true,
-      message: "Report submitted successfully.",
-      ticketNumber: newReport.ticketNumber,
-      data: newReport,
+      message: "Report submitted successfully",
+      report,
+      ticketNumber: ticket.ticketNumber,
     });
   } catch (error) {
-    console.error("Create Report Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create report.",
-      error: error.message,
-    });
+    console.error("Error creating report:", error);
+    res.status(500).json({ message: error.message });
   }
 };
-// ✅ USER: Get all their reports
+
+/**
+ * Get all reports created by the authenticated user
+ * @route GET /api/reports/user/all
+ * @access User, Admin
+ */
 const getUserReports = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status = "", search = "" } = req.query;
+    const userId = req.user.id;
 
-    const query = {
-      createdBy: req.user.id,
-      archived: { $ne: true },
-    };
+    const reports = await Report.find({ createdBy: userId, isArchived: false })
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "firstName lastName email");
 
-    if (status) query.status = status; // <- this is the missing piece
+    res.json(reports);
+  } catch (error) {
+    console.error("Error fetching user reports:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
 
+/**
+ * Get a single report by ID (user must own the report)
+ * @route GET /api/reports/user/:id
+ * @access User, Admin
+ */
+const getUserReportById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const report = await Report.findOne({ _id: id, createdBy: userId })
+      .populate("createdBy", "firstName lastName email");
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    res.json(report);
+  } catch (error) {
+    console.error("Error fetching report:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Get all non-archived reports (admin only)
+ * @route GET /api/reports/admin/all
+ * @access Admin, Superadmin
+ */
+const getAllReports = async (req, res) => {
+  try {
+    const { status, incidentType, search, sortBy = "createdAt" } = req.query;
+
+    let query = { isArchived: false };
+
+    if (status) query.status = status;
+    if (incidentType) query.incidentType = incidentType;
     if (search) {
       query.$or = [
-        { ticketNumber: { $regex: search, $options: "i" } },
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
+        { reportNumber: new RegExp(search, "i") },
+        { description: new RegExp(search, "i") },
+        { incidentLocation: new RegExp(search, "i") },
       ];
     }
 
     const reports = await Report.find(query)
-      .sort({ submittedAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .sort({ [sortBy]: -1 })
+      .populate("createdBy", "firstName lastName email tupId");
 
-    const total = await Report.countDocuments(query);
-
-    res.status(200).json({
-      success: true,
-      data: reports,
-      total,
-    });
+    res.json(reports);
   } catch (error) {
-    console.error("Get User Reports Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch reports.",
-      error: error.message,
-    });
+    console.error("Error fetching all reports:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
-
-// ✅ USER: Get single report
-const getUserReportById = async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid report ID format." 
-      });
-    }
-
-    const report = await Report.findOne({
-      _id: req.params.id,
-      createdBy: req.user.id,
-    });
-
-    if (!report)
-      return res.status(404).json({ success: false, message: "Report not found." });
-
-    res.status(200).json({ success: true, data: report });
-  } catch (error) {
-    console.error("Get User Report Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to fetch report.",
-      error: error.message 
-    });
-  }
-};
-
-// ✅ ADMIN: Get all reports
-const getAllReports = async (req, res) => {
-  try {
-    const reports = await Report.find({ archived: { $ne: true } })
-      .populate({
-        path: "createdBy",
-        select: "tupId firstName lastName email role",
-        options: { strictPopulate: false }
-      })
-      .sort({ submittedAt: 1 });
-
-    res.status(200).json({ success: true, data: reports });
-  } catch (error) {
-    console.error("Get All Reports Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to fetch reports.",
-      error: error.message 
-    });
-  }
-};
-
-// ✅ ADMIN: Get single report
+/**
+ * Get a single report by ID (admin only)
+ * @route GET /api/reports/admin/:id
+ * @access Admin, Superadmin
+ */
 const getReportById = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid report ID format." 
-      });
+    const { id } = req.params;
+
+    const report = await Report.findById(id)
+      .populate("createdBy", "firstName lastName email tupId");
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
     }
 
-    const report = await Report.findById(req.params.id)
-      .populate({
-        path: "createdBy",
-        select: "tupId firstName lastName email role",
-        options: { strictPopulate: false }
-      });
-
-    if (!report)
-      return res.status(404).json({ success: false, message: "Report not found." });
-
-    res.status(200).json({ success: true, data: report });
+    res.json(report);
   } catch (error) {
-    console.error("Get Report By ID Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to fetch report.",
-      error: error.message 
-    });
+    console.error("Error fetching report:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ ADMIN: Update report status + add timeline
+/**
+ * Update report status (admin only)
+ * @route PUT /api/reports/admin/:id/status
+ * @access Admin, Superadmin
+ */
 const updateReportStatus = async (req, res) => {
   try {
-    const { status, remarks, caseStatus } = req.body;
+    const { id } = req.params;
+    const { status, adminNotes } = req.body;
 
-    const validCaseStatuses = ["For Queuing", "For Interview", "For Appointment", "For Referral", "Case Closed"];
-
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid report ID format." });
+    const validStatuses = ["Pending", "Under Review", "Resolved", "Rejected"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
     }
 
-    const report = await Report.findById(req.params.id);
-    if (!report)
-      return res.status(404).json({ success: false, message: "Report not found." });
-
-    // Update main status if provided
-    if (status) {
-      // ❌ REMOVE THIS VALIDATION BLOCK
-      // if (!validStatuses.includes(status)) {
-      //   return res.status(400).json({ success: false, message: "Invalid status." });
-      // }
-
-      report.status = status;
-      report.timeline.push({
-        action: `Status updated to ${status}`,
-        performedBy: req.user.id,
-        remarks: remarks || "",
-      });
+    const updateData = { status };
+    if (adminNotes) updateData.adminNotes = adminNotes;
+    if (status === "Resolved" || status === "Rejected") {
+      updateData.resolvedAt = new Date();
     }
 
-    // Update caseStatus if provided
-    if (caseStatus) {
-      if (!validCaseStatuses.includes(caseStatus)) {
-        return res.status(400).json({ success: false, message: "Invalid case status." });
-      }
+    const report = await Report.findByIdAndUpdate(id, updateData, { new: true })
+      .populate("createdBy", "firstName lastName email");
 
-      report.caseStatus = caseStatus;
-      report.timeline.push({
-        action: `Case status updated to ${caseStatus}`,
-        performedBy: req.user.id,
-        remarks: remarks || "",
-        caseStatus
-      });
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
     }
 
-    report.lastUpdated = new Date();
-    await report.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Status updated successfully.",
-      data: report,
-    });
+    res.json(report);
   } catch (error) {
-    console.error("Update Report Status Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to update status.",
-      error: error.message 
-    });
+    console.error("Error updating report status:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
-
-// // ✅ ADMIN: Add referral record
-// const addReferral = async (req, res) => {
-//   try {
-//     const { department, note } = req.body;
-
-//     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-//       return res.status(400).json({ success: false, message: "Invalid report ID format." });
-//     }
-
-//     const report = await Report.findById(req.params.id);
-//     if (!report)
-//       return res.status(404).json({ success: false, message: "Report not found." });
-
-//     report.referrals.push({
-//       department,
-//       note,
-//       referredBy: req.user.id,
-//       date: new Date(),
-//     });
-
-//     report.timeline.push({
-//       action: `Referred to ${department}`,
-//       performedBy: req.user.id,
-//       remarks: note || "",
-//     });
-
-//     report.lastUpdated = new Date();
-//     report.status = "In Progress";
-
-//     await report.save();
-
-//     res.status(200).json({
-//       success: true,
-//       message: `Report referred to ${department}.`,
-//       data: report,
-//     });
-//   } catch (error) {
-//     console.error("Add Referral Error:", error);
-//     res.status(500).json({ 
-//       success: false, 
-//       message: "Failed to add referral.",
-//       error: error.message 
-//     });
-//   }
-// };
-
-// ✅ ADMIN: Archive report
+/**
+ * Archive a report (admin only)
+ * @route PUT /api/reports/admin/:id/archive
+ * @access Admin, Superadmin
+ */
 const archiveReport = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid report ID format." });
+    const { id } = req.params;
+
+    const report = await Report.findByIdAndUpdate(
+      id,
+      { isArchived: true, archivedAt: new Date() },
+      { new: true }
+    ).populate("createdBy", "firstName lastName email");
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
     }
 
-    const report = await Report.findById(req.params.id);
-    if (!report)
-      return res.status(404).json({ success: false, message: "Report not found." });
-
-    report.archived = true;
-    report.timeline.push({ action: "Report Archived", performedBy: req.user.id });
-    await report.save();
-
-    res.status(200).json({ success: true, message: "Report archived successfully." });
+    res.json({ message: "Report archived successfully", report });
   } catch (error) {
-    console.error("Archive Report Error:", error);
-    res.status(500).json({ success: false, message: "Failed to archive report.", error: error.message });
+    console.error("Error archiving report:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ ADMIN: Get archived reports
+/**
+ * Get all archived reports (admin only)
+ * @route GET /api/reports/admin/archived
+ * @access Admin, Superadmin
+ */
 const getArchivedReports = async (req, res) => {
   try {
-    const archived = await Report.find({ archived: true })
-      .populate({
-        path: "createdBy",
-        select: "tupId firstName lastName email role",
-        options: { strictPopulate: false }
-      })
-      .sort({ submittedAt: -1 })
-      .lean();
+    const reports = await Report.find({ isArchived: true })
+      .sort({ archivedAt: -1 })
+      .populate("createdBy", "firstName lastName email tupId");
 
-    res.status(200).json({ success: true, data: archived });
+    res.json(reports);
   } catch (error) {
-    console.error("Get Archived Reports Error:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch archived reports.", error: error.message });
+    console.error("Error fetching archived reports:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ ADMIN: Restore archived report
+/**
+ * Restore an archived report (admin only)
+ * @route PUT /api/reports/admin/:id/restore
+ * @access Admin, Superadmin
+ */
 const restoreReport = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid report ID format." });
+    const { id } = req.params;
+
+    const report = await Report.findByIdAndUpdate(
+      id,
+      { isArchived: false, $unset: { archivedAt: "" } },
+      { new: true }
+    ).populate("createdBy", "firstName lastName email");
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
     }
 
-    const report = await Report.findById(req.params.id);
-    if (!report)
-      return res.status(404).json({ success: false, message: "Report not found." });
-
-    report.archived = false;
-    report.timeline.push({ action: "Report Restored", performedBy: req.user.id });
-    await report.save();
-
-    res.status(200).json({ success: true, message: "Report restored successfully." });
+    res.json({ message: "Report restored successfully", report });
   } catch (error) {
-    console.error("Restore Report Error:", error);
-    res.status(500).json({ success: false, message: "Failed to restore report.", error: error.message });
+    console.error("Error restoring report:", error);
+    res.status(500).json({ message: error.message });
   }
 };
- const discloseReport = async (req, res) => {
+
+/**
+ * Disclose user identity (user only)
+ * @route PATCH /api/reports/user/disclose/:id
+ * @route POST /api/reports/:id/reveal
+ * @access User, Admin
+ */
+const discloseReport = async (req, res) => {
   try {
-    const reportId = req.params.id;
-    const userId = req.user.id; // from auth middleware
-    const { password } = req.body;
+    const { id } = req.params;
+    const userId = req.user.id;
 
-    if (!password) return res.status(400).json({ message: "Password is required" });
+    // Find the report and verify ownership
+    const report = await Report.findOne({ _id: id, createdBy: userId });
 
-    // Check user role
-    if (req.user.role !== "user") {
-      return res.status(403).json({ message: "Only users can disclose their own report" });
+    if (!report) {
+      return res.status(404).json({ message: "Report not found or access denied" });
     }
 
-    // Verify user password
+    // Check if already disclosed
+    if (!report.isAnonymous) {
+      return res.status(400).json({ message: "Report is already disclosed" });
+    }
+
+    // Get user info
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "Incorrect password" });
-
-    // Fetch report
-    const report = await Report.findById(reportId);
-    if (!report) return res.status(404).json({ message: "Report not found" });
-
-    // Ensure ownership
-    if (report.createdBy.toString() !== userId) {
-      return res.status(403).json({ message: "You can only disclose your own report" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Update isAnonymous
+    // Update report to non-anonymous
     report.isAnonymous = false;
     await report.save();
 
-    res.json({ message: "Identity revealed", report });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    // Update associated ticket
+    if (report.ticketNumber) {
+      const displayName = `${user.firstName} ${user.lastName}`;
+      await Ticket.findOneAndUpdate(
+        { ticketNumber: report.ticketNumber },
+        { 
+          isAnonymous: false,
+          displayName: displayName
+        }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "Identity disclosed successfully",
+      report,
+    });
+  } catch (error) {
+    console.error("Error disclosing report:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
+/**
+ * Update report by user (after disclosing identity)
+ * @route PATCH /api/reports/user/update/:id
+ * @access User, Admin
+ */
 const updateReportByUser = async (req, res) => {
   try {
-    const reportId = req.params.id;
-    const userId = req.user._id;
-    const updates = req.body;
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { description, desiredOutcome } = req.body;
 
-    const report = await Report.findOne({ _id: reportId, createdBy: userId });
-    if (!report) return res.status(404).json({ message: "Report not found" });
+    // Find the report and verify ownership
+    const report = await Report.findOne({ _id: id, createdBy: userId });
 
-    if (report.isAnonymous)
-      return res.status(400).json({ message: "Disclose identity first before editing" });
+    if (!report) {
+      return res.status(404).json({ message: "Report not found or access denied" });
+    }
 
-    if (report.hasEdited)
-      return res.status(400).json({ message: "You can only edit once" });
+    // Only allow updates if report is not anonymous (identity disclosed)
+    if (report.isAnonymous) {
+      return res.status(403).json({ 
+        message: "You must disclose your identity before updating the report" 
+      });
+    }
 
-    // ✅ Allowed fields for editing (everything except incidentDescription & incidentTypes)
-    const editableFields = [
-      "lastName","firstName","middleName","alias","sex","dateOfBirth","age","civilStatus",
-      "educationalAttainment","nationality","passportNo","occupation","religion",
-      "region","province","cityMun","barangay","disability","numberOfChildren","agesOfChildren",
-      "guardianLastName","guardianFirstName","guardianMiddleName","guardianRelationship",
-      "guardianRegion","guardianProvince","guardianCityMun","guardianBarangay","guardianContact",
-      "perpLastName","perpFirstName","perpMiddleName","perpAlias","perpSex","perpDateOfBirth","perpAge",
-      "perpCivilStatus","perpEducation","perpNationality","perpPassport","perpOccupation","perpReligion",
-      "perpRegion","perpProvince","perpCityMun","perpBarangay","perpRelationship",
-      "perpGuardianLastName","perpGuardianFirstName","perpGuardianMiddleName","perpGuardianRelationship",
-      "perpGuardianRegion","perpGuardianProvince","perpGuardianCityMun","perpGuardianBarangay","perpGuardianContact",
-      "crisisIntervention","protectionOrder","referToSWDO","swdoDate","swdoServices",
-      "referToHealthcare","healthcareDate","healthcareProvider","healthcareServices",
-      "referToLawEnforcement","lawDate","lawAgency","referToOther","otherDate","otherProvider","otherService",
-      "attachments","additionalNotes"
-    ];
-
-    // Only apply allowed fields
-    editableFields.forEach(field => {
-      if (updates[field] !== undefined) {
-        report[field] = updates[field];
-      }
-    });
-
-    report.hasEdited = true; // mark as edited
-    report.lastUpdated = new Date();
+    // Update allowed fields
+    if (description) report.description = description;
+    if (desiredOutcome) report.desiredOutcome = desiredOutcome;
 
     await report.save();
 
-    return res.json({ message: "Report updated successfully", report });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Server error" });
+    res.json({
+      success: true,
+      message: "Report updated successfully",
+      report,
+    });
+  } catch (error) {
+    console.error("Error updating report:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Send report PDF via email
+ * @route POST /api/reports/send-pdf
+ * @access User, Admin, Superadmin
+ */
+const sendReportPDF = async (req, res) => {
+  try {
+    const { email, subject, message } = req.body;
+    const pdfFile = req.file;
+
+    // Validate inputs
+    if (!email) {
+      return res.status(400).json({ message: "Email address is required" });
+    }
+
+    if (!pdfFile) {
+      return res.status(400).json({ message: "PDF file is required" });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email address" });
+    }
+
+    // Validate file type
+    if (pdfFile.mimetype !== "application/pdf") {
+      return res.status(400).json({ message: "Only PDF files are allowed" });
+    }
+
+    // Prepare email content
+    const emailSubject = subject || "Report Document";
+    const emailMessage = message || "Please find the attached report document.";
+
+    // Send email with PDF attachment
+    await sendEmail({
+      to: email,
+      subject: emailSubject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Report Document</h2>
+          <p>${emailMessage}</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+            Please find the report document attached to this email.
+          </p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: pdfFile.originalname || "report.pdf",
+          content: pdfFile.buffer,
+          contentType: "application/pdf"
+        }
+      ]
+    });
+
+    console.log(`✉️ Report PDF sent to ${email}`);
+
+    res.json({ 
+      success: true, 
+      message: "Report sent successfully",
+      recipient: email
+    });
+
+  } catch (error) {
+    console.error("❌ Failed to send report PDF:", error);
+    res.status(500).json({ 
+      message: "Failed to send report", 
+      error: error.message 
+    });
   }
 };
 
@@ -508,10 +478,10 @@ module.exports = {
   getAllReports,
   getReportById,
   updateReportStatus,
-  // addReferral,
   archiveReport,
   getArchivedReports,
   restoreReport,
   discloseReport,
   updateReportByUser,
+  sendReportPDF,
 };

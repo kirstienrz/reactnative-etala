@@ -24,9 +24,37 @@ const TicketMessagingSystem = () => {
   const messagesEndRef = useRef(null);
   const menuRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const ticketListRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   
   // 🔥 FIX: Use ref to avoid stale closure
   const selectedTicketRef = useRef(null);
+
+  // ✅ Track read tickets in localStorage (like AdminReports)
+  const [readTickets, setReadTickets] = useState(() => {
+    const stored = localStorage.getItem('adminReadTickets');
+    return stored ? JSON.parse(stored) : [];
+  });
+
+  // ✅ Save read tickets to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('adminReadTickets', JSON.stringify(readTickets));
+  }, [readTickets]);
+
+  // ✅ Helper functions for read/unread status
+  const isTicketRead = (ticketNumber) => {
+    return readTickets.includes(ticketNumber);
+  };
+
+  const markTicketAsReadLocally = (ticketNumber) => {
+    if (!readTickets.includes(ticketNumber)) {
+      setReadTickets([...readTickets, ticketNumber]);
+    }
+  };
+
+  const markTicketAsUnreadLocally = (ticketNumber) => {
+    setReadTickets(readTickets.filter(t => t !== ticketNumber));
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -76,6 +104,10 @@ const TicketMessagingSystem = () => {
         });
       } else {
         console.log('⚠️ Different ticket, updating list only');
+        // ✅ Mark as unread if it's a new message from user
+        if (message.sender === 'user') {
+          markTicketAsUnreadLocally(ticket.ticketNumber);
+        }
       }
 
       // ✅ Always update ticket list with latest data and sort by most recent
@@ -289,6 +321,9 @@ const TicketMessagingSystem = () => {
       await markMessagesAsRead(ticketNumber);
       console.log('✅ Marked ticket as read:', ticketNumber);
       
+      // Update local storage
+      markTicketAsReadLocally(ticketNumber);
+      
       // Update local state
       setTickets(prev => prev.map(t => 
         t.ticketNumber === ticketNumber 
@@ -305,6 +340,9 @@ const TicketMessagingSystem = () => {
     try {
       await markTicketAsUnread(ticketNumber);
       console.log('✅ Marked ticket as unread:', ticketNumber);
+      
+      // Update local storage
+      markTicketAsUnreadLocally(ticketNumber);
       
       // Update will come via socket event, but update local state immediately for responsiveness
       setTickets(prev => prev.map(t => 
@@ -427,12 +465,27 @@ const TicketMessagingSystem = () => {
   const lastAdminMessageIndex = getLastAdminMessageIndex();
 
   return (
-    <div className="flex h-full bg-gray-50">
-      {/* Ticket List Sidebar */}
-      <div className={`${showTicketList ? 'block' : 'hidden'} md:block ${
-        sidebarCollapsed ? 'md:w-16' : 'w-full md:w-80'
-      } bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}>
-        <div className="p-4 border-b border-gray-200">
+    // 🔥 Main container - takes full available height from parent
+    <div className="flex bg-gray-50" style={{ height: '100%', overflow: 'hidden' }}>
+      {/* 🔥 TICKET LIST SIDEBAR - Completely separate scrollable container */}
+      <div 
+        className={`${showTicketList ? 'block' : 'hidden'} md:block ${
+          sidebarCollapsed ? 'md:w-16' : 'w-full md:w-80'
+        } bg-white border-r border-gray-200 transition-all duration-300`}
+        style={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          minHeight: 0
+        }}
+      >
+        {/* FIXED HEADER */}
+        <div 
+          className="p-4 border-b border-gray-200"
+          style={{ 
+            flexShrink: 0
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             {!sidebarCollapsed && (
               <h2 className="text-xl font-bold text-gray-900">Tickets</h2>
@@ -459,7 +512,16 @@ const TicketMessagingSystem = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        {/* SCROLLABLE TICKET LIST */}
+        <div 
+          ref={ticketListRef}
+          style={{ 
+            flex: '1 1 auto',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            minHeight: 0
+          }}
+        >
           {loading ? (
             <div className="flex items-center justify-center p-8">
               <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
@@ -471,8 +533,7 @@ const TicketMessagingSystem = () => {
           ) : (
             <div className="divide-y divide-gray-100">
               {tickets.map((ticket) => {
-                // ✅ Use server-side hasUnreadMessages flag
-                const hasUnread = ticket.hasUnreadMessages;
+                const hasUnread = !isTicketRead(ticket.ticketNumber);
                 const isMenuOpen = openMenuId === ticket.ticketNumber;
                 const isSelected = selectedTicket?.ticketNumber === ticket.ticketNumber;
                 
@@ -577,12 +638,25 @@ const TicketMessagingSystem = () => {
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      {/* 🔥 CHAT AREA - Completely separate scrollable container */}
+      <div 
+        className="flex-1"
+        style={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          minHeight: 0
+        }}
+      >
         {selectedTicket ? (
           <>
-            {/* Chat Header */}
-            <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+            {/* FIXED CHAT HEADER */}
+            <div 
+              className="bg-white border-b border-gray-200 p-4 flex items-center justify-between"
+              style={{ 
+                flexShrink: 0
+              }}
+            >
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowTicketList(true)}
@@ -609,8 +683,17 @@ const TicketMessagingSystem = () => {
               </span>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* SCROLLABLE MESSAGES */}
+            <div 
+              ref={messagesContainerRef}
+              className="p-4 space-y-4"
+              style={{ 
+                flex: '1 1 auto',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                minHeight: 0
+              }}
+            >
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -647,7 +730,6 @@ const TicketMessagingSystem = () => {
                           }`}>
                             {formatTime(msg.createdAt)}
                           </span>
-                          {/* Read indicator for last admin message */}
                           {isCurrentUser && isLastAdminMessage && msg.isRead && (
                             <span className="text-xs text-blue-200">
                               Read
@@ -660,7 +742,6 @@ const TicketMessagingSystem = () => {
                 })
               )}
               
-              {/* Typing Indicator */}
               {typingUser && (
                 <div className="flex justify-start">
                   <div className="bg-gray-200 rounded-lg px-4 py-2">
@@ -674,9 +755,14 @@ const TicketMessagingSystem = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
+            {/* FIXED MESSAGE INPUT */}
             {selectedTicket.status === 'Open' && (
-              <div className="bg-white border-t border-gray-200 p-4">
+              <div 
+                className="bg-white border-t border-gray-200 p-4"
+                style={{ 
+                  flexShrink: 0
+                }}
+              >
                 <div className="flex gap-2">
                   <input
                     type="text"

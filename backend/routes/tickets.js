@@ -6,6 +6,7 @@ const Message = require("../models/message");
 const Report = require("../models/report");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/auth");
+const sendEmail = require("../utils/sendEmail"); // ✉️ Import email utility
 
 // Middlewares
 const authenticateAdmin = authMiddleware(["superadmin"]);
@@ -299,7 +300,9 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     }
     
     // Check if ticket exists
-    const ticket = await Ticket.findOne({ ticketNumber });
+    const ticket = await Ticket.findOne({ ticketNumber })
+      .populate("userId", "firstName lastName email");
+    
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
@@ -311,7 +314,7 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     
     // If user (not admin), verify they own this ticket
     if (userRole !== "superadmin") {
-      if (!ticket.isAnonymous && ticket.userId.toString() !== senderId) {
+      if (!ticket.isAnonymous && ticket.userId._id.toString() !== senderId) {
         return res.status(403).json({ message: "Access denied" });
       }
       // For anonymous tickets, check if user created the report
@@ -335,6 +338,9 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
       ? `${sender.firstName} ${sender.lastName}` 
       : ticket.displayName;
     
+    // ✉️ CHECK IF THIS IS THE FIRST ADMIN REPLY
+    const isFirstAdminReply = isAdmin && !ticket.adminHasReplied;
+    
     const message = new Message({
       ticketNumber,
       sender: isAdmin ? "admin" : "user",
@@ -355,6 +361,10 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     
     if (isAdmin) {
       updateData.$inc = { "unreadCount.user": 1 };
+      // ✅ Mark that admin has replied
+      if (isFirstAdminReply) {
+        updateData.adminHasReplied = true;
+      }
     } else {
       updateData.$inc = { "unreadCount.admin": 1 };
     }
@@ -369,6 +379,35 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     // Convert to plain object with virtuals
     updatedTicket = updatedTicket.toObject({ virtuals: true });
     
+    // ✉️ SEND EMAIL NOTIFICATION ON FIRST ADMIN REPLY
+    if (isFirstAdminReply && ticket.userId?.email) {
+      try {
+        const userEmail = ticket.userId.email;
+        const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
+        
+        await sendEmail({
+          to: userEmail,
+          subject: `Reply to Your Support Ticket #${ticketNumber}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2563eb;">Support Ticket Update</h2>
+              <p>Hi ${userName},</p>
+              <p>Our support team has replied to your ticket <strong>#${ticketNumber}</strong>.</p>
+              <p>Please log in to your account in the GAD Portal to view the message and continue the conversation.</p>
+              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                This is an automated notification. Please do not reply to this email.
+              </p>
+            </div>
+          `
+        });
+        
+        console.log(`✉️ First reply email sent to ${userEmail} for ticket ${ticketNumber}`);
+      } catch (emailError) {
+        console.error("❌ Failed to send first reply email:", emailError);
+        // Don't fail the request if email fails
+      }
+    }
+    
     // 🔥 EMIT SOCKET EVENT FOR NEW MESSAGE
     const io = req.app.get("io");
     io.to(`ticket-${ticketNumber}`).emit("new-message", {
@@ -379,8 +418,8 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     // 🔥 EMIT EVENT FOR TICKET LIST UPDATE (for admins/users to see unread counts)
     if (isAdmin) {
       console.log('📤 Admin sent message, emitting to user room');
-      console.log('👤 User ID:', ticket.userId);
-      console.log('📍 Room name:', `user-${ticket.userId}`);
+      console.log('👤 User ID:', ticket.userId._id);
+      console.log('📍 Room name:', `user-${ticket.userId._id}`);
       console.log('📊 Ticket data being sent:', {
         ticketNumber: updatedTicket.ticketNumber,
         unreadCount: updatedTicket.unreadCount,
@@ -388,14 +427,14 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
       });
       
       // Check if anyone is in the user room
-      const userRoom = io.sockets.adapter.rooms.get(`user-${ticket.userId}`);
+      const userRoom = io.sockets.adapter.rooms.get(`user-${ticket.userId._id}`);
       console.log('📊 User room status:', {
         exists: !!userRoom,
         size: userRoom ? userRoom.size : 0,
         sockets: userRoom ? Array.from(userRoom) : []
       });
       
-      io.to(`user-${ticket.userId}`).emit("ticket-updated", updatedTicket);
+      io.to(`user-${ticket.userId._id}`).emit("ticket-updated", updatedTicket);
       console.log('✅ Emitted ticket-updated to user room');
     } else {
       io.to("admin-room").emit("ticket-updated", updatedTicket);

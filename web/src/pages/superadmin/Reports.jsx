@@ -1050,7 +1050,7 @@ const AdminReports = () => {
                             </div>
                           )}
                         </div>
-                        <div className="mt-3">
+                        {/* <div className="mt-3">
                           <button
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
                             onClick={() => handleMessageUser(selectedReport)}
@@ -1058,7 +1058,7 @@ const AdminReports = () => {
                             <MessageSquare size={16} />
                             Message User
                           </button>
-                        </div>
+                        </div> */}
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-4 text-sm">

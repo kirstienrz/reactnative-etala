@@ -96,6 +96,51 @@ export const generateReportPDF = ({ formData, ticketNumber, isAnonymous }) => {
     { align: "center" }
   );
 
-  // ===== DOWNLOAD =====
+  // ✅ AUTO-DOWNLOAD PDF
   doc.save(`TUP_GAD_Report_${ticketNumber}.pdf`);
+
+  // ✅ RETURN PDF BLOB for sending to backend
+  return doc.output('blob');
+};
+
+// ✅ Function to send PDF to backend via email
+// Email is automatically pulled from logged-in user's account
+export const sendPDFToEmail = async (pdfBlob, ticketNumber, userEmail = null) => {
+  try {
+    const formData = new FormData();
+    formData.append('pdf', pdfBlob, `TUP_GAD_Report_${ticketNumber}.pdf`);
+    formData.append('ticketNumber', ticketNumber);
+    
+    // Optional: only include if you want to override the user's registered email
+    if (userEmail) {
+      formData.append('userEmail', userEmail);
+    }
+    
+    // Get the token from localStorage
+    const token = localStorage.getItem('token');
+    
+    // Use the same base URL as your API config
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    
+    const response = await fetch(`${baseURL}/reports/send-pdf`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Don't set Content-Type - let the browser set it with boundary for multipart/form-data
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send PDF via email');
+    }
+    
+    const result = await response.json();
+    console.log('📧 Email sent to:', result.emailSentTo);
+    return result;
+  } catch (error) {
+    console.error('Error sending PDF to email:', error);
+    throw error;
+  }
 };
