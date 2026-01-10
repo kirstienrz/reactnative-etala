@@ -16,6 +16,32 @@ const Inbox = () => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
 
+  // ✅ Track read tickets in localStorage (like AdminReports)
+  const [readTickets, setReadTickets] = useState(() => {
+    const stored = localStorage.getItem('userReadTickets');
+    return stored ? JSON.parse(stored) : [];
+  });
+
+  // ✅ Save read tickets to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('userReadTickets', JSON.stringify(readTickets));
+  }, [readTickets]);
+
+  // ✅ Helper functions for read/unread status
+  const isTicketRead = (ticketNumber) => {
+    return readTickets.includes(ticketNumber);
+  };
+
+  const markTicketAsReadLocally = (ticketNumber) => {
+    if (!readTickets.includes(ticketNumber)) {
+      setReadTickets([...readTickets, ticketNumber]);
+    }
+  };
+
+  const markTicketAsUnreadLocally = (ticketNumber) => {
+    setReadTickets(readTickets.filter(t => t !== ticketNumber));
+  };
+
   useEffect(() => {
     if (currentUserId) {
       fetchTickets();
@@ -50,9 +76,30 @@ const Inbox = () => {
       // Update ticket list with latest data and sort by most recent
       setTickets(prev => {
         console.log('📊 Current tickets count:', prev.length);
-        const updatedTickets = prev.map(t => 
-          t.ticketNumber === ticket.ticketNumber ? ticket : t
-        );
+        
+        // Check if this is a completely new ticket (not in the list yet)
+        const existingTicket = prev.find(t => t.ticketNumber === ticket.ticketNumber);
+        
+        let updatedTickets;
+        if (!existingTicket) {
+          // 🆕 NEW TICKET: Add it to the list and mark as UNREAD
+          console.log('🆕 New ticket detected, adding to inbox as unread');
+          updatedTickets = [ticket, ...prev];
+          
+          // 🔥 Mark new tickets as unread in localStorage
+          markTicketAsUnreadLocally(ticket.ticketNumber);
+        } else {
+          // Existing ticket: update it
+          updatedTickets = prev.map(t => 
+            t.ticketNumber === ticket.ticketNumber ? ticket : t
+          );
+          
+          // 🔥 If message is from admin, mark as unread
+          if (message.sender === 'admin') {
+            console.log('📨 Admin replied, marking as unread');
+            markTicketAsUnreadLocally(ticket.ticketNumber);
+          }
+        }
         
         // 🔥 Sort tickets: most recent message first (like Messenger)
         const sorted = [...updatedTickets].sort((a, b) => {
@@ -77,14 +124,26 @@ const Inbox = () => {
       
       setTickets(prev => {
         console.log('📊 Updating ticket in list...');
-        // Update the ticket in the list
-        const newTickets = prev.map(t => {
-          if (t.ticketNumber === updatedTicket.ticketNumber) {
-            console.log('✅ Found matching ticket, updating');
-            return updatedTicket;
-          }
-          return t;
-        });
+        
+        // Check if this ticket exists in the list
+        const existingTicket = prev.find(t => t.ticketNumber === updatedTicket.ticketNumber);
+        
+        let newTickets;
+        if (!existingTicket) {
+          // 🆕 NEW TICKET: Add it to the list and mark as UNREAD
+          console.log('🆕 New ticket detected via update event, adding to inbox as unread');
+          newTickets = [updatedTicket, ...prev];
+          markTicketAsUnreadLocally(updatedTicket.ticketNumber);
+        } else {
+          // Update the existing ticket
+          console.log('✅ Found matching ticket, updating');
+          newTickets = prev.map(t => {
+            if (t.ticketNumber === updatedTicket.ticketNumber) {
+              return updatedTicket;
+            }
+            return t;
+          });
+        }
         
         // 🔥 Sort tickets: most recent message first
         const sorted = [...newTickets].sort((a, b) => {
@@ -186,11 +245,14 @@ const Inbox = () => {
     });
   };
 
-  // ✅ Mark ticket as read on server
+  // ✅ Mark ticket as read on server AND locally
   const markTicketAsRead = async (ticketNumber) => {
     try {
       await markMessagesAsRead(ticketNumber);
       console.log('✅ Marked ticket as read:', ticketNumber);
+      
+      // Update localStorage
+      markTicketAsReadLocally(ticketNumber);
       
       // Update local state immediately for responsiveness
       setTickets(prev => prev.map(t => 
@@ -203,10 +265,12 @@ const Inbox = () => {
     }
   };
 
-  // ❌ Mark ticket as unread (local only - user doesn't have unread endpoint)
+  // ❌ Mark ticket as unread (localStorage only since no backend endpoint)
   const markTicketAsUnread = (ticketNumber) => {
-    // For user inbox, we just update local state since there's no backend endpoint
-    // This is cosmetic only and will reset on refresh
+    // Update localStorage
+    markTicketAsUnreadLocally(ticketNumber);
+    
+    // Update local state
     setTickets(prev => prev.map(t => 
       t.ticketNumber === ticketNumber 
         ? { ...t, unreadCount: { ...t.unreadCount, user: 1 } } 
@@ -274,8 +338,8 @@ const Inbox = () => {
                 const timeStamp = ticket.lastMessageAt ? formatTime(ticket.lastMessageAt) : '';
                 const ticketNumber = ticket.ticketNumber;
                 
-                // ✅ Use server-side unreadCount.user for read/unread status
-                const hasUnread = ticket.unreadCount?.user > 0;
+                // ✅ Check localStorage first, then fall back to server unreadCount
+                const hasUnread = !isTicketRead(ticketNumber) || (ticket.unreadCount?.user > 0);
                 const isMenuOpen = openMenuId === ticketNumber;
 
                 return (

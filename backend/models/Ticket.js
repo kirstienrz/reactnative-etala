@@ -55,6 +55,10 @@ const ticketSchema = new mongoose.Schema(
     closedReason: {
       type: String,
     },
+    adminHasReplied: {
+      type: Boolean,
+      default: false
+    },
   },
   {
     timestamps: true,

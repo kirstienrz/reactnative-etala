@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft, Save, Calendar, ChevronDown, Check, User, UserX,
-  Upload, X, Image as ImageIcon, Video, Info, Shield, AlertCircle, FileText, Lock
+  ArrowLeft, Save, Calendar, ChevronDown, Check, Upload, X, 
+  Image as ImageIcon, Video, Info, Shield, AlertCircle, FileText
 } from 'lucide-react';
 import { createReport } from '../../api/report';
-import { generateReportPDF } from '../../utils/generateReportPDF';
-
+import { generateReportPDF, sendPDFToEmail } from '../../utils/generateReportPDF';
 
 const ReportForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
   const [savedProgress, setSavedProgress] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -19,7 +17,7 @@ const ReportForm = () => {
   const [dropdownOptions, setDropdownOptions] = useState([]);
 
   const [formData, setFormData] = useState({
-    // Victim-Survivor Information
+    // Reporter/Victim Information (all optional now)
     lastName: '', firstName: '', middleName: '', alias: '', sex: '',
     dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
     nationality: '', passportNo: '', occupation: '', religion: '',
@@ -28,9 +26,9 @@ const ReportForm = () => {
     guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
     guardianRelationship: '', guardianRegion: '', guardianProvince: '',
     guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-
-    // Anonymous Reporter Info
-    reporterRole: '', tupRole: '', anonymousGender: '', anonymousDepartment: '',
+    
+    // Reporter Context
+    reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
 
     // Perpetrator Information
     perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
@@ -38,9 +36,6 @@ const ReportForm = () => {
     perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
     perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
     perpBarangay: '', perpRelationship: '',
-    perpGuardianLastName: '', perpGuardianFirstName: '', perpGuardianMiddleName: '',
-    perpGuardianRelationship: '', perpGuardianRegion: '', perpGuardianProvince: '',
-    perpGuardianCityMun: '', perpGuardianBarangay: '', perpGuardianContact: '',
 
     // Incident Information
     incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
@@ -53,7 +48,7 @@ const ReportForm = () => {
     confirmConfidentiality: false,
   });
 
-  const totalSteps = 6;
+  const totalSteps = 4;
 
   const regions = ['NCR', 'Region I', 'Region II', 'Region III', 'Region IV-A', 'Region IV-B', 'Region V', 'Region VI', 'Region VII', 'Region VIII', 'Region IX', 'Region X', 'Region XI', 'Region XII', 'Region XIII', 'CAR', 'BARMM'];
   const civilStatuses = ['Single', 'Married', 'Live In', 'Widowed', 'Separated'];
@@ -78,7 +73,6 @@ const ReportForm = () => {
     'Other'
   ];
 
-  // Load saved progress from localStorage
   useEffect(() => {
     loadSavedProgress();
   }, []);
@@ -89,7 +83,6 @@ const ReportForm = () => {
       if (saved) {
         const data = JSON.parse(saved);
         setFormData(data.formData);
-        setIsAnonymous(data.isAnonymous);
         setCurrentStep(data.currentStep);
         setSavedProgress(true);
       }
@@ -102,7 +95,6 @@ const ReportForm = () => {
     try {
       localStorage.setItem('reportProgress', JSON.stringify({
         formData,
-        isAnonymous,
         currentStep,
         savedAt: new Date().toISOString(),
       }));
@@ -173,121 +165,112 @@ const ReportForm = () => {
   };
 
   const handleSubmit = async () => {
-    // Validate before submitting
-    if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
-      showAlert('Required', 'Please confirm all statements before submitting.');
-      return;
-    }
+  if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
+    showAlert('Required', 'Please confirm all statements before submitting.');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const submitData = new FormData();
-      submitData.append('isAnonymous', String(isAnonymous));
+  setLoading(true);
+  try {
+    const submitData = new FormData();
+    
+    // Determine if anonymous based on whether personal info is provided
+    const isAnonymous = !formData.firstName && !formData.lastName;
+    submitData.append('isAnonymous', String(isAnonymous));
 
-      // Append all form data
-      Object.keys(formData).forEach(key => {
-        if (key === 'attachments') return;
-        const value = formData[key];
-        if (Array.isArray(value)) {
-          value.forEach(item => submitData.append(`${key}[]`, item));
-        } else if (typeof value === 'boolean') {
-          submitData.append(key, value.toString());
-        } else if (value !== '' && value !== null && value !== undefined) {
-          submitData.append(key, value.toString());
-        }
-      });
-
-      // Append attachments
-      formData.attachments.forEach(attachment => {
-        submitData.append('attachments', attachment.file);
-      });
-
-      // ✅ SUBMIT REPORT
-      const response = await createReport(submitData);
-
-      // ============================
-      // 🧾 PDF DOWNLOAD (RIGHT HERE)
-      // ============================
-      const ticketNumber =
-        response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
-
-      generateReportPDF({
-        formData,     // use current form data (NOT reset yet)
-        ticketNumber,
-        isAnonymous,
-      });
-
-      // ============================
-      // CLEAR & FEEDBACK
-      // ============================
-      await clearProgress();
-
-      showAlert(
-        'Report Submitted Successfully',
-        `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy of your report has been downloaded as a PDF.`
-      );
-
-      // ============================
-      // RESET FORM (LAST STEP)
-      // ============================
-      setCurrentStep(1);
-      setIsAnonymous(false);
-      setFormData({
-        lastName: '', firstName: '', middleName: '', alias: '', sex: '',
-        dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
-        nationality: '', passportNo: '', occupation: '', religion: '',
-        region: '', province: '', cityMun: '', barangay: '',
-        disability: '', numberOfChildren: '', agesOfChildren: '',
-        guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
-        guardianRelationship: '', guardianRegion: '', guardianProvince: '',
-        guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-        reporterRole: '', tupRole: '', anonymousGender: '', anonymousDepartment: '',
-        perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
-        perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
-        perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
-        perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
-        perpBarangay: '', perpRelationship: '',
-        perpGuardianLastName: '', perpGuardianFirstName: '', perpGuardianMiddleName: '',
-        perpGuardianRelationship: '', perpGuardianRegion: '', perpGuardianProvince: '',
-        perpGuardianCityMun: '', perpGuardianBarangay: '', perpGuardianContact: '',
-        incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
-        incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
-        placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
-        witnessAccount: '', witnessDate: '',
-        attachments: [], additionalNotes: '', confirmAccuracy: false,
-        confirmConfidentiality: false,
-      });
-
-    } catch (error) {
-      console.error('Submit error:', error);
-      let errorMessage = 'Failed to submit report. Please try again.';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+    Object.keys(formData).forEach(key => {
+      if (key === 'attachments') return;
+      const value = formData[key];
+      if (Array.isArray(value)) {
+        value.forEach(item => submitData.append(`${key}[]`, item));
+      } else if (typeof value === 'boolean') {
+        submitData.append(key, value.toString());
+      } else if (value !== '' && value !== null && value !== undefined) {
+        submitData.append(key, value.toString());
       }
-      showAlert('Error', errorMessage);
-    } finally {
-      setLoading(false);
+    });
+
+    formData.attachments.forEach(attachment => {
+      submitData.append('attachments', attachment.file);
+    });
+
+    // ✅ STEP 1: Submit the report
+    const response = await createReport(submitData);
+    const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+
+    // ✅ STEP 2: Generate PDF - This will auto-download
+    const pdfBlob = generateReportPDF({
+      formData,
+      ticketNumber,
+      isAnonymous,
+    });
+
+    // ✅ STEP 3: Send PDF via Email
+    // Backend will automatically use the logged-in user's email from the User model
+    try {
+      await sendPDFToEmail(pdfBlob, ticketNumber);
+      console.log('✅ PDF sent to your registered email successfully');
+    } catch (emailError) {
+      console.error('❌ Failed to send PDF email:', emailError);
+      // Don't fail the whole submission if email fails
+      showAlert(
+        'Report Submitted',
+        `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nNote: Email delivery failed. Please download the PDF manually.`
+      );
     }
-  };
+
+    await clearProgress();
+
+    showAlert(
+      'Report Submitted Successfully',
+      `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy has been downloaded and sent to your registered email.`
+    );
+
+    // Reset form
+    setCurrentStep(1);
+    setFormData({
+      lastName: '', firstName: '', middleName: '', alias: '', sex: '',
+      dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
+      nationality: '', passportNo: '', occupation: '', religion: '',
+      region: '', province: '', cityMun: '', barangay: '',
+      disability: '', numberOfChildren: '', agesOfChildren: '',
+      guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
+      guardianRelationship: '', guardianRegion: '', guardianProvince: '',
+      guardianCityMun: '', guardianBarangay: '', guardianContact: '',
+      reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
+      perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
+      perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
+      perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
+      perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
+      perpBarangay: '', perpRelationship: '',
+      incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+      incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
+      placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
+      witnessAccount: '', witnessDate: '',
+      attachments: [], additionalNotes: '', confirmAccuracy: false,
+      confirmConfidentiality: false,
+    });
+
+  } catch (error) {
+    console.error('Submit error:', error);
+    let errorMessage = 'Failed to submit report. Please try again.';
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+    showAlert('Error', errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const validateStep = () => {
     if (currentStep === 1) {
-      return true;
-    }
-    if (currentStep === 2) {
-      if (!isAnonymous) {
-        if (!formData.lastName || !formData.firstName || !formData.sex || !formData.age) {
-          showAlert('Required', 'Please fill in all required fields (Name, Sex, Age).');
-          return false;
-        }
-      } else {
-        if (!formData.reporterRole || !formData.tupRole) {
-          showAlert('Required', 'Please fill in all required fields (Reporter Role & TUP Role).');
-          return false;
-        }
+      if (!formData.reporterRole || !formData.tupRole) {
+        showAlert('Required', 'Please provide your role and TUP affiliation.');
+        return false;
       }
     }
-    if (currentStep === 5) {
+    if (currentStep === 2) {
       if (formData.incidentTypes.length === 0 || !formData.latestIncidentDate) {
         showAlert('Required', 'Please select at least one incident type and provide the date.');
         return false;
@@ -335,11 +318,9 @@ const ReportForm = () => {
 
   const getStepTitle = () => {
     const titles = [
-      "Reporting Mode",
-      isAnonymous ? "Reporter Context" : "Victim-Survivor Information",
-      isAnonymous ? "Perpetrator Information" : "Guardian Information",
-      isAnonymous ? "Incident Details" : "Perpetrator Information",
-      isAnonymous ? "Review & Submit" : "Incident Details",
+      "Reporter Information",
+      "Incident Details",
+      "Perpetrator & Witness Information",
       "Review & Submit"
     ];
     return titles[currentStep - 1] || "";
@@ -375,157 +356,34 @@ const ReportForm = () => {
     </div>
   );
 
-  const renderAnonymitySelection = () => (
+  const renderReporterInfo = () => (
     <div style={styles.stepContainer}>
-      <div style={{ textAlign: 'center', marginBottom: '48px', paddingTop: '20px' }}>
-        <div style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '40px',
-          backgroundColor: styles.colors.ultraLightBackground,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 24px',
-          border: `1px solid ${styles.colors.border}`,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
-        }}>
-          <Shield size={40} color={styles.colors.primary} />
-        </div>
-        <h2 style={styles.stepTitle}>Choose Reporting Mode</h2>
-        <p style={styles.stepSubtitle}>Select how you would like to submit your report</p>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
-        <div
-          style={{
-            ...styles.anonymityCard,
-            borderColor: isAnonymous ? styles.colors.primary : styles.colors.border,
-            backgroundColor: isAnonymous ? styles.colors.ultraLightBackground : 'white',
-            boxShadow: isAnonymous ? '0 4px 20px rgba(37, 99, 235, 0.1)' : '0 2px 8px rgba(0, 0, 0, 0.04)'
-          }}
-          onClick={() => setIsAnonymous(true)}
-        >
+      <div style={styles.sectionCard}>
+        <div style={styles.sectionHeader}>
           <div style={{
-            ...styles.anonymityIconContainer,
-            backgroundColor: isAnonymous ? styles.colors.primary : styles.colors.ultraLightBackground,
-            boxShadow: isAnonymous ? '0 4px 12px rgba(37, 99, 235, 0.2)' : '0 2px 6px rgba(0, 0, 0, 0.05)'
+            width: '64px',
+            height: '64px',
+            borderRadius: '32px',
+            backgroundColor: styles.colors.ultraLightBackground,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px',
+            border: `1px solid ${styles.colors.border}`,
           }}>
-            <UserX size={28} color={isAnonymous ? 'white' : styles.colors.textSecondary} />
+            <Shield size={32} color={styles.colors.primary} />
           </div>
-          <div style={styles.anonymityContent}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{
-                ...styles.anonymityTitle,
-                color: isAnonymous ? styles.colors.primary : styles.colors.textPrimary
-              }}>
-                Anonymous Report
-              </h3>
-            </div>
-            <ul style={styles.featureList}>
-              <li>Your identity remains confidential</li>
-              <li>Secure tracking number provided</li>
-              <li>No personal information required</li>
-            </ul>
-          </div>
-          {isAnonymous && (
-            <div style={styles.checkCircle}>
-              <Check size={20} color="white" />
-            </div>
-          )}
+          <h3 style={{ ...styles.sectionTitle, textAlign: 'center', fontSize: '24px' }}>Your Information</h3>
+          <p style={{ ...styles.sectionDescription, textAlign: 'center', marginBottom: '32px' }}>
+            Help us understand your situation better. All fields are optional except your role.
+          </p>
         </div>
 
-        <div
-          style={{
-            ...styles.anonymityCard,
-            borderColor: !isAnonymous ? styles.colors.primary : styles.colors.border,
-            backgroundColor: !isAnonymous ? styles.colors.ultraLightBackground : 'white',
-            boxShadow: !isAnonymous ? '0 4px 20px rgba(37, 99, 235, 0.1)' : '0 2px 8px rgba(0, 0, 0, 0.04)'
-          }}
-          onClick={() => setIsAnonymous(false)}
-        >
-          <div style={{
-            ...styles.anonymityIconContainer,
-            backgroundColor: !isAnonymous ? styles.colors.primary : styles.colors.ultraLightBackground,
-            boxShadow: !isAnonymous ? '0 4px 12px rgba(37, 99, 235, 0.2)' : '0 2px 6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <User size={28} color={!isAnonymous ? 'white' : styles.colors.textSecondary} />
-          </div>
-          <div style={styles.anonymityContent}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{
-                ...styles.anonymityTitle,
-                color: isAnonymous ? styles.colors.primary : styles.colors.textPrimary
-              }}>
-                Identified Report
-              </h3>
-              <div style={{
-                marginLeft: '12px',
-                padding: '4px 8px',
-                backgroundColor: styles.colors.lightBackground,
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: '600',
-                color: styles.colors.primary,
-                letterSpacing: '0.5px'
-              }}>
-                RECOMMENDED
-              </div>
-            </div>
-            <ul style={styles.featureList}>
-              <li>Enables follow-up support</li>
-              <li>Access to full services</li>
-              <li>Strict confidentiality maintained</li>
-            </ul>
-          </div>
-          {!isAnonymous && (
-            <div style={styles.checkCircle}>
-              <Check size={20} color="white" />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={styles.importantNote}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-          <Info size={18} color={styles.colors.textSecondary} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
           <div>
-            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
-              Important Information
-            </p>
-            <p style={{ margin: 0, fontSize: '13px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
-              All reports are handled with strict confidentiality by the TUP GAD Office.
-              False reporting may result in legal consequences under RA 11313 (Safe Spaces Act).
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {savedProgress && (
-        <div style={styles.savedProgressBanner}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-            <Info size={18} color={styles.colors.success} />
-            <div>
-              <span style={styles.savedProgressText}>Saved progress detected</span>
-              <p style={{ fontSize: '13px', color: styles.colors.textSecondary, margin: '4px 0 0 0' }}>
-                You can continue where you left off. Your data is saved locally on this device.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderVictimInfo = () => (
-    <div style={styles.stepContainer}>
-      {isAnonymous ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Your Role & Context</h3>
-              <p style={styles.sectionDescription}>Required information for anonymous reports</p>
-            </div>
+            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: styles.colors.textPrimary }}>
+              Required Context
+            </h4>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>
                 Are you reporting as
@@ -564,17 +422,16 @@ const ReportForm = () => {
             </div>
           </div>
 
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Optional Information</h3>
-              <p style={styles.sectionDescription}>Additional context for better assistance</p>
-            </div>
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: styles.colors.textPrimary }}>
+              Optional Details
+            </h4>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Gender (optional)</label>
+              <label style={styles.inputLabel}>Gender</label>
               <select
                 style={styles.selectInput}
-                value={formData.anonymousGender}
-                onChange={(e) => setFormData(prev => ({ ...prev, anonymousGender: e.target.value }))}
+                value={formData.reporterGender}
+                onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
               >
                 <option value="">Prefer not to say</option>
                 <option value="Female">Female</option>
@@ -584,260 +441,34 @@ const ReportForm = () => {
               </select>
             </div>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>College/Department (optional)</label>
+              <label style={styles.inputLabel}>College/Department</label>
               <input
                 style={styles.input}
                 placeholder="e.g., College of Engineering"
-                value={formData.anonymousDepartment}
-                onChange={(e) => setFormData(prev => ({ ...prev, anonymousDepartment: e.target.value }))}
+                value={formData.reporterDepartment}
+                onChange={(e) => setFormData(prev => ({ ...prev, reporterDepartment: e.target.value }))}
               />
             </div>
           </div>
         </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
-          <div>
-            <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitle}>Personal Information</h3>
-                <p style={styles.sectionDescription}>Basic identification details</p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    Last Name
-                    <span style={styles.requiredStar}> *</span>
-                  </label>
-                  <input
-                    style={styles.input}
-                    placeholder="Enter last name"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    First Name
-                    <span style={styles.requiredStar}> *</span>
-                  </label>
-                  <input
-                    style={styles.input}
-                    placeholder="Enter first name"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                  />
-                </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>Middle Name</label>
-                  <input
-                    style={styles.input}
-                    placeholder="Enter middle name"
-                    value={formData.middleName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, middleName: e.target.value }))}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>Alias (if any)</label>
-                  <input
-                    style={styles.input}
-                    placeholder="Enter alias"
-                    value={formData.alias}
-                    onChange={(e) => setFormData(prev => ({ ...prev, alias: e.target.value }))}
-                  />
-                </div>
-              </div>
+        <div style={{ borderTop: `1px solid ${styles.colors.border}`, paddingTop: '32px' }}>
+          <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: styles.colors.textPrimary }}>
+            Personal Information (Optional)
+          </h4>
+          <p style={{ fontSize: '13px', color: styles.colors.textSecondary, marginBottom: '24px', lineHeight: '1.6' }}>
+            Providing your personal information helps us provide better support and follow-up. 
+            Leave blank if you wish to remain anonymous.
+          </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    Sex
-                    <span style={styles.requiredStar}> *</span>
-                  </label>
-                  <div style={styles.optionGroup}>
-                    {['Male', 'Female'].map(sex => (
-                      <button
-                        key={sex}
-                        type="button"
-                        style={{
-                          ...styles.optionButton,
-                          backgroundColor: formData.sex === sex ? styles.colors.primary : 'white',
-                          color: formData.sex === sex ? 'white' : styles.colors.textPrimary,
-                          borderColor: formData.sex === sex ? styles.colors.primary : styles.colors.border,
-                          boxShadow: formData.sex === sex ? '0 2px 4px rgba(37, 99, 235, 0.2)' : 'none'
-                        }}
-                        onClick={() => setFormData(prev => ({ ...prev, sex }))}
-                      >
-                        {sex}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>
-                    Age
-                    <span style={styles.requiredStar}> *</span>
-                  </label>
-                  <input
-                    style={styles.input}
-                    placeholder="Enter age"
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={formData.age}
-                    onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.sectionCard}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitle}>Address Information</h3>
-                <p style={styles.sectionDescription}>Current residential address</p>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Region</label>
-                <div style={styles.dropdownInput} onClick={() => showDropdown('region', regions)}>
-                  <span style={{ color: !formData.region ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                    {formData.region || 'Select region'}
-                  </span>
-                  <ChevronDown size={20} color={styles.colors.textSecondary} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '12px' }}>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>Province</label>
-                  <input
-                    style={styles.input}
-                    placeholder="Enter province"
-                    value={formData.province}
-                    onChange={(e) => setFormData(prev => ({ ...prev, province: e.target.value }))}
-                  />
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.inputLabel}>City/Municipality</label>
-                  <input
-                    style={styles.input}
-                    placeholder="Enter city/municipality"
-                    value={formData.cityMun}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cityMun: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Barangay</label>
-                <input
-                  style={styles.input}
-                  placeholder="Enter barangay"
-                  value={formData.barangay}
-                  onChange={(e) => setFormData(prev => ({ ...prev, barangay: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div style={styles.sectionCard}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitle}>Demographic Information</h3>
-                <p style={styles.sectionDescription}>Additional personal details</p>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Date of Birth</label>
-                <div style={styles.dateInput} onClick={() => showDatePickerModal('dateOfBirth')}>
-                  <span style={{ color: !formData.dateOfBirth ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                    {formData.dateOfBirth || 'Select date'}
-                  </span>
-                  <Calendar size={20} color={styles.colors.textSecondary} />
-                </div>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Civil Status</label>
-                <div style={styles.dropdownInput} onClick={() => showDropdown('civilStatus', civilStatuses)}>
-                  <span style={{ color: !formData.civilStatus ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                    {formData.civilStatus || 'Select civil status'}
-                  </span>
-                  <ChevronDown size={20} color={styles.colors.textSecondary} />
-                </div>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Educational Attainment</label>
-                <div style={styles.dropdownInput} onClick={() => showDropdown('educationalAttainment', educationLevels)}>
-                  <span style={{ color: !formData.educationalAttainment ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                    {formData.educationalAttainment || 'Select education level'}
-                  </span>
-                  <ChevronDown size={20} color={styles.colors.textSecondary} />
-                </div>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Disability Status</label>
-                <div style={styles.dropdownInput} onClick={() => showDropdown('disability', disabilities)}>
-                  <span style={{ color: !formData.disability ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                    {formData.disability || 'Select disability status'}
-                  </span>
-                  <ChevronDown size={20} color={styles.colors.textSecondary} />
-                </div>
-              </div>
-            </div>
-
-            <div style={{ ...styles.sectionCard, marginTop: '24px' }}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitle}>Additional Information</h3>
-                <p style={styles.sectionDescription}>Optional details</p>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Nationality</label>
-                <input
-                  style={styles.input}
-                  placeholder="e.g., Filipino"
-                  value={formData.nationality}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
-                />
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Religion</label>
-                <div style={styles.dropdownInput} onClick={() => showDropdown('religion', religions)}>
-                  <span style={{ color: !formData.religion ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                    {formData.religion || 'Select religion'}
-                  </span>
-                  <ChevronDown size={20} color={styles.colors.textSecondary} />
-                </div>
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Occupation</label>
-                <input
-                  style={styles.input}
-                  placeholder="Enter occupation"
-                  value={formData.occupation}
-                  onChange={(e) => setFormData(prev => ({ ...prev, occupation: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderGuardianInfo = () => (
-    <div style={styles.stepContainer}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-        <div style={styles.sectionCard}>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>Guardian Details</h3>
-            <p style={styles.sectionDescription}>Required for minors (below 18 years old)</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Last Name</label>
               <input
                 style={styles.input}
                 placeholder="Enter last name"
-                value={formData.guardianLastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, guardianLastName: e.target.value }))}
+                value={formData.lastName}
+                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
               />
             </div>
             <div style={styles.inputGroup}>
@@ -845,118 +476,22 @@ const ReportForm = () => {
               <input
                 style={styles.input}
                 placeholder="Enter first name"
-                value={formData.guardianFirstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, guardianFirstName: e.target.value }))}
+                value={formData.firstName}
+                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
               />
             </div>
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Middle Name</label>
-            <input
-              style={styles.input}
-              placeholder="Enter middle name"
-              value={formData.guardianMiddleName}
-              onChange={(e) => setFormData(prev => ({ ...prev, guardianMiddleName: e.target.value }))}
-            />
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Relationship to Victim-Survivor</label>
-            <input
-              style={styles.input}
-              placeholder="e.g., Mother, Father, Legal Guardian"
-              value={formData.guardianRelationship}
-              onChange={(e) => setFormData(prev => ({ ...prev, guardianRelationship: e.target.value }))}
-            />
-          </div>
-        </div>
-
-        <div style={styles.sectionCard}>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>Guardian Contact Information</h3>
-            <p style={styles.sectionDescription}>Contact details and address</p>
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Contact Number</label>
-            <input
-              style={styles.input}
-              placeholder="0917-xxxxxxx"
-              value={formData.guardianContact}
-              onChange={(e) => setFormData(prev => ({ ...prev, guardianContact: e.target.value }))}
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Region</label>
-            <div style={styles.dropdownInput} onClick={() => showDropdown('guardianRegion', regions)}>
-              <span style={{ color: !formData.guardianRegion ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                {formData.guardianRegion || 'Select region'}
-              </span>
-              <ChevronDown size={20} color={styles.colors.textSecondary} />
-            </div>
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>City/Municipality</label>
-            <input
-              style={styles.input}
-              placeholder="Enter city/municipality"
-              value={formData.guardianCityMun}
-              onChange={(e) => setFormData(prev => ({ ...prev, guardianCityMun: e.target.value }))}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPerpetratorInfo = () => (
-    <div style={styles.stepContainer}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-        <div style={styles.sectionCard}>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>Personal Details</h3>
-            <p style={styles.sectionDescription}>Information about the alleged perpetrator</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Last Name</label>
-              <input
-                style={styles.input}
-                placeholder="Enter last name"
-                value={formData.perpLastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpLastName: e.target.value }))}
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>First Name</label>
-              <input
-                style={styles.input}
-                placeholder="Enter first name"
-                value={formData.perpFirstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpFirstName: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Middle Name</label>
               <input
                 style={styles.input}
                 placeholder="Enter middle name"
-                value={formData.perpMiddleName}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpMiddleName: e.target.value }))}
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Alias (if known)</label>
-              <input
-                style={styles.input}
-                placeholder="Enter alias"
-                value={formData.perpAlias}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpAlias: e.target.value }))}
+                value={formData.middleName}
+                onChange={(e) => setFormData(prev => ({ ...prev, middleName: e.target.value }))}
               />
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '20px' }}>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Sex</label>
               <div style={styles.optionGroup}>
@@ -966,12 +501,11 @@ const ReportForm = () => {
                     type="button"
                     style={{
                       ...styles.optionButton,
-                      backgroundColor: formData.perpSex === sex ? styles.colors.primary : 'white',
-                      color: formData.perpSex === sex ? 'white' : styles.colors.textPrimary,
-                      borderColor: formData.perpSex === sex ? styles.colors.primary : styles.colors.border,
-                      boxShadow: formData.perpSex === sex ? '0 2px 4px rgba(37, 99, 235, 0.2)' : 'none'
+                      backgroundColor: formData.sex === sex ? styles.colors.primary : 'white',
+                      color: formData.sex === sex ? 'white' : styles.colors.textPrimary,
+                      borderColor: formData.sex === sex ? styles.colors.primary : styles.colors.border,
                     }}
-                    onClick={() => setFormData(prev => ({ ...prev, perpSex: sex }))}
+                    onClick={() => setFormData(prev => ({ ...prev, sex }))}
                   >
                     {sex}
                   </button>
@@ -979,69 +513,50 @@ const ReportForm = () => {
               </div>
             </div>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Age (approx.)</label>
+              <label style={styles.inputLabel}>Age</label>
               <input
                 style={styles.input}
-                placeholder="Enter approximate age"
+                placeholder="Age"
                 type="number"
                 min="1"
                 max="120"
-                value={formData.perpAge}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpAge: e.target.value }))}
+                value={formData.age}
+                onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
               />
             </div>
-          </div>
-        </div>
-
-        <div>
-          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Relationship & Context</h3>
-              <p style={styles.sectionDescription}>Connection to victim and other details</p>
+            <div style={styles.inputGroup}>
+              <label style={styles.inputLabel}>Contact Number</label>
+              <input
+                style={styles.input}
+                placeholder="09XX-XXX-XXXX"
+                value={formData.guardianContact}
+                onChange={(e) => setFormData(prev => ({ ...prev, guardianContact: e.target.value }))}
+              />
             </div>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Relationship to Victim</label>
-              <div style={styles.dropdownInput} onClick={() => showDropdown('perpRelationship', relationships)}>
-                <span style={{ color: !formData.perpRelationship ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                  {formData.perpRelationship || 'Select relationship'}
+              <label style={styles.inputLabel}>Civil Status</label>
+              <div style={styles.dropdownInput} onClick={() => showDropdown('civilStatus', civilStatuses)}>
+                <span style={{ color: !formData.civilStatus ? styles.colors.textSecondary : styles.colors.textPrimary }}>
+                  {formData.civilStatus || 'Select'}
                 </span>
                 <ChevronDown size={20} color={styles.colors.textSecondary} />
               </div>
             </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Occupation (if known)</label>
-              <input
-                style={styles.input}
-                placeholder="Enter occupation"
-                value={formData.perpOccupation}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpOccupation: e.target.value }))}
-              />
-            </div>
           </div>
+        </div>
+      </div>
 
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Additional Information</h3>
-              <p style={styles.sectionDescription}>Identifying details and description</p>
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Last Known Location</label>
-              <input
-                style={styles.input}
-                placeholder="e.g., TUP Manila Campus"
-                value={formData.perpCityMun}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpCityMun: e.target.value }))}
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Description</label>
-              <textarea
-                style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
-                placeholder="Physical description or other identifying information..."
-                value={formData.incidentDescription}
-                onChange={(e) => setFormData(prev => ({ ...prev, incidentDescription: e.target.value }))}
-              />
-            </div>
+      <div style={styles.importantNote}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+          <Info size={18} color={styles.colors.textSecondary} />
+          <div>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
+              Privacy & Confidentiality
+            </p>
+            <p style={{ margin: 0, fontSize: '13px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
+              All reports are handled with strict confidentiality by the TUP GAD Office. 
+              Whether you choose to remain anonymous or provide your details, your privacy is our priority.
+            </p>
           </div>
         </div>
       </div>
@@ -1055,7 +570,7 @@ const ReportForm = () => {
           <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
             <div style={styles.sectionHeader}>
               <h3 style={styles.sectionTitle}>Incident Details</h3>
-              <p style={styles.sectionDescription}>Date and description of what happened</p>
+              <p style={styles.sectionDescription}>Tell us what happened</p>
             </div>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>
@@ -1090,7 +605,7 @@ const ReportForm = () => {
               <label style={styles.inputLabel}>Place of Incident</label>
               <div style={styles.dropdownInput} onClick={() => showDropdown('placeOfIncident', places)}>
                 <span style={{ color: !formData.placeOfIncident ? styles.colors.textSecondary : styles.colors.textPrimary }}>
-                  {formData.placeOfIncident || 'Select place of incident'}
+                  {formData.placeOfIncident || 'Select place'}
                 </span>
                 <ChevronDown size={20} color={styles.colors.textSecondary} />
               </div>
@@ -1107,81 +622,54 @@ const ReportForm = () => {
           </div>
         </div>
 
-        <div>
-          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Incident Classification</h3>
-              <p style={styles.sectionDescription}>
-                Select all applicable incident types
-                <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
-                  (Not sure? Chat with our chatbot)
-                </span>
-              </p>
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>
-                Type of Incident
-                <span style={styles.requiredStar}> *</span>
-              </label>
-              <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
-                {incidentTypesList.map(type => (
-                  <div
-                    key={type}
-                    style={{
-                      ...styles.optionCard,
-                      borderColor: formData.incidentTypes.includes(type) ? styles.colors.primary : styles.colors.border,
-                      backgroundColor: formData.incidentTypes.includes(type) ? styles.colors.ultraLightBackground : 'white',
-                      marginBottom: '8px'
-                    }}
-                    onClick={() => toggleIncidentType(type)}
-                  >
-                    <span style={{
-                      fontSize: '13px',
-                      color: formData.incidentTypes.includes(type) ? styles.colors.primary : styles.colors.textPrimary
-                    }}>
-                      {type}
-                    </span>
-                    {formData.incidentTypes.includes(type) && (
-                      <div style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '10px',
-                        backgroundColor: styles.colors.primary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Check size={12} color="white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div style={styles.sectionCard}>
+          <div style={styles.sectionHeader}>
+            <h3 style={styles.sectionTitle}>Incident Classification</h3>
+            <p style={styles.sectionDescription}>
+              Select all that apply
+              <span style={{ fontSize: '12px', color: '#666', display: 'block', marginTop: '4px' }}>
+                Not sure? Chat with our chatbot
+              </span>
+            </p>
           </div>
-
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Witness Information</h3>
-              <p style={styles.sectionDescription}>Details of any witnesses (if applicable)</p>
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Witness Name (if any)</label>
-              <input
-                style={styles.input}
-                placeholder="Enter witness name"
-                value={formData.witnessName}
-                onChange={(e) => setFormData(prev => ({ ...prev, witnessName: e.target.value }))}
-              />
-            </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Witness Contact</label>
-              <input
-                style={styles.input}
-                placeholder="Contact information"
-                value={formData.witnessContact}
-                onChange={(e) => setFormData(prev => ({ ...prev, witnessContact: e.target.value }))}
-              />
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>
+              Type of Incident
+              <span style={styles.requiredStar}> *</span>
+            </label>
+            <div style={{ maxHeight: '500px', overflowY: 'auto', paddingRight: '8px' }}>
+              {incidentTypesList.map(type => (
+                <div
+                  key={type}
+                  style={{
+                    ...styles.optionCard,
+                    borderColor: formData.incidentTypes.includes(type) ? styles.colors.primary : styles.colors.border,
+                    backgroundColor: formData.incidentTypes.includes(type) ? styles.colors.ultraLightBackground : 'white',
+                    marginBottom: '8px'
+                  }}
+                  onClick={() => toggleIncidentType(type)}
+                >
+                  <span style={{
+                    fontSize: '13px',
+                    color: formData.incidentTypes.includes(type) ? styles.colors.primary : styles.colors.textPrimary
+                  }}>
+                    {type}
+                  </span>
+                  {formData.incidentTypes.includes(type) && (
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '10px',
+                      backgroundColor: styles.colors.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Check size={12} color="white" />
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1189,193 +677,314 @@ const ReportForm = () => {
     </div>
   );
 
-  const renderConfirmation = () => (
+  const renderPerpetratorInfo = () => (
     <div style={styles.stepContainer}>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
-        <div>
-          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Report Summary</h3>
-              <p style={styles.sectionDescription}>Review your report details</p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-              <div>
-                <p style={styles.summaryLabel}>Reporting Mode</p>
-                <p style={styles.summaryValue}>{isAnonymous ? 'Anonymous' : 'Identified'}</p>
-              </div>
-
-              {!isAnonymous && (
-                <div>
-                  <p style={styles.summaryLabel}>Victim-Survivor</p>
-                  <p style={styles.summaryValue}>{formData.firstName} {formData.lastName}</p>
-                  <p style={styles.summarySubtext}>Age: {formData.age || 'Not provided'}</p>
-                </div>
-              )}
-
-              <div>
-                <p style={styles.summaryLabel}>Incident Date</p>
-                <p style={styles.summaryValue}>{formData.latestIncidentDate || 'Not provided'}</p>
-              </div>
-
-              <div>
-                <p style={styles.summaryLabel}>Incident Types</p>
-                <p style={styles.summaryValue}>
-                  {formData.incidentTypes.length > 0
-                    ? formData.incidentTypes.slice(0, 2).join(', ') + (formData.incidentTypes.length > 2 ? `, +${formData.incidentTypes.length - 2} more` : '')
-                    : 'Not specified'}
-                </p>
-              </div>
-            </div>
-
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+        <div style={styles.sectionCard}>
+          <div style={styles.sectionHeader}>
+            <h3 style={styles.sectionTitle}>Perpetrator Information</h3>
+            <p style={styles.sectionDescription}>Details about the alleged perpetrator (if known)</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Additional Notes</label>
-              <textarea
-                style={{ ...styles.input, minHeight: '120px', resize: 'vertical' }}
-                placeholder="Any additional information or context..."
-                value={formData.additionalNotes}
-                onChange={(e) => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
+              <label style={styles.inputLabel}>Last Name</label>
+              <input
+                style={styles.input}
+                placeholder="Enter last name"
+                value={formData.perpLastName}
+                onChange={(e) => setFormData(prev => ({ ...prev, perpLastName: e.target.value }))}
+              />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.inputLabel}>First Name</label>
+              <input
+                style={styles.input}
+                placeholder="Enter first name"
+                value={formData.perpFirstName}
+                onChange={(e) => setFormData(prev => ({ ...prev, perpFirstName: e.target.value }))}
               />
             </div>
           </div>
-
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Attachments</h3>
-              <p style={styles.sectionDescription}>Supporting documents and evidence</p>
-            </div>
-            {formData.attachments.length === 0 ? (
-              <div style={styles.emptyAttachments}>
-                <FileText size={24} color={styles.colors.textSecondary} />
-                <p style={{ margin: '12px 0 0 0', color: styles.colors.textSecondary, fontSize: '14px' }}>
-                  No attachments added
-                </p>
-              </div>
-            ) : (
-              <div>
-                {formData.attachments.map((attachment, index) => (
-                  <div key={index} style={styles.attachmentItem}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {attachment.type === 'image' && <ImageIcon size={16} color={styles.colors.textSecondary} />}
-                      {attachment.type === 'video' && <Video size={16} color={styles.colors.textSecondary} />}
-                      {attachment.type === 'pdf' && <FileText size={16} color={styles.colors.textSecondary} />}
-                      <span style={{ fontSize: '14px', color: styles.colors.textPrimary }}>
-                        {attachment.name}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => removeAttachment(index)}
-                      style={styles.removeAttachmentButton}
-                    >
-                      <X size={16} color={styles.colors.textSecondary} />
-                    </button>
-                  </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+            <div style={styles.inputGroup}>
+              <label style={styles.inputLabel}>Sex</label>
+              <div style={styles.optionGroup}>
+                {['Male', 'Female'].map(sex => (
+                  <button
+                    key={sex}
+                    type="button"
+                    style={{
+                      ...styles.optionButton,
+                      backgroundColor: formData.perpSex === sex ? styles.colors.primary : 'white',
+                      color: formData.perpSex === sex ? 'white' : styles.colors.textPrimary,
+                      borderColor: formData.perpSex === sex ? styles.colors.primary : styles.colors.border,
+                    }}
+                    onClick={() => setFormData(prev => ({ ...prev, perpSex: sex }))}
+                  >
+                    {sex}
+                  </button>
                 ))}
               </div>
-            )}
-            <button
-              style={styles.addAttachmentButton}
-              onClick={pickFiles}
-            >
-              <Upload size={18} style={{ marginRight: '8px' }} />
-              Add Attachments
-            </button>
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.inputLabel}>Age (approx.)</label>
+              <input
+                style={styles.input}
+                placeholder="Approximate age"
+                type="number"
+                value={formData.perpAge}
+                onChange={(e) => setFormData(prev => ({ ...prev, perpAge: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Relationship to You</label>
+            <div style={styles.dropdownInput} onClick={() => showDropdown('perpRelationship', relationships)}>
+              <span style={{ color: !formData.perpRelationship ? styles.colors.textSecondary : styles.colors.textPrimary }}>
+                {formData.perpRelationship || 'Select relationship'}
+              </span>
+              <ChevronDown size={20} color={styles.colors.textSecondary} />
+            </div>
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Occupation (if known)</label>
+            <input
+              style={styles.input}
+              placeholder="Enter occupation"
+              value={formData.perpOccupation}
+              onChange={(e) => setFormData(prev => ({ ...prev, perpOccupation: e.target.value }))}
+            />
           </div>
         </div>
 
-        <div>
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Final Verification</h3>
-              <p style={styles.sectionDescription}>Confirm before submission</p>
-            </div>
-            <div style={styles.verificationBox}>
-              <div
-                style={styles.checkboxContainer}
-                onClick={() => setFormData(prev => ({ ...prev, confirmAccuracy: !prev.confirmAccuracy }))}
-              >
-                <div style={{
-                  ...styles.checkbox,
-                  backgroundColor: formData.confirmAccuracy ? styles.colors.primary : 'white',
-                  borderColor: formData.confirmAccuracy ? styles.colors.primary : styles.colors.border
-                }}>
-                  {formData.confirmAccuracy && <Check size={16} color="white" />}
+        <div style={styles.sectionCard}>
+          <div style={styles.sectionHeader}>
+            <h3 style={styles.sectionTitle}>Witness Information</h3>
+            <p style={styles.sectionDescription}>Details of any witnesses (if applicable)</p>
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Witness Name</label>
+            <input
+              style={styles.input}
+              placeholder="Enter witness name"
+              value={formData.witnessName}
+              onChange={(e) => setFormData(prev => ({ ...prev, witnessName: e.target.value }))}
+            />
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Witness Contact</label>
+            <input
+              style={styles.input}
+              placeholder="Contact information"
+              value={formData.witnessContact}
+              onChange={(e) => setFormData(prev => ({ ...prev, witnessContact: e.target.value }))}
+            />
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Witness Statement</label>
+            <textarea
+              style={{ ...styles.input, minHeight: '150px', resize: 'vertical' }}
+              placeholder="Brief statement from witness (if available)..."
+              value={formData.witnessAccount}
+              onChange={(e) => setFormData(prev => ({ ...prev, witnessAccount: e.target.value }))}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderConfirmation = () => {
+    const isAnonymous = !formData.firstName && !formData.lastName;
+    
+    return (
+      <div style={styles.stepContainer}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
+          <div>
+            <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
+              <div style={styles.sectionHeader}>
+                <h3 style={styles.sectionTitle}>Report Summary</h3>
+                <p style={styles.sectionDescription}>Review your report details</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                <div>
+                  <p style={styles.summaryLabel}>Reporting Mode</p>
+                  <p style={styles.summaryValue}>{isAnonymous ? 'Anonymous' : 'Identified'}</p>
                 </div>
-                <span style={styles.checkboxLabel}>
-                  I confirm that all information provided is accurate to the best of my knowledge
-                </span>
-                <span style={styles.requiredStar}> *</span>
-              </div>
 
-              <div
-                style={{ ...styles.checkboxContainer, marginTop: '16px' }}
-                onClick={() => setFormData(prev => ({ ...prev, confirmConfidentiality: !prev.confirmConfidentiality }))}
-              >
-                <div style={{
-                  ...styles.checkbox,
-                  backgroundColor: formData.confirmConfidentiality ? styles.colors.primary : 'white',
-                  borderColor: formData.confirmConfidentiality ? styles.colors.primary : styles.colors.border
-                }}>
-                  {formData.confirmConfidentiality && <Check size={16} color="white" />}
+                {!isAnonymous && (
+                  <div>
+                    <p style={styles.summaryLabel}>Reporter</p>
+                    <p style={styles.summaryValue}>{formData.firstName} {formData.lastName}</p>
+                    <p style={styles.summarySubtext}>
+                      {formData.tupRole || 'Role not specified'}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <p style={styles.summaryLabel}>Incident Date</p>
+                  <p style={styles.summaryValue}>{formData.latestIncidentDate || 'Not provided'}</p>
                 </div>
-                <span style={styles.checkboxLabel}>
-                  I understand this report will be handled confidentially by the TUP GAD Office
-                </span>
-                <span style={styles.requiredStar}> *</span>
+
+                <div>
+                  <p style={styles.summaryLabel}>Incident Types</p>
+                  <p style={styles.summaryValue}>
+                    {formData.incidentTypes.length > 0
+                      ? formData.incidentTypes.slice(0, 2).join(', ') + (formData.incidentTypes.length > 2 ? `, +${formData.incidentTypes.length - 2} more` : '')
+                      : 'Not specified'}
+                  </p>
+                </div>
+              </div>
+
+              <div style={styles.inputGroup}>
+                <label style={styles.inputLabel}>Additional Notes</label>
+                <textarea
+                  style={{ ...styles.input, minHeight: '120px', resize: 'vertical' }}
+                  placeholder="Any additional information or context..."
+                  value={formData.additionalNotes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                />
               </div>
             </div>
 
-            <div style={styles.warningBox}>
-              <AlertCircle size={18} color={styles.colors.warning} />
-              <div>
-                <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
-                  Important: Report Submission
-                </p>
-                <p style={{ margin: 0, fontSize: '12px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
-                  Upon submission, you will receive a unique ticket number to track your report status.
-                  Please save this number for future reference.
-                </p>
+            <div style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <h3 style={styles.sectionTitle}>Attachments</h3>
+                <p style={styles.sectionDescription}>Supporting documents and evidence</p>
               </div>
-            </div>
-
-            <button
-              style={{
-                ...styles.submitButton,
-                backgroundColor: !formData.confirmAccuracy || !formData.confirmConfidentiality
-                  ? styles.colors.border
-                  : styles.colors.primary,
-                cursor: !formData.confirmAccuracy || !formData.confirmConfidentiality
-                  ? 'not-allowed'
-                  : 'pointer',
-                boxShadow: !formData.confirmAccuracy || !formData.confirmConfidentiality
-                  ? 'none'
-                  : '0 4px 12px rgba(37, 99, 235, 0.3)'
-              }}
-              onClick={handleSubmit}
-              disabled={loading || !formData.confirmAccuracy || !formData.confirmConfidentiality}
-            >
-              {loading ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={styles.spinner}></div>
-                  <span style={{ marginLeft: '8px' }}>Submitting...</span>
+              {formData.attachments.length === 0 ? (
+                <div style={styles.emptyAttachments}>
+                  <FileText size={24} color={styles.colors.textSecondary} />
+                  <p style={{ margin: '12px 0 0 0', color: styles.colors.textSecondary, fontSize: '14px' }}>
+                    No attachments added
+                  </p>
                 </div>
               ) : (
-                'Submit Report'
+                <div>
+                  {formData.attachments.map((attachment, index) => (
+                    <div key={index} style={styles.attachmentItem}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {attachment.type === 'image' && <ImageIcon size={16} color={styles.colors.textSecondary} />}
+                        {attachment.type === 'video' && <Video size={16} color={styles.colors.textSecondary} />}
+                        {attachment.type === 'pdf' && <FileText size={16} color={styles.colors.textSecondary} />}
+                        <span style={{ fontSize: '14px', color: styles.colors.textPrimary }}>
+                          {attachment.name}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => removeAttachment(index)}
+                        style={styles.removeAttachmentButton}
+                      >
+                        <X size={16} color={styles.colors.textSecondary} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
-            </button>
+              <button
+                style={styles.addAttachmentButton}
+                onClick={pickFiles}
+              >
+                <Upload size={18} style={{ marginRight: '8px' }} />
+                Add Attachments
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <h3 style={styles.sectionTitle}>Final Verification</h3>
+                <p style={styles.sectionDescription}>Confirm before submission</p>
+              </div>
+              <div style={styles.verificationBox}>
+                <div
+                  style={styles.checkboxContainer}
+                  onClick={() => setFormData(prev => ({ ...prev, confirmAccuracy: !prev.confirmAccuracy }))}
+                >
+                  <div style={{
+                    ...styles.checkbox,
+                    backgroundColor: formData.confirmAccuracy ? styles.colors.primary : 'white',
+                    borderColor: formData.confirmAccuracy ? styles.colors.primary : styles.colors.border
+                  }}>
+                    {formData.confirmAccuracy && <Check size={16} color="white" />}
+                  </div>
+                  <span style={styles.checkboxLabel}>
+                    I confirm that all information provided is accurate to the best of my knowledge
+                  </span>
+                  <span style={styles.requiredStar}> *</span>
+                </div>
+
+                <div
+                  style={{ ...styles.checkboxContainer, marginTop: '16px' }}
+                  onClick={() => setFormData(prev => ({ ...prev, confirmConfidentiality: !prev.confirmConfidentiality }))}
+                >
+                  <div style={{
+                    ...styles.checkbox,
+                    backgroundColor: formData.confirmConfidentiality ? styles.colors.primary : 'white',
+                    borderColor: formData.confirmConfidentiality ? styles.colors.primary : styles.colors.border
+                  }}>
+                    {formData.confirmConfidentiality && <Check size={16} color="white" />}
+                  </div>
+                  <span style={styles.checkboxLabel}>
+                    I understand this report will be handled confidentially by the TUP GAD Office
+                  </span>
+                  <span style={styles.requiredStar}> *</span>
+                </div>
+              </div>
+
+              <div style={styles.warningBox}>
+                <AlertCircle size={18} color={styles.colors.warning} />
+                <div>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
+                    Important: Report Submission
+                  </p>
+                  <p style={{ margin: 0, fontSize: '12px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
+                    Upon submission, you will receive a unique ticket number to track your report status.
+                    Please save this number for future reference.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                style={{
+                  ...styles.submitButton,
+                  backgroundColor: !formData.confirmAccuracy || !formData.confirmConfidentiality
+                    ? styles.colors.border
+                    : styles.colors.primary,
+                  cursor: !formData.confirmAccuracy || !formData.confirmConfidentiality
+                    ? 'not-allowed'
+                    : 'pointer',
+                  boxShadow: !formData.confirmAccuracy || !formData.confirmConfidentiality
+                    ? 'none'
+                    : '0 4px 12px rgba(37, 99, 235, 0.3)'
+                }}
+                onClick={handleSubmit}
+                disabled={loading || !formData.confirmAccuracy || !formData.confirmConfidentiality}
+              >
+                {loading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={styles.spinner}></div>
+                    <span style={{ marginLeft: '8px' }}>Submitting...</span>
+                  </div>
+                ) : (
+                  'Submit Report'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case 1: return renderAnonymitySelection();
-      case 2: return renderVictimInfo();
-      case 3: return isAnonymous ? renderPerpetratorInfo() : renderGuardianInfo();
-      case 4: return isAnonymous ? renderIncidentDetails() : renderPerpetratorInfo();
-      case 5: return isAnonymous ? renderConfirmation() : renderIncidentDetails();
-      case 6: return renderConfirmation();
+      case 1: return renderReporterInfo();
+      case 2: return renderIncidentDetails();
+      case 3: return renderPerpetratorInfo();
+      case 4: return renderConfirmation();
       default: return null;
     }
   };
@@ -1384,7 +993,6 @@ const ReportForm = () => {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {currentStep > 1 && (
@@ -1407,13 +1015,12 @@ const ReportForm = () => {
         </div>
       </div>
 
-      {currentStep > 1 && renderProgressBar()}
+      {renderProgressBar()}
 
       <div style={styles.content}>
         {renderStepContent()}
       </div>
 
-      {/* Navigation */}
       <div style={styles.navigation}>
         {currentStep > 1 && !isLastStep && (
           <button style={styles.secondaryButton} onClick={handleBack}>
@@ -1431,7 +1038,6 @@ const ReportForm = () => {
         )}
       </div>
 
-      {/* Date Picker Modal */}
       {showDatePicker && (
         <div style={styles.modalOverlay} onClick={() => setShowDatePicker(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -1454,7 +1060,6 @@ const ReportForm = () => {
         </div>
       )}
 
-      {/* Dropdown Modal */}
       {dropdownVisible && (
         <div style={styles.modalOverlay} onClick={() => setDropdownVisible(false)}>
           <div style={styles.dropdownModal} onClick={(e) => e.stopPropagation()}>
@@ -1478,11 +1083,10 @@ const ReportForm = () => {
   );
 };
 
-// Professional Color Scheme
 const colors = {
-  primary: '#2563eb',       // Professional blue
-  secondary: '#475569',     // Neutral slate
-  background: '#ffffff',    // White background
+  primary: '#2563eb',
+  secondary: '#475569',
+  background: '#ffffff',
   lightBackground: '#f8fafc',
   ultraLightBackground: '#f1f5f9',
   border: '#e2e8f0',
@@ -1494,7 +1098,6 @@ const colors = {
   white: '#ffffff'
 };
 
-// Styles
 const styles = {
   colors,
   container: {
@@ -1522,11 +1125,7 @@ const styles = {
     borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'background-color 0.2s',
-    ':hover': {
-      backgroundColor: colors.lightBackground
-    }
+    justifyContent: 'center'
   },
   mainTitle: {
     fontSize: '32px',
@@ -1542,8 +1141,7 @@ const styles = {
     fontSize: '14px',
     color: colors.textSecondary,
     margin: 0,
-    fontWeight: '500',
-    letterSpacing: '0.025em'
+    fontWeight: '500'
   },
   saveButton: {
     display: 'flex',
@@ -1555,14 +1153,7 @@ const styles = {
     borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: '600',
-    fontSize: '14px',
-    transition: 'all 0.2s',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-    ':hover': {
-      backgroundColor: colors.ultraLightBackground,
-      transform: 'translateY(-1px)',
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)'
-    }
+    fontSize: '14px'
   },
   progressContainer: {
     marginBottom: '48px'
@@ -1570,8 +1161,7 @@ const styles = {
   progressText: {
     fontSize: '14px',
     color: colors.textSecondary,
-    fontWeight: '600',
-    letterSpacing: '0.025em'
+    fontWeight: '600'
   },
   stepIndicator: {
     display: 'flex',
@@ -1605,14 +1195,7 @@ const styles = {
     fontSize: '28px',
     fontWeight: '700',
     color: colors.textPrimary,
-    margin: '0 0 12px 0',
-    lineHeight: '1.2'
-  },
-  stepSubtitle: {
-    fontSize: '16px',
-    color: colors.textSecondary,
-    margin: '0 0 0 0',
-    lineHeight: '1.6'
+    margin: '0 0 12px 0'
   },
   content: {
     marginBottom: '48px'
@@ -1626,11 +1209,7 @@ const styles = {
     borderRadius: '12px',
     padding: '32px',
     border: `1px solid ${colors.border}`,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
-    transition: 'box-shadow 0.2s',
-    ':hover': {
-      boxShadow: '0 6px 20px rgba(0, 0, 0, 0.08)'
-    }
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)'
   },
   sectionHeader: {
     marginBottom: '24px',
@@ -1646,23 +1225,20 @@ const styles = {
   sectionDescription: {
     fontSize: '14px',
     color: colors.textSecondary,
-    margin: 0,
-    lineHeight: '1.5'
+    margin: 0
   },
   inputGroup: {
-    marginBottom: '24px'
+    marginBottom: '20px'
   },
   inputLabel: {
     display: 'block',
     fontSize: '14px',
     fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: '8px',
-    letterSpacing: '-0.01em'
+    marginBottom: '8px'
   },
   requiredStar: {
-    color: colors.error,
-    marginLeft: '4px'
+    color: colors.error
   },
   input: {
     width: '100%',
@@ -1672,18 +1248,7 @@ const styles = {
     borderRadius: '8px',
     boxSizing: 'border-box',
     backgroundColor: colors.white,
-    color: colors.textPrimary,
-    transition: 'all 0.2s',
-    lineHeight: '1.5',
-    ':focus': {
-      outline: 'none',
-      borderColor: colors.primary,
-      boxShadow: `0 0 0 3px rgba(37, 99, 235, 0.1)`
-    },
-    '::placeholder': {
-      color: colors.textSecondary,
-      opacity: 0.7
-    }
+    color: colors.textPrimary
   },
   selectInput: {
     width: '100%',
@@ -1694,19 +1259,7 @@ const styles = {
     boxSizing: 'border-box',
     backgroundColor: colors.white,
     color: colors.textPrimary,
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 16px center',
-    backgroundSize: '16px',
-    paddingRight: '48px',
-    transition: 'all 0.2s',
-    cursor: 'pointer',
-    ':focus': {
-      outline: 'none',
-      borderColor: colors.primary,
-      boxShadow: `0 0 0 3px rgba(37, 99, 235, 0.1)`
-    }
+    cursor: 'pointer'
   },
   dateInput: {
     display: 'flex',
@@ -1716,12 +1269,7 @@ const styles = {
     border: `1px solid ${colors.border}`,
     borderRadius: '8px',
     backgroundColor: colors.white,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    ':hover': {
-      borderColor: colors.primary,
-      backgroundColor: colors.lightBackground
-    }
+    cursor: 'pointer'
   },
   dropdownInput: {
     display: 'flex',
@@ -1731,12 +1279,7 @@ const styles = {
     border: `1px solid ${colors.border}`,
     borderRadius: '8px',
     backgroundColor: colors.white,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    ':hover': {
-      borderColor: colors.primary,
-      backgroundColor: colors.lightBackground
-    }
+    cursor: 'pointer'
   },
   optionGroup: {
     display: 'flex',
@@ -1750,11 +1293,7 @@ const styles = {
     fontSize: '14px',
     fontWeight: '500',
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    backgroundColor: colors.white,
-    ':hover': {
-      transform: 'translateY(-1px)'
-    }
+    backgroundColor: colors.white
   },
   optionCard: {
     padding: '16px',
@@ -1764,103 +1303,14 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    transition: 'all 0.2s',
-    backgroundColor: colors.white,
-    ':hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-    }
-  },
-  anonymityCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: '32px',
-    border: `2px solid`,
-    borderRadius: '12px',
-    cursor: 'pointer',
-    transition: 'all 0.3s',
-    position: 'relative',
-    height: '100%',
-    overflow: 'hidden',
-    ':hover': {
-      transform: 'translateY(-4px)'
-    }
-  },
-  anonymityIconContainer: {
-    width: '64px',
-    height: '64px',
-    borderRadius: '32px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '24px',
-    flexShrink: 0,
-    transition: 'all 0.3s'
-  },
-  anonymityContent: {
-    flex: 1
-  },
-  anonymityTitle: {
-    fontSize: '20px',
-    fontWeight: '700',
-    margin: '0 0 16px 0',
-    transition: 'color 0.2s',
-    letterSpacing: '-0.01em'
-  },
-  featureList: {
-    margin: 0,
-    paddingLeft: '20px',
-    color: colors.textSecondary,
-    fontSize: '14px',
-    lineHeight: '1.6',
-    listStyleType: 'none',
-    li: {
-      position: 'relative',
-      marginBottom: '8px',
-      ':before': {
-        content: '"✓"',
-        position: 'absolute',
-        left: '-20px',
-        color: colors.primary,
-        fontWeight: 'bold'
-      }
-    }
-  },
-  checkCircle: {
-    position: 'absolute',
-    top: '24px',
-    right: '24px',
-    width: '28px',
-    height: '28px',
-    borderRadius: '14px',
-    backgroundColor: colors.success,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    boxShadow: '0 4px 8px rgba(5, 150, 105, 0.3)'
-  },
-  savedProgressBanner: {
-    padding: '20px',
-    backgroundColor: colors.lightBackground,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '12px',
-    marginTop: '32px',
-    borderLeft: `4px solid ${colors.success}`
-  },
-  savedProgressText: {
-    fontSize: '14px',
-    color: colors.success,
-    fontWeight: '600',
-    display: 'block',
-    marginBottom: '4px'
+    backgroundColor: colors.white
   },
   importantNote: {
     padding: '24px',
     backgroundColor: colors.lightBackground,
     border: `1px solid ${colors.border}`,
     borderRadius: '12px',
-    borderLeft: `4px solid ${colors.primary}`
+    marginTop: '32px'
   },
   verificationBox: {
     backgroundColor: colors.ultraLightBackground,
@@ -1874,11 +1324,7 @@ const styles = {
     alignItems: 'flex-start',
     cursor: 'pointer',
     padding: '16px',
-    borderRadius: '8px',
-    transition: 'background-color 0.2s',
-    ':hover': {
-      backgroundColor: colors.lightBackground
-    }
+    borderRadius: '8px'
   },
   checkbox: {
     width: '24px',
@@ -1889,13 +1335,11 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: '16px',
-    flexShrink: 0,
-    transition: 'all 0.2s'
+    flexShrink: 0
   },
   checkboxLabel: {
     fontSize: '14px',
     color: colors.textPrimary,
-    lineHeight: '1.5',
     flex: 1,
     fontWeight: '500'
   },
@@ -1907,14 +1351,12 @@ const styles = {
     border: `1px solid #fde68a`,
     borderRadius: '12px',
     gap: '16px',
-    marginBottom: '24px',
-    borderLeft: `4px solid ${colors.warning}`
+    marginBottom: '24px'
   },
   summaryLabel: {
     fontSize: '12px',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: '0.1em',
     margin: '0 0 8px 0',
     fontWeight: '600'
   },
@@ -1922,21 +1364,18 @@ const styles = {
     fontSize: '16px',
     color: colors.textPrimary,
     fontWeight: '600',
-    margin: '0 0 4px 0',
-    lineHeight: '1.4'
+    margin: '0 0 4px 0'
   },
   summarySubtext: {
     fontSize: '14px',
     color: colors.textSecondary,
-    margin: 0,
-    lineHeight: '1.4'
+    margin: 0
   },
   navigation: {
     paddingTop: '40px',
     borderTop: `1px solid ${colors.border}`,
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
+    justifyContent: 'space-between'
   },
   secondaryButton: {
     padding: '14px 28px',
@@ -1946,15 +1385,7 @@ const styles = {
     borderRadius: '8px',
     fontSize: '14px',
     fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    letterSpacing: '-0.01em',
-    ':hover': {
-      backgroundColor: colors.lightBackground,
-      borderColor: colors.primary,
-      transform: 'translateY(-1px)',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-    }
+    cursor: 'pointer'
   },
   primaryButton: {
     padding: '14px 36px',
@@ -1965,14 +1396,7 @@ const styles = {
     fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    letterSpacing: '-0.01em',
-    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
-    ':hover': {
-      backgroundColor: '#1d4ed8',
-      transform: 'translateY(-2px)',
-      boxShadow: '0 6px 20px rgba(37, 99, 235, 0.3)'
-    }
+    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
   },
   submitButton: {
     width: '100%',
@@ -1983,12 +1407,7 @@ const styles = {
     borderRadius: '8px',
     fontSize: '16px',
     fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    letterSpacing: '-0.01em',
-    ':hover': {
-      transform: 'translateY(-2px)'
-    }
+    cursor: 'pointer'
   },
   spinner: {
     width: '20px',
@@ -2008,8 +1427,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
-    backdropFilter: 'blur(4px)'
+    zIndex: 1000
   },
   modalContent: {
     backgroundColor: colors.white,
@@ -2034,12 +1452,7 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    transition: 'background-color 0.2s',
-    ':hover': {
-      backgroundColor: colors.lightBackground
-    }
+    padding: '8px 16px'
   },
   datePickerInput: {
     width: '100%',
@@ -2047,13 +1460,7 @@ const styles = {
     border: `1px solid ${colors.border}`,
     borderRadius: '8px',
     fontSize: '16px',
-    color: colors.textPrimary,
-    transition: 'all 0.2s',
-    ':focus': {
-      outline: 'none',
-      borderColor: colors.primary,
-      boxShadow: `0 0 0 3px rgba(37, 99, 235, 0.1)`
-    }
+    color: colors.textPrimary
   },
   dropdownModal: {
     backgroundColor: colors.white,
@@ -2081,18 +1488,14 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '16px 24px',
-    borderBottom: `1px solid ${colors.lightBackground}`,
     background: 'none',
     border: 'none',
     width: '100%',
     cursor: 'pointer',
     textAlign: 'left',
-    transition: 'background-color 0.2s',
     fontSize: '14px',
     color: colors.textPrimary,
-    ':hover': {
-      backgroundColor: colors.lightBackground
-    }
+    borderBottom: `1px solid ${colors.lightBackground}`
   },
   dropdownOptionText: {
     fontSize: '14px',
@@ -2113,14 +1516,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '16px',
-    borderBottom: `1px solid ${colors.border}`,
-    transition: 'background-color 0.2s',
-    ':hover': {
-      backgroundColor: colors.lightBackground
-    },
-    ':last-child': {
-      borderBottom: 'none'
-    }
+    borderBottom: `1px solid ${colors.border}`
   },
   removeAttachmentButton: {
     background: 'none',
@@ -2130,12 +1526,7 @@ const styles = {
     borderRadius: '6px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s',
-    ':hover': {
-      backgroundColor: colors.ultraLightBackground,
-      transform: 'scale(1.1)'
-    }
+    justifyContent: 'center'
   },
   addAttachmentButton: {
     width: '100%',
@@ -2149,17 +1540,10 @@ const styles = {
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s',
-    ':hover': {
-      borderColor: colors.primary,
-      backgroundColor: colors.lightBackground,
-      transform: 'translateY(-1px)'
-    }
+    justifyContent: 'center'
   }
 };
 
-// Add spinner animation
 const styleSheet = document.createElement('style');
 styleSheet.innerHTML = `
   @keyframes spin {
