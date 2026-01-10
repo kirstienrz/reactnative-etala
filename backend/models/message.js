@@ -1,43 +1,55 @@
+// models/Message.js
 const mongoose = require("mongoose");
 
-const messageSchema = new mongoose.Schema(
-  {
-    sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    receiver: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    chat: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Chat",
-      required: true,
-    },
-    content: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    read: {
-      type: Boolean,
-      default: false,
-    },
-    type: {
-  type: String,
-  enum: ["USER", "SYSTEM"],
-  default: "USER",
-},
-action: {
-  type: String,
-  default: null,
-},
-
+const messageSchema = new mongoose.Schema({
+  ticketNumber: {
+    type: String,
+    required: true
   },
-  { timestamps: true }
-);
 
-module.exports = mongoose.model("Message", messageSchema);
+  sender: {
+    type: String,
+    enum: ["user", "admin"],
+    required: true
+  },
+
+  senderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+
+  senderName: {
+    type: String,
+    required: true
+  },
+
+  messageType: {
+    type: String,
+    enum: ["text", "file"],
+    default: "text"
+  },
+
+  content: {
+    type: String,
+    required: true
+  },
+
+  attachments: [{
+    uri: String,
+    type: String,
+    fileName: String
+  }],
+
+  isRead: {
+    type: Boolean,
+    default: false
+  },
+
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// ✅ Check if model exists before creating
+module.exports = mongoose.models.Message || mongoose.model("Message", messageSchema);

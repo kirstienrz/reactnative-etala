@@ -1,22 +1,28 @@
-
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
-const http = require("http"); // 🧩 for socket.io
-const { Server } = require("socket.io"); // 🧩 import socket.io
+const http = require("http");
+const { Server } = require("socket.io");
+const setupSocketIO = require("./config/socket"); // 🔥 Import socket config
 const path = require('path'); // ✅ ADD THIS
 
 dotenv.config();
 connectDB();
 
 const app = express();
-const server = http.createServer(app); // 🧩 create HTTP server for sockets
+const server = http.createServer(app);
 
-// ✅ Initialize Socket.IO
+// ✅ Initialize Socket.IO with CORS
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: { 
+    origin: "*", // Change to your frontend URL in production
+    methods: ["GET", "POST"]
+  },
 });
+
+// ✅ Setup Socket.IO events
+setupSocketIO(io);
 
 // ✅ Make `io` globally available
 app.set("io", io);
@@ -52,14 +58,7 @@ app.use("/api/contact", require("./routes/contactRoutes"));
 
 
 
-// ✅ SOCKET EVENTS
-io.on("connection", (socket) => {
-  console.log("🟢 Client connected:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("🔴 Client disconnected:", socket.id);
-  });
-});
+app.use("/api/tickets", require("./routes/tickets"));
 
 // ✅ SERVER LISTEN
 const PORT = process.env.PORT || 5000;

@@ -76,11 +76,11 @@ const LoginPage = () => {
       }
 
       // 🔹 EMAIL FORMAT CHECK
-      if (!email.endsWith("@etala.com")) {
-        toast.warning("Please use your E-tala email address only.");
-        setLoading(false);
-        return;
-      }
+      // if (!email.endsWith("@tup.edu.ph")) {
+      //   toast.warning("Please use your TUP email address only.");
+      //   setLoading(false);
+      //   return;
+      // }
       let data;
 
       if (usePin) {
@@ -301,9 +301,19 @@ const LoginPage = () => {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center text-sm text-gray-500">
+          <div className="mt-6 text-center text-sm text-gray-500 space-y-2">
             <p>Need help? Contact GAD Office</p>
+            <p>
+              Don't have an account?{" "}
+              <span
+                className="text-violet-600 cursor-pointer font-medium hover:underline"
+                onClick={() => navigate("/signup")}
+              >
+                Sign Up
+              </span>
+            </p>
           </div>
+
         </div>
       </div>
     </div>

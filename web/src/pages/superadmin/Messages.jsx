@@ -1,333 +1,688 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { Search, Plus, X, Loader2 } from 'lucide-react';
-import { getChats, createOrGetChat, getAllUsers } from '../../api/chat';
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, Plus, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
+import { 
+  getAllTickets, 
+  getTicketMessages, 
+  sendTicketMessage,
+  markMessagesAsRead,
+  markTicketAsUnread 
+} from '../../api/tickets';
+import socketService from '../../api/socket';
 
-const Messages = () => {
-  const navigate = useNavigate();
-  const currentUser = useSelector((state) => state.auth.user);
+const TicketMessagingSystem = () => {
+  const [tickets, setTickets] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [showTicketList, setShowTicketList] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [typingUser, setTypingUser] = useState(null);
   
-  // ✅ Better user ID extraction - try multiple possible fields
-  const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
+  const messagesEndRef = useRef(null);
+  const menuRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
   
-  const [chats, setChats] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [showNewModal, setShowNewModal] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  // 🔥 FIX: Use ref to avoid stale closure
+  const selectedTicketRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    console.log('=== USER DEBUG INFO ===');
-    console.log('Current user from Redux:', currentUser);
-    console.log('Full user object:', JSON.stringify(currentUser, null, 2));
-    console.log('Available keys:', currentUser ? Object.keys(currentUser) : 'no user');
-    console.log('Extracted user ID:', currentUserId);
-    console.log('====================');
-    
-    if (currentUserId) {
-      fetchChats();
-    } else {
-      console.error('❌ No user ID found! Check your login dispatch.');
-      setLoading(false);
-    }
-  }, [currentUserId]);
+    scrollToBottom();
+  }, [messages]);
 
-  const fetchChats = async () => {
-    try {
-      console.log('📨 Fetching chats for user:', currentUserId);
-      const data = await getChats();
-      console.log('✅ Chats received:', data);
+  // 🔥 Update ref whenever selectedTicket changes
+  useEffect(() => {
+    selectedTicketRef.current = selectedTicket;
+  }, [selectedTicket]);
+
+  // 🔥 Initialize Socket.IO - Setup ONCE
+  useEffect(() => {
+    console.log('🔌 Initializing socket connection...');
+    socketService.connect();
+    
+    // Small delay to ensure connection before joining room
+    setTimeout(() => {
+      console.log('👑 Attempting to join admin room...');
+      socketService.joinAdminRoom();
+    }, 100);
+
+    // 📩 Listen for new messages
+    socketService.onNewMessage(({ message, ticket }) => {
+      console.log('🔥 New message received:', message);
+      console.log('🔍 Message ticket:', message.ticketNumber);
+      console.log('🔍 Current ticket:', selectedTicketRef.current?.ticketNumber);
       
-      if (!data || data.length === 0) {
-        console.log('ℹ️ No chats returned from API');
-        setChats([]);
-        return;
+      // Update messages if viewing this ticket
+      if (selectedTicketRef.current?.ticketNumber === message.ticketNumber) {
+        console.log('✅ Ticket match! Adding to messages...');
+        setMessages(prev => {
+          console.log('📊 Current messages:', prev.length);
+          const exists = prev.some(m => m._id === message._id);
+          console.log('🔍 Message exists?', exists);
+          
+          if (exists) {
+            console.log('⚠️ Duplicate, skipping');
+            return prev;
+          }
+          
+          console.log('✅ Adding message');
+          return [...prev, message];
+        });
+      } else {
+        console.log('⚠️ Different ticket, updating list only');
+      }
+
+      // ✅ Always update ticket list with latest data and sort by most recent
+      setTickets(prev => {
+        const updatedTickets = prev.map(t => 
+          t.ticketNumber === ticket.ticketNumber ? ticket : t
+        );
+        
+        // 🔥 Sort tickets: most recent message first (like Messenger)
+        return [...updatedTickets].sort((a, b) => {
+          const dateA = new Date(a.lastMessageAt);
+          const dateB = new Date(b.lastMessageAt);
+          return dateB - dateA; // Most recent first
+        });
+      });
+    });
+
+    // 📩 Listen for ticket updates
+    socketService.onTicketUpdated((updatedTicket) => {
+      console.log('🔥 Ticket updated:', updatedTicket);
+      console.log('📊 Updated ticket hasUnreadMessages:', updatedTicket.hasUnreadMessages);
+      console.log('📊 Updated ticket unreadCount:', updatedTicket.unreadCount);
+      
+      setTickets(prev => {
+        // Update the ticket in the list
+        const newTickets = prev.map(t => 
+          t.ticketNumber === updatedTicket.ticketNumber ? updatedTicket : t
+        );
+        
+        // 🔥 Sort tickets: most recent message first (like Messenger)
+        const sortedTickets = [...newTickets].sort((a, b) => {
+          const dateA = new Date(a.lastMessageAt);
+          const dateB = new Date(b.lastMessageAt);
+          return dateB - dateA; // Most recent first
+        });
+        
+        console.log('📊 Tickets after update:', sortedTickets.map(t => ({ 
+          ticketNumber: t.ticketNumber, 
+          hasUnreadMessages: t.hasUnreadMessages,
+          unreadCount: t.unreadCount,
+          lastMessageAt: t.lastMessageAt
+        })));
+        
+        return sortedTickets;
+      });
+      
+      // Also update selected ticket if it's the one that was updated
+      if (selectedTicketRef.current?.ticketNumber === updatedTicket.ticketNumber) {
+        setSelectedTicket(updatedTicket);
+      }
+    });
+
+    // 📩 Listen for ticket closed
+    socketService.onTicketClosed(({ ticket, message }) => {
+      console.log('🔥 Ticket closed:', ticket);
+      if (selectedTicketRef.current?.ticketNumber === ticket.ticketNumber) {
+        setSelectedTicket(ticket);
+        setMessages(prev => [...prev, message]);
+      }
+      setTickets(prev => prev.map(t => 
+        t.ticketNumber === ticket.ticketNumber ? ticket : t
+      ));
+    });
+
+    // 📩 Listen for ticket reopened
+    socketService.onTicketReopened(({ ticket, message }) => {
+      console.log('🔥 Ticket reopened:', ticket);
+      if (selectedTicketRef.current?.ticketNumber === ticket.ticketNumber) {
+        setSelectedTicket(ticket);
+        setMessages(prev => [...prev, message]);
+      }
+      setTickets(prev => prev.map(t => 
+        t.ticketNumber === ticket.ticketNumber ? ticket : t
+      ));
+    });
+
+    // 📩 Listen for typing
+    socketService.onUserTyping(({ userName, isTyping }) => {
+      console.log('👤 Typing event:', userName, isTyping);
+      if (isTyping) {
+        setTypingUser(userName);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+          setTypingUser(null);
+        }, 3000);
+      } else {
+        setTypingUser(null);
+      }
+    });
+
+    // 📩 Listen for read receipts
+    socketService.onMessagesRead(({ ticketNumber, readBy }) => {
+      console.log('📖 Messages read event received for ticket:', ticketNumber, 'by:', readBy);
+      
+      // Update messages in current view
+      if (selectedTicketRef.current?.ticketNumber === ticketNumber) {
+        setMessages(prev => prev.map(msg => ({
+          ...msg,
+          // Mark messages as read based on who read them
+          isRead: msg.sender === 'admin' && readBy === 'user' ? true : msg.isRead
+        })));
       }
       
-      const chatsWithMessages = data.filter(chat => chat.latestMessage);
-      console.log('💬 Chats with messages:', chatsWithMessages.length);
-      setChats(chatsWithMessages);
-    } catch (error) {
-      console.error('❌ Error fetching chats:', error);
-      setChats([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      // ✅ Update ticket list to show as read (for admin view)
+      // Only update hasUnreadMessages if user read the admin's messages
+      if (readBy === 'user') {
+        setTickets(prev => prev.map(t => 
+          t.ticketNumber === ticketNumber 
+            ? { ...t, unreadCount: { ...t.unreadCount, admin: 0 }, hasUnreadMessages: false } 
+            : t
+        ));
+      }
+    });
 
-  const fetchUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      const data = await getAllUsers();
-      console.log('👥 All users fetched:', data.length);
+    // Cleanup only typing timeout, keep socket connected
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // 🔥 Join/leave ticket rooms when selection changes
+  useEffect(() => {
+    if (selectedTicket) {
+      console.log('🎫 Joining ticket room:', selectedTicket.ticketNumber);
+      socketService.joinTicket(selectedTicket.ticketNumber);
       
-      // ✅ Filter out current user using the extracted ID
-      const otherUsers = data.filter(user => {
-        const userId = user._id || user.id;
-        return userId !== currentUserId;
-      });
-      
-      console.log('👤 Other users (excluding current):', otherUsers.length);
-      setUsers(otherUsers);
-      setFilteredUsers(otherUsers);
-    } catch (error) {
-      console.error('❌ Error fetching users:', error);
-    } finally {
-      setLoadingUsers(false);
+      // Only leave the room when switching tickets, not when unmounting
+      return () => {
+        console.log('🚪 Leaving ticket room:', selectedTicket.ticketNumber);
+        socketService.leaveTicket(selectedTicket.ticketNumber);
+      };
     }
-  };
+  }, [selectedTicket]);
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredUsers(users);
-      return;
-    }
-    const query = searchQuery.toLowerCase();
-    const filtered = users.filter(user => {
-      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-      const email = user.email?.toLowerCase() || '';
-      return fullName.includes(query) || email.includes(query);
-    });
-    setFilteredUsers(filtered);
-  }, [searchQuery, users]);
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpenMenuId(null);
+      }
+    };
 
-  const handleNewMessage = () => {
-    setShowNewModal(true);
-    setSearchQuery('');
-    fetchUsers();
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const handleUserSelect = async (user) => {
+  useEffect(() => {
+    loadTickets();
+  }, []);
+
+  const loadTickets = async () => {
+    setLoading(true);
     try {
-      setLoadingUsers(true);
-      const userId = user._id || user.id;
-      const chat = await createOrGetChat(userId);
-      setShowNewModal(false);
-      navigate('/superadmin/chat', {
-        state: {
-          chatId: chat._id,
-          receiverId: userId,
-          receiverName: `${user.firstName} ${user.lastName}`,
-        }
-      });
-      fetchChats();
+      const data = await getAllTickets({ sortBy: 'lastMessageAt' });
+      console.log('📥 Loaded tickets:', data);
+      setTickets(data);
     } catch (error) {
-      console.error('❌ Error creating/getting chat:', error);
+      console.error('❌ Error loading tickets:', error);
+      alert('Failed to load tickets');
     } finally {
-      setLoadingUsers(false);
+      setLoading(false);
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchChats();
+  const loadMessages = async (ticketNumber) => {
+    setLoading(true);
+    try {
+      const data = await getTicketMessages(ticketNumber, { limit: 50 });
+      console.log('📥 Loaded messages:', data);
+      setMessages(data);
+    } catch (error) {
+      console.error('❌ Error loading messages:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getOtherUser = (users) => {
-    if (!currentUserId || !users || users.length === 0) {
-      return users && users.length > 0 ? users[0] : null;
+  // ✅ Mark ticket as read on server
+  const markTicketAsRead = async (ticketNumber) => {
+    try {
+      await markMessagesAsRead(ticketNumber);
+      console.log('✅ Marked ticket as read:', ticketNumber);
+      
+      // Update local state
+      setTickets(prev => prev.map(t => 
+        t.ticketNumber === ticketNumber 
+          ? { ...t, hasUnreadMessages: false } 
+          : t
+      ));
+    } catch (error) {
+      console.error('❌ Error marking as read:', error);
     }
+  };
+
+  // ❌ Mark ticket as unread (calls API to update server and broadcasts via socket)
+  const handleMarkAsUnread = async (ticketNumber) => {
+    try {
+      await markTicketAsUnread(ticketNumber);
+      console.log('✅ Marked ticket as unread:', ticketNumber);
+      
+      // Update will come via socket event, but update local state immediately for responsiveness
+      setTickets(prev => prev.map(t => 
+        t.ticketNumber === ticketNumber 
+          ? { ...t, hasUnreadMessages: true, unreadCount: { ...t.unreadCount, admin: 1 } } 
+          : t
+      ));
+    } catch (error) {
+      console.error('❌ Error marking as unread:', error);
+    }
+  };
+
+  const handleSelectTicket = async (ticket) => {
+    setSelectedTicket(ticket);
+    setShowTicketList(false);
     
-    // ✅ Better comparison - check both _id and id fields
-    return users.find(user => {
-      const userId = user._id || user.id;
-      return userId !== currentUserId;
-    }) || users[0];
+    console.log('🔍 Selected ticket:', ticket);
+    console.log('🔍 Using ticketNumber:', ticket.ticketNumber);
+    
+    // ✅ Mark as read when opening
+    await markTicketAsRead(ticket.ticketNumber);
+    
+    await loadMessages(ticket.ticketNumber);
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedTicket) return;
+
+    setSending(true);
+    try {
+      console.log('📤 Sending to ticketNumber:', selectedTicket.ticketNumber);
+      
+      const message = await sendTicketMessage(selectedTicket.ticketNumber, {
+        content: newMessage.trim(),
+        attachments: []
+      });
+      
+      console.log('✅ Message sent:', message);
+      
+      // 🔥 FIX: Add message immediately for instant feedback
+      setMessages(prev => {
+        const exists = prev.some(m => m._id === message._id);
+        if (!exists) {
+          return [...prev, message];
+        }
+        return prev;
+      });
+      
+      setNewMessage('');
+      socketService.sendTyping(selectedTicket.ticketNumber, 'Admin', false);
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      alert('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleTyping = (e) => {
+    setNewMessage(e.target.value);
+    
+    if (selectedTicket && e.target.value.trim()) {
+      socketService.sendTyping(selectedTicket.ticketNumber, 'Admin', true);
+      
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        socketService.sendTyping(selectedTicket.ticketNumber, 'Admin', false);
+      }, 2000);
+    }
+  };
+
+  const toggleMenu = (e, ticketNumber) => {
+    e.stopPropagation();
+    setOpenMenuId(openMenuId === ticketNumber ? null : ticketNumber);
+  };
+
+  const formatDate = (date) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now - d;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return d.toLocaleDateString();
   };
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now - date) / (1000 * 60 * 60);
-
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    } else if (diffInHours < 168) {
-      return date.toLocaleDateString('en-US', { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
-  const handleChatPress = (chat) => {
-    const otherUser = getOtherUser(chat.users);
-    if (otherUser) {
-      const userId = otherUser._id || otherUser.id;
-      navigate('/superadmin/chat', {
-        state: {
-          chatId: chat._id,
-          receiverId: userId,
-          receiverName: `${otherUser.firstName} ${otherUser.lastName}`,
-        }
-      });
+  // Find the last message sent by admin
+  const getLastAdminMessageIndex = () => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender === 'admin') {
+        return i;
+      }
     }
+    return -1;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
-  // ✅ Show error if no user ID found
-  if (!currentUserId) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-lg font-medium text-red-600 mb-2">Unable to load messages</p>
-          <p className="text-sm text-gray-500">User ID not found. Please try logging in again.</p>
-          <button
-            onClick={() => navigate('/login')}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const lastAdminMessageIndex = getLastAdminMessageIndex();
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Messages</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
-          >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-          <button
-            onClick={handleNewMessage}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Message
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        {chats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <p className="text-lg font-medium text-gray-600">No conversations yet</p>
-            <p className="text-sm text-gray-400 mt-2">Click "New Message" to start a conversation</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {chats.map((chat) => {
-              const otherUser = getOtherUser(chat.users);
-              if (!otherUser) return null;
-
-              const userName = `${otherUser.firstName} ${otherUser.lastName}`;
-              const latestMessageContent = chat.latestMessage?.content || 'Start a conversation';
-              const timeStamp = chat.updatedAt ? formatTime(chat.updatedAt) : '';
-              
-              // ✅ Better unread check with flexible ID matching
-              const messageReceiverId = chat.latestMessage?.receiver?._id || chat.latestMessage?.receiver?.id || chat.latestMessage?.receiver;
-              const isUnread = chat.latestMessage && !chat.latestMessage.read && 
-                             messageReceiverId === currentUserId;
-
-              return (
-                <div
-                  key={chat._id}
-                  onClick={() => handleChatPress(chat)}
-                  className="bg-white px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors flex items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
-                    {otherUser.firstName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className={`font-semibold truncate ${isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
-                        {userName}
-                      </p>
-                      {timeStamp && <span className="text-xs text-gray-400 ml-2">{timeStamp}</span>}
-                    </div>
-                    <p className={`text-sm truncate ${isUnread ? 'font-semibold text-gray-900' : 'text-gray-500'} ${!chat.latestMessage ? 'italic' : ''}`}>
-                      {latestMessageContent}
-                    </p>
-                  </div>
-                  {isUnread && <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 flex-shrink-0" />}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {showNewModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">New Message</h2>
+    <div className="flex h-full bg-gray-50">
+      {/* Ticket List Sidebar */}
+      <div className={`${showTicketList ? 'block' : 'hidden'} md:block ${
+        sidebarCollapsed ? 'md:w-16' : 'w-full md:w-80'
+      } bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}>
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            {!sidebarCollapsed && (
+              <h2 className="text-xl font-bold text-gray-900">Tickets</h2>
+            )}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowNewModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden md:block p-1 hover:bg-gray-100 rounded transition-colors"
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                {sidebarCollapsed ? (
+                  <ChevronRight className="w-5 h-5" />
+                ) : (
+                  <ChevronLeft className="w-5 h-5" />
+                )}
+              </button>
+              <button
+                onClick={() => setShowTicketList(false)}
+                className="md:hidden p-1 hover:bg-gray-100 rounded"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-auto">
-              {loadingUsers ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="flex items-center justify-center py-8 text-gray-500">
-                  {searchQuery ? 'No users found' : 'No users available'}
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {filteredUsers.map((user) => (
-                    <div
-                      key={user._id || user.id}
-                      onClick={() => handleUserSelect(user)}
-                      className="px-6 py-3 hover:bg-gray-50 cursor-pointer transition-colors flex items-center gap-3"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                        {user.firstName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
-                          {user.firstName} {user.lastName}
-                        </p>
-                        {user.email && <p className="text-sm text-gray-500 truncate">{user.email}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         </div>
-      )}
+
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {!sidebarCollapsed && <p>No tickets found</p>}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {tickets.map((ticket) => {
+                // ✅ Use server-side hasUnreadMessages flag
+                const hasUnread = ticket.hasUnreadMessages;
+                const isMenuOpen = openMenuId === ticket.ticketNumber;
+                const isSelected = selectedTicket?.ticketNumber === ticket.ticketNumber;
+                
+                return (
+                  <div
+                    key={ticket._id}
+                    className={`relative flex items-stretch transition-colors ${
+                      isSelected 
+                        ? 'bg-blue-100' 
+                        : hasUnread 
+                        ? 'bg-blue-50 hover:bg-blue-100' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <button
+                      onClick={() => handleSelectTicket(ticket)}
+                      className="flex-1 p-4 text-left bg-transparent"
+                      title={sidebarCollapsed ? `${ticket.reportId?.ticketNumber || ticket.ticketNumber} - ${ticket.displayName}` : ''}
+                    >
+                      {sidebarCollapsed ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${hasUnread ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-3">
+                          <div className="w-2 flex-shrink-0 pt-1">
+                            {hasUnread && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-sm ${hasUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-900'}`}>
+                                    {ticket.reportId?.ticketNumber || ticket.ticketNumber}
+                                  </span>
+                                </div>
+                                <p className={`text-sm truncate ${hasUnread ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                                  {ticket.displayName}
+                                </p>
+                                {ticket.reportId?.caseStatus && (
+                                  <span className="text-xs text-gray-500">
+                                    {ticket.reportId.caseStatus}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center text-xs text-gray-500">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {formatDate(ticket.lastMessageAt)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </button>
+
+                    {!sidebarCollapsed && (
+                      <div className="relative flex items-center pr-4" ref={isMenuOpen ? menuRef : null}>
+                        <button
+                          onClick={(e) => toggleMenu(e, ticket.ticketNumber)}
+                          className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-600" />
+                        </button>
+
+                        {isMenuOpen && (
+                          <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                            {hasUnread ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markTicketAsRead(ticket.ticketNumber);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                              >
+                                Mark as read
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAsUnread(ticket.ticketNumber);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                              >
+                                Mark as unread
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {selectedTicket ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowTicketList(true)}
+                  className="md:hidden p-2 hover:bg-gray-100 rounded"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    {selectedTicket.reportId?.ticketNumber || selectedTicket.ticketNumber}
+                  </h3>
+                  <p className="text-sm text-gray-500">{selectedTicket.displayName}</p>
+                  {selectedTicket.reportId?.caseStatus && (
+                    <p className="text-xs text-gray-400">{selectedTicket.reportId.caseStatus}</p>
+                  )}
+                </div>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                selectedTicket.status === 'Open' 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-gray-100 text-gray-700'
+              }`}>
+                {selectedTicket.status}
+              </span>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <p>No messages yet</p>
+                </div>
+              ) : (
+                messages.map((msg, idx) => {
+                  const isCurrentUser = msg.sender === 'admin';
+                  const isLastAdminMessage = isCurrentUser && idx === lastAdminMessageIndex;
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-xs md:max-w-md lg:max-w-lg ${
+                        isCurrentUser ? 'bg-blue-500 text-white' : 'bg-white'
+                      } rounded-lg p-3 shadow-sm`}>
+                        <p className={`text-sm ${isCurrentUser ? 'text-white' : 'text-gray-900'}`}>
+                          {msg.content}
+                        </p>
+                        {msg.attachments?.length > 0 && (
+                          <div className="mt-2 flex items-center gap-1 text-xs">
+                            <Paperclip className="w-3 h-3" />
+                            {msg.attachments.length} attachment(s)
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <span className={`text-xs ${
+                            isCurrentUser ? 'text-blue-200' : 'text-gray-400'
+                          }`}>
+                            {formatTime(msg.createdAt)}
+                          </span>
+                          {/* Read indicator for last admin message */}
+                          {isCurrentUser && isLastAdminMessage && msg.isRead && (
+                            <span className="text-xs text-blue-200">
+                              Read
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              
+              {/* Typing Indicator */}
+              {typingUser && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-200 rounded-lg px-4 py-2">
+                    <span className="text-sm text-gray-600">
+                      {typingUser} is typing...
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            {selectedTicket.status === 'Open' && (
+              <div className="bg-white border-t border-gray-200 p-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={handleTyping}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type your message..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={sending}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim() || sending}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  >
+                    {sending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            <p>Select a ticket to start messaging</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default Messages;
+export default TicketMessagingSystem;

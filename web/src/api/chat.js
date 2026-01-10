@@ -1,24 +1,24 @@
 import API from "./config";
-import { getItem } from "../utils/storage"; // ✅ get token from SecureStore
+import { getItem } from "../utils/storage";
 
-// 💬 Create or Get Chat (1-on-1)
-export const createOrGetChat = async (userId) => {
+// 💬 Create or Get Ticket
+export const createOrGetTicket = async (ticketNumber, isAnonymous = false) => {
   try {
     const token = await getItem("token");
     const res = await API.post(
-      "/chat",
-      { userId },
+      "/chat", // same route as backend
+      { ticketNumber, isAnonymous },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return res.data;
   } catch (error) {
-    console.error("❌ Error creating/getting chat:", error.response?.data || error.message);
+    console.error("❌ Error creating/getting ticket:", error.response?.data || error.message);
     throw error;
   }
 };
 
-// 📋 Get All Chats for Logged-in User
-export const getChats = async () => {
+// 📋 Get All Tickets for Logged-in User
+export const getTickets = async () => {
   try {
     const token = await getItem("token");
     const res = await API.get("/chat", {
@@ -26,28 +26,32 @@ export const getChats = async () => {
     });
     return res.data;
   } catch (error) {
-    console.error("❌ Error fetching chats:", error.response?.data || error.message);
+    console.error("❌ Error fetching tickets:", error.response?.data || error.message);
     throw error;
   }
 };
 
-// ✉️ Send Message
-export const sendMessage = async (chatId, receiverId, content, type, action) => {
-  const token = await getItem("token");
-  const res = await API.post(
-    "/chat/message",
-    { chatId, receiverId, content, type, action },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.data;
-};
-
-
-// 📩 Get Messages in a Chat
-export const getMessages = async (chatId) => {
+// ✉️ Send Message inside a ticket
+export const sendMessage = async (ticketId, content, type, action) => {
   try {
     const token = await getItem("token");
-    const res = await API.get(`/chat/${chatId}/messages`, {
+    const res = await API.post(
+      "/chat/message",
+      { ticketId, content, type, action }, // no receiverId
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  } catch (error) {
+    console.error("❌ Error sending message:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// 📩 Get Messages in a Ticket (chatbox)
+export const getMessages = async (ticketId) => {
+  try {
+    const token = await getItem("token");
+    const res = await API.get(`/chat/${ticketId}/messages`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return res.data;
@@ -73,11 +77,11 @@ export const markMessageAsRead = async (messageId) => {
   }
 };
 
-// Add this to your existing chat.js API file
+// Optional: get all users (for staff/admin use)
 export const getAllUsers = async () => {
   try {
     const token = await getItem("token");
-    const res = await API.get("/user/all", { // ✅ Changed from "/user/users" to "/users/all"
+    const res = await API.get("/user/all", {
       headers: { Authorization: `Bearer ${token}` },
     });
     return res.data;

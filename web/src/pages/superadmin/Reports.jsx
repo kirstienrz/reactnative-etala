@@ -3,15 +3,14 @@ import { useNavigate } from "react-router-dom";
 import {
   MessageSquare, Send, Share2, X, Eye, Archive, RefreshCw,
   Search, Filter, Calendar, FileText, AlertCircle, CheckCircle,
-  Clock, XCircle, ChevronDown, Download, Users, UserCheck, ClipboardList
+  Clock, XCircle, ChevronDown, Download, Users, UserCheck, ClipboardList, Edit,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown, Mail, MoreVertical
 } from "lucide-react";
 
 import {
   getAllReports, getArchivedReports, getReportById,
   updateReportStatus, archiveReport, restoreReport, addReferral
 } from "../../api/report";
-
-import { createOrGetChat } from "../../api/chat";
 
 const AdminReports = () => {
   const navigate = useNavigate();
@@ -21,12 +20,16 @@ const AdminReports = () => {
   const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [readStatusFilter, setReadStatusFilter] = useState("All");
   const [caseStatusFilter, setCaseStatusFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [sortOrder, setSortOrder] = useState("latest");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -39,9 +42,14 @@ const AdminReports = () => {
   const [newStatus, setNewStatus] = useState("");
   const [newCaseStatus, setNewCaseStatus] = useState("");
   const [statusRemarks, setStatusRemarks] = useState("");
-  const [caseStatusRemarks, setCaseStatusRemarks] = useState("");
   const [referralDept, setReferralDept] = useState("");
   const [referralNote, setReferralNote] = useState("");
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+  const [readReports, setReadReports] = useState(() => {
+    const stored = localStorage.getItem('adminReadReports');
+    return stored ? JSON.parse(stored) : [];
+  });
 
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
 
@@ -49,34 +57,43 @@ const AdminReports = () => {
     fetchReports();
   }, []);
 
-  const handleMessageUser = async (user) => {
-    try {
-      console.log("💬 Starting chat with user:", user);
-      
-      // Extract user ID
-      const userId = user._id || user.id;
-      
-      if (!userId) {
-        showToast("Unable to message user: User ID not found", "error");
-        return;
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdown && !event.target.closest('.dropdown-container')) {
+        setOpenDropdown(null);
       }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openDropdown]);
 
-      // Create or get existing chat
-      const chat = await createOrGetChat(userId);
-      console.log("✅ Chat created/retrieved:", chat);
+  useEffect(() => {
+    localStorage.setItem('adminReadReports', JSON.stringify(readReports));
+  }, [readReports]);
 
-      // Navigate to chat screen with user details
-      navigate('/superadmin/chat', {
-        state: {
-          chatId: chat._id || chat.id,
-          receiverId: userId,
-          receiverName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.tupId || "User",
-        }
-      });
-    } catch (error) {
-      console.error("❌ Error creating/getting chat:", error);
-      showToast(`Failed to start chat: ${error.message}`, "error");
+  const markAsRead = (reportId) => {
+    if (!readReports.includes(reportId)) {
+      setReadReports([...readReports, reportId]);
     }
+  };
+
+  const markAsUnread = (reportId) => {
+    setReadReports(readReports.filter(id => id !== reportId));
+  };
+
+  const isReportRead = (reportId) => {
+    return readReports.includes(reportId);
+  };
+
+  // ✅ Navigate to messaging with selected ticket
+  const handleMessageUser = async (report) => {
+    // Navigate to messages page with the ticket number as state
+    navigate('/superadmin/messages', { 
+      state: { 
+        selectedTicketNumber: report.ticketNumber,
+        reportId: report._id 
+      } 
+    });
   };
 
   const fetchReports = async () => {
@@ -111,6 +128,7 @@ const AdminReports = () => {
       if (res.success) {
         setSelectedReport(res.data);
         setShowDetailsModal(true);
+        markAsRead(reportId);
       } else {
         showToast(res.message || "Failed to load report details", "error");
       }
@@ -119,39 +137,27 @@ const AdminReports = () => {
     }
   };
 
-  const handleUpdateStatus = async () => {
-    if (!newStatus) return;
-    try {
-      const res = await updateReportStatus(selectedReport._id, newStatus, statusRemarks);
-      if (res.success) {
-        showToast("Status updated successfully");
-        setShowStatusModal(false);
-        setNewStatus("");
-        setStatusRemarks("");
-        fetchReports();
-      } else {
-        showToast(res.message || "Failed to update status", "error");
-      }
-    } catch (error) {
-      showToast(`Failed to update status: ${error.message}`, "error");
-    }
-  };
-
   const handleUpdateCaseStatus = async () => {
     if (!newCaseStatus) return;
     try {
-      const res = await updateReportStatus(selectedReport._id, selectedReport.status, caseStatusRemarks, newCaseStatus);
+      const res = await updateReportStatus(
+        selectedReport._id, 
+        selectedReport.status,
+        "",
+        newCaseStatus
+      );
       if (res.success) {
         showToast("Case status updated successfully");
         setShowCaseStatusModal(false);
         setNewCaseStatus("");
-        setCaseStatusRemarks("");
         fetchReports();
       } else {
         showToast(res.message || "Failed to update case status", "error");
       }
     } catch (error) {
-      showToast(`Failed to update case status: ${error.message}`, "error");
+      console.error("Update case status error:", error);
+      const errorMessage = error.response?.data?.message || error.message || "Unknown error";
+      showToast(`Failed to update case status: ${errorMessage}`, "error");
     }
   };
 
@@ -210,22 +216,13 @@ const AdminReports = () => {
 
   const clearFilters = () => {
     setSearchTerm("");
-    setStatusFilter("All");
+    setReadStatusFilter("All");
     setCaseStatusFilter("All");
     setCategoryFilter("All");
     setDateFrom("");
     setDateTo("");
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      Pending: "bg-yellow-100 text-yellow-800",
-      Reviewed: "bg-blue-100 text-blue-800",
-      "In Progress": "bg-purple-100 text-purple-800",
-      Resolved: "bg-green-100 text-green-800",
-      Closed: "bg-gray-100 text-gray-800"
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    setSortOrder("latest");
+    setCurrentPage(1);
   };
 
   const getCaseStatusColor = (caseStatus) => {
@@ -233,20 +230,10 @@ const AdminReports = () => {
       "For Queuing": "bg-orange-100 text-orange-800",
       "For Interview": "bg-cyan-100 text-cyan-800",
       "For Appointment": "bg-indigo-100 text-indigo-800",
-      "For Referral": "bg-pink-100 text-pink-800"
+      "For Referral": "bg-pink-100 text-pink-800",
+      "Case Closed": "bg-gray-100 text-gray-800"
     };
     return colors[caseStatus] || "bg-gray-100 text-gray-800";
-  };
-
-  const getStatusIcon = (status) => {
-    const icons = {
-      Pending: <Clock size={14} />,
-      Reviewed: <Eye size={14} />,
-      "In Progress": <RefreshCw size={14} />,
-      Resolved: <CheckCircle size={14} />,
-      Closed: <XCircle size={14} />
-    };
-    return icons[status] || <AlertCircle size={14} />;
   };
 
   const getCaseStatusIcon = (caseStatus) => {
@@ -254,7 +241,8 @@ const AdminReports = () => {
       "For Queuing": <ClipboardList size={14} />,
       "For Interview": <Users size={14} />,
       "For Appointment": <Calendar size={14} />,
-      "For Referral": <Share2 size={14} />
+      "For Referral": <Share2 size={14} />,
+      "Case Closed": <XCircle size={14} />
     };
     return icons[caseStatus] || <AlertCircle size={14} />;
   };
@@ -271,7 +259,10 @@ const AdminReports = () => {
       r.incidentDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.createdBy?.tupId || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "All" || r.status === statusFilter;
+    const matchesReadStatus = readStatusFilter === "All" || 
+      (readStatusFilter === "Read" && isReportRead(r._id)) ||
+      (readStatusFilter === "Unread" && !isReportRead(r._id));
+
     const matchesCaseStatus = caseStatusFilter === "All" || r.caseStatus === caseStatusFilter;
     const matchesCategory = categoryFilter === "All" || r.incidentTypes?.includes(categoryFilter);
 
@@ -279,15 +270,29 @@ const AdminReports = () => {
     const matchesDateFrom = !dateFrom || reportDate >= new Date(dateFrom);
     const matchesDateTo = !dateTo || reportDate <= new Date(dateTo + "T23:59:59");
 
-    return matchesSearch && matchesStatus && matchesCaseStatus && matchesCategory && matchesDateFrom && matchesDateTo;
+    return matchesSearch && matchesReadStatus && matchesCaseStatus && matchesCategory && matchesDateFrom && matchesDateTo;
+  }).sort((a, b) => {
+    const dateA = new Date(a.submittedAt);
+    const dateB = new Date(b.submittedAt);
+    return sortOrder === "latest" ? dateB - dateA : dateA - dateB;
   });
 
+  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedReports = filteredReports.slice(startIndex, endIndex);
+
+  const goToPage = (page) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
   const activeFilterCount = [
-    statusFilter !== "All",
+    readStatusFilter !== "All",
     caseStatusFilter !== "All",
     categoryFilter !== "All",
     dateFrom,
-    dateTo
+    dateTo,
+    sortOrder !== "latest"
   ].filter(Boolean).length;
 
   const InfoItem = ({ label, value }) => {
@@ -299,7 +304,6 @@ const AdminReports = () => {
       </div>
     );
   };
-
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -351,20 +355,35 @@ const AdminReports = () => {
         {/* Advanced Filters */}
         {showFilters && (
           <div className="pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Report Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By Date</label>
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  value={sortOrder}
+                  onChange={(e) => {
+                    setSortOrder(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="latest">Latest First</option>
+                  <option value="oldest">Oldest First</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Read Status</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={readStatusFilter}
+                  onChange={(e) => {
+                    setReadStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 >
                   <option>All</option>
-                  <option>Pending</option>
-                  <option>Reviewed</option>
-                  <option>In Progress</option>
-                  <option>Resolved</option>
-                  <option>Closed</option>
+                  <option>Unread</option>
+                  <option>Read</option>
                 </select>
               </div>
 
@@ -373,13 +392,17 @@ const AdminReports = () => {
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   value={caseStatusFilter}
-                  onChange={(e) => setCaseStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setCaseStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 >
                   <option>All</option>
                   <option>For Queuing</option>
                   <option>For Interview</option>
                   <option>For Appointment</option>
                   <option>For Referral</option>
+                  <option>Case Closed</option>
                 </select>
               </div>
 
@@ -388,7 +411,10 @@ const AdminReports = () => {
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  onChange={(e) => {
+                    setCategoryFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 >
                   <option>All</option>
                   {allCategories.map(cat => (
@@ -403,7 +429,10 @@ const AdminReports = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 />
               </div>
 
@@ -413,7 +442,10 @@ const AdminReports = () => {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 />
               </div>
             </div>
@@ -439,7 +471,10 @@ const AdminReports = () => {
           <div className="flex items-center justify-between p-6">
             <div className="flex gap-2">
               <button
-                onClick={() => setActiveTab("active")}
+                onClick={() => {
+                  setActiveTab("active");
+                  setCurrentPage(1);
+                }}
                 className={`px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === "active"
                   ? "bg-blue-600 text-white"
                   : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
@@ -448,7 +483,10 @@ const AdminReports = () => {
                 Active Reports ({reports.length})
               </button>
               <button
-                onClick={() => setActiveTab("archived")}
+                onClick={() => {
+                  setActiveTab("archived");
+                  setCurrentPage(1);
+                }}
                 className={`px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === "archived"
                   ? "bg-blue-600 text-white"
                   : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
@@ -458,10 +496,8 @@ const AdminReports = () => {
               </button>
             </div>
             <div className="text-sm text-gray-600">
-              Showing <span className="font-semibold">{filteredReports.length}</span> of{" "}
-              <span className="font-semibold">
-                {activeTab === "active" ? reports.length : archivedReports.length}
-              </span> reports
+              Showing <span className="font-semibold">{startIndex + 1}-{Math.min(endIndex, filteredReports.length)}</span> of{" "}
+              <span className="font-semibold">{filteredReports.length}</span> reports
             </div>
           </div>
         </div>
@@ -479,107 +515,463 @@ const AdminReports = () => {
               <p className="text-sm">Adjust your search criteria or filters</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ticket
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Reporter
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Case Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredReports.map((report) => (
-                    <tr key={report._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 font-mono">
-                          {report.ticketNumber}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {report.isAnonymous ? (
-                            <span className="text-gray-500 italic">Anonymous</span>
-                          ) : (
-                            report.createdBy?.tupId || "Unknown User"
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
-                          {report.incidentTypes?.slice(0, 2).join(", ") || "N/A"}
-                          {report.incidentTypes?.length > 2 && (
-                            <span className="text-gray-500"> +{report.incidentTypes.length - 2}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {report.caseStatus ? (
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
-                            {getCaseStatusIcon(report.caseStatus)}
-                            {report.caseStatus}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-xs">Not Set</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(report.submittedAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleViewDetails(report._id)}
-                            className="text-blue-600 hover:text-blue-900 transition-colors p-1 rounded"
-                            title="View Details"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          {activeTab === "active" ? (
-                            <button
-                              onClick={() => {
-                                setSelectedReport(report);
-                                setShowArchiveModal(true);
-                              }}
-                              className="text-gray-600 hover:text-gray-900 transition-colors p-1 rounded"
-                              title="Archive"
-                            >
-                              <Archive size={18} />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setSelectedReport(report);
-                                setShowRestoreModal(true);
-                              }}
-                              className="text-green-600 hover:text-green-900 transition-colors p-1 rounded"
-                              title="Restore"
-                            >
-                              <RefreshCw size={18} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ticket
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Reporter
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Case Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {paginatedReports.map((report) => (
+                      <tr 
+                        key={report._id} 
+                        className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {!isReportRead(report._id) && (
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                            {report.ticketNumber}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {report.isAnonymous ? (
+                              <span className="text-gray-500 italic">Anonymous</span>
+                            ) : (
+                              report.createdBy?.tupId || "Unknown User"
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {report.incidentTypes?.slice(0, 2).join(", ") || "N/A"}
+                            {report.incidentTypes?.length > 2 && (
+                              <span className="text-gray-500"> +{report.incidentTypes.length - 2}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {report.caseStatus ? (
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
+                              {getCaseStatusIcon(report.caseStatus)}
+                              {report.caseStatus}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">Not Set</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(report.submittedAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="relative dropdown-container">
+                            <button
+                              onClick={() => setOpenDropdown(openDropdown === report._id ? null : report._id)}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Actions"
+                            >
+                              <MoreVertical size={18} className="text-gray-600" />
+                            </button>
+                            
+                            {openDropdown === report._id && (
+                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                <button
+                                  onClick={() => {
+                                    handleViewDetails(report._id);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Eye size={16} />
+                                  View Details
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    handleMessageUser(report);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <MessageSquare size={16} />
+                                  Message User
+                                </button>
+                                
+                                {isReportRead(report._id) ? (
+                                  <button
+                                    onClick={() => {
+                                      markAsUnread(report._id);
+                                      showToast("Marked as unread", "success");
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  >
+                                    <Mail size={16} />
+                                    Mark as Unread
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      markAsRead(report._id);
+                                      showToast("Marked as read", "success");
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  >
+                                    <CheckCircle size={16} />
+                                    Mark as Read
+                                  </button>
+                                )}
+                                
+                                <button
+                                  onClick={() => {
+                                    setSelectedReport(report);
+                                    setNewCaseStatus(report.caseStatus || "");
+                                    setShowCaseStatusModal(true);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Edit size={16} />
+                                  Edit Case Status
+                                </button>
+                                
+                                <div className="border-t border-gray-200 my-1"></div>
+                                
+                                {activeTab === "active" ? (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedReport(report);
+                                      setShowArchiveModal(true);
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                  >
+                                    <Archive size={16} />
+                                    Archive
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedReport(report);
+                                      setShowRestoreModal(true);
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                                  >
+                                    <RefreshCw size={16} />
+                                    Restore
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+              <table>
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ticket
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Reporter
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Case Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {paginatedReports.map((report) => (
+                      <tr 
+                        key={report._id} 
+                        className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {!isReportRead(report._id) && (
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                            {report.ticketNumber}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {report.isAnonymous ? (
+                              <span className="text-gray-500 italic">Anonymous</span>
+                            ) : (
+                              report.createdBy?.tupId || "Unknown User"
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {report.incidentTypes?.slice(0, 2).join(", ") || "N/A"}
+                            {report.incidentTypes?.length > 2 && (
+                              <span className="text-gray-500"> +{report.incidentTypes.length - 2}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {report.caseStatus ? (
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
+                              {getCaseStatusIcon(report.caseStatus)}
+                              {report.caseStatus}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">Not Set</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(report.submittedAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="relative dropdown-container">
+                            <button
+                              onClick={() => setOpenDropdown(openDropdown === report._id ? null : report._id)}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Actions"
+                            >
+                              <MoreVertical size={18} className="text-gray-600" />
+                            </button>
+                            
+                            {openDropdown === report._id && (
+                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                <button
+                                  onClick={() => {
+                                    handleViewDetails(report._id);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Eye size={16} />
+                                  View Details
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    handleMessageUser(report);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <MessageSquare size={16} />
+                                  Message User
+                                </button>
+                                
+                                {isReportRead(report._id) ? (
+                                  <button
+                                    onClick={() => {
+                                      markAsUnread(report._id);
+                                      showToast("Marked as unread", "success");
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  >
+                                    <Mail size={16} />
+                                    Mark as Unread
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      markAsRead(report._id);
+                                      showToast("Marked as read", "success");
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  >
+                                    <CheckCircle size={16} />
+                                    Mark as Read
+                                  </button>
+                                )}
+                                
+                                <button
+                                  onClick={() => {
+                                    setSelectedReport(report);
+                                    setNewCaseStatus(report.caseStatus || "");
+                                    setShowCaseStatusModal(true);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Edit size={16} />
+                                  Edit Case Status
+                                </button>
+                                
+                                <div className="border-t border-gray-200 my-1"></div>
+                                
+                                {activeTab === "active" ? (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedReport(report);
+                                      setShowArchiveModal(true);
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                  >
+                                    <Archive size={16} />
+                                    Archive
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedReport(report);
+                                      setShowRestoreModal(true);
+                                      setOpenDropdown(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                                  >
+                                    <RefreshCw size={16} />
+                                    Restore
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Items per page:</label>
+                    <select
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => goToPage(1)}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="First page"
+                    >
+                      <ChevronsLeft size={16} />
+                    </button>
+                    <button
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Previous page"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    
+                    <div className="flex items-center gap-1">
+                      {[...Array(totalPages)].map((_, idx) => {
+                        const page = idx + 1;
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => goToPage(page)}
+                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                currentPage === page
+                                  ? 'bg-blue-600 text-white'
+                                  : 'border border-gray-300 hover:bg-gray-100'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        } else if (page === currentPage - 2 || page === currentPage + 2) {
+                          return <span key={page} className="px-2 text-gray-400">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Next page"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                    <button
+                      onClick={() => goToPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Last page"
+                    >
+                      <ChevronsRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -605,28 +997,24 @@ const AdminReports = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div>
-                {/* Left Column - Basic Info */}
-                <div>
-                  {/* Timeline */}
-                  {selectedReport.timeline?.length > 0 && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-900 mb-3">Recent Activity</h3>
-                      <div className="space-y-3">
-                        {selectedReport.timeline.slice(0, 3).map((t, i) => (
-                          <div key={i} className="border-l-2 border-blue-500 pl-3 py-1">
-                            <p className="text-sm font-medium text-gray-900">{t.action}</p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(t.timestamp).toLocaleDateString()}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                {/* Timeline */}
+                {selectedReport.timeline?.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 className="font-semibold text-gray-900 mb-3">Recent Activity</h3>
+                    <div className="space-y-3">
+                      {selectedReport.timeline.slice(0, 3).map((t, i) => (
+                        <div key={i} className="border-l-2 border-blue-500 pl-3 py-1">
+                          <p className="text-sm font-medium text-gray-900">{t.action}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(t.timestamp).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {/* Right Column - Details */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="space-y-6">
                   {/* Basic Information */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Basic Information</h3>
@@ -648,7 +1036,7 @@ const AdminReports = () => {
                     {selectedReport.isAnonymous ? (
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                         <p className="text-yellow-800 font-medium mb-2">Anonymous Report</p>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                           {selectedReport.reporterRole && (
                             <div>
                               <label className="text-yellow-700">Role</label>
@@ -661,6 +1049,15 @@ const AdminReports = () => {
                               <p className="text-yellow-900">{selectedReport.anonymousGender}</p>
                             </div>
                           )}
+                        </div>
+                        <div className="mt-3">
+                          <button
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                            onClick={() => handleMessageUser(selectedReport)}
+                          >
+                            <MessageSquare size={16} />
+                            Message User
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -675,18 +1072,15 @@ const AdminReports = () => {
                             <p className="text-gray-900">{selectedReport.createdBy.email}</p>
                           </div>
                         )}
-                        {/* ✅ MESSAGE USER BUTTON */}
-                        {selectedReport.createdBy && (
-                          <div className="col-span-2 mt-3">
-                            <button
-                              onClick={() => handleMessageUser(selectedReport.createdBy)}
-                              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-                            >
-                              <MessageSquare size={16} />
-                              Message User
-                            </button>
-                          </div>
-                        )}
+                        <div className="col-span-2 mt-3">
+                          <button
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                            onClick={() => handleMessageUser(selectedReport)}
+                          >
+                            <MessageSquare size={16} />
+                            Message User
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -695,7 +1089,6 @@ const AdminReports = () => {
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Victim / Reporter Details
                     </h3>
-
                     <div className="grid grid-cols-2 gap-4">
                       <InfoItem label="Last Name" value={selectedReport.lastName} />
                       <InfoItem label="First Name" value={selectedReport.firstName} />
@@ -719,12 +1112,10 @@ const AdminReports = () => {
                     </div>
                   </div>
 
-
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Guardian Information
                     </h3>
-
                     <div className="grid grid-cols-2 gap-4">
                       <InfoItem label="Last Name" value={selectedReport.guardianLastName} />
                       <InfoItem label="First Name" value={selectedReport.guardianFirstName} />
@@ -738,12 +1129,10 @@ const AdminReports = () => {
                     </div>
                   </div>
 
-
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Perpetrator Information
                     </h3>
-
                     <div className="grid grid-cols-2 gap-4">
                       <InfoItem label="Last Name" value={selectedReport.perpLastName} />
                       <InfoItem label="First Name" value={selectedReport.perpFirstName} />
@@ -760,23 +1149,6 @@ const AdminReports = () => {
                       <InfoItem label="Barangay" value={selectedReport.perpBarangay} />
                     </div>
                   </div>
-
-
-                  {/* <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
-                      Services & Referrals
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <InfoItem label="Crisis Intervention" value={selectedReport.crisisIntervention ? "Yes" : "No"} />
-                      <InfoItem label="Protection Order" value={selectedReport.protectionOrder ? "Yes" : "No"} />
-                      <InfoItem label="Refer to SWDO" value={selectedReport.referToSWDO ? "Yes" : "No"} />
-                      <InfoItem label="Healthcare Referral" value={selectedReport.referToHealthcare ? "Yes" : "No"} />
-                      <InfoItem label="Law Enforcement Referral" value={selectedReport.referToLawEnforcement ? "Yes" : "No"} />
-                      <InfoItem label="Other Referral" value={selectedReport.referToOther ? "Yes" : "No"} />
-                    </div>
-                  </div> */}
-
 
                   {/* Incident Information */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -829,26 +1201,6 @@ const AdminReports = () => {
             {/* Footer Actions */}
             <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
               <div className="flex flex-col sm:flex-row gap-3">
-                {/* <button
-                  onClick={() => {
-                    setNewStatus(selectedReport.status);
-                    setShowStatusModal(true);
-                  }}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <RefreshCw size={18} />
-                  Update Report Status
-                </button> */}
-                {/* <button
-                  onClick={() => {
-                    setNewCaseStatus(selectedReport.caseStatus || "");
-                    setShowCaseStatusModal(true);
-                  }}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <ClipboardList size={18} />
-                  Update Case Status
-                </button> */}
                 {selectedReport.caseStatus === "For Interview" && (
                   <button
                     onClick={() => setShowReferralModal(true)}
@@ -882,65 +1234,6 @@ const AdminReports = () => {
         </div>
       )}
 
-      {/* Enhanced Status Update Modal */}
-      {showStatusModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Update Report Status</h2>
-              <button
-                onClick={() => setShowStatusModal(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} className="text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Status</label>
-                <select
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                >
-                  <option value="">Choose a status</option>
-                  <option>Pending</option>
-                  <option>Reviewed</option>
-                  <option>In Progress</option>
-                  <option>Resolved</option>
-                  <option>Closed</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows="3"
-                  placeholder="Add remarks (optional)..."
-                  value={statusRemarks}
-                  onChange={(e) => setStatusRemarks(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 p-6 border-t border-gray-200">
-              <button
-                onClick={() => setShowStatusModal(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateStatus}
-                disabled={!newStatus}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition-colors"
-              >
-                Update Status
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Enhanced Case Status Modal */}
       {showCaseStatusModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -967,17 +1260,8 @@ const AdminReports = () => {
                   <option>For Interview</option>
                   <option>For Appointment</option>
                   <option>For Referral</option>
+                  <option>Case Closed</option>
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows="3"
-                  placeholder="Add remarks (optional)..."
-                  value={caseStatusRemarks}
-                  onChange={(e) => setCaseStatusRemarks(e.target.value)}
-                />
               </div>
             </div>
             <div className="flex gap-3 p-6 border-t border-gray-200">

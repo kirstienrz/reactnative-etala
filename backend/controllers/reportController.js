@@ -2,6 +2,7 @@ const Report = require("../models/report");
 const User = require("../models/User");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const Ticket = require("../models/Ticket");
 
 // ✅ Utility: Generate unique ticket number
 const generateTicketNumber = (isAnonymous) => {
@@ -12,7 +13,6 @@ const generateTicketNumber = (isAnonymous) => {
   return `ETALA-${isAnonymous ? "ANON" : "ID"}-${year}${month}-${random}`;
 };
 
-// ✅ Create a new report
 const createReport = async (req, res) => {
   try {
     const { attachments: _, ...reportData } = req.body;
@@ -56,6 +56,47 @@ const createReport = async (req, res) => {
 
     await newReport.save();
 
+    // ✅ ===== AUTO-CREATE TICKET =====
+    const displayName = isAnonymous 
+      ? "Anonymous Reporter" 
+      : `${reportData.firstName || ''} ${reportData.lastName || ''}`.trim() || "Unknown User";
+
+    const newTicket = new Ticket({
+      ticketNumber: newReport.ticketNumber,
+      reportId: newReport._id,
+      userId: isAnonymous ? null : req.user.id,
+      isAnonymous,
+      displayName,
+      status: "Open",
+      lastMessageAt: new Date(),
+      unreadCount: {
+        admin: 0,
+        user: 0
+      }
+    });
+
+    await newTicket.save();
+
+    // ✅ Optional: Create initial system message
+    const Message = require("../models/message"); // Add this import
+    const systemMessage = new Message({
+      ticketNumber: newReport.ticketNumber,
+      sender: "admin",
+      senderName: "System",
+      messageType: "text",
+      content: `Thank you for submitting your report. Your ticket number is ${newReport.ticketNumber}. Our team will review your case shortly.`,
+      isRead: false
+    });
+
+    await systemMessage.save();
+
+    // Update ticket's unread count for user
+    await Ticket.findOneAndUpdate(
+      { ticketNumber: newReport.ticketNumber },
+      { $inc: { "unreadCount.user": 1 } }
+    );
+    // ✅ ===== END AUTO-CREATE TICKET =====
+
     res.status(201).json({
       success: true,
       message: "Report submitted successfully.",
@@ -71,7 +112,6 @@ const createReport = async (req, res) => {
     });
   }
 };
-
 // ✅ USER: Get all their reports
 const getUserReports = async (req, res) => {
   try {
@@ -202,8 +242,7 @@ const updateReportStatus = async (req, res) => {
   try {
     const { status, remarks, caseStatus } = req.body;
 
-    const validStatuses = ["Pending", "Reviewed", "In Progress", "Resolved", "Closed"];
-    const validCaseStatuses = ["For Queuing", "For Interview", "For Appointment", "For Referral"];
+    const validCaseStatuses = ["For Queuing", "For Interview", "For Appointment", "For Referral", "Case Closed"];
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, message: "Invalid report ID format." });
@@ -215,9 +254,10 @@ const updateReportStatus = async (req, res) => {
 
     // Update main status if provided
     if (status) {
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({ success: false, message: "Invalid status." });
-      }
+      // ❌ REMOVE THIS VALIDATION BLOCK
+      // if (!validStatuses.includes(status)) {
+      //   return res.status(400).json({ success: false, message: "Invalid status." });
+      // }
 
       report.status = status;
       report.timeline.push({
@@ -261,51 +301,51 @@ const updateReportStatus = async (req, res) => {
 };
 
 
-// ✅ ADMIN: Add referral record
-const addReferral = async (req, res) => {
-  try {
-    const { department, note } = req.body;
+// // ✅ ADMIN: Add referral record
+// const addReferral = async (req, res) => {
+//   try {
+//     const { department, note } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid report ID format." });
-    }
+//     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+//       return res.status(400).json({ success: false, message: "Invalid report ID format." });
+//     }
 
-    const report = await Report.findById(req.params.id);
-    if (!report)
-      return res.status(404).json({ success: false, message: "Report not found." });
+//     const report = await Report.findById(req.params.id);
+//     if (!report)
+//       return res.status(404).json({ success: false, message: "Report not found." });
 
-    report.referrals.push({
-      department,
-      note,
-      referredBy: req.user.id,
-      date: new Date(),
-    });
+//     report.referrals.push({
+//       department,
+//       note,
+//       referredBy: req.user.id,
+//       date: new Date(),
+//     });
 
-    report.timeline.push({
-      action: `Referred to ${department}`,
-      performedBy: req.user.id,
-      remarks: note || "",
-    });
+//     report.timeline.push({
+//       action: `Referred to ${department}`,
+//       performedBy: req.user.id,
+//       remarks: note || "",
+//     });
 
-    report.lastUpdated = new Date();
-    report.status = "In Progress";
+//     report.lastUpdated = new Date();
+//     report.status = "In Progress";
 
-    await report.save();
+//     await report.save();
 
-    res.status(200).json({
-      success: true,
-      message: `Report referred to ${department}.`,
-      data: report,
-    });
-  } catch (error) {
-    console.error("Add Referral Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to add referral.",
-      error: error.message 
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       message: `Report referred to ${department}.`,
+//       data: report,
+//     });
+//   } catch (error) {
+//     console.error("Add Referral Error:", error);
+//     res.status(500).json({ 
+//       success: false, 
+//       message: "Failed to add referral.",
+//       error: error.message 
+//     });
+//   }
+// };
 
 // ✅ ADMIN: Archive report
 const archiveReport = async (req, res) => {
@@ -468,7 +508,7 @@ module.exports = {
   getAllReports,
   getReportById,
   updateReportStatus,
-  addReferral,
+  // addReferral,
   archiveReport,
   getArchivedReports,
   restoreReport,

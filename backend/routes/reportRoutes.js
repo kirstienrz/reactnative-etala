@@ -10,7 +10,7 @@ const {
   getAllReports,
   getReportById,
   updateReportStatus,
-  addReferral,          // ✅ new controller
+  // addReferral,          // ✅ new controller
   archiveReport,
   getArchivedReports,
   restoreReport,
@@ -62,7 +62,7 @@ router.get("/admin/:id", auth(["admin", "superadmin"]), getReportById);
 router.put("/admin/:id/status", auth(["admin", "superadmin"]), updateReportStatus);
 
 // 📌 Add referral (auto-updates status to "In Progress")
-router.post("/admin/:id/referral", auth(["admin", "superadmin"]), addReferral);
+// router.post("/admin/:id/referral", auth(["admin", "superadmin"]), addReferral);
 
 // 📌 Archive report
 router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);

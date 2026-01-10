@@ -1,120 +1,94 @@
 const express = require("express");
 const router = express.Router();
-const Chat = require("../models/chat");
-const Message = require("../models/message");
+const Chat = require("../models/chat");       // now ticket-based "chat"
+const Message = require("../models/message"); // messages inside tickets
 const auth = require("../middleware/auth");
 
-// 🟢 Create or get existing chat between two users
+// -----------------------------
+// Create a new ticket or get existing by ticketNumber
+// -----------------------------
 router.post("/", auth(), async (req, res) => {
-  const { userId } = req.body;
-  
-  console.log("=== CREATE/GET CHAT DEBUG ===");
-  console.log("req.user:", req.user);
-  console.log("userId from body:", userId);
-  
-  if (!userId) return res.status(400).json({ message: "User ID required" });
-
   try {
+    const { ticketNumber, isAnonymous } = req.body;
     const currentUserId = req.user.id;
-    
-    if (!currentUserId) {
-      return res.status(401).json({ message: "User not authenticated" });
-    }
 
-    // Check if chat already exists between the two users
-    let chat = await Chat.findOne({
-      users: { $all: [currentUserId, userId] },
-    })
-      .populate("users", "firstName lastName email")
-      .populate({
-        path: "latestMessage",
-        populate: {
-          path: "sender receiver",
-          select: "firstName lastName email"
-        }
-      });
+    if (!ticketNumber) return res.status(400).json({ message: "Ticket number required" });
+
+    let chat = await Chat.findOne({ ticketNumber })
+      .populate("latestMessage")
+      .lean();
 
     if (!chat) {
-      chat = await Chat.create({ users: [currentUserId, userId] });
-      chat = await chat.populate("users", "firstName lastName email");
+      chat = await Chat.create({
+        ticketNumber,
+        createdBy: currentUserId,
+        isAnonymous: !!isAnonymous,
+      });
     }
 
-    console.log("✅ Chat created/found:", chat._id);
     res.json(chat);
   } catch (err) {
-    console.error("❌ Error in create/get chat:", err);
+    console.error("❌ Error creating/finding ticket chat:", err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// 🟡 Get all chats for logged-in user
+// -----------------------------
+// Get all ticket chats (inbox) for logged-in user
+// -----------------------------
 router.get("/", auth(), async (req, res) => {
   try {
     const currentUserId = req.user.id;
-    
+
     const chats = await Chat.find({
-      users: { $elemMatch: { $eq: currentUserId } },
+      createdBy: currentUserId,
     })
-      .populate("users", "firstName lastName email")
       .populate({
         path: "latestMessage",
-        populate: {
-          path: "sender receiver",
-          select: "firstName lastName email"
-        }
+        populate: { path: "sender", select: "firstName lastName email" },
       })
       .sort({ updatedAt: -1 });
 
     res.json(chats);
   } catch (err) {
-    console.error("❌ Error fetching chats:", err);
+    console.error("❌ Error fetching ticket chats:", err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// 💬 Send message
+// -----------------------------
+// Send a message inside a ticket
+// -----------------------------
 router.post("/message", auth(), async (req, res) => {
-  const { chatId, receiverId, content, type, action } = req.body;
-
-  if (!chatId || !receiverId || !content)
-    return res.status(400).json({ message: "Missing required fields" });
-
   try {
+    const { ticketId, content, type, action } = req.body;
     const currentUserId = req.user.id;
 
-    if (action === "PROCEED_TO_INTERVIEW") {
-  const existing = await Message.findOne({
-    chat: chatId,
-    action: "PROCEED_TO_INTERVIEW",
-  });
+    if (!ticketId || !content) return res.status(400).json({ message: "Missing required fields" });
 
-  if (existing) {
-    return res
-      .status(400)
-      .json({ message: "Interview already triggered" });
-  }
-}
+    const chat = await Chat.findById(ticketId);
+    if (!chat) return res.status(404).json({ message: "Ticket not found" });
+
+    // Optional: prevent duplicate actions like "PROCEED_TO_INTERVIEW"
+    if (action === "PROCEED_TO_INTERVIEW") {
+      const existing = await Message.findOne({ ticket: ticketId, action });
+      if (existing) return res.status(400).json({ message: "Action already triggered" });
+    }
 
     const message = await Message.create({
-  sender: currentUserId,
-  receiver: receiverId,
-  chat: chatId,
-  content: content,        // ONLY the string text
-  type: type || "USER",    // e.g., "SYSTEM"
-  action: action || null,  // e.g., "PROCEED_TO_INTERVIEW"
-});
-
-
-    await Chat.findByIdAndUpdate(chatId, {
-      latestMessage: message._id,
-      updatedAt: new Date(),
+      ticket: ticketId,
+      sender: currentUserId,
+      content,
+      type: type || "USER",
+      action: action || null,
     });
 
-    const populated = await message.populate(
-      "sender receiver",
-      "firstName lastName email"
-    );
+    // Update latestMessage in Chat
+    chat.latestMessage = message._id;
+    chat.updatedAt = new Date();
+    await chat.save();
 
+    const populated = await message.populate("sender", "firstName lastName email");
     res.json(populated);
   } catch (err) {
     console.error("❌ Error sending message:", err);
@@ -122,22 +96,42 @@ router.post("/message", auth(), async (req, res) => {
   }
 });
 
-// 📩 Get all messages in a chat
-router.get("/:chatId/messages", auth(), async (req, res) => {
+// -----------------------------
+// Get all messages for a ticket (chatbox)
+// -----------------------------
+router.get("/:ticketId/messages", auth(), async (req, res) => {
   try {
-    const messages = await Message.find({ chat: req.params.chatId })
-      .populate("sender", "firstName lastName email")
-      .populate("receiver", "firstName lastName email")
-      .sort({ createdAt: 1 });
+    const { ticketId } = req.params;
+    const userId = req.user.id;
 
-    res.json(messages);
+    const chat = await Chat.findById(ticketId);
+    if (!chat) return res.status(404).json({ message: "Ticket not found" });
+
+    const messages = await Message.find({ ticket: ticketId })
+      .sort({ createdAt: 1 })
+      .populate("sender", "firstName lastName email")
+      .lean();
+
+    // Apply anonymity
+    const anonymized = messages.map(msg => ({
+      ...msg,
+      sender: chat.isAnonymous
+        ? msg.sender._id.toString() === userId.toString()
+          ? "You"
+          : "Anonymous"
+        : msg.sender.firstName + " " + msg.sender.lastName,
+    }));
+
+    res.json(anonymized);
   } catch (err) {
     console.error("❌ Error fetching messages:", err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// 👀 Mark message as read
+// -----------------------------
+// Mark message as read
+// -----------------------------
 router.put("/message/:messageId/read", auth(), async (req, res) => {
   try {
     const updated = await Message.findByIdAndUpdate(
@@ -152,20 +146,16 @@ router.put("/message/:messageId/read", auth(), async (req, res) => {
   }
 });
 
-// ✅ Mark all messages in a chat as read
-router.put("/:chatId/read-all", auth(), async (req, res) => {
+// -----------------------------
+// Mark all messages in a ticket as read
+// -----------------------------
+router.put("/:ticketId/read-all", auth(), async (req, res) => {
   try {
-    const currentUserId = req.user.id;
-    
+    const userId = req.user.id;
     await Message.updateMany(
-      { 
-        chat: req.params.chatId,
-        receiver: currentUserId,
-        read: false
-      },
+      { ticket: req.params.ticketId, read: false, sender: { $ne: userId } },
       { read: true }
     );
-    
     res.json({ message: "All messages marked as read" });
   } catch (err) {
     console.error("❌ Error marking all as read:", err);

@@ -1,5 +1,3 @@
-//src/api/auth.js
-
 import axios from "axios";
 
 // 🔹 Change this to your backend URL
@@ -7,7 +5,6 @@ const API_URL = "http://localhost:5000/api/auth";
 
 /**
  * Login with email + TUPT ID + password
- * Returns user data including stoken
  */
 export const login = async (email, password, tupId) => {
   const response = await axios.post(`${API_URL}/login`, {
@@ -27,8 +24,17 @@ export const verifyPin = async (email, pin) => {
 };
 
 /**
+ * Signup a new user
+ * Expects firstName, lastName, email, password, tupId, userType, department
+ */
+export const signup = async (userData) => {
+  const response = await axios.post(`${API_URL}/signup`, userData);
+  return response.data;
+};
+
+/**
  * Change password
- * Requires userId (from login) and newPassword
+ * Requires userId and newPassword
  */
 export const changePassword = async (userId, newPassword, token) => {
   const response = await axios.post(

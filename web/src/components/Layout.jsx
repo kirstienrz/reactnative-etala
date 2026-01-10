@@ -19,6 +19,9 @@ const Layout = ({ children }) => {
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAdmin = ["osa", "hr", "depthead"].includes(effectiveDepartment);
 
+  // Check if current route is user chat details
+  const isUserChatRoute = location.pathname === "/user/chat";
+
   // ================= SUPER ADMIN LAYOUT =================
   if (isSuperAdmin || isSuperAdminRoute) {
     return (
@@ -40,6 +43,18 @@ const Layout = ({ children }) => {
           userName={user?.name}
         />
         <main className="flex-1 p-6 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // ================= USER CHAT LAYOUT (FULL SCREEN) =================
+  if (isUserChatRoute) {
+    return (
+      <div className="flex flex-col h-screen w-screen overflow-hidden">
+        <Header />
+        <main className="flex-1 bg-gray-50 overflow-hidden">
           {children}
         </main>
       </div>

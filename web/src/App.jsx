@@ -6,6 +6,8 @@ import store from "./store/store";
 import Layout from "./components/Layout";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import ActivatePage from "./pages/ActivatePage";
 
 import FloatingChatbot from "./components/FloatingChatbot";
 
@@ -20,7 +22,6 @@ import UserManagementPage from "./pages/superadmin/UserManagement";
 import ReportsPage from "./pages/superadmin/Reports";
 import ReferralPage from "./pages/superadmin/Referral";
 import MessagesPage from "./pages/superadmin/Messages";
-import ChatDetailsPage from "./pages/superadmin/ChatDetails";
 import AnalyticsPage from "./pages/superadmin/Analytics";
 import CarouselPage from "./pages/superadmin/Carousel";
 import EventsPage from "./pages/superadmin/Events";
@@ -97,6 +98,8 @@ const App = () => {
             <Route path="/Research" element={<Research />} />
             <Route path="/News" element={<News />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/activate/:token" element={<ActivatePage />} />
 
             <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>
               <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
@@ -105,7 +108,6 @@ const App = () => {
               <Route path="/superadmin/reports" element={<ReportsPage />} />
               <Route path="/superadmin/referral" element={<ReferralPage />} />
               <Route path="/superadmin/messages" element={<MessagesPage />} />
-              <Route path="/superadmin/chat" element={<ChatDetailsPage />} />
               <Route path="/superadmin/analytics" element={<AnalyticsPage />} />
               <Route path="/superadmin/carousel" element={<CarouselPage />} />
               <Route path="/superadmin/events" element={<EventsPage />} />
