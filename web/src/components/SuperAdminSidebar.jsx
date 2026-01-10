@@ -158,7 +158,7 @@ const SuperAdminSidebar = () => {
           <SidebarSection title="Admin Tools">
             <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
             <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
-            <SidebarItem icon={<FileSignature size={18} />} label="Templates" to="/superadmin/templates" />
+            {/* <SidebarItem icon={<FileSignature size={18} />} label="Templates" to="/superadmin/templates" /> */}
           </SidebarSection>
         </nav>
       </div>

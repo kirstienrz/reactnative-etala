@@ -67,6 +67,7 @@ import Contact from "./pages/public/Contact";
 import Announcements from "./pages/public/Announcements";
 import Gallery from "./pages/public/Albums";
 import Research from "./pages/public/Research";
+import News from "./pages/public/News";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -94,6 +95,7 @@ const App = () => {
             <Route path="/Announcements" element={<Announcements />} />
             <Route path="/album" element={<Gallery />} />
             <Route path="/Research" element={<Research />} />
+            <Route path="/News" element={<News />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>

@@ -286,7 +286,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-        {/* Highlights Section - Added after Hero */}
+      {/* Highlights Section - Added after Hero */}
       <HighlightsSection />
 
       {/* Press Releases Section */}
@@ -295,9 +295,13 @@ const LandingPage = () => {
           {/* Section Header */}
           <div className="flex items-end justify-between mb-24 border-b-4 border-violet-600 pb-8">
             <h2 className="text-6xl font-black text-slate-800">Press Releases</h2>
-            <button className="text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors flex items-center gap-3">
+            <button
+              onClick={() => navigate("/news")}
+              className="text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors flex items-center gap-3"
+            >
               View All <ArrowRight className="w-7 h-7" />
             </button>
+
           </div>
 
           {/* Press Releases Grid */}
@@ -378,7 +382,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-    
+
 
       {/* Report Section */}
       <section className="py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
@@ -404,9 +408,9 @@ const LandingPage = () => {
 
       {/* Infographic Modal */}
       {fullscreenImage && (
-        <InfographicModal 
-          image={fullscreenImage} 
-          onClose={() => setFullscreenImage(null)} 
+        <InfographicModal
+          image={fullscreenImage}
+          onClose={() => setFullscreenImage(null)}
         />
       )}
     </main>

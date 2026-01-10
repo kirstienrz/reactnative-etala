@@ -97,9 +97,9 @@ const Header = () => {
   // Logged-in menu items for the dropdown
   const loggedInItems = [
     { title: "Dashboard", path: dashboardLink, icon: <LayoutDashboard size={16} /> },
-    { title: "Reports", path: "/user/reports", icon: <FileText size={16} /> },
-    { title: "Inbox", path: "/user/inbox", icon: <Inbox size={16} /> },
-    { title: "My Profile", path: "/user/profile", icon: <User size={16} /> },
+    // { title: "Reports", path: "/user/reports", icon: <FileText size={16} /> },
+    // { title: "Inbox", path: "/user/inbox", icon: <Inbox size={16} /> },
+    // { title: "My Profile", path: "/user/profile", icon: <User size={16} /> },
   ];
 
   const toggleMobileDropdown = (title) => {

@@ -28,10 +28,10 @@ const ReportForm = () => {
     guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
     guardianRelationship: '', guardianRegion: '', guardianProvince: '',
     guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-    
+
     // Anonymous Reporter Info
     reporterRole: '', tupRole: '', anonymousGender: '', anonymousDepartment: '',
-    
+
     // Perpetrator Information
     perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
     perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
@@ -41,13 +41,13 @@ const ReportForm = () => {
     perpGuardianLastName: '', perpGuardianFirstName: '', perpGuardianMiddleName: '',
     perpGuardianRelationship: '', perpGuardianRegion: '', perpGuardianProvince: '',
     perpGuardianCityMun: '', perpGuardianBarangay: '', perpGuardianContact: '',
-    
+
     // Incident Information
     incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
     incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
     placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
     witnessAccount: '', witnessDate: '',
-    
+
     // Additional
     attachments: [], additionalNotes: '', confirmAccuracy: false,
     confirmConfidentiality: false,
@@ -172,103 +172,103 @@ const ReportForm = () => {
     }));
   };
 
- const handleSubmit = async () => {
-  // Validate before submitting
-  if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
-    showAlert('Required', 'Please confirm all statements before submitting.');
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const submitData = new FormData();
-    submitData.append('isAnonymous', String(isAnonymous));
-    
-    // Append all form data
-    Object.keys(formData).forEach(key => {
-      if (key === 'attachments') return;
-      const value = formData[key];
-      if (Array.isArray(value)) {
-        value.forEach(item => submitData.append(`${key}[]`, item));
-      } else if (typeof value === 'boolean') {
-        submitData.append(key, value.toString());
-      } else if (value !== '' && value !== null && value !== undefined) {
-        submitData.append(key, value.toString());
-      }
-    });
-    
-    // Append attachments
-    formData.attachments.forEach(attachment => {
-      submitData.append('attachments', attachment.file);
-    });
-    
-    // ✅ SUBMIT REPORT
-    const response = await createReport(submitData);
-
-    // ============================
-    // 🧾 PDF DOWNLOAD (RIGHT HERE)
-    // ============================
-    const ticketNumber =
-      response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
-
-    generateReportPDF({
-      formData,     // use current form data (NOT reset yet)
-      ticketNumber,
-      isAnonymous,
-    });
-
-    // ============================
-    // CLEAR & FEEDBACK
-    // ============================
-    await clearProgress();
-
-    showAlert(
-      'Report Submitted Successfully',
-      `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy of your report has been downloaded as a PDF.`
-    );
-    
-    // ============================
-    // RESET FORM (LAST STEP)
-    // ============================
-    setCurrentStep(1);
-    setIsAnonymous(false);
-    setFormData({
-      lastName: '', firstName: '', middleName: '', alias: '', sex: '',
-      dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
-      nationality: '', passportNo: '', occupation: '', religion: '',
-      region: '', province: '', cityMun: '', barangay: '',
-      disability: '', numberOfChildren: '', agesOfChildren: '',
-      guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
-      guardianRelationship: '', guardianRegion: '', guardianProvince: '',
-      guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-      reporterRole: '', tupRole: '', anonymousGender: '', anonymousDepartment: '',
-      perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
-      perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
-      perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
-      perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
-      perpBarangay: '', perpRelationship: '',
-      perpGuardianLastName: '', perpGuardianFirstName: '', perpGuardianMiddleName: '',
-      perpGuardianRelationship: '', perpGuardianRegion: '', perpGuardianProvince: '',
-      perpGuardianCityMun: '', perpGuardianBarangay: '', perpGuardianContact: '',
-      incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
-      incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
-      placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
-      witnessAccount: '', witnessDate: '',
-      attachments: [], additionalNotes: '', confirmAccuracy: false,
-      confirmConfidentiality: false,
-    });
-
-  } catch (error) {
-    console.error('Submit error:', error);
-    let errorMessage = 'Failed to submit report. Please try again.';
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
+  const handleSubmit = async () => {
+    // Validate before submitting
+    if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
+      showAlert('Required', 'Please confirm all statements before submitting.');
+      return;
     }
-    showAlert('Error', errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+
+    setLoading(true);
+    try {
+      const submitData = new FormData();
+      submitData.append('isAnonymous', String(isAnonymous));
+
+      // Append all form data
+      Object.keys(formData).forEach(key => {
+        if (key === 'attachments') return;
+        const value = formData[key];
+        if (Array.isArray(value)) {
+          value.forEach(item => submitData.append(`${key}[]`, item));
+        } else if (typeof value === 'boolean') {
+          submitData.append(key, value.toString());
+        } else if (value !== '' && value !== null && value !== undefined) {
+          submitData.append(key, value.toString());
+        }
+      });
+
+      // Append attachments
+      formData.attachments.forEach(attachment => {
+        submitData.append('attachments', attachment.file);
+      });
+
+      // ✅ SUBMIT REPORT
+      const response = await createReport(submitData);
+
+      // ============================
+      // 🧾 PDF DOWNLOAD (RIGHT HERE)
+      // ============================
+      const ticketNumber =
+        response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+
+      generateReportPDF({
+        formData,     // use current form data (NOT reset yet)
+        ticketNumber,
+        isAnonymous,
+      });
+
+      // ============================
+      // CLEAR & FEEDBACK
+      // ============================
+      await clearProgress();
+
+      showAlert(
+        'Report Submitted Successfully',
+        `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy of your report has been downloaded as a PDF.`
+      );
+
+      // ============================
+      // RESET FORM (LAST STEP)
+      // ============================
+      setCurrentStep(1);
+      setIsAnonymous(false);
+      setFormData({
+        lastName: '', firstName: '', middleName: '', alias: '', sex: '',
+        dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
+        nationality: '', passportNo: '', occupation: '', religion: '',
+        region: '', province: '', cityMun: '', barangay: '',
+        disability: '', numberOfChildren: '', agesOfChildren: '',
+        guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
+        guardianRelationship: '', guardianRegion: '', guardianProvince: '',
+        guardianCityMun: '', guardianBarangay: '', guardianContact: '',
+        reporterRole: '', tupRole: '', anonymousGender: '', anonymousDepartment: '',
+        perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
+        perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
+        perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
+        perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
+        perpBarangay: '', perpRelationship: '',
+        perpGuardianLastName: '', perpGuardianFirstName: '', perpGuardianMiddleName: '',
+        perpGuardianRelationship: '', perpGuardianRegion: '', perpGuardianProvince: '',
+        perpGuardianCityMun: '', perpGuardianBarangay: '', perpGuardianContact: '',
+        incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+        incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
+        placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
+        witnessAccount: '', witnessDate: '',
+        attachments: [], additionalNotes: '', confirmAccuracy: false,
+        confirmConfidentiality: false,
+      });
+
+    } catch (error) {
+      console.error('Submit error:', error);
+      let errorMessage = 'Failed to submit report. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      showAlert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateStep = () => {
     if (currentStep === 1) {
@@ -299,7 +299,7 @@ const ReportForm = () => {
   const handleNext = () => {
     if (validateStep()) setCurrentStep(prev => prev + 1);
   };
-  
+
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
@@ -347,12 +347,12 @@ const ReportForm = () => {
 
   const renderProgressBar = () => (
     <div style={styles.progressContainer}>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div style={styles.progressText}>
           Step {currentStep} of {totalSteps}
         </div>
         <div style={styles.stepIndicator}>
-          {Array.from({length: totalSteps}).map((_, index) => (
+          {Array.from({ length: totalSteps }).map((_, index) => (
             <div key={index} style={{
               ...styles.stepDot,
               backgroundColor: currentStep > index ? styles.colors.primary : styles.colors.border,
@@ -365,7 +365,7 @@ const ReportForm = () => {
       </div>
       <h2 style={styles.stepTitle}>{getStepTitle()}</h2>
       <div style={styles.progressBar}>
-        <div 
+        <div
           style={{
             ...styles.progressFill,
             width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%`
@@ -377,7 +377,7 @@ const ReportForm = () => {
 
   const renderAnonymitySelection = () => (
     <div style={styles.stepContainer}>
-      <div style={{textAlign: 'center', marginBottom: '48px', paddingTop: '20px'}}>
+      <div style={{ textAlign: 'center', marginBottom: '48px', paddingTop: '20px' }}>
         <div style={{
           width: '80px',
           height: '80px',
@@ -395,8 +395,8 @@ const ReportForm = () => {
         <h2 style={styles.stepTitle}>Choose Reporting Mode</h2>
         <p style={styles.stepSubtitle}>Select how you would like to submit your report</p>
       </div>
-      
-      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px'}}>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
         <div
           style={{
             ...styles.anonymityCard,
@@ -414,7 +414,7 @@ const ReportForm = () => {
             <UserX size={28} color={isAnonymous ? 'white' : styles.colors.textSecondary} />
           </div>
           <div style={styles.anonymityContent}>
-            <div style={{display: 'flex', alignItems: 'center', marginBottom: '12px'}}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
               <h3 style={{
                 ...styles.anonymityTitle,
                 color: isAnonymous ? styles.colors.primary : styles.colors.textPrimary
@@ -452,13 +452,13 @@ const ReportForm = () => {
             <User size={28} color={!isAnonymous ? 'white' : styles.colors.textSecondary} />
           </div>
           <div style={styles.anonymityContent}>
-            <div style={{display: 'flex', alignItems: 'center', marginBottom: '12px'}}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
               <h3 style={{
                 ...styles.anonymityTitle,
                 color: isAnonymous ? styles.colors.primary : styles.colors.textPrimary
               }}>
-              Identified Report
-            </h3>
+                Identified Report
+              </h3>
               <div style={{
                 marginLeft: '12px',
                 padding: '4px 8px',
@@ -471,7 +471,7 @@ const ReportForm = () => {
               }}>
                 RECOMMENDED
               </div>
-              </div>
+            </div>
             <ul style={styles.featureList}>
               <li>Enables follow-up support</li>
               <li>Access to full services</li>
@@ -487,14 +487,14 @@ const ReportForm = () => {
       </div>
 
       <div style={styles.importantNote}>
-        <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
           <Info size={18} color={styles.colors.textSecondary} />
           <div>
-            <p style={{margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500'}}>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
               Important Information
             </p>
-            <p style={{margin: 0, fontSize: '13px', color: styles.colors.textSecondary, lineHeight: '1.5'}}>
-              All reports are handled with strict confidentiality by the TUP GAD Office. 
+            <p style={{ margin: 0, fontSize: '13px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
+              All reports are handled with strict confidentiality by the TUP GAD Office.
               False reporting may result in legal consequences under RA 11313 (Safe Spaces Act).
             </p>
           </div>
@@ -503,11 +503,11 @@ const ReportForm = () => {
 
       {savedProgress && (
         <div style={styles.savedProgressBanner}>
-          <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px'}}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
             <Info size={18} color={styles.colors.success} />
             <div>
               <span style={styles.savedProgressText}>Saved progress detected</span>
-              <p style={{fontSize: '13px', color: styles.colors.textSecondary, margin: '4px 0 0 0'}}>
+              <p style={{ fontSize: '13px', color: styles.colors.textSecondary, margin: '4px 0 0 0' }}>
                 You can continue where you left off. Your data is saved locally on this device.
               </p>
             </div>
@@ -520,7 +520,7 @@ const ReportForm = () => {
   const renderVictimInfo = () => (
     <div style={styles.stepContainer}>
       {isAnonymous ? (
-        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px'}}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
           <div style={styles.sectionCard}>
             <div style={styles.sectionHeader}>
               <h3 style={styles.sectionTitle}>Your Role & Context</h3>
@@ -595,14 +595,14 @@ const ReportForm = () => {
           </div>
         </div>
       ) : (
-        <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px'}}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
           <div>
-            <div style={{...styles.sectionCard, marginBottom: '24px'}}>
+            <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
               <div style={styles.sectionHeader}>
                 <h3 style={styles.sectionTitle}>Personal Information</h3>
                 <p style={styles.sectionDescription}>Basic identification details</p>
               </div>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px'}}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div style={styles.inputGroup}>
                   <label style={styles.inputLabel}>
                     Last Name
@@ -629,7 +629,7 @@ const ReportForm = () => {
                 </div>
               </div>
 
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px'}}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div style={styles.inputGroup}>
                   <label style={styles.inputLabel}>Middle Name</label>
                   <input
@@ -650,7 +650,7 @@ const ReportForm = () => {
                 </div>
               </div>
 
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div style={styles.inputGroup}>
                   <label style={styles.inputLabel}>
                     Sex
@@ -701,13 +701,13 @@ const ReportForm = () => {
               <div style={styles.inputGroup}>
                 <label style={styles.inputLabel}>Region</label>
                 <div style={styles.dropdownInput} onClick={() => showDropdown('region', regions)}>
-                  <span style={{color: !formData.region ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                  <span style={{ color: !formData.region ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                     {formData.region || 'Select region'}
                   </span>
                   <ChevronDown size={20} color={styles.colors.textSecondary} />
                 </div>
               </div>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '12px'}}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '12px' }}>
                 <div style={styles.inputGroup}>
                   <label style={styles.inputLabel}>Province</label>
                   <input
@@ -748,7 +748,7 @@ const ReportForm = () => {
               <div style={styles.inputGroup}>
                 <label style={styles.inputLabel}>Date of Birth</label>
                 <div style={styles.dateInput} onClick={() => showDatePickerModal('dateOfBirth')}>
-                  <span style={{color: !formData.dateOfBirth ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                  <span style={{ color: !formData.dateOfBirth ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                     {formData.dateOfBirth || 'Select date'}
                   </span>
                   <Calendar size={20} color={styles.colors.textSecondary} />
@@ -757,7 +757,7 @@ const ReportForm = () => {
               <div style={styles.inputGroup}>
                 <label style={styles.inputLabel}>Civil Status</label>
                 <div style={styles.dropdownInput} onClick={() => showDropdown('civilStatus', civilStatuses)}>
-                  <span style={{color: !formData.civilStatus ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                  <span style={{ color: !formData.civilStatus ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                     {formData.civilStatus || 'Select civil status'}
                   </span>
                   <ChevronDown size={20} color={styles.colors.textSecondary} />
@@ -766,7 +766,7 @@ const ReportForm = () => {
               <div style={styles.inputGroup}>
                 <label style={styles.inputLabel}>Educational Attainment</label>
                 <div style={styles.dropdownInput} onClick={() => showDropdown('educationalAttainment', educationLevels)}>
-                  <span style={{color: !formData.educationalAttainment ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                  <span style={{ color: !formData.educationalAttainment ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                     {formData.educationalAttainment || 'Select education level'}
                   </span>
                   <ChevronDown size={20} color={styles.colors.textSecondary} />
@@ -775,7 +775,7 @@ const ReportForm = () => {
               <div style={styles.inputGroup}>
                 <label style={styles.inputLabel}>Disability Status</label>
                 <div style={styles.dropdownInput} onClick={() => showDropdown('disability', disabilities)}>
-                  <span style={{color: !formData.disability ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                  <span style={{ color: !formData.disability ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                     {formData.disability || 'Select disability status'}
                   </span>
                   <ChevronDown size={20} color={styles.colors.textSecondary} />
@@ -783,7 +783,7 @@ const ReportForm = () => {
               </div>
             </div>
 
-            <div style={{...styles.sectionCard, marginTop: '24px'}}>
+            <div style={{ ...styles.sectionCard, marginTop: '24px' }}>
               <div style={styles.sectionHeader}>
                 <h3 style={styles.sectionTitle}>Additional Information</h3>
                 <p style={styles.sectionDescription}>Optional details</p>
@@ -800,7 +800,7 @@ const ReportForm = () => {
               <div style={styles.inputGroup}>
                 <label style={styles.inputLabel}>Religion</label>
                 <div style={styles.dropdownInput} onClick={() => showDropdown('religion', religions)}>
-                  <span style={{color: !formData.religion ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                  <span style={{ color: !formData.religion ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                     {formData.religion || 'Select religion'}
                   </span>
                   <ChevronDown size={20} color={styles.colors.textSecondary} />
@@ -824,13 +824,13 @@ const ReportForm = () => {
 
   const renderGuardianInfo = () => (
     <div style={styles.stepContainer}>
-      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px'}}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
         <div style={styles.sectionCard}>
           <div style={styles.sectionHeader}>
             <h3 style={styles.sectionTitle}>Guardian Details</h3>
             <p style={styles.sectionDescription}>Required for minors (below 18 years old)</p>
           </div>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px'}}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Last Name</label>
               <input
@@ -888,7 +888,7 @@ const ReportForm = () => {
           <div style={styles.inputGroup}>
             <label style={styles.inputLabel}>Region</label>
             <div style={styles.dropdownInput} onClick={() => showDropdown('guardianRegion', regions)}>
-              <span style={{color: !formData.guardianRegion ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+              <span style={{ color: !formData.guardianRegion ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                 {formData.guardianRegion || 'Select region'}
               </span>
               <ChevronDown size={20} color={styles.colors.textSecondary} />
@@ -910,13 +910,13 @@ const ReportForm = () => {
 
   const renderPerpetratorInfo = () => (
     <div style={styles.stepContainer}>
-      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px'}}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
         <div style={styles.sectionCard}>
           <div style={styles.sectionHeader}>
             <h3 style={styles.sectionTitle}>Personal Details</h3>
             <p style={styles.sectionDescription}>Information about the alleged perpetrator</p>
           </div>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px'}}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Last Name</label>
               <input
@@ -936,7 +936,7 @@ const ReportForm = () => {
               />
             </div>
           </div>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px'}}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Middle Name</label>
               <input
@@ -956,7 +956,7 @@ const ReportForm = () => {
               />
             </div>
           </div>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Sex</label>
               <div style={styles.optionGroup}>
@@ -994,7 +994,7 @@ const ReportForm = () => {
         </div>
 
         <div>
-          <div style={{...styles.sectionCard, marginBottom: '24px'}}>
+          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
             <div style={styles.sectionHeader}>
               <h3 style={styles.sectionTitle}>Relationship & Context</h3>
               <p style={styles.sectionDescription}>Connection to victim and other details</p>
@@ -1002,7 +1002,7 @@ const ReportForm = () => {
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Relationship to Victim</label>
               <div style={styles.dropdownInput} onClick={() => showDropdown('perpRelationship', relationships)}>
-                <span style={{color: !formData.perpRelationship ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                <span style={{ color: !formData.perpRelationship ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                   {formData.perpRelationship || 'Select relationship'}
                 </span>
                 <ChevronDown size={20} color={styles.colors.textSecondary} />
@@ -1036,7 +1036,7 @@ const ReportForm = () => {
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Description</label>
               <textarea
-                style={{...styles.input, minHeight: '100px', resize: 'vertical'}}
+                style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
                 placeholder="Physical description or other identifying information..."
                 value={formData.incidentDescription}
                 onChange={(e) => setFormData(prev => ({ ...prev, incidentDescription: e.target.value }))}
@@ -1050,9 +1050,9 @@ const ReportForm = () => {
 
   const renderIncidentDetails = () => (
     <div style={styles.stepContainer}>
-      <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px'}}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
         <div>
-          <div style={{...styles.sectionCard, marginBottom: '24px'}}>
+          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
             <div style={styles.sectionHeader}>
               <h3 style={styles.sectionTitle}>Incident Details</h3>
               <p style={styles.sectionDescription}>Date and description of what happened</p>
@@ -1063,7 +1063,7 @@ const ReportForm = () => {
                 <span style={styles.requiredStar}> *</span>
               </label>
               <div style={styles.dateInput} onClick={() => showDatePickerModal('latestIncidentDate')}>
-                <span style={{color: !formData.latestIncidentDate ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                <span style={{ color: !formData.latestIncidentDate ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                   {formData.latestIncidentDate || 'Select date'}
                 </span>
                 <Calendar size={20} color={styles.colors.textSecondary} />
@@ -1073,7 +1073,7 @@ const ReportForm = () => {
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Description of Incident</label>
               <textarea
-                style={{...styles.input, minHeight: '200px', resize: 'vertical'}}
+                style={{ ...styles.input, minHeight: '200px', resize: 'vertical' }}
                 placeholder="Provide a detailed description of what happened, including dates, times, locations, and any other relevant information..."
                 value={formData.incidentDescription}
                 onChange={(e) => setFormData(prev => ({ ...prev, incidentDescription: e.target.value }))}
@@ -1089,7 +1089,7 @@ const ReportForm = () => {
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Place of Incident</label>
               <div style={styles.dropdownInput} onClick={() => showDropdown('placeOfIncident', places)}>
-                <span style={{color: !formData.placeOfIncident ? styles.colors.textSecondary : styles.colors.textPrimary}}>
+                <span style={{ color: !formData.placeOfIncident ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                   {formData.placeOfIncident || 'Select place of incident'}
                 </span>
                 <ChevronDown size={20} color={styles.colors.textSecondary} />
@@ -1108,17 +1108,22 @@ const ReportForm = () => {
         </div>
 
         <div>
-          <div style={{...styles.sectionCard, marginBottom: '24px'}}>
+          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
             <div style={styles.sectionHeader}>
               <h3 style={styles.sectionTitle}>Incident Classification</h3>
-              <p style={styles.sectionDescription}>Select all applicable incident types</p>
+              <p style={styles.sectionDescription}>
+                Select all applicable incident types
+                <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                  (Not sure? Chat with our chatbot)
+                </span>
+              </p>
             </div>
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>
                 Type of Incident
                 <span style={styles.requiredStar}> *</span>
               </label>
-              <div style={{maxHeight: '400px', overflowY: 'auto', paddingRight: '8px'}}>
+              <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
                 {incidentTypesList.map(type => (
                   <div
                     key={type}
@@ -1186,19 +1191,19 @@ const ReportForm = () => {
 
   const renderConfirmation = () => (
     <div style={styles.stepContainer}>
-      <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px'}}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
         <div>
-          <div style={{...styles.sectionCard, marginBottom: '24px'}}>
+          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
             <div style={styles.sectionHeader}>
               <h3 style={styles.sectionTitle}>Report Summary</h3>
               <p style={styles.sectionDescription}>Review your report details</p>
             </div>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px'}}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
               <div>
                 <p style={styles.summaryLabel}>Reporting Mode</p>
                 <p style={styles.summaryValue}>{isAnonymous ? 'Anonymous' : 'Identified'}</p>
               </div>
-              
+
               {!isAnonymous && (
                 <div>
                   <p style={styles.summaryLabel}>Victim-Survivor</p>
@@ -1206,16 +1211,16 @@ const ReportForm = () => {
                   <p style={styles.summarySubtext}>Age: {formData.age || 'Not provided'}</p>
                 </div>
               )}
-              
+
               <div>
                 <p style={styles.summaryLabel}>Incident Date</p>
                 <p style={styles.summaryValue}>{formData.latestIncidentDate || 'Not provided'}</p>
               </div>
-              
+
               <div>
                 <p style={styles.summaryLabel}>Incident Types</p>
                 <p style={styles.summaryValue}>
-                  {formData.incidentTypes.length > 0 
+                  {formData.incidentTypes.length > 0
                     ? formData.incidentTypes.slice(0, 2).join(', ') + (formData.incidentTypes.length > 2 ? `, +${formData.incidentTypes.length - 2} more` : '')
                     : 'Not specified'}
                 </p>
@@ -1225,7 +1230,7 @@ const ReportForm = () => {
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Additional Notes</label>
               <textarea
-                style={{...styles.input, minHeight: '120px', resize: 'vertical'}}
+                style={{ ...styles.input, minHeight: '120px', resize: 'vertical' }}
                 placeholder="Any additional information or context..."
                 value={formData.additionalNotes}
                 onChange={(e) => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
@@ -1241,7 +1246,7 @@ const ReportForm = () => {
             {formData.attachments.length === 0 ? (
               <div style={styles.emptyAttachments}>
                 <FileText size={24} color={styles.colors.textSecondary} />
-                <p style={{margin: '12px 0 0 0', color: styles.colors.textSecondary, fontSize: '14px'}}>
+                <p style={{ margin: '12px 0 0 0', color: styles.colors.textSecondary, fontSize: '14px' }}>
                   No attachments added
                 </p>
               </div>
@@ -1249,11 +1254,11 @@ const ReportForm = () => {
               <div>
                 {formData.attachments.map((attachment, index) => (
                   <div key={index} style={styles.attachmentItem}>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       {attachment.type === 'image' && <ImageIcon size={16} color={styles.colors.textSecondary} />}
                       {attachment.type === 'video' && <Video size={16} color={styles.colors.textSecondary} />}
                       {attachment.type === 'pdf' && <FileText size={16} color={styles.colors.textSecondary} />}
-                      <span style={{fontSize: '14px', color: styles.colors.textPrimary}}>
+                      <span style={{ fontSize: '14px', color: styles.colors.textPrimary }}>
                         {attachment.name}
                       </span>
                     </div>
@@ -1271,7 +1276,7 @@ const ReportForm = () => {
               style={styles.addAttachmentButton}
               onClick={pickFiles}
             >
-              <Upload size={18} style={{marginRight: '8px'}} />
+              <Upload size={18} style={{ marginRight: '8px' }} />
               Add Attachments
             </button>
           </div>
@@ -1302,7 +1307,7 @@ const ReportForm = () => {
               </div>
 
               <div
-                style={{...styles.checkboxContainer, marginTop: '16px'}}
+                style={{ ...styles.checkboxContainer, marginTop: '16px' }}
                 onClick={() => setFormData(prev => ({ ...prev, confirmConfidentiality: !prev.confirmConfidentiality }))}
               >
                 <div style={{
@@ -1322,11 +1327,11 @@ const ReportForm = () => {
             <div style={styles.warningBox}>
               <AlertCircle size={18} color={styles.colors.warning} />
               <div>
-                <p style={{margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500'}}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
                   Important: Report Submission
                 </p>
-                <p style={{margin: 0, fontSize: '12px', color: styles.colors.textSecondary, lineHeight: '1.5'}}>
-                  Upon submission, you will receive a unique ticket number to track your report status. 
+                <p style={{ margin: 0, fontSize: '12px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
+                  Upon submission, you will receive a unique ticket number to track your report status.
                   Please save this number for future reference.
                 </p>
               </div>
@@ -1335,23 +1340,23 @@ const ReportForm = () => {
             <button
               style={{
                 ...styles.submitButton,
-                backgroundColor: !formData.confirmAccuracy || !formData.confirmConfidentiality 
-                  ? styles.colors.border 
+                backgroundColor: !formData.confirmAccuracy || !formData.confirmConfidentiality
+                  ? styles.colors.border
                   : styles.colors.primary,
-                cursor: !formData.confirmAccuracy || !formData.confirmConfidentiality 
-                  ? 'not-allowed' 
+                cursor: !formData.confirmAccuracy || !formData.confirmConfidentiality
+                  ? 'not-allowed'
                   : 'pointer',
-                boxShadow: !formData.confirmAccuracy || !formData.confirmConfidentiality 
-                  ? 'none' 
+                boxShadow: !formData.confirmAccuracy || !formData.confirmConfidentiality
+                  ? 'none'
                   : '0 4px 12px rgba(37, 99, 235, 0.3)'
               }}
               onClick={handleSubmit}
               disabled={loading || !formData.confirmAccuracy || !formData.confirmConfidentiality}
             >
               {loading ? (
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={styles.spinner}></div>
-                  <span style={{marginLeft: '8px'}}>Submitting...</span>
+                  <span style={{ marginLeft: '8px' }}>Submitting...</span>
                 </div>
               ) : (
                 'Submit Report'
@@ -1381,7 +1386,7 @@ const ReportForm = () => {
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <div style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {currentStep > 1 && (
             <button style={styles.backButton} onClick={handleBack}>
               <ArrowLeft size={24} color={styles.colors.textPrimary} />
@@ -1392,11 +1397,11 @@ const ReportForm = () => {
             <p style={styles.mainSubtitle}>Secure • Confidential • Professional</p>
           </div>
         </div>
-        <div style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {currentStep > 1 && currentStep < totalSteps && (
             <button style={styles.saveButton} onClick={saveProgress}>
               <Save size={18} color={styles.colors.primary} />
-              <span style={{marginLeft: '8px', fontSize: '14px', fontWeight: '600'}}>Save Draft</span>
+              <span style={{ marginLeft: '8px', fontSize: '14px', fontWeight: '600' }}>Save Draft</span>
             </button>
           )}
         </div>
@@ -1415,7 +1420,7 @@ const ReportForm = () => {
             Back
           </button>
         )}
-        
+
         {!isLastStep && (
           <button
             style={styles.primaryButton}
@@ -1431,15 +1436,15 @@ const ReportForm = () => {
         <div style={styles.modalOverlay} onClick={() => setShowDatePicker(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={{margin: 0, fontSize: '18px', color: styles.colors.textPrimary}}>Select Date</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', color: styles.colors.textPrimary }}>Select Date</h3>
               <button onClick={() => setShowDatePicker(false)} style={styles.modalDoneButton}>
                 Done
               </button>
             </div>
             <input
               type="date"
-              value={formData[datePickerField] ? 
-                new Date(formData[datePickerField]).toISOString().split('T')[0] : 
+              value={formData[datePickerField] ?
+                new Date(formData[datePickerField]).toISOString().split('T')[0] :
                 new Date().toISOString().split('T')[0]}
               onChange={handleDateChange}
               max={new Date().toISOString().split('T')[0]}
