@@ -253,80 +253,80 @@ const AdminReports = () => {
 
 
   const handleReanalyzeAllReports = async () => {
-    // Get ALL reports (active + archived)
-    const allReports = [...reports, ...archivedReports];
-
-    // Get reports that HAVE severity analysis
-    const analyzedReports = allReports.filter(r => r.severityAnalysis);
-
-    if (analyzedReports.length === 0) {
-      showToast("No analyzed reports found", "error");
-      return;
-    }
-
-    const shouldProceed = window.confirm(
-      `RE-ANALYZE ALL REPORTS?\n\n` +
-      `This will re-analyze ${analyzedReports.length} reports with existing severity analysis.\n` +
-      `This may take ${Math.ceil(analyzedReports.length / 10)} minutes.\n\n` +
-      `⚠️  THIS WILL REFRESH ALL SEVERITY RATINGS!`
-    );
-
-    if (!shouldProceed) return;
-
-    setAnalyzing(prev => ({ ...prev, 'reanalyzeAll': true }));
-
-    try {
-      // Option A: Use batch function with ALL report IDs
-      const reportIds = analyzedReports.map(r => r._id);
-      const res = await batchAnalyzeSeverity(reportIds);
-
-      if (res.success) {
-        const { successful, failed } = res.data || {};
-
-        showToast(
-          `✅ Re-analyzed ${successful || 0} reports\n` +
-          `${failed ? `❌ ${failed} failed` : ''}`,
-          successful > 0 ? "success" : "warning"
+  // Get ALL reports (active + archived)
+  const allReports = [...reports, ...archivedReports];
+  
+  // Get reports that HAVE severity analysis
+  const analyzedReports = allReports.filter(r => r.severityAnalysis);
+  
+  if (analyzedReports.length === 0) {
+    showToast("No analyzed reports found", "error");
+    return;
+  }
+  
+  const shouldProceed = window.confirm(
+    `RE-ANALYZE ALL REPORTS?\n\n` +
+    `This will re-analyze ${analyzedReports.length} reports with existing severity analysis.\n` +
+    `This may take ${Math.ceil(analyzedReports.length / 10)} minutes.\n\n` +
+    `⚠️  THIS WILL REFRESH ALL SEVERITY RATINGS!`
+  );
+  
+  if (!shouldProceed) return;
+  
+  setAnalyzing(prev => ({ ...prev, 'reanalyzeAll': true }));
+  
+  try {
+    // Option A: Use batch function with ALL report IDs
+    const reportIds = analyzedReports.map(r => r._id);
+    const res = await batchAnalyzeSeverity(reportIds);
+    
+    if (res.success) {
+      const { successful, failed } = res.data || {};
+      
+      showToast(
+        `✅ Re-analyzed ${successful || 0} reports\n` +
+        `${failed ? `❌ ${failed} failed` : ''}`,
+        successful > 0 ? "success" : "warning"
+      );
+      
+      // Refresh data
+      await fetchReports();
+      
+      // Show changes summary
+      if (res.data?.details) {
+        const severityChanges = res.data.details.filter(d => 
+          d.oldSeverity && d.newSeverity && d.oldSeverity !== d.newSeverity
         );
-
-        // Refresh data
-        await fetchReports();
-
-        // Show changes summary
-        if (res.data?.details) {
-          const severityChanges = res.data.details.filter(d =>
-            d.oldSeverity && d.newSeverity && d.oldSeverity !== d.newSeverity
-          );
-
-          if (severityChanges.length > 0) {
-            setTimeout(() => {
-              showToast(
-                `🔄 ${severityChanges.length} reports changed severity`,
-                "info"
-              );
-
-              // Optional: Show breakdown
-              const changesBySeverity = {};
-              severityChanges.forEach(change => {
-                const key = `${change.oldSeverity} → ${change.newSeverity}`;
-                changesBySeverity[key] = (changesBySeverity[key] || 0) + 1;
-              });
-
-              console.log("Severity changes:", changesBySeverity);
-            }, 1000);
-          }
+        
+        if (severityChanges.length > 0) {
+          setTimeout(() => {
+            showToast(
+              `🔄 ${severityChanges.length} reports changed severity`,
+              "info"
+            );
+            
+            // Optional: Show breakdown
+            const changesBySeverity = {};
+            severityChanges.forEach(change => {
+              const key = `${change.oldSeverity} → ${change.newSeverity}`;
+              changesBySeverity[key] = (changesBySeverity[key] || 0) + 1;
+            });
+            
+            console.log("Severity changes:", changesBySeverity);
+          }, 1000);
         }
-      } else {
-        showToast(res.message || "Failed to re-analyze", "error");
       }
-
-    } catch (error) {
-      console.error("Re-analyze all error:", error);
-      showToast(`Failed to re-analyze: ${error.message}`, "error");
-    } finally {
-      setAnalyzing(prev => ({ ...prev, 'reanalyzeAll': false }));
+    } else {
+      showToast(res.message || "Failed to re-analyze", "error");
     }
-  };
+    
+  } catch (error) {
+    console.error("Re-analyze all error:", error);
+    showToast(`Failed to re-analyze: ${error.message}`, "error");
+  } finally {
+    setAnalyzing(prev => ({ ...prev, 'reanalyzeAll': false }));
+  }
+};
 
 
   // Add this function with your other handle functions
@@ -513,86 +513,86 @@ const AdminReports = () => {
   ].filter(Boolean).length;
 
   // Add this function with your other handle functions
-  const handleBatchReanalyzeStale = async () => {
-    // Get reports based on active tab
-    const reportsToReanalyze = activeTab === "active" ? reports : archivedReports;
-
-    // Get only analyzed reports (those with severityAnalysis)
-    const analyzedReports = reportsToReanalyze.filter(r => r.severityAnalysis);
-
-    if (analyzedReports.length === 0) {
-      showToast("No analyzed reports to re-analyze", "error");
-      return;
-    }
-
-    // Optional: Show confirmation with stats
-    const shouldProceed = window.confirm(
-      `Re-analyze ${analyzedReports.length} reports?\n\n` +
-      `This will update severity analysis for reports analyzed more than 7 days ago.\n` +
-      `Note: This may take a few minutes and will refresh your data.`
-    );
-
-    if (!shouldProceed) return;
-
-    setAnalyzing(prev => ({ ...prev, 'batchReanalyze': true }));
-
-    try {
-      // Option 1: Use the new dedicated stale reports function (RECOMMENDED)
-      const res = await batchReanalyzeStaleReports(7, 50);
-
-      // Option 2: Or use the existing batchAnalyzeSeverity with all IDs
-      // const reportIds = analyzedReports.map(r => r._id);
-      // const res = await batchAnalyzeSeverity(reportIds);
-
-      if (res.success) {
-        const { successful, failed } = res.data || res.summary || {};
-
-        // Show detailed toast
-        showToast(
-          `✅ Re-analyzed ${successful || 0} reports\n` +
-          `${failed ? `❌ ${failed} failed` : ''}`,
-          successful > 0 ? "success" : "warning"
-        );
-
-        // Refresh data
-        await fetchReports();
-
-        // Show detailed results if available
-        if (res.data?.details) {
-          const severityChanges = res.data.details.filter(d => d.severityChanged);
-          if (severityChanges.length > 0) {
-            setTimeout(() => {
-              showToast(
-                `${severityChanges.length} reports had severity changes`,
-                "info"
-              );
-            }, 1000);
-          }
+const handleBatchReanalyzeStale = async () => {
+  // Get reports based on active tab
+  const reportsToReanalyze = activeTab === "active" ? reports : archivedReports;
+  
+  // Get only analyzed reports (those with severityAnalysis)
+  const analyzedReports = reportsToReanalyze.filter(r => r.severityAnalysis);
+  
+  if (analyzedReports.length === 0) {
+    showToast("No analyzed reports to re-analyze", "error");
+    return;
+  }
+  
+  // Optional: Show confirmation with stats
+  const shouldProceed = window.confirm(
+    `Re-analyze ${analyzedReports.length} reports?\n\n` +
+    `This will update severity analysis for reports analyzed more than 7 days ago.\n` +
+    `Note: This may take a few minutes and will refresh your data.`
+  );
+  
+  if (!shouldProceed) return;
+  
+  setAnalyzing(prev => ({ ...prev, 'batchReanalyze': true }));
+  
+  try {
+    // Option 1: Use the new dedicated stale reports function (RECOMMENDED)
+    const res = await batchReanalyzeStaleReports(7, 50);
+    
+    // Option 2: Or use the existing batchAnalyzeSeverity with all IDs
+    // const reportIds = analyzedReports.map(r => r._id);
+    // const res = await batchAnalyzeSeverity(reportIds);
+    
+    if (res.success) {
+      const { successful, failed } = res.data || res.summary || {};
+      
+      // Show detailed toast
+      showToast(
+        `✅ Re-analyzed ${successful || 0} reports\n` +
+        `${failed ? `❌ ${failed} failed` : ''}`,
+        successful > 0 ? "success" : "warning"
+      );
+      
+      // Refresh data
+      await fetchReports();
+      
+      // Show detailed results if available
+      if (res.data?.details) {
+        const severityChanges = res.data.details.filter(d => d.severityChanged);
+        if (severityChanges.length > 0) {
+          setTimeout(() => {
+            showToast(
+              `${severityChanges.length} reports had severity changes`,
+              "info"
+            );
+          }, 1000);
         }
-      } else {
-        showToast(res.message || "Failed to re-analyze", "error");
       }
-
-    } catch (error) {
-      console.error("Batch re-analyze error:", error);
-      showToast(`Failed to re-analyze: ${error.message}`, "error");
-    } finally {
-      setAnalyzing(prev => ({ ...prev, 'batchReanalyze': false }));
+    } else {
+      showToast(res.message || "Failed to re-analyze", "error");
     }
-  };
+    
+  } catch (error) {
+    console.error("Batch re-analyze error:", error);
+    showToast(`Failed to re-analyze: ${error.message}`, "error");
+  } finally {
+    setAnalyzing(prev => ({ ...prev, 'batchReanalyze': false }));
+  }
+};
 
 
 
-  // OR create a dedicated API function:
-  // export const batchReanalyzeStaleReports = async (days = 7, limit = 50) => {
-  //   try {
-  //     const res = await API.post('/reports/admin/batch-reanalyze-stale', { days, limit });
-  //     return res.data;
-  //   } catch (err) {
-  //     console.error("Batch Reanalyze API Error:", err);
-  //     return { success: false, message: err.response?.data?.message || "Failed to re-analyze stale reports" };
-  //   }
-  // };
+// OR create a dedicated API function:
+// export const batchReanalyzeStaleReports = async (days = 7, limit = 50) => {
+//   try {
+//     const res = await API.post('/reports/admin/batch-reanalyze-stale', { days, limit });
+//     return res.data;
+//   } catch (err) {
+//     console.error("Batch Reanalyze API Error:", err);
+//     return { success: false, message: err.response?.data?.message || "Failed to re-analyze stale reports" };
+//   }
+// };
 
   // Calculate severity statistics
   const severityStats = () => {
@@ -624,7 +624,7 @@ const AdminReports = () => {
     );
   };
 
-
+  
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -637,45 +637,46 @@ const AdminReports = () => {
         </div>
       )}
 
-      {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Report Management</h1>
-            <p className="text-gray-600">Monitor and manage incident reports with severity analysis</p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            {/* RE-ANALYZE STALE REPORTS BUTTON */}
-            <button
-              onClick={handleBatchReanalyzeStale}
-              disabled={analyzing['batchReanalyze'] || stats.analyzed === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              {analyzing['batchReanalyze'] ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                <RefreshCw size={16} />
-              )}
-              Re-analyze Stale Reports
-            </button>
-            {/* RE-ANALYZE ALL BUTTON */}
-            <button
-              onClick={handleReanalyzeAllReports}
-              disabled={analyzing['reanalyzeAll'] || stats.analyzed === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              {analyzing['reanalyzeAll'] ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                <RefreshCw size={16} />
-              )} 
-              {/* re analyze button */}
-              Analyze All Reports
-            </button>
-          </div>
-        </div>
-      </div>
+     {/* Header Section */}
+<div className="mb-8">
+  <div className="flex justify-between items-start">
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Report Management</h1>
+      <p className="text-gray-600">Monitor and manage incident reports with severity analysis</p>
+    </div>
+    
+    <div className="flex flex-col sm:flex-row gap-2">
+      {/* RE-ANALYZE STALE REPORTS BUTTON */}
+      <button
+        onClick={handleBatchReanalyzeStale}
+        disabled={analyzing['batchReanalyze'] || stats.analyzed === 0}
+        className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors disabled:opacity-50"
+      >
+        {analyzing['batchReanalyze'] ? (
+          <RefreshCw size={16} className="animate-spin" />
+        ) : (
+          <RefreshCw size={16} />
+        )}
+        Re-analyze Stale Reports
+      </button>
+      
+      {/* ANALYZE ALL REPORTS BUTTON */}
+      <button
+        onClick={handleBatchSeverityAnalysis}
+        disabled={analyzing['batch'] || stats.total === 0}
+        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
+      >
+        {analyzing['batch'] ? (
+          <RefreshCw size={16} className="animate-spin" />
+        ) : (
+          <Shield size={16} />
+        )}
+        Analyze All Reports
+      </button>
+      
+    </div>
+  </div>
+</div>
 
 
       {/* Severity Analysis Summary Card */}
@@ -1048,6 +1049,20 @@ const AdminReports = () => {
                                   className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
                                 >
                                   View Analysis
+                                </button>
+
+                                {/* RE-ANALYZE BUTTON - DITO ILAGAY! */}
+                                <button
+                                  onClick={() => handleReanalyzeSeverity(report._id)}
+                                  disabled={analyzing[`reanalyze-${report._id}`]}
+                                  className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
+                                >
+                                  {analyzing[`reanalyze-${report._id}`] ? (
+                                    <RefreshCw size={10} className="animate-spin" />
+                                  ) : (
+                                    <RefreshCw size={10} />
+                                  )}
+                                  Re-analyze
                                 </button>
                               </div>
                             </div>
@@ -1647,8 +1662,8 @@ const AdminReports = () => {
                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
                             className={`h-full ${factor === 'urgency' ? 'bg-red-500' :
-                              factor === 'impact' ? 'bg-orange-500' :
-                                factor === 'sensitivity' ? 'bg-yellow-500' : 'bg-blue-500'
+                                factor === 'impact' ? 'bg-orange-500' :
+                                  factor === 'sensitivity' ? 'bg-yellow-500' : 'bg-blue-500'
                               }`}
                             style={{ width: `${score * 100}%` }}
                           ></div>
