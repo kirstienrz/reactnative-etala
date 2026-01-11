@@ -73,13 +73,11 @@ const Header = () => {
     },
     {
       title: 'Etala',
-      path: '/login',
+      path: isLoggedIn ? '/user/report' : '/login',
       submenu: []
     },
-
-
     {
-      title: 'Contact Us',
+      title: 'Contact',
       path: '/Contact',
       submenu: []
     }

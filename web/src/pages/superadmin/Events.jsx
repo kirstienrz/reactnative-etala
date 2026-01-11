@@ -40,7 +40,7 @@ export default function SuperAdminCalendarUI() {
     end: "",
     location: "",
     description: "",
-    notes: "", // ✅ ADDED
+    notes: "",
     allDay: true,
     color: "",
     status: "upcoming"
@@ -56,6 +56,9 @@ export default function SuperAdminCalendarUI() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const eventTypes = getEventTypes();
   
   // Get event color based on type
@@ -104,6 +107,9 @@ export default function SuperAdminCalendarUI() {
       const eventType = event.extendedProps?.type || event.type || 'consultation';
       const color = event.color || getEventColor(eventType);
       
+      // Map 'scheduled' to 'upcoming' for display consistency
+      const displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
+      
       return {
         id: event._id || event.id,
         title: event.title || "Untitled Event",
@@ -111,14 +117,15 @@ export default function SuperAdminCalendarUI() {
         end: event.end || event.start,
         allDay: event.allDay || false,
         extendedProps: {
-          ...event.extendedProps,
           type: eventType,
           description: event.description || event.extendedProps?.description || "",
           location: event.location || event.extendedProps?.location || "",
           notes: event.notes || event.extendedProps?.notes || "",
-          status: event.status || event.extendedProps?.status || "upcoming",
-          userName: event.extendedProps?.userName || "Super Admin",
-          userEmail: event.extendedProps?.userEmail || "admin@example.com"
+          status: displayStatus || "upcoming",
+          userName: event.extendedProps?.userName || event.userName || "Super Admin",
+          userEmail: event.extendedProps?.userEmail || event.userEmail || event.email || "admin@example.com",
+          mode: event.extendedProps?.mode || event.mode || "N/A",
+          userId: event.userId || event.extendedProps?.userId
         },
         backgroundColor: color,
         borderColor: color,
@@ -207,21 +214,11 @@ export default function SuperAdminCalendarUI() {
       ...extendedProps,
       start: event.startStr,
       end: event.endStr,
-      allDay: event.allDay
+      allDay: event.allDay,
+      backgroundColor: event.backgroundColor
     });
     
-    // Show detailed modal instead of alert
-    alert(`
-      📅 ${event.title}
-      📍 Type: ${extendedProps.type || 'N/A'}
-      📍 Status: ${extendedProps.status || 'upcoming'}
-      🕐 Date: ${new Date(event.startStr).toLocaleDateString()}
-      ${extendedProps.location ? `📍 Location: ${extendedProps.location}` : ''}
-      ${extendedProps.description ? `📝 Description: ${extendedProps.description}` : ''}
-      ${extendedProps.notes ? `📋 Notes: ${extendedProps.notes}` : ''}
-      👤 Booked by: ${extendedProps.userName || 'Super Admin'}
-      ✉️ Email: ${extendedProps.userEmail || 'N/A'}
-    `);
+    setShowDetailsModal(true);
   };
 
   const handleEditEvent = (event) => {
@@ -249,7 +246,7 @@ export default function SuperAdminCalendarUI() {
       const response = await deleteCalendarEvent(eventId);
       if (response.success) {
         toast.success(response.message || "Event deleted successfully");
-        fetchEvents(); // Refresh events
+        fetchEvents();
       } else {
         toast.error(response.message || "Failed to delete event");
       }
@@ -260,7 +257,6 @@ export default function SuperAdminCalendarUI() {
   };
 
   const handleSaveEvent = async () => {
-    // Validate form
     if (!formData.title.trim()) {
       toast.error("Please enter event title");
       return;
@@ -271,7 +267,6 @@ export default function SuperAdminCalendarUI() {
       return;
     }
 
-    // Prepare event data for API
     const eventData = {
       title: formData.title.trim(),
       type: formData.type,
@@ -298,12 +293,11 @@ export default function SuperAdminCalendarUI() {
 
       if (response.success) {
         toast.success(response.message || "Event saved successfully");
-        await fetchEvents(); // Refresh events
+        await fetchEvents();
         setShowModal(false);
         resetForm();
         setSelectedEvent(null);
       } else {
-        // Show validation errors if any
         if (response.errors && response.errors.length > 0) {
           response.errors.forEach(err => toast.error(err));
         } else {
@@ -343,6 +337,14 @@ export default function SuperAdminCalendarUI() {
       year: 'numeric'
     });
   };
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredEvents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Loading State
   if (loading && events.length === 0) {
@@ -571,7 +573,7 @@ export default function SuperAdminCalendarUI() {
                   </td>
                 </tr>
               ) : (
-                filteredEvents.map((event) => (
+                currentItems.map((event) => (
                   <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
@@ -677,7 +679,217 @@ export default function SuperAdminCalendarUI() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {filteredEvents.length > 0 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredEvents.length)} of {filteredEvents.length} events
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => paginate(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              {[...Array(totalPages)].map((_, index) => (
+                <button
+                  key={index + 1}
+                  onClick={() => paginate(index + 1)}
+                  className={`px-3 py-1 border rounded-lg text-sm font-medium ${
+                    currentPage === index + 1
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => paginate(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Event Details Modal */}
+      {showDetailsModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Event Details
+                </h3>
+                <button 
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    setSelectedEvent(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Event Title */}
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div 
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: selectedEvent.backgroundColor || '#3b82f6' }}
+                    ></div>
+                    <h4 className="text-xl font-semibold text-gray-900">
+                      {selectedEvent.title}
+                    </h4>
+                  </div>
+                </div>
+
+                {/* Type and Status */}
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Type</p>
+                    <p className="text-sm font-medium text-gray-900 capitalize">
+                      {selectedEvent.type?.replace('_', ' ') || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Status</p>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      selectedEvent.status === 'completed' 
+                        ? 'bg-green-100 text-green-800' 
+                        : selectedEvent.status === 'cancelled'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedEvent.status || 'upcoming'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Date and Time */}
+                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
+                  <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {formatDate(selectedEvent.start)}
+                    </p>
+                    {!selectedEvent.allDay && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {new Date(selectedEvent.start).toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                        {selectedEvent.end && ` - ${new Date(selectedEvent.end).toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}`}
+                      </p>
+                    )}
+                    {selectedEvent.allDay && (
+                      <p className="text-sm text-gray-600 mt-1">All Day Event</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location */}
+                {selectedEvent.location && (
+                  <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                    <MapPin className="w-5 h-5 text-gray-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 mb-1">Location</p>
+                      <p className="text-sm text-gray-900">{selectedEvent.location}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {selectedEvent.description && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-2">Description</p>
+                    <p className="text-sm text-gray-900">{selectedEvent.description}</p>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedEvent.notes && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-2">Notes</p>
+                    <p className="text-sm text-gray-900">{selectedEvent.notes}</p>
+                  </div>
+                )}
+
+                {/* User Info */}
+                <div className="border-t border-gray-200 pt-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <User className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500">Booked by</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {selectedEvent.userName || 'Super Admin'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {selectedEvent.userEmail || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedEvent.mode && (
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-xs text-gray-500">Mode</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedEvent.mode}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      handleEditEvent(selectedEvent);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    <Edit size={16} />
+                    Edit Event
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      handleDeleteEvent(selectedEvent.id);
+                    }}
+                    className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal for Adding/Editing Event */}
       {showModal && (

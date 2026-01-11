@@ -1,10 +1,13 @@
+// routes/calendar.js
 const express = require('express');
 const router = express.Router();
 const {
   getAllCalendarEvents,
   createCalendarEvent,
   updateCalendarEvent,
-  deleteCalendarEvent
+  deleteCalendarEvent,
+  sendInterviewBookingLink,
+  verifyBookingAccess  // ✅ NEW
 } = require('../controllers/calendarController');
 
 router.route('/events')
@@ -14,5 +17,8 @@ router.route('/events')
 router.route('/events/:id')
   .put(updateCalendarEvent)
   .delete(deleteCalendarEvent);
+
+router.post('/send-booking-link', sendInterviewBookingLink);
+router.get('/verify-booking-access', verifyBookingAccess);  // ✅ NEW
 
 module.exports = router;
