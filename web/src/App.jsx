@@ -145,12 +145,13 @@ const App = () => {
               <Route path="/user/chat" element={<UserChatDetailsPage />} />
               <Route path="/user/reports" element={<UserReports />} />
               <Route path="/user/report" element={<UserReporting />} />
-              <Route
+              {/* <Route
   path="/user/interview"
   element={<ProtectedRoute requireInterviewAccess={true} />}
 >
   <Route index element={<InterviewBooking />} />
-</Route>
+</Route> */}
+<Route path="/user/interview" element={<InterviewBooking />} />
 
             </Route>
           </Routes>

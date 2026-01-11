@@ -149,6 +149,9 @@ router.post("/login", async (req, res) => {
       tupId: user.tupId,
       isFirstLogin: user.isFirstLogin,
       hasPin: user.hasPin,
+      firstName: user.firstName,    // ✅ ADD THIS
+      lastName: user.lastName,      // ✅ ADD THIS
+      email: user.email,            // ✅ ADD THIS
     });
   } catch (err) {
     console.error("Login error:", err);

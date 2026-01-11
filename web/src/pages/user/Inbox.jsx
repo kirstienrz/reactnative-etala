@@ -375,9 +375,9 @@ const Inbox = () => {
                           <p className={`text-sm truncate ${hasUnread ? 'font-semibold text-purple-900' : 'text-gray-500'}`}>
                             {ticket.lastMessage}
                           </p>
-                          {ticket.reportId?.caseStatus && (
+                          {ticket.reportId?.status && (
                             <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-                              {ticket.reportId.caseStatus}
+                              {ticket.reportId.status}
                             </span>
                           )}
                         </div>

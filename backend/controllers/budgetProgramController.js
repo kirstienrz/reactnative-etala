@@ -21,8 +21,11 @@ const uploadToCloudinary = (fileBuffer, options) => {
 
 exports.uploadBudgetProgram = async (req, res, next) => {
   try {
-    const { title } = req.body;
+    const { title, description, year, dateApproved, status } = req.body;
+    
+    // Validation
     if (!title) return res.status(400).json({ message: "Title is required" });
+    if (!year) return res.status(400).json({ message: "Year is required" });
     if (!req.file) return res.status(400).json({ message: "File is required" });
 
     const format = req.file.mimetype;
@@ -132,9 +135,13 @@ exports.uploadBudgetProgram = async (req, res, next) => {
       }
     }
 
-    // Save to database
+    // Save to database with new fields
     const budget = await BudgetProgram.create({
       title,
+      description: description || "",
+      year,
+      dateApproved: dateApproved ? new Date(dateApproved) : null,
+      status: status || "Pending",
       file: {
         public_id: publicId,
         original_url: originalUrl,
@@ -177,6 +184,103 @@ exports.getBudgetById = async (req, res) => {
     const budget = await BudgetProgram.findById(req.params.id);
     if (!budget) return res.status(404).json({ message: "Budget not found" });
     res.json(budget);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.updateBudget = async (req, res) => {
+  try {
+    const { title, description, year, dateApproved, status } = req.body;
+    
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (year) updateData.year = year;
+    if (dateApproved !== undefined) updateData.dateApproved = dateApproved ? new Date(dateApproved) : null;
+    if (status) updateData.status = status;
+
+    const budget = await BudgetProgram.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!budget) return res.status(404).json({ message: "Budget not found" });
+
+    res.json({ 
+      success: true, 
+      budget,
+      message: "Budget updated successfully" 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// NEW: Archive budget
+exports.archiveBudget = async (req, res) => {
+  try {
+    const budget = await BudgetProgram.findByIdAndUpdate(
+      req.params.id,
+      { 
+        isArchived: true,
+        archivedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!budget) return res.status(404).json({ message: "Budget not found" });
+
+    res.json({ 
+      success: true, 
+      budget,
+      message: "Budget archived successfully" 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// NEW: Unarchive budget
+exports.unarchiveBudget = async (req, res) => {
+  try {
+    const budget = await BudgetProgram.findByIdAndUpdate(
+      req.params.id,
+      { 
+        isArchived: false,
+        archivedAt: null
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!budget) return res.status(404).json({ message: "Budget not found" });
+
+    res.json({ 
+      success: true, 
+      budget,
+      message: "Budget unarchived successfully" 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// NEW: Get archived budgets
+exports.getArchivedBudgets = async (req, res) => {
+  try {
+    const budgets = await BudgetProgram.find({ isArchived: true }).sort({ archivedAt: -1 });
+    res.json(budgets);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// NEW: Get active (non-archived) budgets
+exports.getActiveBudgets = async (req, res) => {
+  try {
+    const budgets = await BudgetProgram.find({ isArchived: false }).sort({ createdAt: -1 });
+    res.json(budgets);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
