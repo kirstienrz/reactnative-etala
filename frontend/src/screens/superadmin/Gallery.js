@@ -16,46 +16,15 @@ import {
   StatusBar,
 } from 'react-native';
 import {
-  Calendar,
-  Folder,
-  Image as ImageIcon,
-  Upload,
-  Trash2,
-  Plus,
-  X,
-  Check,
-  Eye,
-  EyeOff,
-  Search,
-  Grid3x3,
-  List,
-  LayoutGrid,
-  Download,
-  Share2,
-  Edit,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react-native';
-import {
-  getAlbums,
-  getArchivedAlbums,
-  getAlbum,
-  createAlbum,
-  updateAlbum,
-  uploadImages,
-  updateImageCaption,
-  deleteImage,
-  archiveAlbum,
-  restoreAlbum,
-  deleteAlbum,
-  bulkArchiveAlbums,
-  bulkRestoreAlbums
-} from '../../api/albums';
+  Ionicons,
+  MaterialIcons,
+  MaterialCommunityIcons,
+  Feather,
+} from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// FIX: Add 'function' keyword or arrow function
-const Gallery = () => {  // <- DITO ANG PAGBABAGO
+const Gallery = () => {
   // State management
   const [albums, setAlbums] = useState([]);
   const [archivedAlbums, setArchivedAlbums] = useState([]);
@@ -561,12 +530,12 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
               >
                 {viewArchived ? (
                   <>
-                    <Eye size={16} color="#374151" />
+                    <Ionicons name="eye" size={16} color="#374151" />
                     <Text style={styles.viewToggleText}>View Active Albums</Text>
                   </>
                 ) : (
                   <>
-                    <EyeOff size={16} color="#374151" />
+                    <Ionicons name="eye-off" size={16} color="#374151" />
                     <Text style={styles.viewToggleText}>View Archived Albums</Text>
                   </>
                 )}
@@ -577,7 +546,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                   style={styles.createButton}
                   onPress={() => setShowCreateModal(true)}
                 >
-                  <Plus size={16} color="#fff" />
+                  <Ionicons name="add" size={16} color="#fff" />
                   <Text style={styles.createButtonText}>Create New Album</Text>
                 </TouchableOpacity>
               )}
@@ -591,7 +560,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 <Text style={styles.statLabel}>Total Albums</Text>
                 <Text style={styles.statNumber}>{stats.totalAlbums}</Text>
               </View>
-              <Folder size={20} color="#3b82f6" />
+              <MaterialIcons name="folder" size={20} color="#3b82f6" />
             </View>
             
             <View style={[styles.statCard, { backgroundColor: '#dcfce7' }]}>
@@ -599,7 +568,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 <Text style={[styles.statLabel, { color: '#16a34a' }]}>Active Albums</Text>
                 <Text style={styles.statNumber}>{stats.activeAlbums}</Text>
               </View>
-              <ImageIcon size={20} color="#16a34a" />
+              <MaterialIcons name="image" size={20} color="#16a34a" />
             </View>
             
             <View style={[styles.statCard, { backgroundColor: '#fef3c7' }]}>
@@ -607,7 +576,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 <Text style={[styles.statLabel, { color: '#d97706' }]}>Archived</Text>
                 <Text style={styles.statNumber}>{stats.archivedAlbums}</Text>
               </View>
-              <EyeOff size={20} color="#d97706" />
+              <Ionicons name="eye-off" size={20} color="#d97706" />
             </View>
             
             <View style={[styles.statCard, { backgroundColor: '#f3e8ff' }]}>
@@ -615,7 +584,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 <Text style={[styles.statLabel, { color: '#7c3aed' }]}>Total Photos</Text>
                 <Text style={styles.statNumber}>{stats.totalPhotos}</Text>
               </View>
-              <Upload size={20} color="#7c3aed" />
+              <MaterialIcons name="cloud-upload" size={20} color="#7c3aed" />
             </View>
           </View>
         </View>
@@ -624,7 +593,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
         {error ? (
           <View style={styles.errorAlert}>
             <View style={styles.alertContent}>
-              <X size={24} color="#dc2626" />
+              <Ionicons name="close" size={24} color="#dc2626" />
               <View style={styles.alertTextContainer}>
                 <Text style={styles.alertTitle}>Error</Text>
                 <Text style={styles.alertMessage}>{error}</Text>
@@ -636,7 +605,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
         {success ? (
           <View style={styles.successAlert}>
             <View style={styles.alertContent}>
-              <Check size={24} color="#059669" />
+              <Ionicons name="checkmark" size={24} color="#059669" />
               <View style={styles.alertTextContainer}>
                 <Text style={styles.alertTitle}>Success</Text>
                 <Text style={styles.alertMessage}>{success}</Text>
@@ -650,7 +619,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
           <View style={styles.controlsRow}>
             {/* Search */}
             <View style={styles.searchContainer}>
-              <Search size={20} color="#6b7280" style={styles.searchIcon} />
+              <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search albums by title or description..."
@@ -682,19 +651,19 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                   style={[styles.viewModeButton, viewMode === 'grid' && styles.viewModeActive]}
                   onPress={() => setViewMode('grid')}
                 >
-                  <Grid3x3 size={16} color={viewMode === 'grid' ? '#3b82f6' : '#6b7280'} />
+                  <MaterialIcons name="grid-on" size={16} color={viewMode === 'grid' ? '#3b82f6' : '#6b7280'} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.viewModeButton, viewMode === 'list' && styles.viewModeActive]}
                   onPress={() => setViewMode('list')}
                 >
-                  <List size={16} color={viewMode === 'list' ? '#3b82f6' : '#6b7280'} />
+                  <MaterialIcons name="list" size={16} color={viewMode === 'list' ? '#3b82f6' : '#6b7280'} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.viewModeButton, viewMode === 'compact' && styles.viewModeActive]}
                   onPress={() => setViewMode('compact')}
                 >
-                  <LayoutGrid size={16} color={viewMode === 'compact' ? '#3b82f6' : '#6b7280'} />
+                  <MaterialIcons name="view-module" size={16} color={viewMode === 'compact' ? '#3b82f6' : '#6b7280'} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -705,7 +674,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
         {filteredAlbums.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
-              <Folder size={48} color="#9ca3af" />
+              <MaterialIcons name="folder" size={48} color="#9ca3af" />
             </View>
             <Text style={styles.emptyTitle}>No albums found</Text>
             <Text style={styles.emptyDescription}>
@@ -752,7 +721,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                   
                   {/* Photo Count */}
                   <View style={styles.photoCountBadge}>
-                    <ImageIcon size={16} color="#fff" />
+                    <MaterialIcons name="image" size={16} color="#fff" />
                     <Text style={styles.photoCountText}>{album.totalPhotos || 0} photos</Text>
                   </View>
                 </View>
@@ -767,7 +736,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                   {/* Album Info */}
                   <View style={styles.albumInfo}>
                     <View style={styles.infoRow}>
-                      <Calendar size={16} color="#6b7280" />
+                      <Ionicons name="calendar" size={16} color="#6b7280" />
                       <Text style={styles.infoText}>{formatDate(album.date)}</Text>
                     </View>
                   </View>
@@ -783,7 +752,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                         <ActivityIndicator size="small" color="#1d4ed8" />
                       ) : (
                         <>
-                          <Eye size={16} color="#1d4ed8" />
+                          <Ionicons name="eye" size={16} color="#1d4ed8" />
                           <Text style={styles.viewButtonText}>View Album</Text>
                         </>
                       )}
@@ -797,7 +766,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                           setShowUploadModal(true);
                         }}
                       >
-                        <Upload size={16} color="#16a34a" />
+                        <MaterialIcons name="cloud-upload" size={16} color="#16a34a" />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -834,7 +803,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
                       <>
-                        <Check size={16} color="#fff" />
+                        <Ionicons name="checkmark" size={16} color="#fff" />
                         <Text style={styles.bulkButtonText}>Restore Selected</Text>
                       </>
                     )}
@@ -849,7 +818,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
                       <>
-                        <Folder size={16} color="#fff" />
+                        <MaterialIcons name="folder" size={16} color="#fff" />
                         <Text style={styles.bulkButtonText}>Archive Selected</Text>
                       </>
                     )}
@@ -884,11 +853,11 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 <Text style={styles.modalTitle}>{selectedAlbum?.title}</Text>
                 <View style={styles.modalInfoRow}>
                   <View style={styles.modalInfoItem}>
-                    <Calendar size={16} color="#6b7280" />
+                    <Ionicons name="calendar" size={16} color="#6b7280" />
                     <Text style={styles.modalInfoText}>{selectedAlbum && formatDate(selectedAlbum.date)}</Text>
                   </View>
                   <View style={styles.modalInfoItem}>
-                    <ImageIcon size={16} color="#6b7280" />
+                    <MaterialIcons name="image" size={16} color="#6b7280" />
                     <Text style={styles.modalInfoText}>{selectedAlbum?.totalPhotos || 0} photos</Text>
                   </View>
                 </View>
@@ -900,7 +869,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 style={styles.modalCloseButton}
                 onPress={() => setSelectedAlbum(null)}
               >
-                <X size={24} color="#374151" />
+                <Ionicons name="close" size={24} color="#374151" />
               </TouchableOpacity>
             </View>
             
@@ -909,7 +878,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
               {(!selectedAlbum?.images || selectedAlbum.images.length === 0) ? (
                 <View style={styles.emptyAlbumState}>
                   <View style={styles.emptyAlbumIcon}>
-                    <ImageIcon size={40} color="#9ca3af" />
+                    <MaterialIcons name="image" size={40} color="#9ca3af" />
                   </View>
                   <Text style={styles.emptyAlbumTitle}>No photos yet</Text>
                   <Text style={styles.emptyAlbumDescription}>Upload photos to this album</Text>
@@ -920,7 +889,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                       setShowUploadModal(true);
                     }}
                   >
-                    <Upload size={20} color="#fff" />
+                    <MaterialIcons name="cloud-upload" size={20} color="#fff" />
                     <Text style={styles.emptyAlbumButtonText}>Upload Photos</Text>
                   </TouchableOpacity>
                 </View>
@@ -937,7 +906,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                         setShowUploadModal(true);
                       }}
                     >
-                      <Plus size={16} color="#fff" />
+                      <Ionicons name="add" size={16} color="#fff" />
                       <Text style={styles.addPhotosButtonText}>Add More Photos</Text>
                     </TouchableOpacity>
                   </View>
@@ -962,7 +931,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                             setShowImageDeleteModal(true);
                           }}
                         >
-                          <Trash2 size={16} color="#fff" />
+                          <Ionicons name="trash" size={16} color="#fff" />
                         </TouchableOpacity>
                       </View>
                     ))}
@@ -1026,7 +995,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 style={styles.createModalCloseButton}
                 onPress={() => setShowCreateModal(false)}
               >
-                <X size={24} color="#374151" />
+                <Ionicons name="close" size={24} color="#374151" />
               </TouchableOpacity>
             </View>
             
@@ -1118,7 +1087,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                 style={styles.uploadModalCloseButton}
                 onPress={() => setShowUploadModal(false)}
               >
-                <X size={24} color="#374151" />
+                <Ionicons name="close" size={24} color="#374151" />
               </TouchableOpacity>
             </View>
             
@@ -1156,7 +1125,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
                           style={styles.removePreviewButton}
                           onPress={() => removeUploadImage(index)}
                         >
-                          <X size={16} color="#dc2626" />
+                          <Ionicons name="close" size={16} color="#dc2626" />
                           <Text style={styles.removePreviewText}>Remove</Text>
                         </TouchableOpacity>
                       </View>
@@ -1201,7 +1170,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
         <View style={styles.confirmModalOverlay}>
           <View style={styles.confirmModalContainer}>
             <View style={styles.confirmModalIcon}>
-              <Trash2 size={32} color="#dc2626" />
+              <Ionicons name="trash" size={32} color="#dc2626" />
             </View>
             <Text style={styles.confirmModalTitle}>Delete Album</Text>
             <Text style={styles.confirmModalText}>
@@ -1243,7 +1212,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
         <View style={styles.confirmModalOverlay}>
           <View style={styles.confirmModalContainer}>
             <View style={styles.confirmModalIcon}>
-              <Trash2 size={32} color="#dc2626" />
+              <Ionicons name="trash" size={32} color="#dc2626" />
             </View>
             <Text style={styles.confirmModalTitle}>Delete Image</Text>
             <Text style={styles.confirmModalText}>
@@ -1276,7 +1245,7 @@ const Gallery = () => {  // <- DITO ANG PAGBABAGO
       </Modal>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -1606,7 +1575,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '40%',
-    backgroundColor: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   statusBadge: {
     position: 'absolute',

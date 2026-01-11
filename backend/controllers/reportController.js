@@ -3,6 +3,557 @@ const Ticket = require("../models/Ticket");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const mongoose = require("mongoose");
+// Add these at the beginning with other imports
+const axios = require('axios');
+require('dotenv').config();
+
+// Add this helper function for text analysis
+const analyzeTextWithOpenAI = async (text) => {
+  try {
+    // Option 1: Using OpenAI API (recommended for accuracy)
+    if (process.env.OPENAI_API_KEY) {
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "You are a sentiment analysis assistant. Analyze the following text and return ONLY a JSON object with these fields: sentiment (positive, negative, neutral, mixed), confidence (0-1), keywords (array of key phrases), summary (brief summary), emotionScores (object with positive, negative, neutral, mixed scores 0-1)."
+            },
+            {
+              role: "user",
+              content: `Analyze this text: "${text}"`
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 500
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const content = response.data.choices[0].message.content;
+      try {
+        const result = JSON.parse(content);
+        return result;
+      } catch (parseError) {
+        console.error("Failed to parse OpenAI response:", parseError);
+        // Fallback to manual analysis
+        return analyzeTextManually(text);
+      }
+    }
+
+    // Option 2: Using Hugging Face Inference API (free tier available)
+    if (process.env.HUGGINGFACE_API_KEY) {
+      const response = await axios.post(
+        'https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest',
+        { inputs: text },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const scores = response.data[0];
+      const sentiments = [
+        { label: 'negative', score: scores.find(s => s.label === 'negative')?.score || 0 },
+        { label: 'neutral', score: scores.find(s => s.label === 'neutral')?.score || 0 },
+        { label: 'positive', score: scores.find(s => s.label === 'positive')?.score || 0 }
+      ];
+
+      const maxScore = Math.max(...sentiments.map(s => s.score));
+      const dominantSentiment = sentiments.find(s => s.score === maxScore);
+
+      return {
+        sentiment: dominantSentiment.label,
+        confidence: maxScore,
+        emotionScores: {
+          positive: sentiments.find(s => s.label === 'positive').score,
+          negative: sentiments.find(s => s.label === 'negative').score,
+          neutral: sentiments.find(s => s.label === 'neutral').score,
+          mixed: 0
+        },
+        keywords: extractKeywords(text),
+        summary: generateSummary(text)
+      };
+    }
+
+    // Option 3: Manual analysis (fallback)
+    return analyzeTextManually(text);
+  } catch (error) {
+    console.error("Error analyzing text with external API:", error);
+    return analyzeTextManually(text);
+  }
+};
+
+// Manual text analysis (fallback when no API available)
+const analyzeTextManually = (text) => {
+  const lowerText = text.toLowerCase();
+  
+  // Sentiment word lists
+  const positiveWords = [
+    'good', 'great', 'excellent', 'happy', 'satisfied', 'thank', 'appreciate',
+    'helpful', 'resolved', 'quick', 'efficient', 'professional', 'kind', 'supportive',
+    'understanding', 'patient', 'polite', 'friendly', 'cooperative', 'successful'
+  ];
+  
+  const negativeWords = [
+    'bad', 'terrible', 'awful', 'angry', 'frustrated', 'disappointed', 'upset',
+    'unhappy', 'complaint', 'problem', 'issue', 'wrong', 'failed', 'slow',
+    'inefficient', 'rude', 'unprofessional', 'unhelpful', 'ignored', 'dismissed'
+  ];
+  
+  const urgentWords = [
+    'urgent', 'emergency', 'immediately', 'now', 'asap', 'critical', 'important',
+    'serious', 'dangerous', 'harm', 'threat', 'danger', 'risk', 'concerned', 'worried'
+  ];
+  
+  // Count occurrences
+  let positiveCount = 0;
+  let negativeCount = 0;
+  let urgentCount = 0;
+  
+  positiveWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    const matches = lowerText.match(regex);
+    if (matches) positiveCount += matches.length;
+  });
+  
+  negativeWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    const matches = lowerText.match(regex);
+    if (matches) negativeCount += matches.length;
+  });
+  
+  urgentWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    const matches = lowerText.match(regex);
+    if (matches) urgentCount += matches.length;
+  });
+  
+  // Determine sentiment
+  let sentiment;
+  let confidence;
+  
+  if (positiveCount > 0 && negativeCount === 0) {
+    sentiment = 'positive';
+    confidence = Math.min(0.7 + (positiveCount * 0.1), 0.95);
+  } else if (negativeCount > 0 && positiveCount === 0) {
+    sentiment = 'negative';
+    confidence = Math.min(0.7 + (negativeCount * 0.1), 0.95);
+  } else if (positiveCount > 0 && negativeCount > 0) {
+    sentiment = 'mixed';
+    confidence = Math.min(0.5 + (Math.abs(positiveCount - negativeCount) * 0.05), 0.9);
+  } else {
+    sentiment = 'neutral';
+    confidence = 0.6;
+  }
+  
+  // Adjust for urgency
+  if (urgentCount > 0 && sentiment !== 'positive') {
+    sentiment = 'negative';
+    confidence = Math.min(confidence + 0.1, 0.95);
+  }
+  
+  return {
+    sentiment,
+    confidence,
+    keywords: extractKeywords(text),
+    summary: generateSummary(text),
+    emotionScores: {
+      positive: positiveCount / (positiveCount + negativeCount + 1),
+      negative: negativeCount / (positiveCount + negativeCount + 1),
+      neutral: sentiment === 'neutral' ? 0.8 : 0.1,
+      mixed: sentiment === 'mixed' ? 0.8 : 0.1
+    },
+    analysisMethod: 'manual',
+    wordStats: {
+      positive: positiveCount,
+      negative: negativeCount,
+      urgent: urgentCount,
+      totalWords: text.split(/\s+/).length
+    }
+  };
+};
+
+// Helper function to extract keywords
+const extractKeywords = (text) => {
+  const words = text.toLowerCase().split(/\W+/);
+  const stopWords = new Set([
+    'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of',
+    'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have',
+    'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could',
+    'can', 'may', 'might', 'must', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
+    'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their'
+  ]);
+  
+  const wordFreq = {};
+  words.forEach(word => {
+    if (word.length > 3 && !stopWords.has(word)) {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    }
+  });
+  
+  return Object.entries(wordFreq)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 10)
+    .map(([word]) => word);
+};
+
+// Helper function to generate summary
+const generateSummary = (text) => {
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  if (sentences.length === 0) return 'No summary available';
+  
+  const firstSentence = sentences[0].trim();
+  const lastSentence = sentences[sentences.length - 1].trim();
+  
+  if (sentences.length === 1) {
+    return firstSentence.length > 150 
+      ? firstSentence.substring(0, 147) + '...'
+      : firstSentence;
+  }
+  
+  const summary = `${firstSentence.substring(0, 100)}... ${lastSentence.substring(0, 100)}`;
+  return summary.length > 200 ? summary.substring(0, 197) + '...' : summary;
+};
+
+// Add this controller function to your exports
+/**
+ * Analyze sentiment of a report
+ * @route POST /api/reports/admin/:id/analyze-sentiment
+ * @access Admin, Superadmin
+ */
+const analyzeReportSentiment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Find the report
+    const report = await Report.findById(id)
+      .populate("createdBy", "firstName lastName email");
+
+    if (!report) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Report not found" 
+      });
+    }
+
+    // Check if sentiment was already analyzed recently (within 24 hours)
+    if (report.sentimentAnalysis && report.sentimentAnalysis.analyzedAt) {
+      const hoursSinceAnalysis = (Date.now() - new Date(report.sentimentAnalysis.analyzedAt).getTime()) / (1000 * 60 * 60);
+      
+      if (hoursSinceAnalysis < 24) {
+        return res.json({
+          success: true,
+          message: "Sentiment already analyzed recently",
+          data: report.sentimentAnalysis,
+          cached: true
+        });
+      }
+    }
+
+    // Prepare text for analysis
+    const textToAnalyze = [
+      report.incidentDescription,
+      report.additionalDetails || '',
+      ...(report.incidentTypes || [])
+    ]
+      .filter(text => text && text.trim().length > 0)
+      .join(' ')
+      .trim();
+
+    if (!textToAnalyze || textToAnalyze.length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Not enough text content for sentiment analysis"
+      });
+    }
+
+    console.log(`Analyzing sentiment for report ${id}, text length: ${textToAnalyze.length}`);
+
+    // Analyze the text
+    const sentimentResult = await analyzeTextWithOpenAI(textToAnalyze);
+
+    // Add metadata
+    sentimentResult.analyzedAt = new Date();
+    sentimentResult.analyzedBy = userId;
+    sentimentResult.textLength = textToAnalyze.length;
+    sentimentResult.textSample = textToAnalyze.substring(0, 200) + (textToAnalyze.length > 200 ? '...' : '');
+
+    // Update the report with sentiment analysis
+    report.sentimentAnalysis = sentimentResult;
+    report.lastUpdated = new Date();
+    
+    await report.save();
+
+    console.log(`Sentiment analysis completed for report ${id}: ${sentimentResult.sentiment} (${Math.round(sentimentResult.confidence * 100)}%)`);
+
+    res.json({
+      success: true,
+      message: "Sentiment analysis completed successfully",
+      data: sentimentResult,
+      cached: false,
+      reportId: report._id,
+      ticketNumber: report.ticketNumber
+    });
+  } catch (error) {
+    console.error("Error analyzing report sentiment:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || "Failed to analyze sentiment",
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Batch analyze sentiment for multiple reports
+ * @route POST /api/reports/admin/batch-analyze-sentiment
+ * @access Admin, Superadmin
+ */
+const batchAnalyzeSentiment = async (req, res) => {
+  try {
+    const { reportIds } = req.body;
+    const userId = req.user.id;
+
+    if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Report IDs array is required"
+      });
+    }
+
+    // Limit batch size for performance
+    const maxBatchSize = 10;
+    const idsToProcess = reportIds.slice(0, maxBatchSize);
+
+    const results = {
+      total: idsToProcess.length,
+      successful: 0,
+      failed: 0,
+      details: []
+    };
+
+    // Process reports one by one (to avoid overwhelming APIs)
+    for (const reportId of idsToProcess) {
+      try {
+        const report = await Report.findById(reportId);
+        
+        if (!report) {
+          results.details.push({
+            reportId,
+            success: false,
+            message: "Report not found"
+          });
+          results.failed++;
+          continue;
+        }
+
+        // Skip if already analyzed recently
+        if (report.sentimentAnalysis && report.sentimentAnalysis.analyzedAt) {
+          const hoursSinceAnalysis = (Date.now() - new Date(report.sentimentAnalysis.analyzedAt).getTime()) / (1000 * 60 * 60);
+          if (hoursSinceAnalysis < 24) {
+            results.details.push({
+              reportId,
+              success: true,
+              message: "Already analyzed recently",
+              cached: true,
+              sentiment: report.sentimentAnalysis.sentiment
+            });
+            results.successful++;
+            continue;
+          }
+        }
+
+        // Prepare text for analysis
+        const textToAnalyze = [
+          report.incidentDescription,
+          report.additionalDetails || '',
+          ...(report.incidentTypes || [])
+        ]
+          .filter(text => text && text.trim().length > 0)
+          .join(' ')
+          .trim();
+
+        if (!textToAnalyze || textToAnalyze.length < 10) {
+          results.details.push({
+            reportId,
+            success: false,
+            message: "Not enough text content"
+          });
+          results.failed++;
+          continue;
+        }
+
+        // Analyze the text
+        const sentimentResult = await analyzeTextWithOpenAI(textToAnalyze);
+
+        // Add metadata
+        sentimentResult.analyzedAt = new Date();
+        sentimentResult.analyzedBy = userId;
+        sentimentResult.textLength = textToAnalyze.length;
+
+        // Update the report
+        report.sentimentAnalysis = sentimentResult;
+        report.lastUpdated = new Date();
+        await report.save();
+
+        results.details.push({
+          reportId,
+          success: true,
+          message: "Analysis completed",
+          cached: false,
+          sentiment: sentimentResult.sentiment,
+          confidence: sentimentResult.confidence
+        });
+        results.successful++;
+
+        // Small delay between requests to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+      } catch (error) {
+        console.error(`Error analyzing report ${reportId}:`, error);
+        results.details.push({
+          reportId,
+          success: false,
+          message: error.message
+        });
+        results.failed++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Batch analysis completed: ${results.successful} successful, ${results.failed} failed`,
+      data: results
+    });
+  } catch (error) {
+    console.error("Error in batch sentiment analysis:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || "Failed to perform batch sentiment analysis"
+    });
+  }
+};
+
+/**
+ * Get sentiment statistics
+ * @route GET /api/reports/admin/sentiment-stats
+ * @access Admin, Superadmin
+ */
+const getSentimentStats = async (req, res) => {
+  try {
+    const { timeframe = 'all', status = 'active' } = req.query;
+    
+    let dateFilter = {};
+    if (timeframe === 'today') {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      dateFilter = { createdAt: { $gte: startOfDay } };
+    } else if (timeframe === 'week') {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      dateFilter = { createdAt: { $gte: oneWeekAgo } };
+    } else if (timeframe === 'month') {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      dateFilter = { createdAt: { $gte: oneMonthAgo } };
+    }
+
+    // Build query
+    let query = { ...dateFilter };
+    if (status === 'active') {
+      query.archived = false;
+    } else if (status === 'archived') {
+      query.archived = true;
+    }
+
+    const reports = await Report.find(query);
+
+    // Calculate statistics
+    const stats = {
+      total: reports.length,
+      analyzed: reports.filter(r => r.sentimentAnalysis).length,
+      bySentiment: {
+        positive: 0,
+        negative: 0,
+        neutral: 0,
+        mixed: 0,
+        notAnalyzed: 0
+      },
+      confidence: {
+        average: 0,
+        high: 0, // > 0.8
+        medium: 0, // 0.5-0.8
+        low: 0 // < 0.5
+      },
+      trends: []
+    };
+
+    let totalConfidence = 0;
+    let analyzedCount = 0;
+
+    reports.forEach(report => {
+      if (report.sentimentAnalysis) {
+        const sentiment = report.sentimentAnalysis.sentiment;
+        const confidence = report.sentimentAnalysis.confidence || 0;
+        
+        stats.bySentiment[sentiment]++;
+        totalConfidence += confidence;
+        analyzedCount++;
+
+        if (confidence > 0.8) stats.confidence.high++;
+        else if (confidence > 0.5) stats.confidence.medium++;
+        else stats.confidence.low++;
+
+        // Add to trends
+        stats.trends.push({
+          date: report.createdAt,
+          sentiment,
+          confidence,
+          ticketNumber: report.ticketNumber
+        });
+      } else {
+        stats.bySentiment.notAnalyzed++;
+      }
+    });
+
+    if (analyzedCount > 0) {
+      stats.confidence.average = totalConfidence / analyzedCount;
+    }
+
+    // Calculate percentages
+    stats.bySentimentPercentages = {
+      positive: stats.bySentiment.positive / analyzedCount * 100,
+      negative: stats.bySentiment.negative / analyzedCount * 100,
+      neutral: stats.bySentiment.neutral / analyzedCount * 100,
+      mixed: stats.bySentiment.mixed / analyzedCount * 100,
+      notAnalyzed: stats.bySentiment.notAnalyzed / stats.total * 100
+    };
+
+    res.json({
+      success: true,
+      data: stats,
+      timeframe,
+      status
+    });
+  } catch (error) {
+    console.error("Error getting sentiment stats:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
 
 // ✅ Utility: Generate unique ticket number
 const generateTicketNumber = (isAnonymous) => {
@@ -731,4 +1282,7 @@ module.exports = {
   updateReportByUser,
   sendReportPDF,
   generateTicketNumber,
+  analyzeReportSentiment,
+  batchAnalyzeSentiment,
+  getSentimentStats
 };

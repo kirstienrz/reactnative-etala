@@ -156,3 +156,39 @@ export const updateReportByUser = async (reportId, payload) => {
   }
 };
 
+
+// Analyze sentiment of a report
+export const analyzeReportSentiment = async (reportId) => {
+  try {
+    const res = await API.post(`/reports/admin/${reportId}/analyze-sentiment`);
+    return res.data;
+  } catch (err) {
+    console.error("Analyze Sentiment API Error:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+    });
+    return { 
+      success: false, 
+      message: err.response?.data?.message || "Failed to analyze sentiment" 
+    };
+  }
+};
+
+// Batch analyze sentiment for multiple reports
+export const batchAnalyzeSentiment = async (reportIds) => {
+  try {
+    const res = await API.post('/reports/admin/batch-analyze-sentiment', { reportIds });
+    return res.data;
+  } catch (err) {
+    console.error("Batch Sentiment Analysis API Error:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+    });
+    return { 
+      success: false, 
+      message: err.response?.data?.message || "Failed to analyze sentiment in batch" 
+    };
+  }
+};

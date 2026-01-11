@@ -172,6 +172,40 @@ const reportSchema = new mongoose.Schema({
     enum: ["For Queuing", "For Interview", "For Appointment", "For Referral", "Case Closed"],
     default: "For Queuing"
   },
+  // In your Report model, add this schema field:
+sentimentAnalysis: {
+  sentiment: {
+    type: String,
+    enum: ['positive', 'negative', 'neutral', 'mixed'],
+    default: null
+  },
+  confidence: {
+    type: Number,
+    min: 0,
+    max: 1
+  },
+  keywords: [String],
+  summary: String,
+  emotionScores: {
+    positive: Number,
+    negative: Number,
+    neutral: Number,
+    mixed: Number
+  },
+  analyzedAt: Date,
+  analyzedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  textLength: Number,
+  analysisMethod: String,
+  wordStats: {
+    positive: Number,
+    negative: Number,
+    urgent: Number,
+    totalWords: Number
+  }
+},
 
   submittedAt: { type: Date, default: Date.now },
   lastUpdated: { type: Date, default: Date.now },

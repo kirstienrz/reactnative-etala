@@ -20,6 +20,9 @@ const {
   discloseReport,
   updateReportByUser, 
   sendReportPDF,
+  analyzeReportSentiment,
+  batchAnalyzeSentiment,
+  getSentimentStats
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -79,5 +82,15 @@ router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);
 
 // 📌 Restore archived report
 router.put("/admin/:id/restore", auth(["admin", "superadmin"]), restoreReport);
+
+
+// In your report routes file (usually routes/report.js), add these routes:
+
+// Sentiment analysis routes
+router.post('/admin/:id/analyze-sentiment', auth(["admin", "superadmin"]), analyzeReportSentiment);
+router.post('/admin/batch-analyze-sentiment', auth(["admin", "superadmin"]), batchAnalyzeSentiment);
+router.get('/admin/sentiment-stats', auth(["admin", "superadmin"]), getSentimentStats);
+
+
 
 module.exports = router;
