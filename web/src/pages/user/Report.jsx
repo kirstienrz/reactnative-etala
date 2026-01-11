@@ -1,10 +1,575 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft, Save, Calendar, ChevronDown, Check, Upload, X, 
+  ArrowLeft, Save, Calendar, ChevronDown, Check, Upload, X,
   Image as ImageIcon, Video, Info, Shield, AlertCircle, FileText
 } from 'lucide-react';
 import { createReport } from '../../api/report';
+import { checkSpamReport } from "../../api/ai";
 import { generateReportPDF, sendPDFToEmail } from '../../utils/generateReportPDF';
+
+// ============ STYLES OBJECT (NAILIPAT SA TOP) ============
+const colors = {
+  primary: '#2563eb',
+  secondary: '#475569',
+  background: '#ffffff',
+  lightBackground: '#f8fafc',
+  ultraLightBackground: '#f1f5f9',
+  border: '#e2e8f0',
+  textPrimary: '#1e293b',
+  textSecondary: '#64748b',
+  success: '#059669',
+  warning: '#d97706',
+  error: '#dc2626',
+  white: '#ffffff'
+};
+
+const styles = {
+  colors,
+  container: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '40px 32px',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    backgroundColor: colors.background,
+    minHeight: '100vh',
+    color: colors.textPrimary
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '48px',
+    paddingBottom: '24px',
+    borderBottom: `1px solid ${colors.border}`
+  },
+  backButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '10px',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  mainTitle: {
+    fontSize: '32px',
+    fontWeight: '700',
+    color: colors.textPrimary,
+    margin: '0 0 4px 0',
+    letterSpacing: '-0.025em',
+    background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent'
+  },
+  mainSubtitle: {
+    fontSize: '14px',
+    color: colors.textSecondary,
+    margin: 0,
+    fontWeight: '500'
+  },
+  saveButton: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '12px 20px',
+    backgroundColor: colors.lightBackground,
+    color: colors.primary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '14px'
+  },
+  progressContainer: {
+    marginBottom: '48px'
+  },
+  progressText: {
+    fontSize: '14px',
+    color: colors.textSecondary,
+    fontWeight: '600'
+  },
+  stepIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  stepDot: {
+    width: '24px',
+    height: '24px',
+    borderRadius: '50%',
+    border: `2px solid`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.3s ease'
+  },
+  progressBar: {
+    height: '4px',
+    backgroundColor: colors.ultraLightBackground,
+    borderRadius: '2px',
+    overflow: 'hidden',
+    marginTop: '16px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    transition: 'width 0.3s ease',
+    borderRadius: '2px'
+  },
+  stepTitle: {
+    fontSize: '28px',
+    fontWeight: '700',
+    color: colors.textPrimary,
+    margin: '0 0 12px 0'
+  },
+  content: {
+    marginBottom: '48px'
+  },
+  stepContainer: {
+    backgroundColor: colors.background,
+    borderRadius: '12px'
+  },
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: '12px',
+    padding: '32px',
+    border: `1px solid ${colors.border}`,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)'
+  },
+  sectionHeader: {
+    marginBottom: '24px',
+    paddingBottom: '16px',
+    borderBottom: `1px solid ${colors.border}`
+  },
+  sectionTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: colors.textPrimary,
+    margin: '0 0 8px 0'
+  },
+  sectionDescription: {
+    fontSize: '14px',
+    color: colors.textSecondary,
+    margin: 0
+  },
+  inputGroup: {
+    marginBottom: '20px'
+  },
+  inputLabel: {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: '8px'
+  },
+  requiredStar: {
+    color: colors.error
+  },
+  input: {
+    width: '100%',
+    padding: '14px 16px',
+    fontSize: '14px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    boxSizing: 'border-box',
+    backgroundColor: colors.white,
+    color: colors.textPrimary
+  },
+  selectInput: {
+    width: '100%',
+    padding: '14px 16px',
+    fontSize: '14px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    boxSizing: 'border-box',
+    backgroundColor: colors.white,
+    color: colors.textPrimary,
+    cursor: 'pointer'
+  },
+  dateInput: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '14px 16px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    backgroundColor: colors.white,
+    cursor: 'pointer'
+  },
+  dropdownInput: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '14px 16px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    backgroundColor: colors.white,
+    cursor: 'pointer'
+  },
+  optionGroup: {
+    display: 'flex',
+    gap: '12px'
+  },
+  optionButton: {
+    flex: 1,
+    padding: '14px 16px',
+    border: `1px solid`,
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    backgroundColor: colors.white
+  },
+  optionCard: {
+    padding: '16px',
+    border: `1px solid`,
+    borderRadius: '8px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.white
+  },
+  importantNote: {
+    padding: '24px',
+    backgroundColor: colors.lightBackground,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '12px',
+    marginTop: '32px'
+  },
+  verificationBox: {
+    backgroundColor: colors.ultraLightBackground,
+    padding: '24px',
+    borderRadius: '12px',
+    marginBottom: '24px',
+    border: `1px solid ${colors.border}`
+  },
+  checkboxContainer: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    cursor: 'pointer',
+    padding: '16px',
+    borderRadius: '8px'
+  },
+  checkbox: {
+    width: '24px',
+    height: '24px',
+    border: `2px solid`,
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: '16px',
+    flexShrink: 0
+  },
+  checkboxLabel: {
+    fontSize: '14px',
+    color: colors.textPrimary,
+    flex: 1,
+    fontWeight: '500'
+  },
+  warningBox: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    padding: '20px',
+    backgroundColor: '#fffbeb',
+    border: `1px solid #fde68a`,
+    borderRadius: '12px',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  summaryLabel: {
+    fontSize: '12px',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    margin: '0 0 8px 0',
+    fontWeight: '600'
+  },
+  summaryValue: {
+    fontSize: '16px',
+    color: colors.textPrimary,
+    fontWeight: '600',
+    margin: '0 0 4px 0'
+  },
+  summarySubtext: {
+    fontSize: '14px',
+    color: colors.textSecondary,
+    margin: 0
+  },
+  navigation: {
+    paddingTop: '40px',
+    borderTop: `1px solid ${colors.border}`,
+    display: 'flex',
+    justifyContent: 'space-between'
+  },
+  secondaryButton: {
+    padding: '14px 28px',
+    backgroundColor: colors.white,
+    color: colors.textPrimary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  primaryButton: {
+    padding: '14px 36px',
+    backgroundColor: colors.primary,
+    color: colors.white,
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
+  },
+  submitButton: {
+    width: '100%',
+    padding: '16px 28px',
+    backgroundColor: colors.primary,
+    color: colors.white,
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  spinner: {
+    width: '20px',
+    height: '20px',
+    border: `2px solid rgba(255, 255, 255, 0.3)`,
+    borderTop: `2px solid white`,
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite'
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: '16px',
+    padding: '32px',
+    width: '90%',
+    maxWidth: '400px',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    paddingBottom: '16px',
+    borderBottom: `1px solid ${colors.border}`
+  },
+  modalDoneButton: {
+    background: 'none',
+    border: 'none',
+    color: colors.primary,
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    padding: '8px 16px'
+  },
+  datePickerInput: {
+    width: '100%',
+    padding: '16px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    fontSize: '16px',
+    color: colors.textPrimary
+  },
+  dropdownModal: {
+    backgroundColor: colors.white,
+    borderRadius: '16px',
+    width: '90%',
+    maxWidth: '400px',
+    maxHeight: '80vh',
+    overflow: 'hidden',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
+  },
+  dropdownTitle: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: colors.textPrimary,
+    padding: '24px',
+    margin: 0,
+    borderBottom: `1px solid ${colors.border}`
+  },
+  dropdownList: {
+    maxHeight: '400px',
+    overflowY: 'auto'
+  },
+  dropdownOption: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px 24px',
+    background: 'none',
+    border: 'none',
+    width: '100%',
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontSize: '14px',
+    color: colors.textPrimary,
+    borderBottom: `1px solid ${colors.lightBackground}`
+  },
+  dropdownOptionText: {
+    fontSize: '14px',
+    color: colors.textPrimary,
+    flex: 1,
+    fontWeight: '500'
+  },
+  emptyAttachments: {
+    textAlign: 'center',
+    padding: '48px 32px',
+    border: `2px dashed ${colors.border}`,
+    borderRadius: '12px',
+    marginBottom: '24px',
+    backgroundColor: colors.lightBackground
+  },
+  attachmentItem: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px',
+    borderBottom: `1px solid ${colors.border}`
+  },
+  removeAttachmentButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  addAttachmentButton: {
+    width: '100%',
+    padding: '16px',
+    backgroundColor: colors.white,
+    color: colors.textPrimary,
+    border: `2px dashed ${colors.border}`,
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  aiValidationModal: {
+    backgroundColor: 'white',
+    borderRadius: '16px',
+    width: '90%',
+    maxWidth: '600px',
+    maxHeight: '90vh',
+    overflow: 'auto',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.15)'
+  },
+  aiModalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '24px',
+    borderBottom: '1px solid #E5E7EB',
+    position: 'sticky',
+    top: 0,
+    backgroundColor: 'white',
+    borderTopLeftRadius: '16px',
+    borderTopRightRadius: '16px',
+    zIndex: 10
+  },
+  aiModalContent: {
+    padding: '24px'
+  },
+  aiResultCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: '12px',
+    padding: '20px',
+    marginBottom: '24px',
+    border: '1px solid #E5E7EB'
+  },
+  aiDetails: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '16px',
+    border: '1px solid #E5E7EB'
+  },
+  aiDetailItem: {
+    marginBottom: '12px'
+  },
+  aiDetailLabel: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#6B7280',
+    display: 'block',
+    marginBottom: '4px'
+  },
+  aiDetailText: {
+    fontSize: '14px',
+    color: '#374151',
+    backgroundColor: '#F9FAFB',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    borderLeft: '3px solid #E5E7EB'
+  },
+  aiSuggestions: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: '12px',
+    padding: '20px',
+    marginBottom: '24px',
+    border: '1px solid #BAE6FD'
+  },
+  aiModalActions: {
+    display: 'flex',
+    gap: '12px',
+    justifyContent: 'flex-end'
+  },
+  aiEditButton: {
+    backgroundColor: colors.primary,
+    color: 'white',
+    border: 'none',
+    padding: '12px 24px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
+  aiSecondaryButton: {
+    backgroundColor: 'white',
+    color: colors.primary,
+    border: `1px solid ${colors.primary}`,
+    padding: '12px 24px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
+  modalCloseButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: colors.textSecondary
+  }
+};
+// ============ END OF STYLES ============
 
 const ReportForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -15,6 +580,8 @@ const ReportForm = () => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [dropdownField, setDropdownField] = useState('');
   const [dropdownOptions, setDropdownOptions] = useState([]);
+  const [aiValidationResult, setAiValidationResult] = useState(null);
+  const [showAIValidation, setShowAIValidation] = useState(false);
 
   const [formData, setFormData] = useState({
     // Reporter/Victim Information (all optional now)
@@ -76,6 +643,9 @@ const ReportForm = () => {
   useEffect(() => {
     loadSavedProgress();
   }, []);
+
+  // Reset the AI validation when user edits the form
+
 
   const loadSavedProgress = () => {
     try {
@@ -164,17 +734,257 @@ const ReportForm = () => {
     }));
   };
 
-  const handleSubmit = async () => {
+  // const handleSubmit = async () => {
+  //   if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
+  //     showAlert("Required", "Please confirm all statements before submitting.");
+  //     return;
+  //   }
+
+  //   setLoading(true);
+  //   setAiValidationResult(null); // Reset previous results
+    
+  //   try {
+  //     // 🧠 AI SPAM CHECK
+  //     const aiCheck = await checkSpamReport({
+  //       incidentDescription: formData.incidentDescription || "",
+  //       additionalNotes: formData.additionalNotes || "",
+  //       witnessAccount: formData.witnessAccount || "",
+  //     });
+
+  //     if (!aiCheck.data.allowed) {
+  //       // Store the AI result to show to user
+  //       setAiValidationResult({
+  //         allowed: false,
+  //         reason: aiCheck.data.reason || "Your report lacks meaningful details.",
+  //         details: {
+  //           incidentDescription: formData.incidentDescription,
+  //           additionalNotes: formData.additionalNotes,
+  //           witnessAccount: formData.witnessAccount
+  //         }
+  //       });
+        
+  //       // Show the AI validation modal instead of just alert
+  //       setShowAIValidation(true);
+  //       setLoading(false);
+  //       return;
+  //     }
+
+
+//  const handleSubmit = async () => {
+//   if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
+//     showAlert("Required", "Please confirm all statements before submitting.");
+//     return;
+//   }
+
+//   setLoading(true);
+//   setAiValidationResult(null);
+  
+//   try {
+//     console.log("🔍 Starting AI validation...");
+    
+//     // TEMPORARY: SIMULATE AI RESPONSE FOR TESTING
+//     // Comment this out when AI API is working
+//     const simulatedAIResponse = {
+//       data: {
+//         allowed: false,
+//         reason: "Incident description contains random, meaningless text."
+//       }
+//     };
+    
+//     if (!simulatedAIResponse.data.allowed) {
+//       console.log("❌ AI Blocked (SIMULATED) - Showing modal...");
+      
+//       setAiValidationResult({
+//         allowed: false,
+//         reason: simulatedAIResponse.data.reason,
+//         details: {
+//           incidentDescription: formData.incidentDescription,
+//           additionalNotes: formData.additionalNotes,
+//           witnessAccount: formData.witnessAccount
+//         }
+//       });
+      
+//       setShowAIValidation(true);
+//       setLoading(false);
+//       return;
+//     }
+    
+    
+//     // UNCOMMENT THIS WHEN AI API IS WORKING
+//     let aiCheck;
+//     try {
+//       aiCheck = await checkSpamReport({
+//         incidentDescription: formData.incidentDescription || "",
+//         additionalNotes: formData.additionalNotes || "",
+//         witnessAccount: formData.witnessAccount || "",
+//       });
+//       console.log("✅ AI Response:", aiCheck.data);
+      
+//       if (!aiCheck.data.allowed) {
+//         console.log("❌ AI Blocked - Showing modal...");
+//         setAiValidationResult({
+//           allowed: false,
+//           reason: aiCheck.data.reason || "Your report lacks meaningful details.",
+//           details: {
+//             incidentDescription: formData.incidentDescription,
+//             additionalNotes: formData.additionalNotes,
+//             witnessAccount: formData.witnessAccount
+//           }
+//         });
+//         setShowAIValidation(true);
+//         setLoading(false);
+//         return;
+//       }
+      
+//     } catch (aiError) {
+//       console.error("❌ AI API Error:", aiError);
+//       // Handle error...
+//     }
+    
+
+//     console.log("✅ AI Approved - Continuing submission...");
+//       // ---- EXISTING CODE BELOW ----
+//       const submitData = new FormData();
+
+//       // Determine if anonymous based on whether personal info is provided
+//       const isAnonymous = !formData.firstName && !formData.lastName;
+//       submitData.append('isAnonymous', String(isAnonymous));
+
+//       Object.keys(formData).forEach(key => {
+//         if (key === 'attachments') return;
+//         const value = formData[key];
+//         if (Array.isArray(value)) {
+//           value.forEach(item => submitData.append(`${key}[]`, item));
+//         } else if (typeof value === 'boolean') {
+//           submitData.append(key, value.toString());
+//         } else if (value !== '' && value !== null && value !== undefined) {
+//           submitData.append(key, value.toString());
+//         }
+//       });
+
+//       formData.attachments.forEach(attachment => {
+//         submitData.append('attachments', attachment.file);
+//       });
+
+//       // ✅ STEP 1: Submit the report
+//       const response = await createReport(submitData);
+//       const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+
+//       // ✅ STEP 2: Generate PDF - This will auto-download
+//       const pdfBlob = generateReportPDF({
+//         formData,
+//         ticketNumber,
+//         isAnonymous,
+//       });
+
+//       // ✅ STEP 3: Send PDF via Email
+//       try {
+//         await sendPDFToEmail(pdfBlob, ticketNumber);
+//         console.log('✅ PDF sent to your registered email successfully');
+//       } catch (emailError) {
+//         console.error('❌ Failed to send PDF email:', emailError);
+//         showAlert(
+//           'Report Submitted',
+//           `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nNote: Email delivery failed. Please download the PDF manually.`
+//         );
+//       }
+
+//       await clearProgress();
+
+//       showAlert(
+//         'Report Submitted Successfully',
+//         `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy has been downloaded and sent to your registered email.`
+//       );
+
+//       // Reset form
+//       setCurrentStep(1);
+//       setFormData({
+//         lastName: '', firstName: '', middleName: '', alias: '', sex: '',
+//         dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
+//         nationality: '', passportNo: '', occupation: '', religion: '',
+//         region: '', province: '', cityMun: '', barangay: '',
+//         disability: '', numberOfChildren: '', agesOfChildren: '',
+//         guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
+//         guardianRelationship: '', guardianRegion: '', guardianProvince: '',
+//         guardianCityMun: '', guardianBarangay: '', guardianContact: '',
+//         reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
+//         perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
+//         perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
+//         perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
+//         perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
+//         perpBarangay: '', perpRelationship: '',
+//         incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+//         incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
+//         placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
+//         witnessAccount: '', witnessDate: '',
+//         attachments: [], additionalNotes: '', confirmAccuracy: false,
+//         confirmConfidentiality: false,
+//       });
+
+//     } catch (error) {
+//       console.error('Submit error:', error);
+//       let errorMessage = 'Failed to submit report. Please try again.';
+//       if (error.response?.data?.message) {
+//         errorMessage = error.response.data.message;
+//       }
+//       showAlert('Error', errorMessage);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+const handleSubmit = async () => {
   if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
-    showAlert('Required', 'Please confirm all statements before submitting.');
+    showAlert("Required", "Please confirm all statements before submitting.");
     return;
   }
 
   setLoading(true);
+  setAiValidationResult(null);
+  
   try {
-    const submitData = new FormData();
+    console.log("🔍 [1] Starting submission...");
+    console.log("📝 Text being submitted:", formData.incidentDescription);
     
-    // Determine if anonymous based on whether personal info is provided
+    // CALL AI CHECK
+    const aiCheck = await checkSpamReport({
+      incidentDescription: formData.incidentDescription || "",
+      additionalNotes: formData.additionalNotes || "",
+      witnessAccount: formData.witnessAccount || "",
+    });
+
+    console.log("✅ [2] AI Response RECEIVED:", aiCheck.data);
+    console.log("✅ [3] aiCheck.data.allowed =", aiCheck.data.allowed);
+    console.log("✅ [4] aiCheck.data.reason =", aiCheck.data.reason);
+
+    // CRITICAL: Check if AI blocked it
+    if (!aiCheck.data.allowed) {
+      console.log("❌ [5] AI BLOCKED DETECTED! Showing modal...");
+      
+      setAiValidationResult({
+        allowed: false,
+        reason: aiCheck.data.reason || "Your report lacks meaningful details.",
+        details: {
+          incidentDescription: formData.incidentDescription,
+          additionalNotes: formData.additionalNotes,
+          witnessAccount: formData.witnessAccount
+        }
+      });
+      
+      console.log("✅ [6] Setting showAIValidation to TRUE");
+      setShowAIValidation(true);
+      setLoading(false);
+      console.log("✅ [7] Modal should now appear!");
+      return;
+    } else {
+      console.log("✅ [5] AI APPROVED - continuing to submission");
+    }
+
+    // ALWAYS CONTINUE TO SUBMISSION
+    console.log("✅ [6] Continuing to submission...");
+    
+    // ---- EXISTING SUBMISSION CODE ----
+    const submitData = new FormData();
     const isAnonymous = !formData.firstName && !formData.lastName;
     submitData.append('isAnonymous', String(isAnonymous));
 
@@ -194,25 +1004,23 @@ const ReportForm = () => {
       submitData.append('attachments', attachment.file);
     });
 
-    // ✅ STEP 1: Submit the report
+    // Submit the report
     const response = await createReport(submitData);
     const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
 
-    // ✅ STEP 2: Generate PDF - This will auto-download
+    // Generate PDF
     const pdfBlob = generateReportPDF({
       formData,
       ticketNumber,
       isAnonymous,
     });
 
-    // ✅ STEP 3: Send PDF via Email
-    // Backend will automatically use the logged-in user's email from the User model
+    // Send PDF via Email
     try {
       await sendPDFToEmail(pdfBlob, ticketNumber);
       console.log('✅ PDF sent to your registered email successfully');
     } catch (emailError) {
       console.error('❌ Failed to send PDF email:', emailError);
-      // Don't fail the whole submission if email fails
       showAlert(
         'Report Submitted',
         `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nNote: Email delivery failed. Please download the PDF manually.`
@@ -229,6 +1037,7 @@ const ReportForm = () => {
     // Reset form
     setCurrentStep(1);
     setFormData({
+      // ... reset all form fields ...
       lastName: '', firstName: '', middleName: '', alias: '', sex: '',
       dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
       nationality: '', passportNo: '', occupation: '', religion: '',
@@ -250,7 +1059,7 @@ const ReportForm = () => {
       attachments: [], additionalNotes: '', confirmAccuracy: false,
       confirmConfidentiality: false,
     });
-
+    
   } catch (error) {
     console.error('Submit error:', error);
     let errorMessage = 'Failed to submit report. Please try again.';
@@ -325,6 +1134,423 @@ const ReportForm = () => {
     ];
     return titles[currentStep - 1] || "";
   };
+
+ const renderAIValidationModal = () => {
+  if (!showAIValidation || !aiValidationResult) {
+    console.log("❌ Modal conditions not met:", { showAIValidation, aiValidationResult });
+    return null;
+  }
+
+  console.log("✅ Rendering AI Validation Modal...");
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)', // Darker background
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999, // Higher z-index
+      padding: '20px'
+    }} onClick={() => {
+      console.log("Closing modal");
+      setShowAIValidation(false);
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        width: '90%',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+      }} onClick={(e) => {
+        e.stopPropagation();
+        console.log("Modal content clicked");
+      }}>
+        
+        {/* MODAL HEADER */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '24px',
+          borderBottom: '2px solid #EF4444',
+          backgroundColor: '#FEF2F2',
+          borderTopLeftRadius: '16px',
+          borderTopRightRadius: '16px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Shield size={28} color="#DC2626" />
+            <h3 style={{ 
+              margin: 0, 
+              fontSize: '22px', 
+              color: '#DC2626',
+              fontWeight: '700'
+            }}>
+              ⚠️ Content Validation Required
+            </h3>
+          </div>
+          <button 
+            onClick={() => {
+              console.log("Close button clicked");
+              setShowAIValidation(false);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#DC2626',
+              fontSize: '18px',
+              fontWeight: 'bold'
+            }}
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* MODAL CONTENT */}
+        <div style={{ padding: '24px' }}>
+          
+          {/* AI RESULT CARD */}
+          <div style={{
+            backgroundColor: '#FEF2F2',
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '24px',
+            border: '2px solid #FECACA'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px',
+              marginBottom: '16px' 
+            }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '16px',
+                backgroundColor: '#FEE2E2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <X size={20} color="#DC2626" />
+              </div>
+              <span style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: '#DC2626'
+              }}>
+                ❌ Report Not Approved
+              </span>
+            </div>
+
+            <div style={{
+              backgroundColor: 'white',
+              padding: '16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              borderLeft: '4px solid #DC2626'
+            }}>
+              <p style={{
+                margin: 0,
+                fontSize: '16px',
+                color: '#1F2937',
+                lineHeight: '1.6',
+                fontWeight: '500'
+              }}>
+                {aiValidationResult.reason}
+              </p>
+            </div>
+
+            {/* DETAILS SECTION */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '16px',
+              border: '1px solid #E5E7EB'
+            }}>
+              <h4 style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                margin: '0 0 16px 0',
+                color: '#374151',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                📋 AI Analysis Details
+              </h4>
+              
+              {formData.incidentDescription && (
+                <div style={{ marginBottom: '16px' }}>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6B7280',
+                    display: 'block',
+                    marginBottom: '6px'
+                  }}>
+                    Incident Description:
+                  </span>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#374151',
+                    backgroundColor: '#F9FAFB',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    borderLeft: '3px solid #DC2626',
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-word'
+                  }}>
+                    "{formData.incidentDescription.length > 100 
+                      ? formData.incidentDescription.substring(0, 100) + '...' 
+                      : formData.incidentDescription}"
+                  </div>
+                </div>
+              )}
+              
+              {formData.additionalNotes && (
+                <div style={{ marginBottom: '16px' }}>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6B7280',
+                    display: 'block',
+                    marginBottom: '6px'
+                  }}>
+                    Additional Notes:
+                  </span>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#374151',
+                    backgroundColor: '#F9FAFB',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    borderLeft: '3px solid #F59E0B'
+                  }}>
+                    {formData.additionalNotes.length > 50 
+                      ? formData.additionalNotes.substring(0, 50) + '...' 
+                      : formData.additionalNotes}
+                  </div>
+                </div>
+              )}
+              
+              {formData.witnessAccount && (
+                <div>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6B7280',
+                    display: 'block',
+                    marginBottom: '6px'
+                  }}>
+                    Witness Account:
+                  </span>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#374151',
+                    backgroundColor: '#F9FAFB',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    borderLeft: '3px solid #10B981'
+                  }}>
+                    {formData.witnessAccount.length > 50 
+                      ? formData.witnessAccount.substring(0, 50) + '...' 
+                      : formData.witnessAccount}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SUGGESTIONS */}
+          <div style={{
+            backgroundColor: '#EFF6FF',
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '24px',
+            border: '2px solid #93C5FD'
+          }}>
+            <h4 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              margin: '0 0 16px 0',
+              color: '#1E40AF',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              💡 How to improve your report:
+            </h4>
+            
+            <ul style={{
+              margin: 0,
+              paddingLeft: '24px',
+              color: '#374151',
+              fontSize: '15px',
+              lineHeight: '1.8'
+            }}>
+              <li style={{ marginBottom: '10px' }}>
+                <strong>Be specific:</strong> Include dates, times, and exact locations
+              </li>
+              <li style={{ marginBottom: '10px' }}>
+                <strong>Describe people:</strong> Mention names, roles, or descriptions of involved persons
+              </li>
+              <li style={{ marginBottom: '10px' }}>
+                <strong>Sequence of events:</strong> Explain what happened step by step
+              </li>
+              <li style={{ marginBottom: '10px' }}>
+                <strong>Use proper language:</strong> Write in complete sentences with proper grammar
+              </li>
+              <li style={{ marginBottom: '10px' }}>
+                <strong>Avoid randomness:</strong> Don't use random characters like "asdf", "test", or "123"
+              </li>
+              <li>
+                <strong>Provide context:</strong> Explain why you're reporting and what outcome you expect
+              </li>
+            </ul>
+            
+            <div style={{
+              marginTop: '20px',
+              padding: '16px',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              borderLeft: '4px solid #3B82F6'
+            }}>
+              <p style={{
+                margin: 0,
+                fontSize: '14px',
+                color: '#1E40AF',
+                fontWeight: '600'
+              }}>
+                💬 Example of a good report:
+              </p>
+              <p style={{
+                margin: '8px 0 0 0',
+                fontSize: '13px',
+                color: '#4B5563',
+                fontStyle: 'italic'
+              }}>
+                "On March 15, 2024, around 2:00 PM at the Engineering Building, my professor made inappropriate comments about my appearance during class. This happened in Room 205 in front of other students. I felt uncomfortable and humiliated. This is not the first time..."
+              </p>
+            </div>
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            justifyContent: 'space-between'
+          }}>
+            <button
+              onClick={() => {
+                console.log("Edit Report clicked");
+                setShowAIValidation(false);
+                // Auto-focus to incident description field
+                setTimeout(() => {
+                  const textarea = document.querySelector('textarea');
+                  if (textarea) {
+                    textarea.focus();
+                    textarea.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }, 100);
+              }}
+              style={{
+                flex: 1,
+                backgroundColor: '#DC2626',
+                color: 'white',
+                border: 'none',
+                padding: '16px 24px',
+                borderRadius: '10px',
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#B91C1C'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#DC2626'}
+            >
+              <span>✏️</span>
+              Edit & Improve Report
+            </button>
+            
+            <button
+              onClick={() => {
+                console.log("Manual Review clicked");
+                setShowAIValidation(false);
+                showAlert("Manual Review Requested", 
+                  "Your report has been flagged for manual review by the TUP GAD Office. " +
+                  "An administrator will review your submission within 24-48 hours."
+                );
+              }}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#2563EB',
+                border: '2px solid #2563EB',
+                padding: '16px 24px',
+                borderRadius: '10px',
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = '#EFF6FF';
+                e.target.style.borderColor = '#1D4ED8';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'white';
+                e.target.style.borderColor = '#2563EB';
+              }}
+            >
+              <span>👨‍⚖️</span>
+              Request Manual Review
+            </button>
+          </div>
+
+          {/* FOOTER NOTE */}
+          <div style={{
+            marginTop: '20px',
+            padding: '12px',
+            backgroundColor: '#F3F4F6',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <p style={{
+              margin: 0,
+              fontSize: '12px',
+              color: '#6B7280',
+              lineHeight: '1.5'
+            }}>
+              ⚠️ <strong>Note:</strong> This AI validation helps prevent spam submissions. 
+              Please provide meaningful details to ensure your report is properly reviewed.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   const renderProgressBar = () => (
     <div style={styles.progressContainer}>
@@ -1038,6 +2264,8 @@ const ReportForm = () => {
         )}
       </div>
 
+      {renderAIValidationModal()}
+
       {showDatePicker && (
         <div style={styles.modalOverlay} onClick={() => setShowDatePicker(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -1082,475 +2310,5 @@ const ReportForm = () => {
     </div>
   );
 };
-
-const colors = {
-  primary: '#2563eb',
-  secondary: '#475569',
-  background: '#ffffff',
-  lightBackground: '#f8fafc',
-  ultraLightBackground: '#f1f5f9',
-  border: '#e2e8f0',
-  textPrimary: '#1e293b',
-  textSecondary: '#64748b',
-  success: '#059669',
-  warning: '#d97706',
-  error: '#dc2626',
-  white: '#ffffff'
-};
-
-const styles = {
-  colors,
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '40px 32px',
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    backgroundColor: colors.background,
-    minHeight: '100vh',
-    color: colors.textPrimary
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '48px',
-    paddingBottom: '24px',
-    borderBottom: `1px solid ${colors.border}`
-  },
-  backButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '10px',
-    borderRadius: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  mainTitle: {
-    fontSize: '32px',
-    fontWeight: '700',
-    color: colors.textPrimary,
-    margin: '0 0 4px 0',
-    letterSpacing: '-0.025em',
-    background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent'
-  },
-  mainSubtitle: {
-    fontSize: '14px',
-    color: colors.textSecondary,
-    margin: 0,
-    fontWeight: '500'
-  },
-  saveButton: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '12px 20px',
-    backgroundColor: colors.lightBackground,
-    color: colors.primary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '14px'
-  },
-  progressContainer: {
-    marginBottom: '48px'
-  },
-  progressText: {
-    fontSize: '14px',
-    color: colors.textSecondary,
-    fontWeight: '600'
-  },
-  stepIndicator: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
-  },
-  stepDot: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '50%',
-    border: `2px solid`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.3s ease'
-  },
-  progressBar: {
-    height: '4px',
-    backgroundColor: colors.ultraLightBackground,
-    borderRadius: '2px',
-    overflow: 'hidden',
-    marginTop: '16px'
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    transition: 'width 0.3s ease',
-    borderRadius: '2px'
-  },
-  stepTitle: {
-    fontSize: '28px',
-    fontWeight: '700',
-    color: colors.textPrimary,
-    margin: '0 0 12px 0'
-  },
-  content: {
-    marginBottom: '48px'
-  },
-  stepContainer: {
-    backgroundColor: colors.background,
-    borderRadius: '12px'
-  },
-  sectionCard: {
-    backgroundColor: colors.white,
-    borderRadius: '12px',
-    padding: '32px',
-    border: `1px solid ${colors.border}`,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)'
-  },
-  sectionHeader: {
-    marginBottom: '24px',
-    paddingBottom: '16px',
-    borderBottom: `1px solid ${colors.border}`
-  },
-  sectionTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: colors.textPrimary,
-    margin: '0 0 8px 0'
-  },
-  sectionDescription: {
-    fontSize: '14px',
-    color: colors.textSecondary,
-    margin: 0
-  },
-  inputGroup: {
-    marginBottom: '20px'
-  },
-  inputLabel: {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: '8px'
-  },
-  requiredStar: {
-    color: colors.error
-  },
-  input: {
-    width: '100%',
-    padding: '14px 16px',
-    fontSize: '14px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    boxSizing: 'border-box',
-    backgroundColor: colors.white,
-    color: colors.textPrimary
-  },
-  selectInput: {
-    width: '100%',
-    padding: '14px 16px',
-    fontSize: '14px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    boxSizing: 'border-box',
-    backgroundColor: colors.white,
-    color: colors.textPrimary,
-    cursor: 'pointer'
-  },
-  dateInput: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '14px 16px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    backgroundColor: colors.white,
-    cursor: 'pointer'
-  },
-  dropdownInput: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '14px 16px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    backgroundColor: colors.white,
-    cursor: 'pointer'
-  },
-  optionGroup: {
-    display: 'flex',
-    gap: '12px'
-  },
-  optionButton: {
-    flex: 1,
-    padding: '14px 16px',
-    border: `1px solid`,
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    backgroundColor: colors.white
-  },
-  optionCard: {
-    padding: '16px',
-    border: `1px solid`,
-    borderRadius: '8px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.white
-  },
-  importantNote: {
-    padding: '24px',
-    backgroundColor: colors.lightBackground,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '12px',
-    marginTop: '32px'
-  },
-  verificationBox: {
-    backgroundColor: colors.ultraLightBackground,
-    padding: '24px',
-    borderRadius: '12px',
-    marginBottom: '24px',
-    border: `1px solid ${colors.border}`
-  },
-  checkboxContainer: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    cursor: 'pointer',
-    padding: '16px',
-    borderRadius: '8px'
-  },
-  checkbox: {
-    width: '24px',
-    height: '24px',
-    border: `2px solid`,
-    borderRadius: '6px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: '16px',
-    flexShrink: 0
-  },
-  checkboxLabel: {
-    fontSize: '14px',
-    color: colors.textPrimary,
-    flex: 1,
-    fontWeight: '500'
-  },
-  warningBox: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    padding: '20px',
-    backgroundColor: '#fffbeb',
-    border: `1px solid #fde68a`,
-    borderRadius: '12px',
-    gap: '16px',
-    marginBottom: '24px'
-  },
-  summaryLabel: {
-    fontSize: '12px',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    margin: '0 0 8px 0',
-    fontWeight: '600'
-  },
-  summaryValue: {
-    fontSize: '16px',
-    color: colors.textPrimary,
-    fontWeight: '600',
-    margin: '0 0 4px 0'
-  },
-  summarySubtext: {
-    fontSize: '14px',
-    color: colors.textSecondary,
-    margin: 0
-  },
-  navigation: {
-    paddingTop: '40px',
-    borderTop: `1px solid ${colors.border}`,
-    display: 'flex',
-    justifyContent: 'space-between'
-  },
-  secondaryButton: {
-    padding: '14px 28px',
-    backgroundColor: colors.white,
-    color: colors.textPrimary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  primaryButton: {
-    padding: '14px 36px',
-    backgroundColor: colors.primary,
-    color: colors.white,
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
-  },
-  submitButton: {
-    width: '100%',
-    padding: '16px 28px',
-    backgroundColor: colors.primary,
-    color: colors.white,
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  spinner: {
-    width: '20px',
-    height: '20px',
-    border: `2px solid rgba(255, 255, 255, 0.3)`,
-    borderTop: `2px solid white`,
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite'
-  },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: '16px',
-    padding: '32px',
-    width: '90%',
-    maxWidth: '400px',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
-  },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '24px',
-    paddingBottom: '16px',
-    borderBottom: `1px solid ${colors.border}`
-  },
-  modalDoneButton: {
-    background: 'none',
-    border: 'none',
-    color: colors.primary,
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    padding: '8px 16px'
-  },
-  datePickerInput: {
-    width: '100%',
-    padding: '16px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    fontSize: '16px',
-    color: colors.textPrimary
-  },
-  dropdownModal: {
-    backgroundColor: colors.white,
-    borderRadius: '16px',
-    width: '90%',
-    maxWidth: '400px',
-    maxHeight: '80vh',
-    overflow: 'hidden',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
-  },
-  dropdownTitle: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: colors.textPrimary,
-    padding: '24px',
-    margin: 0,
-    borderBottom: `1px solid ${colors.border}`
-  },
-  dropdownList: {
-    maxHeight: '400px',
-    overflowY: 'auto'
-  },
-  dropdownOption: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '16px 24px',
-    background: 'none',
-    border: 'none',
-    width: '100%',
-    cursor: 'pointer',
-    textAlign: 'left',
-    fontSize: '14px',
-    color: colors.textPrimary,
-    borderBottom: `1px solid ${colors.lightBackground}`
-  },
-  dropdownOptionText: {
-    fontSize: '14px',
-    color: colors.textPrimary,
-    flex: 1,
-    fontWeight: '500'
-  },
-  emptyAttachments: {
-    textAlign: 'center',
-    padding: '48px 32px',
-    border: `2px dashed ${colors.border}`,
-    borderRadius: '12px',
-    marginBottom: '24px',
-    backgroundColor: colors.lightBackground
-  },
-  attachmentItem: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '16px',
-    borderBottom: `1px solid ${colors.border}`
-  },
-  removeAttachmentButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '6px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  addAttachmentButton: {
-    width: '100%',
-    padding: '16px',
-    backgroundColor: colors.white,
-    color: colors.textPrimary,
-    border: `2px dashed ${colors.border}`,
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  }
-};
-
-const styleSheet = document.createElement('style');
-styleSheet.innerHTML = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default ReportForm;

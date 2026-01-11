@@ -20,12 +20,6 @@ const {
   discloseReport,
   updateReportByUser, 
   sendReportPDF,
-  analyzeReportSeverity,          // PINALITAN: analyzeReportSentiment -> analyzeReportSeverity
-  batchAnalyzeSeverity,          // PINALITAN: batchAnalyzeSentiment -> batchAnalyzeSeverity
-  getSeverityStats,
-  batchReanalyzeStaleReports,
-  getReanalysisStats,
-  reanalyzeAllReports,              // PINALITAN: getSentimentStats -> getSeverityStats
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -85,35 +79,5 @@ router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);
 
 // 📌 Restore archived report
 router.put("/admin/:id/restore", auth(["admin", "superadmin"]), restoreReport);
-
-
-// ===================================================================
-// 🔍 SEVERITY ANALYSIS ROUTES (PINALITAN: Sentiment -> Severity)
-// ===================================================================
-
-// Analyze severity for a specific report
-router.post('/admin/:id/analyze-severity', auth(["admin", "superadmin"]), analyzeReportSeverity);
-
-// Batch analyze severity for multiple reports
-router.post('/admin/batch-analyze-severity', auth(["admin", "superadmin"]), batchAnalyzeSeverity);
-
-// Get severity statistics
-router.get('/admin/severity-stats', auth(["admin", "superadmin"]), getSeverityStats);
-
-// routes/reportRoutes.js
-// ... (existing code continues)
-
-// ===================================================================
-// 🔄 STALE REPORTS RE-ANALYSIS ROUTES
-// ===================================================================
-
-// Batch re-analyze stale reports (older than X days)
-router.post('/admin/batch-reanalyze-stale', auth(["admin", "superadmin"]), batchReanalyzeStaleReports);
-
-// Get re-analysis statistics
-router.get('/admin/reanalysis-stats', auth(["admin", "superadmin"]), getReanalysisStats);
-
-// routes/reportRoutes.js - ADD THIS ROUTE
-router.post('/admin/reanalyze-all', auth(["admin", "superadmin"]), reanalyzeAllReports);
 
 module.exports = router;
