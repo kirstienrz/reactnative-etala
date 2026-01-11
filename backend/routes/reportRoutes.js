@@ -20,9 +20,12 @@ const {
   discloseReport,
   updateReportByUser, 
   sendReportPDF,
-  analyzeReportSentiment,
-  batchAnalyzeSentiment,
-  getSentimentStats
+  analyzeReportSeverity,          // PINALITAN: analyzeReportSentiment -> analyzeReportSeverity
+  batchAnalyzeSeverity,          // PINALITAN: batchAnalyzeSentiment -> batchAnalyzeSeverity
+  getSeverityStats,
+  batchReanalyzeStaleReports,
+  getReanalysisStats,
+  reanalyzeAllReports,              // PINALITAN: getSentimentStats -> getSeverityStats
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -84,13 +87,33 @@ router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);
 router.put("/admin/:id/restore", auth(["admin", "superadmin"]), restoreReport);
 
 
-// In your report routes file (usually routes/report.js), add these routes:
+// ===================================================================
+// 🔍 SEVERITY ANALYSIS ROUTES (PINALITAN: Sentiment -> Severity)
+// ===================================================================
 
-// Sentiment analysis routes
-router.post('/admin/:id/analyze-sentiment', auth(["admin", "superadmin"]), analyzeReportSentiment);
-router.post('/admin/batch-analyze-sentiment', auth(["admin", "superadmin"]), batchAnalyzeSentiment);
-router.get('/admin/sentiment-stats', auth(["admin", "superadmin"]), getSentimentStats);
+// Analyze severity for a specific report
+router.post('/admin/:id/analyze-severity', auth(["admin", "superadmin"]), analyzeReportSeverity);
 
+// Batch analyze severity for multiple reports
+router.post('/admin/batch-analyze-severity', auth(["admin", "superadmin"]), batchAnalyzeSeverity);
 
+// Get severity statistics
+router.get('/admin/severity-stats', auth(["admin", "superadmin"]), getSeverityStats);
+
+// routes/reportRoutes.js
+// ... (existing code continues)
+
+// ===================================================================
+// 🔄 STALE REPORTS RE-ANALYSIS ROUTES
+// ===================================================================
+
+// Batch re-analyze stale reports (older than X days)
+router.post('/admin/batch-reanalyze-stale', auth(["admin", "superadmin"]), batchReanalyzeStaleReports);
+
+// Get re-analysis statistics
+router.get('/admin/reanalysis-stats', auth(["admin", "superadmin"]), getReanalysisStats);
+
+// routes/reportRoutes.js - ADD THIS ROUTE
+router.post('/admin/reanalyze-all', auth(["admin", "superadmin"]), reanalyzeAllReports);
 
 module.exports = router;

@@ -3,185 +3,7 @@ const Ticket = require("../models/Ticket");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const mongoose = require("mongoose");
-// Add these at the beginning with other imports
-const axios = require('axios');
-require('dotenv').config();
-
-// Add this helper function for text analysis
-const analyzeTextWithOpenAI = async (text) => {
-  try {
-    // Option 1: Using OpenAI API (recommended for accuracy)
-    if (process.env.OPENAI_API_KEY) {
-      const response = await axios.post(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content: "You are a sentiment analysis assistant. Analyze the following text and return ONLY a JSON object with these fields: sentiment (positive, negative, neutral, mixed), confidence (0-1), keywords (array of key phrases), summary (brief summary), emotionScores (object with positive, negative, neutral, mixed scores 0-1)."
-            },
-            {
-              role: "user",
-              content: `Analyze this text: "${text}"`
-            }
-          ],
-          temperature: 0.3,
-          max_tokens: 500
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      const content = response.data.choices[0].message.content;
-      try {
-        const result = JSON.parse(content);
-        return result;
-      } catch (parseError) {
-        console.error("Failed to parse OpenAI response:", parseError);
-        // Fallback to manual analysis
-        return analyzeTextManually(text);
-      }
-    }
-
-    // Option 2: Using Hugging Face Inference API (free tier available)
-    if (process.env.HUGGINGFACE_API_KEY) {
-      const response = await axios.post(
-        'https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest',
-        { inputs: text },
-        {
-          headers: {
-            'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      const scores = response.data[0];
-      const sentiments = [
-        { label: 'negative', score: scores.find(s => s.label === 'negative')?.score || 0 },
-        { label: 'neutral', score: scores.find(s => s.label === 'neutral')?.score || 0 },
-        { label: 'positive', score: scores.find(s => s.label === 'positive')?.score || 0 }
-      ];
-
-      const maxScore = Math.max(...sentiments.map(s => s.score));
-      const dominantSentiment = sentiments.find(s => s.score === maxScore);
-
-      return {
-        sentiment: dominantSentiment.label,
-        confidence: maxScore,
-        emotionScores: {
-          positive: sentiments.find(s => s.label === 'positive').score,
-          negative: sentiments.find(s => s.label === 'negative').score,
-          neutral: sentiments.find(s => s.label === 'neutral').score,
-          mixed: 0
-        },
-        keywords: extractKeywords(text),
-        summary: generateSummary(text)
-      };
-    }
-
-    // Option 3: Manual analysis (fallback)
-    return analyzeTextManually(text);
-  } catch (error) {
-    console.error("Error analyzing text with external API:", error);
-    return analyzeTextManually(text);
-  }
-};
-
-// Manual text analysis (fallback when no API available)
-const analyzeTextManually = (text) => {
-  const lowerText = text.toLowerCase();
-  
-  // Sentiment word lists
-  const positiveWords = [
-    'good', 'great', 'excellent', 'happy', 'satisfied', 'thank', 'appreciate',
-    'helpful', 'resolved', 'quick', 'efficient', 'professional', 'kind', 'supportive',
-    'understanding', 'patient', 'polite', 'friendly', 'cooperative', 'successful'
-  ];
-  
-  const negativeWords = [
-    'bad', 'terrible', 'awful', 'angry', 'frustrated', 'disappointed', 'upset',
-    'unhappy', 'complaint', 'problem', 'issue', 'wrong', 'failed', 'slow',
-    'inefficient', 'rude', 'unprofessional', 'unhelpful', 'ignored', 'dismissed'
-  ];
-  
-  const urgentWords = [
-    'urgent', 'emergency', 'immediately', 'now', 'asap', 'critical', 'important',
-    'serious', 'dangerous', 'harm', 'threat', 'danger', 'risk', 'concerned', 'worried'
-  ];
-  
-  // Count occurrences
-  let positiveCount = 0;
-  let negativeCount = 0;
-  let urgentCount = 0;
-  
-  positiveWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    const matches = lowerText.match(regex);
-    if (matches) positiveCount += matches.length;
-  });
-  
-  negativeWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    const matches = lowerText.match(regex);
-    if (matches) negativeCount += matches.length;
-  });
-  
-  urgentWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    const matches = lowerText.match(regex);
-    if (matches) urgentCount += matches.length;
-  });
-  
-  // Determine sentiment
-  let sentiment;
-  let confidence;
-  
-  if (positiveCount > 0 && negativeCount === 0) {
-    sentiment = 'positive';
-    confidence = Math.min(0.7 + (positiveCount * 0.1), 0.95);
-  } else if (negativeCount > 0 && positiveCount === 0) {
-    sentiment = 'negative';
-    confidence = Math.min(0.7 + (negativeCount * 0.1), 0.95);
-  } else if (positiveCount > 0 && negativeCount > 0) {
-    sentiment = 'mixed';
-    confidence = Math.min(0.5 + (Math.abs(positiveCount - negativeCount) * 0.05), 0.9);
-  } else {
-    sentiment = 'neutral';
-    confidence = 0.6;
-  }
-  
-  // Adjust for urgency
-  if (urgentCount > 0 && sentiment !== 'positive') {
-    sentiment = 'negative';
-    confidence = Math.min(confidence + 0.1, 0.95);
-  }
-  
-  return {
-    sentiment,
-    confidence,
-    keywords: extractKeywords(text),
-    summary: generateSummary(text),
-    emotionScores: {
-      positive: positiveCount / (positiveCount + negativeCount + 1),
-      negative: negativeCount / (positiveCount + negativeCount + 1),
-      neutral: sentiment === 'neutral' ? 0.8 : 0.1,
-      mixed: sentiment === 'mixed' ? 0.8 : 0.1
-    },
-    analysisMethod: 'manual',
-    wordStats: {
-      positive: positiveCount,
-      negative: negativeCount,
-      urgent: urgentCount,
-      totalWords: text.split(/\s+/).length
-    }
-  };
-};
+const axios = require("axios");
 
 // Helper function to extract keywords
 const extractKeywords = (text) => {
@@ -225,20 +47,210 @@ const generateSummary = (text) => {
   return summary.length > 200 ? summary.substring(0, 197) + '...' : summary;
 };
 
-// Add this controller function to your exports
-/**
- * Analyze sentiment of a report
- * @route POST /api/reports/admin/:id/analyze-sentiment
- * @access Admin, Superadmin
- */
-const analyzeReportSentiment = async (req, res) => {
+// Pinalitan: Severity detection instead of sentiment analysis
+// ENHANCED VERSION: Spam detection + Cache management
+const analyzeTextWithOpenAI = async (text, reportId = null) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key is required");
+    }
+
+    // First: Check for obvious spam/nonsense
+    if (isLikelySpam(text)) {
+      console.log(`⚠️ Spam detected for report ${reportId || 'unknown'}`);
+      return getSpamResult(text);
+    }
+
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: `You analyze Philippine incident reports. Determine:
+            1. SEVERITY: SEVERE, MODERATE, or MILD
+            2. IS_SPAM: true or false (if text is nonsense, spam, or not a real report)
+            
+            SEVERE = Physical violence, sexual assault, threats, confinement, RA laws
+            MODERATE = Harassment, discrimination, threats without violence
+            MILD = Minor complaints, misunderstandings
+            SPAM = Gibberish, test messages, advertisements, nonsense
+            
+            Return ONLY JSON:
+            {
+              "severity": "SEVERE|MODERATE|MILD",
+              "is_spam": boolean,
+              "spam_reason": "if is_spam=true, explain why",
+              "confidence": 0.0-1.0,
+              "keywords": ["relevant", "keywords"],
+              "summary": "brief analysis",
+              "factors": {
+                "urgency": 0.0-1.0,
+                "impact": 0.0-1.0,
+                "sensitivity": 0.0-1.0,
+                "frequency": 0.0-1.0
+              }
+            }`
+          },
+          {
+            role: "user",
+            content: `Analyze this report and flag if spam: "${text}"`
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 400,
+        response_format: { type: "json_object" }
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 20000
+      }
+    );
+
+    const content = response.data.choices[0].message.content;
+    
+    try {
+      const result = JSON.parse(content);
+      
+      // Validate and normalize
+      result.severity = validateSeverity(result.severity);
+      result.is_spam = Boolean(result.is_spam);
+      result.confidence = clamp(result.confidence, 0, 1);
+      
+      // Log analysis
+      console.log(`📊 Analysis for ${reportId || 'report'}:`, {
+        severity: result.severity,
+        spam: result.is_spam,
+        confidence: result.confidence,
+        length: text.length
+      });
+      
+      return result;
+      
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      return getDefaultResult(text, true); // Force reanalysis next time
+    }
+    
+  } catch (error) {
+    console.error("OpenAI API Error:", error.message);
+    return getDefaultResult(text, false);
+  }
+};
+
+// Helper: Check for obvious spam
+const isLikelySpam = (text) => {
+  if (!text || text.trim().length < 10) return true;
+  
+  const lowerText = text.toLowerCase();
+  
+  // Spam indicators
+  const spamPatterns = [
+    // Too short or nonsense
+    /^[0-9\s]+$/, // Just numbers
+    /^[a-z]{1,3}$/i, // 1-3 letters
+    /^(test|testing|trial|sample|demo)$/i,
+    
+    // Gibberish
+    /(.)\1{4,}/, // Repeated characters "aaaaa"
+    /[xqz]{5,}/i, // Weird character sequences
+    
+    // Advertisements
+    /\b(buy|sell|shop|promo|discount|free|click|link|http|www|\.com|\.ph)\b/i,
+    
+    // Common spam words
+    /\b(viagra|casino|lottery|winner|prize|money|rich|profit)\b/i
+  ];
+  
+  // Check patterns
+  for (const pattern of spamPatterns) {
+    if (pattern.test(text)) {
+      console.log(`Spam detected: ${pattern.toString()} matched`);
+      return true;
+    }
+  }
+  
+  // Check for extremely repetitive text
+  const words = text.split(/\s+/);
+  const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+  const uniqueness = uniqueWords.size / words.length;
+  
+  if (uniqueness < 0.3 && words.length > 10) {
+    console.log(`Low uniqueness spam: ${uniqueness}`);
+    return true;
+  }
+  
+  return false;
+};
+
+// Helper: Get spam result
+const getSpamResult = (text) => {
+  return {
+    severity: "MILD",
+    is_spam: true,
+    spam_reason: "Pattern matched known spam indicators",
+    confidence: 0.9,
+    keywords: ["spam", "invalid", "test"],
+    summary: "This appears to be spam or a test message.",
+    factors: {
+      urgency: 0.1,
+      impact: 0.1,
+      sensitivity: 0.1,
+      frequency: 0.1
+    },
+    analysisMethod: "spam_detection"
+  };
+};
+
+// Helper: Validate severity
+const validateSeverity = (severity) => {
+  const valid = ["SEVERE", "MODERATE", "MILD"];
+  if (valid.includes(severity?.toUpperCase())) {
+    return severity.toUpperCase();
+  }
+  return "MILD";
+};
+
+// Helper: Clamp number
+const clamp = (num, min, max) => {
+  return Math.min(Math.max(num || 0.7, min), max);
+};
+
+// Helper: Default result when API fails
+const getDefaultResult = (text, shouldRetry = true) => {
+  const lowerText = text.toLowerCase();
+  const hasViolence = /(bugbog|suntok|hampas|gulpi|kinulong|9262|gahasa)/i.test(lowerText);
+  
+  return {
+    severity: hasViolence ? "SEVERE" : "MODERATE",
+    is_spam: false,
+    confidence: hasViolence ? 0.85 : 0.6,
+    keywords: text.split(/\s+/).slice(0, 5),
+    summary: hasViolence ? 
+      "Violence indicators detected. Needs manual review." : 
+      "Analysis failed. Needs review.",
+    factors: {
+      urgency: hasViolence ? 0.8 : 0.4,
+      impact: hasViolence ? 0.9 : 0.5,
+      sensitivity: hasViolence ? 0.8 : 0.4,
+      frequency: 0.3
+    },
+    shouldRetry, // Flag for retry later
+    analysisMethod: "fallback"
+  };
+};
+
+const analyzeReportSeverity = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const { forceRefresh = false } = req.query; // NEW: Force re-analysis
 
-    // Find the report
-    const report = await Report.findById(id)
-      .populate("createdBy", "firstName lastName email");
+    const report = await Report.findById(id);
 
     if (!report) {
       return res.status(404).json({ 
@@ -247,18 +259,21 @@ const analyzeReportSentiment = async (req, res) => {
       });
     }
 
-    // Check if sentiment was already analyzed recently (within 24 hours)
-    if (report.sentimentAnalysis && report.sentimentAnalysis.analyzedAt) {
-      const hoursSinceAnalysis = (Date.now() - new Date(report.sentimentAnalysis.analyzedAt).getTime()) / (1000 * 60 * 60);
-      
-      if (hoursSinceAnalysis < 24) {
-        return res.json({
-          success: true,
-          message: "Sentiment already analyzed recently",
-          data: report.sentimentAnalysis,
-          cached: true
-        });
-      }
+    // CHECK IF WE SHOULD RE-ANALYZE
+    const shouldReanalyze = 
+      forceRefresh || 
+      !report.severityAnalysis || 
+      !report.severityAnalysis.analyzedAt ||
+      isAnalysisStale(report.severityAnalysis.analyzedAt);
+
+    if (!shouldReanalyze) {
+      return res.json({
+        success: true,
+        message: "Using cached analysis",
+        data: report.severityAnalysis,
+        cached: true,
+        analyzedAt: report.severityAnalysis.analyzedAt
+      });
     }
 
     // Prepare text for analysis
@@ -266,61 +281,234 @@ const analyzeReportSentiment = async (req, res) => {
       report.incidentDescription,
       report.additionalDetails || '',
       ...(report.incidentTypes || [])
-    ]
-      .filter(text => text && text.trim().length > 0)
-      .join(' ')
-      .trim();
+    ].filter(text => text && text.trim().length > 0)
+     .join(' ')
+     .trim();
 
     if (!textToAnalyze || textToAnalyze.length < 10) {
       return res.status(400).json({
         success: false,
-        message: "Not enough text content for sentiment analysis"
+        message: "Not enough text content"
       });
     }
 
-    console.log(`Analyzing sentiment for report ${id}, text length: ${textToAnalyze.length}`);
-
-    // Analyze the text
-    const sentimentResult = await analyzeTextWithOpenAI(textToAnalyze);
+    // Analyze with enhanced function (now includes spam detection)
+    const severityResult = await analyzeTextWithOpenAI(textToAnalyze, report._id);
 
     // Add metadata
-    sentimentResult.analyzedAt = new Date();
-    sentimentResult.analyzedBy = userId;
-    sentimentResult.textLength = textToAnalyze.length;
-    sentimentResult.textSample = textToAnalyze.substring(0, 200) + (textToAnalyze.length > 200 ? '...' : '');
+    severityResult.analyzedAt = new Date();
+    severityResult.analyzedBy = userId;
+    severityResult.reportId = report._id;
+    severityResult.textSample = textToAnalyze.substring(0, 200);
+    severityResult.textLength = textToAnalyze.length;
+    
+    // If spam, flag the report
+    if (severityResult.is_spam) {
+      report.isPotentialSpam = true;
+      report.spamFlaggedAt = new Date();
+      report.spamReason = severityResult.spam_reason;
+    }
 
-    // Update the report with sentiment analysis
-    report.sentimentAnalysis = sentimentResult;
+    // Update report
+    report.severityAnalysis = severityResult;
     report.lastUpdated = new Date();
+    report.lastAnalyzed = new Date();
     
     await report.save();
 
-    console.log(`Sentiment analysis completed for report ${id}: ${sentimentResult.sentiment} (${Math.round(sentimentResult.confidence * 100)}%)`);
-
     res.json({
       success: true,
-      message: "Sentiment analysis completed successfully",
-      data: sentimentResult,
+      message: severityResult.is_spam ? 
+        "Analysis complete (SPAM DETECTED)" : 
+        "Severity analysis completed",
+      data: severityResult,
       cached: false,
+      is_spam: severityResult.is_spam,
       reportId: report._id,
       ticketNumber: report.ticketNumber
     });
+
   } catch (error) {
-    console.error("Error analyzing report sentiment:", error);
+    console.error("Error analyzing report:", error);
     res.status(500).json({ 
       success: false,
-      message: error.message || "Failed to analyze sentiment",
-      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      message: error.message 
     });
   }
 };
 
+// Helper: Check if analysis is stale (older than 7 days)
+const isAnalysisStale = (analyzedAt) => {
+  if (!analyzedAt) return true;
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return new Date(analyzedAt) < sevenDaysAgo;
+};
+// DAGDAGAN MO ITO bago ang module.exports
+
 /**
- * Batch analyze sentiment for multiple reports
- * @route POST /api/reports/admin/batch-analyze-sentiment
+ * Batch analyze severity for multiple reports
+ * @route POST /api/reports/admin/batch-analyze-severity
  * @access Admin, Superadmin
  */
-const batchAnalyzeSentiment = async (req, res) => {
+
+// controllers/reportController.js - ADD THIS FUNCTION
+
+/**
+ * Re-analyze ALL reports (force refresh all severity analysis)
+ * @route POST /api/reports/admin/reanalyze-all
+ * @access Admin, Superadmin
+ */
+const reanalyzeAllReports = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { batchSize = 20 } = req.body; // Process 20 at a time
+    
+    // Get ALL reports (active + archived) with severity analysis
+    const allReports = await Report.find({
+      'severityAnalysis': { $exists: true, $ne: null }
+    })
+    .select('_id ticketNumber incidentDescription additionalDetails incidentTypes severityAnalysis')
+    .lean();
+    
+    if (allReports.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No analyzed reports found',
+        data: { total: 0, successful: 0, failed: 0, details: [] }
+      });
+    }
+    
+    const results = {
+      total: allReports.length,
+      successful: 0,
+      failed: 0,
+      severityChanges: {},
+      details: []
+    };
+    
+    // Process in batches to avoid timeout
+    for (let i = 0; i < allReports.length; i += batchSize) {
+      const batch = allReports.slice(i, i + batchSize);
+      
+      for (const report of batch) {
+        try {
+          // Prepare text for analysis
+          const textToAnalyze = [
+            report.incidentDescription,
+            report.additionalDetails || '',
+            ...(report.incidentTypes || [])
+          ]
+            .filter(text => text && text.trim().length > 0)
+            .join(' ')
+            .trim();
+          
+          if (!textToAnalyze || textToAnalyze.length < 10) {
+            results.details.push({
+              reportId: report._id,
+              ticketNumber: report.ticketNumber,
+              success: false,
+              error: "Not enough text content",
+              oldSeverity: report.severityAnalysis?.severity || 'N/A'
+            });
+            results.failed++;
+            continue;
+          }
+          
+          // Analyze with FRESH analysis
+          const severityResult = await analyzeTextWithOpenAI(textToAnalyze, report._id);
+          
+          // Add metadata
+          severityResult.analyzedAt = new Date();
+          severityResult.analyzedBy = userId;
+          severityResult.textLength = textToAnalyze.length;
+          severityResult.isReanalysis = true;
+          severityResult.previousAnalysis = {
+            severity: report.severityAnalysis?.severity,
+            analyzedAt: report.severityAnalysis?.analyzedAt,
+            confidence: report.severityAnalysis?.confidence
+          };
+          
+          // Track severity changes
+          const oldSeverity = report.severityAnalysis?.severity || 'N/A';
+          const newSeverity = severityResult.severity;
+          const severityChanged = oldSeverity !== newSeverity;
+          
+          if (severityChanged) {
+            const changeKey = `${oldSeverity}→${newSeverity}`;
+            results.severityChanges[changeKey] = (results.severityChanges[changeKey] || 0) + 1;
+          }
+          
+          // Update the report
+          await Report.findByIdAndUpdate(
+            report._id,
+            {
+              $set: {
+                'severityAnalysis': severityResult,
+                'lastAnalyzed': new Date(),
+                'lastUpdated': new Date()
+              }
+            }
+          );
+          
+          results.details.push({
+            reportId: report._id,
+            ticketNumber: report.ticketNumber,
+            success: true,
+            message: "Re-analyzed successfully",
+            oldSeverity: oldSeverity,
+            newSeverity: newSeverity,
+            severityChanged: severityChanged,
+            confidence: severityResult.confidence,
+            analyzedAt: severityResult.analyzedAt
+          });
+          results.successful++;
+          
+          // Delay between API calls
+          await new Promise(resolve => setTimeout(resolve, 600));
+          
+        } catch (error) {
+          console.error(`❌ Error re-analyzing report ${report._id}:`, error.message);
+          results.details.push({
+            reportId: report._id,
+            ticketNumber: report.ticketNumber,
+            success: false,
+            error: error.message,
+            oldSeverity: report.severityAnalysis?.severity || 'N/A'
+          });
+          results.failed++;
+        }
+      }
+      
+      // Small delay between batches
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Summary
+    res.json({
+      success: true,
+      message: `Re-analyzed ALL reports: ${results.successful} successful, ${results.failed} failed`,
+      summary: {
+        totalProcessed: results.total,
+        successful: results.successful,
+        failed: results.failed,
+        severityChanges: Object.keys(results.severityChanges).length > 0 ? results.severityChanges : 'No changes',
+        processingTime: `${Math.ceil(results.total / batchSize)} batches`
+      },
+      data: results
+    });
+    
+  } catch (error) {
+    console.error("❌ Error in reanalyze-all:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || "Failed to re-analyze all reports"
+    });
+  }
+};
+
+
+const batchAnalyzeSeverity = async (req, res) => {
   try {
     const { reportIds } = req.body;
     const userId = req.user.id;
@@ -343,7 +531,7 @@ const batchAnalyzeSentiment = async (req, res) => {
       details: []
     };
 
-    // Process reports one by one (to avoid overwhelming APIs)
+    // Process reports one by one (to avoid overwhelming OpenAI API)
     for (const reportId of idsToProcess) {
       try {
         const report = await Report.findById(reportId);
@@ -358,16 +546,17 @@ const batchAnalyzeSentiment = async (req, res) => {
           continue;
         }
 
-        // Skip if already analyzed recently
-        if (report.sentimentAnalysis && report.sentimentAnalysis.analyzedAt) {
-          const hoursSinceAnalysis = (Date.now() - new Date(report.sentimentAnalysis.analyzedAt).getTime()) / (1000 * 60 * 60);
-          if (hoursSinceAnalysis < 24) {
+        // Check if severity was already analyzed recently (within 7 days)
+        if (report.severityAnalysis && report.severityAnalysis.analyzedAt) {
+          const daysSinceAnalysis = (Date.now() - new Date(report.severityAnalysis.analyzedAt).getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSinceAnalysis < 7) {
             results.details.push({
               reportId,
               success: true,
               message: "Already analyzed recently",
               cached: true,
-              sentiment: report.sentimentAnalysis.sentiment
+              severity: report.severityAnalysis.severity,
+              is_spam: report.severityAnalysis.is_spam || false
             });
             results.successful++;
             continue;
@@ -394,17 +583,25 @@ const batchAnalyzeSentiment = async (req, res) => {
           continue;
         }
 
-        // Analyze the text
-        const sentimentResult = await analyzeTextWithOpenAI(textToAnalyze);
+        // Analyze the text with spam detection
+        const severityResult = await analyzeTextWithOpenAI(textToAnalyze, reportId);
 
         // Add metadata
-        sentimentResult.analyzedAt = new Date();
-        sentimentResult.analyzedBy = userId;
-        sentimentResult.textLength = textToAnalyze.length;
+        severityResult.analyzedAt = new Date();
+        severityResult.analyzedBy = userId;
+        severityResult.textLength = textToAnalyze.length;
+
+        // If spam, flag the report
+        if (severityResult.is_spam) {
+          report.isPotentialSpam = true;
+          report.spamFlaggedAt = new Date();
+          report.spamReason = severityResult.spam_reason;
+        }
 
         // Update the report
-        report.sentimentAnalysis = sentimentResult;
+        report.severityAnalysis = severityResult;
         report.lastUpdated = new Date();
+        report.lastAnalyzed = new Date();
         await report.save();
 
         results.details.push({
@@ -412,20 +609,21 @@ const batchAnalyzeSentiment = async (req, res) => {
           success: true,
           message: "Analysis completed",
           cached: false,
-          sentiment: sentimentResult.sentiment,
-          confidence: sentimentResult.confidence
+          severity: severityResult.severity,
+          is_spam: severityResult.is_spam || false,
+          confidence: severityResult.confidence
         });
         results.successful++;
 
         // Small delay between requests to respect rate limits
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
 
       } catch (error) {
         console.error(`Error analyzing report ${reportId}:`, error);
         results.details.push({
           reportId,
           success: false,
-          message: error.message
+          message: error.message || "Unknown error"
         });
         results.failed++;
       }
@@ -433,24 +631,20 @@ const batchAnalyzeSentiment = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Batch analysis completed: ${results.successful} successful, ${results.failed} failed`,
+      message: `Batch severity analysis completed: ${results.successful} successful, ${results.failed} failed`,
       data: results
     });
   } catch (error) {
-    console.error("Error in batch sentiment analysis:", error);
+    console.error("Error in batch severity analysis:", error);
     res.status(500).json({ 
       success: false,
-      message: error.message || "Failed to perform batch sentiment analysis"
+      message: error.message || "Failed to perform batch severity analysis"
     });
   }
 };
 
-/**
- * Get sentiment statistics
- * @route GET /api/reports/admin/sentiment-stats
- * @access Admin, Superadmin
- */
-const getSentimentStats = async (req, res) => {
+// Update get severity stats function
+const getSeverityStats = async (req, res) => {
   try {
     const { timeframe = 'all', status = 'active' } = req.query;
     
@@ -469,7 +663,6 @@ const getSentimentStats = async (req, res) => {
       dateFilter = { createdAt: { $gte: oneMonthAgo } };
     }
 
-    // Build query
     let query = { ...dateFilter };
     if (status === 'active') {
       query.archived = false;
@@ -479,15 +672,13 @@ const getSentimentStats = async (req, res) => {
 
     const reports = await Report.find(query);
 
-    // Calculate statistics
     const stats = {
       total: reports.length,
-      analyzed: reports.filter(r => r.sentimentAnalysis).length,
-      bySentiment: {
-        positive: 0,
-        negative: 0,
-        neutral: 0,
-        mixed: 0,
+      analyzed: reports.filter(r => r.severityAnalysis).length,
+      bySeverity: {
+        SEVERE: 0,
+        MODERATE: 0,
+        MILD: 0,
         notAnalyzed: 0
       },
       confidence: {
@@ -503,11 +694,11 @@ const getSentimentStats = async (req, res) => {
     let analyzedCount = 0;
 
     reports.forEach(report => {
-      if (report.sentimentAnalysis) {
-        const sentiment = report.sentimentAnalysis.sentiment;
-        const confidence = report.sentimentAnalysis.confidence || 0;
+      if (report.severityAnalysis) {
+        const severity = report.severityAnalysis.severity;
+        const confidence = report.severityAnalysis.confidence || 0;
         
-        stats.bySentiment[sentiment]++;
+        stats.bySeverity[severity]++;
         totalConfidence += confidence;
         analyzedCount++;
 
@@ -515,15 +706,14 @@ const getSentimentStats = async (req, res) => {
         else if (confidence > 0.5) stats.confidence.medium++;
         else stats.confidence.low++;
 
-        // Add to trends
         stats.trends.push({
           date: report.createdAt,
-          sentiment,
+          severity,
           confidence,
           ticketNumber: report.ticketNumber
         });
       } else {
-        stats.bySentiment.notAnalyzed++;
+        stats.bySeverity.notAnalyzed++;
       }
     });
 
@@ -531,13 +721,11 @@ const getSentimentStats = async (req, res) => {
       stats.confidence.average = totalConfidence / analyzedCount;
     }
 
-    // Calculate percentages
-    stats.bySentimentPercentages = {
-      positive: stats.bySentiment.positive / analyzedCount * 100,
-      negative: stats.bySentiment.negative / analyzedCount * 100,
-      neutral: stats.bySentiment.neutral / analyzedCount * 100,
-      mixed: stats.bySentiment.mixed / analyzedCount * 100,
-      notAnalyzed: stats.bySentiment.notAnalyzed / stats.total * 100
+    stats.bySeverityPercentages = {
+      SEVERE: stats.bySeverity.SEVERE / analyzedCount * 100,
+      MODERATE: stats.bySeverity.MODERATE / analyzedCount * 100,
+      MILD: stats.bySeverity.MILD / analyzedCount * 100,
+      notAnalyzed: stats.bySeverity.notAnalyzed / stats.total * 100
     };
 
     res.json({
@@ -547,13 +735,15 @@ const getSentimentStats = async (req, res) => {
       status
     });
   } catch (error) {
-    console.error("Error getting sentiment stats:", error);
+    console.error("Error getting severity stats:", error);
     res.status(500).json({ 
       success: false,
       message: error.message 
     });
   }
 };
+
+
 
 // ✅ Utility: Generate unique ticket number
 const generateTicketNumber = (isAnonymous) => {
@@ -1265,8 +1455,265 @@ const sendReportPDF = async (req, res) => {
     });
   }
 };
+// controllers/reportController.js
+// ... (existing code continues)
 
+/**
+ * Batch re-analyze stale reports (admin only)
+ * @route POST /api/reports/admin/batch-reanalyze-stale
+ * @access Admin, Superadmin
+ */
+const batchReanalyzeStaleReports = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { days = 7, limit = 50 } = req.body;
+    
+    // Validate input
+    if (days < 1 || days > 365) {
+      return res.status(400).json({
+        success: false,
+        message: 'Days must be between 1 and 365'
+      });
+    }
 
+    if (limit < 1 || limit > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Limit must be between 1 and 100'
+      });
+    }
+
+    // Calculate date threshold for stale analysis
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    
+    // Find reports with:
+    // 1. Already analyzed (has severityAnalysis)
+    // 2. Analysis is older than X days
+    // 3. Not archived (optional, depends on your needs)
+    const staleReports = await Report.find({
+      'severityAnalysis': { $exists: true, $ne: null },
+      'severityAnalysis.analyzedAt': { $lt: cutoffDate },
+      'archived': false  // Only re-analyze active reports
+    })
+    .sort({ 'severityAnalysis.analyzedAt': 1 }) // Oldest first
+    .limit(limit)
+    .select('_id ticketNumber incidentDescription additionalDetails incidentTypes severityAnalysis');
+    
+    if (staleReports.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No stale reports found for re-analysis',
+        data: {
+          total: 0,
+          successful: 0,
+          failed: 0,
+          details: []
+        }
+      });
+    }
+
+    const results = {
+      total: staleReports.length,
+      successful: 0,
+      failed: 0,
+      details: []
+    };
+    
+    // Process reports one by one with delay to avoid rate limits
+    for (const report of staleReports) {
+      try {
+        console.log(`🔄 Re-analyzing report ${report._id} (${report.ticketNumber})`);
+        
+        // Prepare text for analysis
+        const textToAnalyze = [
+          report.incidentDescription,
+          report.additionalDetails || '',
+          ...(report.incidentTypes || [])
+        ]
+          .filter(text => text && text.trim().length > 0)
+          .join(' ')
+          .trim();
+        
+        if (!textToAnalyze || textToAnalyze.length < 10) {
+          results.details.push({
+            reportId: report._id,
+            ticketNumber: report.ticketNumber,
+            success: false,
+            error: "Not enough text content",
+            oldSeverity: report.severityAnalysis?.severity || 'N/A'
+          });
+          results.failed++;
+          continue;
+        }
+        
+        // Analyze with enhanced function (includes spam detection)
+        const severityResult = await analyzeTextWithOpenAI(textToAnalyze, report._id);
+        
+        // Add metadata
+        severityResult.analyzedAt = new Date();
+        severityResult.analyzedBy = userId;
+        severityResult.textLength = textToAnalyze.length;
+        severityResult.isReanalysis = true;
+        severityResult.previousAnalysis = {
+          severity: report.severityAnalysis?.severity,
+          analyzedAt: report.severityAnalysis?.analyzedAt,
+          confidence: report.severityAnalysis?.confidence
+        };
+        
+        // Update the report
+        const updatedReport = await Report.findByIdAndUpdate(
+          report._id,
+          {
+            $set: {
+              'severityAnalysis': severityResult,
+              'lastAnalyzed': new Date(),
+              'lastUpdated': new Date()
+            }
+          },
+          { new: true }
+        );
+        
+        const severityChanged = report.severityAnalysis?.severity !== severityResult.severity;
+        
+        results.details.push({
+          reportId: report._id,
+          ticketNumber: report.ticketNumber,
+          success: true,
+          message: "Re-analyzed successfully",
+          oldSeverity: report.severityAnalysis?.severity || 'N/A',
+          newSeverity: severityResult.severity,
+          severityChanged: severityChanged,
+          is_spam: severityResult.is_spam || false,
+          confidence: severityResult.confidence,
+          analyzedAt: severityResult.analyzedAt
+        });
+        results.successful++;
+        
+        // Add delay between API calls to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+      } catch (error) {
+        console.error(`❌ Error re-analyzing report ${report._id}:`, error.message);
+        results.details.push({
+          reportId: report._id,
+          ticketNumber: report.ticketNumber,
+          success: false,
+          error: error.message,
+          oldSeverity: report.severityAnalysis?.severity || 'N/A'
+        });
+        results.failed++;
+      }
+    }
+    
+    // Summary statistics
+    const severityChanges = results.details.filter(d => d.success && d.severityChanged);
+    const spamDetected = results.details.filter(d => d.success && d.is_spam);
+    
+    res.json({
+      success: true,
+      message: `Batch re-analysis completed: ${results.successful} successful, ${results.failed} failed`,
+      summary: {
+        totalProcessed: results.total,
+        successful: results.successful,
+        failed: results.failed,
+        severityChanges: severityChanges.length,
+        spamDetected: spamDetected.length,
+        processingTime: `${days} day threshold`
+      },
+      data: results
+    });
+    
+  } catch (error) {
+    console.error("❌ Error in batch re-analyze stale reports:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || "Failed to perform batch re-analysis"
+    });
+  }
+};
+
+/**
+ * Get re-analysis statistics (admin only)
+ * @route GET /api/reports/admin/reanalysis-stats
+ * @access Admin, Superadmin
+ */
+const getReanalysisStats = async (req, res) => {
+  try {
+    const { daysThreshold = 7 } = req.query;
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - parseInt(daysThreshold));
+    
+    // Get reports that would qualify for re-analysis
+    const staleReports = await Report.find({
+      'severityAnalysis': { $exists: true, $ne: null },
+      'severityAnalysis.analyzedAt': { $lt: cutoffDate },
+      'archived': false
+    })
+    .select('severityAnalysis createdAt')
+    .lean();
+    
+    // Count by severity
+    const severityCount = {
+      SEVERE: 0,
+      MODERATE: 0,
+      MILD: 0
+    };
+    
+    staleReports.forEach(report => {
+      const severity = report.severityAnalysis?.severity;
+      if (severity && severityCount[severity] !== undefined) {
+        severityCount[severity]++;
+      }
+    });
+    
+    // Calculate average days stale
+    let totalDaysStale = 0;
+    staleReports.forEach(report => {
+      const analyzedAt = new Date(report.severityAnalysis?.analyzedAt);
+      const daysStale = Math.floor((Date.now() - analyzedAt.getTime()) / (1000 * 60 * 60 * 24));
+      totalDaysStale += daysStale;
+    });
+    
+    const avgDaysStale = staleReports.length > 0 
+      ? Math.round(totalDaysStale / staleReports.length) 
+      : 0;
+    
+    // Oldest analysis
+    const oldestAnalysis = staleReports.length > 0
+      ? staleReports.sort((a, b) => 
+          new Date(a.severityAnalysis?.analyzedAt) - new Date(b.severityAnalysis?.analyzedAt)
+        )[0]
+      : null;
+    
+    res.json({
+      success: true,
+      data: {
+        totalStaleReports: staleReports.length,
+        bySeverity: severityCount,
+        averageDaysStale: avgDaysStale,
+        oldestAnalysis: oldestAnalysis ? {
+          reportId: oldestAnalysis._id,
+          analyzedAt: oldestAnalysis.severityAnalysis?.analyzedAt,
+          daysStale: Math.floor((Date.now() - new Date(oldestAnalysis.severityAnalysis?.analyzedAt).getTime()) / (1000 * 60 * 60 * 24)),
+          severity: oldestAnalysis.severityAnalysis?.severity
+        } : null,
+        cutoffDate: cutoffDate,
+        daysThreshold: parseInt(daysThreshold)
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error getting re-analysis stats:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Update the module.exports to include the new functions
 module.exports = {
   createReport,
   getUserReports,
@@ -1282,7 +1729,11 @@ module.exports = {
   updateReportByUser,
   sendReportPDF,
   generateTicketNumber,
-  analyzeReportSentiment,
-  batchAnalyzeSentiment,
-  getSentimentStats
+  analyzeReportSeverity,
+  batchAnalyzeSeverity,
+  getSeverityStats,
+  // ADD THESE NEW FUNCTIONS
+  batchReanalyzeStaleReports,
+  getReanalysisStats,
+  reanalyzeAllReports
 };

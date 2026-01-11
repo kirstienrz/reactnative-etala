@@ -156,39 +156,87 @@ export const updateReportByUser = async (reportId, payload) => {
   }
 };
 
-
-// Analyze sentiment of a report
-export const analyzeReportSentiment = async (reportId) => {
+// Pinalitan: Severity analysis instead of sentiment
+// Analyze severity of a report// Update your API function to accept forceRefresh parameter
+export const analyzeReportSeverity = async (reportId, forceRefresh = false) => {
   try {
-    const res = await API.post(`/reports/admin/${reportId}/analyze-sentiment`);
+    const res = await API.post(`/reports/admin/${reportId}/analyze-severity${forceRefresh ? '?forceRefresh=true' : ''}`);
     return res.data;
   } catch (err) {
-    console.error("Analyze Sentiment API Error:", {
-      message: err.message,
-      response: err.response?.data,
-      status: err.response?.status,
-    });
+    console.error("Analyze Severity API Error:", err);
     return { 
       success: false, 
-      message: err.response?.data?.message || "Failed to analyze sentiment" 
+      message: err.response?.data?.message || "Failed to analyze severity" 
     };
   }
 };
 
-// Batch analyze sentiment for multiple reports
-export const batchAnalyzeSentiment = async (reportIds) => {
+// api/reportApi.js (or similar)
+export const batchReanalyzeStaleReports = async (days = 7, limit = 50) => {
   try {
-    const res = await API.post('/reports/admin/batch-analyze-sentiment', { reportIds });
+    const res = await API.post('/reports/admin/batch-reanalyze-stale', { days, limit });
     return res.data;
   } catch (err) {
-    console.error("Batch Sentiment Analysis API Error:", {
+    console.error("Batch Reanalyze API Error:", err);
+    return { 
+      success: false, 
+      message: err.response?.data?.message || "Failed to re-analyze stale reports" 
+    };
+  }
+};
+
+export const getReanalysisStats = async (daysThreshold = 7) => {
+  try {
+    const res = await API.get(`/reports/admin/reanalysis-stats?daysThreshold=${daysThreshold}`);
+    return res.data;
+  } catch (err) {
+    console.error("Reanalysis Stats API Error:", err);
+    return { 
+      success: false, 
+      message: err.response?.data?.message || "Failed to get re-analysis stats" 
+    };
+  }
+};
+
+// api/report.js - ADD THIS FUNCTION
+export const reanalyzeAllReports = async (batchSize = 20) => {
+  try {
+    const res = await API.post('/reports/admin/reanalyze-all', { batchSize });
+    return res.data;
+  } catch (err) {
+    console.error("Re-analyze All API Error:", err);
+    return { 
+      success: false, 
+      message: err.response?.data?.message || "Failed to re-analyze all reports" 
+    };
+  }
+};
+
+// Batch analyze severity for multiple reports
+export const batchAnalyzeSeverity = async (reportIds) => {
+  try {
+    const res = await API.post('/reports/admin/batch-analyze-severity', { reportIds });
+    return res.data;
+  } catch (err) {
+    console.error("Batch Severity Analysis API Error:", {
       message: err.message,
       response: err.response?.data,
       status: err.response?.status,
     });
     return { 
       success: false, 
-      message: err.response?.data?.message || "Failed to analyze sentiment in batch" 
+      message: err.response?.data?.message || "Failed to analyze severity in batch" 
     };
+  }
+};
+
+// Get severity statistics
+export const getSeverityStats = async (params) => {
+  try {
+    const res = await API.get('/reports/admin/severity-stats', { params });
+    return res.data;
+  } catch (err) {
+    console.error("Get Severity Stats API Error:", err);
+    return { success: false, data: null };
   }
 };
