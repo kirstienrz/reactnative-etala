@@ -1144,411 +1144,458 @@ const handleSubmit = async () => {
   console.log("✅ Rendering AI Validation Modal...");
 
   return (
+   <div style={{
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 9999,
+  padding: '20px'
+}} onClick={() => {
+  console.log("Closing modal");
+  setShowAIValidation(false);
+}}>
+  <div style={{
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    width: '90%',
+    maxWidth: '700px',
+    maxHeight: '90vh',
+    overflow: 'auto',
+    boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+    fontFamily: 'system-ui, -apple-system, sans-serif'
+  }} onClick={(e) => {
+    e.stopPropagation();
+    console.log("Modal content clicked");
+  }}>
+    
+    {/* MODAL HEADER */}
     <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)', // Darker background
       display: 'flex',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999, // Higher z-index
-      padding: '20px'
-    }} onClick={() => {
-      console.log("Closing modal");
-      setShowAIValidation(false);
+      padding: '24px 32px',
+      borderBottom: '1px solid #E5E7EB',
+      backgroundColor: '#FFFFFF'
     }}>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        width: '90%',
-        maxWidth: '600px',
-        maxHeight: '90vh',
-        overflow: 'auto',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-      }} onClick={(e) => {
-        e.stopPropagation();
-        console.log("Modal content clicked");
-      }}>
-        
-        {/* MODAL HEADER */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '24px',
-          borderBottom: '2px solid #EF4444',
+          width: '40px',
+          height: '40px',
+          borderRadius: '8px',
           backgroundColor: '#FEF2F2',
-          borderTopLeftRadius: '16px',
-          borderTopRightRadius: '16px'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Shield size={28} color="#DC2626" />
-            <h3 style={{ 
-              margin: 0, 
-              fontSize: '22px', 
-              color: '#DC2626',
-              fontWeight: '700'
-            }}>
-              ⚠️ Content Validation Required
-            </h3>
+          <Shield size={24} color="#DC2626" />
+        </div>
+        <div>
+          <h3 style={{ 
+            margin: 0, 
+            fontSize: '20px', 
+            color: '#111827',
+            fontWeight: '600',
+            lineHeight: '1.4'
+          }}>
+            Content Validation Required
+          </h3>
+          <p style={{
+            margin: '4px 0 0 0',
+            fontSize: '14px',
+            color: '#6B7280',
+            fontWeight: '400'
+          }}>
+            AI-assisted quality assessment
+          </p>
+        </div>
+      </div>
+      <button 
+        onClick={() => {
+          console.log("Close button clicked");
+          setShowAIValidation(false);
+        }}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '8px',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#6B7280',
+          transition: 'all 0.2s'
+        }}
+        onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+      >
+        <X size={20} />
+      </button>
+    </div>
+
+    {/* MODAL CONTENT */}
+    <div style={{ padding: '32px' }}>
+      
+      {/* VALIDATION STATUS */}
+      <div style={{
+        backgroundColor: '#FEF2F2',
+        borderRadius: '8px',
+        padding: '20px',
+        marginBottom: '24px',
+        border: '1px solid #FECACA'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px',
+          marginBottom: '16px' 
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            backgroundColor: '#FEE2E2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <X size={18} color="#DC2626" />
           </div>
-          <button 
-            onClick={() => {
-              console.log("Close button clicked");
-              setShowAIValidation(false);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#DC2626',
-              fontSize: '18px',
-              fontWeight: 'bold'
-            }}
-          >
-            <X size={24} />
-          </button>
+          <span style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#DC2626'
+          }}>
+            Report Not Approved
+          </span>
         </div>
 
-        {/* MODAL CONTENT */}
-        <div style={{ padding: '24px' }}>
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          padding: '16px',
+          borderRadius: '6px',
+          marginBottom: '20px',
+          borderLeft: '3px solid #DC2626'
+        }}>
+          <p style={{
+            margin: 0,
+            fontSize: '15px',
+            color: '#374151',
+            lineHeight: '1.6',
+            fontWeight: '400'
+          }}>
+            {aiValidationResult.reason}
+          </p>
+        </div>
+
+        {/* CONTENT ANALYSIS */}
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '6px',
+          padding: '20px',
+          border: '1px solid #E5E7EB'
+        }}>
+          <h4 style={{
+            fontSize: '15px',
+            fontWeight: '600',
+            margin: '0 0 20px 0',
+            color: '#111827',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Content Analysis
+          </h4>
           
-          {/* AI RESULT CARD */}
-          <div style={{
-            backgroundColor: '#FEF2F2',
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '24px',
-            border: '2px solid #FECACA'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px',
-              marginBottom: '16px' 
-            }}>
+          {formData.incidentDescription && (
+            <div style={{ marginBottom: '20px' }}>
               <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '16px',
-                backgroundColor: '#FEE2E2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <X size={20} color="#DC2626" />
-              </div>
-              <span style={{
-                fontSize: '18px',
-                fontWeight: '700',
-                color: '#DC2626'
-              }}>
-                ❌ Report Not Approved
-              </span>
-            </div>
-
-            <div style={{
-              backgroundColor: 'white',
-              padding: '16px',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              borderLeft: '4px solid #DC2626'
-            }}>
-              <p style={{
-                margin: 0,
-                fontSize: '16px',
-                color: '#1F2937',
-                lineHeight: '1.6',
-                fontWeight: '500'
-              }}>
-                {aiValidationResult.reason}
-              </p>
-            </div>
-
-            {/* DETAILS SECTION */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '16px',
-              border: '1px solid #E5E7EB'
-            }}>
-              <h4 style={{
-                fontSize: '16px',
-                fontWeight: '600',
-                margin: '0 0 16px 0',
-                color: '#374151',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                📋 AI Analysis Details
-              </h4>
-              
-              {formData.incidentDescription && (
-                <div style={{ marginBottom: '16px' }}>
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#6B7280',
-                    display: 'block',
-                    marginBottom: '6px'
-                  }}>
-                    Incident Description:
-                  </span>
-                  <div style={{
-                    fontSize: '14px',
-                    color: '#374151',
-                    backgroundColor: '#F9FAFB',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    borderLeft: '3px solid #DC2626',
-                    fontFamily: 'monospace',
-                    wordBreak: 'break-word'
-                  }}>
-                    "{formData.incidentDescription.length > 100 
-                      ? formData.incidentDescription.substring(0, 100) + '...' 
-                      : formData.incidentDescription}"
-                  </div>
-                </div>
-              )}
-              
-              {formData.additionalNotes && (
-                <div style={{ marginBottom: '16px' }}>
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#6B7280',
-                    display: 'block',
-                    marginBottom: '6px'
-                  }}>
-                    Additional Notes:
-                  </span>
-                  <div style={{
-                    fontSize: '14px',
-                    color: '#374151',
-                    backgroundColor: '#F9FAFB',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    borderLeft: '3px solid #F59E0B'
-                  }}>
-                    {formData.additionalNotes.length > 50 
-                      ? formData.additionalNotes.substring(0, 50) + '...' 
-                      : formData.additionalNotes}
-                  </div>
-                </div>
-              )}
-              
-              {formData.witnessAccount && (
-                <div>
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#6B7280',
-                    display: 'block',
-                    marginBottom: '6px'
-                  }}>
-                    Witness Account:
-                  </span>
-                  <div style={{
-                    fontSize: '14px',
-                    color: '#374151',
-                    backgroundColor: '#F9FAFB',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    borderLeft: '3px solid #10B981'
-                  }}>
-                    {formData.witnessAccount.length > 50 
-                      ? formData.witnessAccount.substring(0, 50) + '...' 
-                      : formData.witnessAccount}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* SUGGESTIONS */}
-          <div style={{
-            backgroundColor: '#EFF6FF',
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '24px',
-            border: '2px solid #93C5FD'
-          }}>
-            <h4 style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              margin: '0 0 16px 0',
-              color: '#1E40AF',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              💡 How to improve your report:
-            </h4>
-            
-            <ul style={{
-              margin: 0,
-              paddingLeft: '24px',
-              color: '#374151',
-              fontSize: '15px',
-              lineHeight: '1.8'
-            }}>
-              <li style={{ marginBottom: '10px' }}>
-                <strong>Be specific:</strong> Include dates, times, and exact locations
-              </li>
-              <li style={{ marginBottom: '10px' }}>
-                <strong>Describe people:</strong> Mention names, roles, or descriptions of involved persons
-              </li>
-              <li style={{ marginBottom: '10px' }}>
-                <strong>Sequence of events:</strong> Explain what happened step by step
-              </li>
-              <li style={{ marginBottom: '10px' }}>
-                <strong>Use proper language:</strong> Write in complete sentences with proper grammar
-              </li>
-              <li style={{ marginBottom: '10px' }}>
-                <strong>Avoid randomness:</strong> Don't use random characters like "asdf", "test", or "123"
-              </li>
-              <li>
-                <strong>Provide context:</strong> Explain why you're reporting and what outcome you expect
-              </li>
-            </ul>
-            
-            <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              borderLeft: '4px solid #3B82F6'
-            }}>
-              <p style={{
-                margin: 0,
-                fontSize: '14px',
-                color: '#1E40AF',
-                fontWeight: '600'
-              }}>
-                💬 Example of a good report:
-              </p>
-              <p style={{
-                margin: '8px 0 0 0',
                 fontSize: '13px',
-                color: '#4B5563',
-                fontStyle: 'italic'
+                fontWeight: '500',
+                color: '#6B7280',
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}>
-                "On March 15, 2024, around 2:00 PM at the Engineering Building, my professor made inappropriate comments about my appearance during class. This happened in Room 205 in front of other students. I felt uncomfortable and humiliated. This is not the first time..."
-              </p>
+                <span>Incident Description</span>
+                <span style={{
+                  fontSize: '11px',
+                  backgroundColor: '#F3F4F6',
+                  padding: '2px 8px',
+                  borderRadius: '10px'
+                }}>
+                  {formData.incidentDescription.length} characters
+                </span>
+              </div>
+              <div style={{
+                fontSize: '14px',
+                color: '#374151',
+                backgroundColor: '#F9FAFB',
+                padding: '16px',
+                borderRadius: '6px',
+                borderLeft: '2px solid #DC2626',
+                fontFamily: 'monospace',
+                lineHeight: '1.5'
+              }}>
+                {formData.incidentDescription.length > 120 
+                  ? formData.incidentDescription.substring(0, 120) + '...' 
+                  : formData.incidentDescription}
+              </div>
             </div>
-          </div>
-
-          {/* ACTION BUTTONS */}
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            justifyContent: 'space-between'
-          }}>
-            <button
-              onClick={() => {
-                console.log("Edit Report clicked");
-                setShowAIValidation(false);
-                // Auto-focus to incident description field
-                setTimeout(() => {
-                  const textarea = document.querySelector('textarea');
-                  if (textarea) {
-                    textarea.focus();
-                    textarea.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }, 100);
-              }}
-              style={{
-                flex: 1,
-                backgroundColor: '#DC2626',
-                color: 'white',
-                border: 'none',
-                padding: '16px 24px',
-                borderRadius: '10px',
-                fontSize: '16px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
+          )}
+          
+          {formData.additionalNotes && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: '500',
+                color: '#6B7280',
+                marginBottom: '8px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#B91C1C'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#DC2626'}
-            >
-              <span>✏️</span>
-              Edit & Improve Report
-            </button>
-            
-            <button
-              onClick={() => {
-                console.log("Manual Review clicked");
-                setShowAIValidation(false);
-                showAlert("Manual Review Requested", 
-                  "Your report has been flagged for manual review by the TUP GAD Office. " +
-                  "An administrator will review your submission within 24-48 hours."
-                );
-              }}
-              style={{
-                flex: 1,
-                backgroundColor: 'white',
-                color: '#2563EB',
-                border: '2px solid #2563EB',
-                padding: '16px 24px',
-                borderRadius: '10px',
-                fontSize: '16px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
+                gap: '6px'
+              }}>
+                <span>Additional Notes</span>
+                <span style={{
+                  fontSize: '11px',
+                  backgroundColor: '#F3F4F6',
+                  padding: '2px 8px',
+                  borderRadius: '10px'
+                }}>
+                  {formData.additionalNotes.length} characters
+                </span>
+              </div>
+              <div style={{
+                fontSize: '14px',
+                color: '#374151',
+                backgroundColor: '#F9FAFB',
+                padding: '16px',
+                borderRadius: '6px',
+                borderLeft: '2px solid #F59E0B'
+              }}>
+                {formData.additionalNotes.length > 80 
+                  ? formData.additionalNotes.substring(0, 80) + '...' 
+                  : formData.additionalNotes}
+              </div>
+            </div>
+          )}
+          
+          {formData.witnessAccount && (
+            <div>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: '500',
+                color: '#6B7280',
+                marginBottom: '8px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#EFF6FF';
-                e.target.style.borderColor = '#1D4ED8';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = 'white';
-                e.target.style.borderColor = '#2563EB';
-              }}
-            >
-              <span>👨‍⚖️</span>
-              Request Manual Review
-            </button>
-          </div>
+                gap: '6px'
+              }}>
+                <span>Witness Account</span>
+                <span style={{
+                  fontSize: '11px',
+                  backgroundColor: '#F3F4F6',
+                  padding: '2px 8px',
+                  borderRadius: '10px'
+                }}>
+                  {formData.witnessAccount.length} characters
+                </span>
+              </div>
+              <div style={{
+                fontSize: '14px',
+                color: '#374151',
+                backgroundColor: '#F9FAFB',
+                padding: '16px',
+                borderRadius: '6px',
+                borderLeft: '2px solid #10B981'
+              }}>
+                {formData.witnessAccount.length > 80 
+                  ? formData.witnessAccount.substring(0, 80) + '...' 
+                  : formData.witnessAccount}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
-          {/* FOOTER NOTE */}
-          <div style={{
-            marginTop: '20px',
-            padding: '12px',
-            backgroundColor: '#F3F4F6',
-            borderRadius: '8px',
-            textAlign: 'center'
-          }}>
+      {/* GUIDELINES */}
+      <div style={{
+        backgroundColor: '#F8FAFC',
+        borderRadius: '8px',
+        padding: '24px',
+        marginBottom: '28px',
+        border: '1px solid #E2E8F0'
+      }}>
+        <h4 style={{
+          fontSize: '16px',
+          fontWeight: '600',
+          margin: '0 0 20px 0',
+          color: '#1E293B'
+        }}>
+          Report Quality Guidelines
+        </h4>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '20px',
+          marginBottom: '24px'
+        }}>
+          <div>
             <p style={{
+              fontSize: '13px',
+              fontWeight: '500',
+              color: '#64748B',
+              margin: '0 0 8px 0'
+            }}>
+              Specificity
+            </p>
+            <p style={{
+              fontSize: '14px',
+              color: '#334155',
               margin: 0,
-              fontSize: '12px',
-              color: '#6B7280',
               lineHeight: '1.5'
             }}>
-              ⚠️ <strong>Note:</strong> This AI validation helps prevent spam submissions. 
-              Please provide meaningful details to ensure your report is properly reviewed.
+              Include precise dates, times, locations, and identifiable details
+            </p>
+          </div>
+          <div>
+            <p style={{
+              fontSize: '13px',
+              fontWeight: '500',
+              color: '#64748B',
+              margin: '0 0 8px 0'
+            }}>
+              Clarity
+            </p>
+            <p style={{
+              fontSize: '14px',
+              color: '#334155',
+              margin: 0,
+              lineHeight: '1.5'
+            }}>
+              Present events in chronological order with clear context
+            </p>
+          </div>
+          <div>
+            <p style={{
+              fontSize: '13px',
+              fontWeight: '500',
+              color: '#64748B',
+              margin: '0 0 8px 0'
+            }}>
+              Completeness
+            </p>
+            <p style={{
+              fontSize: '14px',
+              color: '#334155',
+              margin: 0,
+              lineHeight: '1.5'
+            }}>
+              Provide all relevant information while maintaining focus
             </p>
           </div>
         </div>
+        
+        <div style={{
+          padding: '16px',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '6px',
+          borderLeft: '3px solid #3B82F6'
+        }}>
+          <p style={{
+            margin: 0,
+            fontSize: '14px',
+            color: '#1E40AF',
+            fontWeight: '500',
+            marginBottom: '8px'
+          }}>
+            Exemplary Report Structure
+          </p>
+          <p style={{
+            margin: 0,
+            fontSize: '13px',
+            color: '#4B5563',
+            lineHeight: '1.6',
+            fontStyle: 'italic'
+          }}>
+            "On [Date] at approximately [Time] in [Location], [specific incident] occurred involving [individuals]. The sequence of events began when... This incident resulted in [consequences]. I am reporting this because [rationale]."
+          </p>
+        </div>
+      </div>
+
+      {/* ACTION BUTTONS */}
+      <div style={{
+        display: 'flex',
+        gap: '16px',
+        justifyContent: 'flex-end'
+      }}>
+        <button
+          onClick={() => {
+            console.log("Edit Report clicked");
+            setShowAIValidation(false);
+            setTimeout(() => {
+              const textarea = document.querySelector('textarea');
+              if (textarea) {
+                textarea.focus();
+                textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 100);
+          }}
+          style={{
+            backgroundColor: '#DC2626',
+            color: '#FFFFFF',
+            border: 'none',
+            padding: '14px 28px',
+            borderRadius: '8px',
+            fontSize: '15px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            letterSpacing: '0.025em'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.backgroundColor = '#B91C1C';
+            e.target.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.backgroundColor = '#DC2626';
+            e.target.style.transform = 'translateY(0)';
+          }}
+        >
+          Revise Report
+        </button>
+      </div>
+
+      {/* FOOTER */}
+      <div style={{
+        marginTop: '24px',
+        paddingTop: '20px',
+        borderTop: '1px solid #E5E7EB'
+      }}>
+        <p style={{
+          margin: 0,
+          fontSize: '12px',
+          color: '#6B7280',
+          lineHeight: '1.5',
+          textAlign: 'center'
+        }}>
+          This automated validation ensures report quality and prevents system misuse.
+          All submissions are handled in accordance with institutional policies.
+        </p>
       </div>
     </div>
+  </div>
+</div>
   );
 };
 

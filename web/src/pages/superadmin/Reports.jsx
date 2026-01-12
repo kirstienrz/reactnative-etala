@@ -4,7 +4,8 @@ import {
   MessageSquare, Send, Share2, X, Eye, Archive, RefreshCw,
   Search, Filter, Calendar, FileText, AlertCircle, CheckCircle,
   Clock, XCircle, ChevronDown, Download, Users, UserCheck, ClipboardList, Edit,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown, Mail, MoreVertical
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown, Mail, MoreVertical,
+  Brain, Activity, AlertTriangle, Shield, BarChart
 } from "lucide-react";
 
 import {
@@ -12,12 +13,20 @@ import {
   updateReportStatus, archiveReport, restoreReport, addReferral
 } from "../../api/report";
 
+// Add this API function for sentiment analysis
+import { analyzeReportSeverity } from "../../api/ai";
+
 const AdminReports = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("active");
   const [reports, setReports] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [sentimentResults, setSentimentResults] = useState({});
+  const [showSentimentModal, setShowSentimentModal] = useState(false);
+  const [selectedReportForAnalysis, setSelectedReportForAnalysis] = useState(null);
+  const [sentimentFilter, setSentimentFilter] = useState("All");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [readStatusFilter, setReadStatusFilter] = useState("All");
@@ -56,6 +65,14 @@ const AdminReports = () => {
 
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
 
+  // Load sentiment results from localStorage
+  useEffect(() => {
+    const savedSentiments = localStorage.getItem('reportSentiments');
+    if (savedSentiments) {
+      setSentimentResults(JSON.parse(savedSentiments));
+    }
+  }, []);
+
   useEffect(() => {
     fetchReports();
   }, []);
@@ -73,6 +90,13 @@ const AdminReports = () => {
   useEffect(() => {
     localStorage.setItem('adminReadReports', JSON.stringify(readReports));
   }, [readReports]);
+
+  // Save sentiment results to localStorage
+  useEffect(() => {
+    if (Object.keys(sentimentResults).length > 0) {
+      localStorage.setItem('reportSentiments', JSON.stringify(sentimentResults));
+    }
+  }, [sentimentResults]);
 
   // Update dropdown position when it opens
   useEffect(() => {
@@ -97,6 +121,65 @@ const AdminReports = () => {
 
   const isReportRead = (reportId) => {
     return readReports.includes(reportId);
+  };
+
+  // Sentiment Analysis Function
+  const analyzeSentiment = async (reportId, reportData) => {
+    setAnalyzing(true);
+    try {
+      const res = await analyzeReportSeverity(reportData);
+      if (res.success) {
+        const newSentimentResults = {
+          ...sentimentResults,
+          [reportId]: {
+            severity: res.data.severity,
+            confidence: res.data.confidence,
+            explanation: res.data.explanation,
+            keywords: res.data.keywords,
+            analyzedAt: new Date().toISOString()
+          }
+        };
+        setSentimentResults(newSentimentResults);
+        showToast(`Severity analysis complete: ${res.data.severity}`, "success");
+        
+        // Store in localStorage
+        localStorage.setItem('reportSentiments', JSON.stringify(newSentimentResults));
+      } else {
+        showToast(res.message || "Failed to analyze sentiment", "error");
+      }
+    } catch (error) {
+      showToast(`Analysis failed: ${error.message}`, "error");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  // Get severity color
+  const getSeverityColor = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'severe':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'moderate':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'mild':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Get severity icon
+  const getSeverityIcon = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'severe':
+        return <AlertTriangle size={14} className="text-red-600" />;
+      case 'moderate':
+        return <Activity size={14} className="text-yellow-600" />;
+      case 'mild':
+        return <Shield size={14} className="text-green-600" />;
+      default:
+        return <Brain size={14} className="text-gray-400" />;
+    }
   };
 
   // ✅ Navigate to messaging with selected ticket
@@ -236,6 +319,7 @@ const AdminReports = () => {
     setDateFrom("");
     setDateTo("");
     setSortOrder("latest");
+    setSentimentFilter("All");
     setCurrentPage(1);
   };
 
@@ -280,11 +364,14 @@ const AdminReports = () => {
     const matchesCaseStatus = caseStatusFilter === "All" || r.caseStatus === caseStatusFilter;
     const matchesCategory = categoryFilter === "All" || r.incidentTypes?.includes(categoryFilter);
 
+    const matchesSentiment = sentimentFilter === "All" || 
+      (sentimentResults[r._id]?.severity?.toLowerCase() === sentimentFilter.toLowerCase());
+
     const reportDate = new Date(r.submittedAt);
     const matchesDateFrom = !dateFrom || reportDate >= new Date(dateFrom);
     const matchesDateTo = !dateTo || reportDate <= new Date(dateTo + "T23:59:59");
 
-    return matchesSearch && matchesReadStatus && matchesCaseStatus && matchesCategory && matchesDateFrom && matchesDateTo;
+    return matchesSearch && matchesReadStatus && matchesCaseStatus && matchesCategory && matchesSentiment && matchesDateFrom && matchesDateTo;
   }).sort((a, b) => {
     const dateA = new Date(a.submittedAt);
     const dateB = new Date(b.submittedAt);
@@ -306,7 +393,8 @@ const AdminReports = () => {
     categoryFilter !== "All",
     dateFrom,
     dateTo,
-    sortOrder !== "latest"
+    sortOrder !== "latest",
+    sentimentFilter !== "All"
   ].filter(Boolean).length;
 
   const InfoItem = ({ label, value }) => {
@@ -318,6 +406,25 @@ const AdminReports = () => {
       </div>
     );
   };
+
+  // Get severity distribution for stats
+  const getSeverityStats = () => {
+    const stats = { severe: 0, moderate: 0, mild: 0, unanalyzed: 0 };
+    reports.forEach(report => {
+      const sentiment = sentimentResults[report._id];
+      if (sentiment?.severity) {
+        const severity = sentiment.severity.toLowerCase();
+        if (stats.hasOwnProperty(severity)) {
+          stats[severity]++;
+        }
+      } else {
+        stats.unanalyzed++;
+      }
+    });
+    return stats;
+  };
+
+  const severityStats = getSeverityStats();
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -332,8 +439,95 @@ const AdminReports = () => {
 
       {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Report Management</h1>
-        <p className="text-gray-600">Monitor and manage incident reports</p>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Report Management</h1>
+            <p className="text-gray-600">Monitor and manage incident reports with AI-powered severity analysis</p>
+          </div>
+          <button
+            onClick={() => setShowSentimentModal(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md"
+          >
+            <Brain size={20} />
+            Severity Analysis
+            <BarChart size={20} />
+          </button>
+        </div>
+
+        {/* Severity Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Severe Reports</p>
+                <p className="text-2xl font-bold text-red-600">{severityStats.severe}</p>
+              </div>
+              <div className="p-3 bg-red-50 rounded-full">
+                <AlertTriangle className="text-red-600" size={24} />
+              </div>
+            </div>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-red-500 rounded-full" 
+                style={{ width: `${(severityStats.severe / reports.length) * 100 || 0}%` }}
+              ></div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Moderate Reports</p>
+                <p className="text-2xl font-bold text-yellow-600">{severityStats.moderate}</p>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded-full">
+                <Activity className="text-yellow-600" size={24} />
+              </div>
+            </div>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-yellow-500 rounded-full" 
+                style={{ width: `${(severityStats.moderate / reports.length) * 100 || 0}%` }}
+              ></div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Mild Reports</p>
+                <p className="text-2xl font-bold text-green-600">{severityStats.mild}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-full">
+                <Shield className="text-green-600" size={24} />
+              </div>
+            </div>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500 rounded-full" 
+                style={{ width: `${(severityStats.mild / reports.length) * 100 || 0}%` }}
+              ></div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Unanalyzed</p>
+                <p className="text-2xl font-bold text-gray-600">{severityStats.unanalyzed}</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-full">
+                <Brain className="text-gray-600" size={24} />
+              </div>
+            </div>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gray-500 rounded-full" 
+                style={{ width: `${(severityStats.unanalyzed / reports.length) * 100 || 0}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Search and Filters Card */}
@@ -417,6 +611,24 @@ const AdminReports = () => {
                   <option>For Appointment</option>
                   <option>For Referral</option>
                   <option>Case Closed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Severity Level</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={sentimentFilter}
+                  onChange={(e) => {
+                    setSentimentFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option>All</option>
+                  <option>Severe</option>
+                  <option>Moderate</option>
+                  <option>Mild</option>
+                  <option>Unanalyzed</option>
                 </select>
               </div>
 
@@ -547,6 +759,9 @@ const AdminReports = () => {
                         Type
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Severity
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Case Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -558,67 +773,109 @@ const AdminReports = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedReports.map((report) => (
-                      <tr 
-                        key={report._id} 
-                        className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {!isReportRead(report._id) && (
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    {paginatedReports.map((report) => {
+                      const sentiment = sentimentResults[report._id];
+                      return (
+                        <tr 
+                          key={report._id} 
+                          className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {!isReportRead(report._id) && (
+                              <div className="flex items-center">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                              {report.ticketNumber}
                             </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
-                            {report.ticketNumber}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {report.isAnonymous ? (
-                              <span className="text-gray-500 italic">Anonymous</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {report.isAnonymous ? (
+                                <span className="text-gray-500 italic">Anonymous</span>
+                              ) : (
+                                report.createdBy?.tupId || "Unknown User"
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {report.incidentTypes?.slice(0, 2).join(", ") || "N/A"}
+                              {report.incidentTypes?.length > 2 && (
+                                <span className="text-gray-500"> +{report.incidentTypes.length - 2}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {sentiment ? (
+                              <div className="flex flex-col gap-1">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
+                                  {getSeverityIcon(sentiment.severity)}
+                                  {sentiment.severity}
+                                  <span className="text-xs opacity-75">({Math.round(sentiment.confidence * 100)}%)</span>
+                                </span>
+                                {sentiment.keywords && sentiment.keywords.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {sentiment.keywords.slice(0, 2).map((keyword, idx) => (
+                                      <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                        {keyword}
+                                      </span>
+                                    ))}
+                                    {sentiment.keywords.length > 2 && (
+                                      <span className="text-xs text-gray-400">+{sentiment.keywords.length - 2}</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             ) : (
-                              report.createdBy?.tupId || "Unknown User"
+                              <button
+                                onClick={() => {
+                                  setSelectedReportForAnalysis(report);
+                                  analyzeSentiment(report._id, {
+                                    incidentDescription: report.incidentDescription,
+                                    incidentTypes: report.incidentTypes,
+                                    timestamp: report.submittedAt
+                                  });
+                                }}
+                                disabled={analyzing}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Brain size={12} />
+                                {analyzing && selectedReportForAnalysis?._id === report._id ? "Analyzing..." : "Analyze"}
+                              </button>
                             )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {report.incidentTypes?.slice(0, 2).join(", ") || "N/A"}
-                            {report.incidentTypes?.length > 2 && (
-                              <span className="text-gray-500"> +{report.incidentTypes.length - 2}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {report.caseStatus ? (
+                              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
+                                {getCaseStatusIcon(report.caseStatus)}
+                                {report.caseStatus}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">Not Set</span>
                             )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {report.caseStatus ? (
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
-                              {getCaseStatusIcon(report.caseStatus)}
-                              {report.caseStatus}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">Not Set</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(report.submittedAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="relative">
-                            <button
-                              ref={(el) => (dropdownRefs.current[report._id] = el)}
-                              onClick={() => setOpenDropdown(openDropdown === report._id ? null : report._id)}
-                              className="dropdown-trigger p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Actions"
-                            >
-                              <MoreVertical size={18} className="text-gray-600" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(report.submittedAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="relative">
+                              <button
+                                ref={(el) => (dropdownRefs.current[report._id] = el)}
+                                onClick={() => setOpenDropdown(openDropdown === report._id ? null : report._id)}
+                                className="dropdown-trigger p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Actions"
+                              >
+                                <MoreVertical size={18} className="text-gray-600" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -714,6 +971,174 @@ const AdminReports = () => {
         </div>
       </div>
 
+      {/* Sentiment Analysis Modal */}
+      {showSentimentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Brain className="text-purple-600" size={24} />
+                  AI Severity Analysis Dashboard
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">Analyze report severity using OpenAI</p>
+              </div>
+              <button
+                onClick={() => setShowSentimentModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
+                {/* Stats Overview */}
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <BarChart size={20} className="text-purple-600" />
+                    Analysis Summary
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-red-600">{severityStats.severe}</div>
+                      <div className="text-sm text-gray-600">Severe</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-yellow-600">{severityStats.moderate}</div>
+                      <div className="text-sm text-gray-600">Moderate</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-green-600">{severityStats.mild}</div>
+                      <div className="text-sm text-gray-600">Mild</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-gray-600">{severityStats.unanalyzed}</div>
+                      <div className="text-sm text-gray-600">Pending</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* How It Works */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">How It Works</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 font-bold">1</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">AI analyzes incident descriptions</p>
+                        <p className="text-sm text-gray-600">Uses OpenAI to understand context and severity</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 font-bold">2</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Classifies severity level</p>
+                        <p className="text-sm text-gray-600">Categorizes as Severe, Moderate, or Mild</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 font-bold">3</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Extracts key insights</p>
+                        <p className="text-sm text-gray-600">Identifies keywords and provides confidence scores</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Analysis Controls */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => {
+                        // Analyze all unanalyzed reports
+                        const unanalyzed = reports.filter(r => !sentimentResults[r._id]);
+                        if (unanalyzed.length > 0) {
+                          showToast(`Analyzing ${unanalyzed.length} reports...`, "success");
+                          unanalyzed.slice(0, 5).forEach(report => {
+                            analyzeSentiment(report._id, {
+                              incidentDescription: report.incidentDescription,
+                              incidentTypes: report.incidentTypes,
+                              timestamp: report.submittedAt
+                            });
+                          });
+                        } else {
+                          showToast("All reports have been analyzed", "success");
+                        }
+                      }}
+                      disabled={analyzing || reports.filter(r => !sentimentResults[r._id]).length === 0}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <Brain size={20} />
+                      {analyzing ? "Analyzing..." : "Analyze All Pending"}
+                      <span className="bg-white/20 px-2 py-1 rounded text-xs">
+                        {reports.filter(r => !sentimentResults[r._id]).length}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSentimentResults({});
+                        localStorage.removeItem('reportSentiments');
+                        showToast("Analysis results cleared", "success");
+                      }}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <RefreshCw size={20} />
+                      Clear All Analysis
+                    </button>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">Severity Legend</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className={`flex items-center gap-3 p-4 rounded-lg ${getSeverityColor('Severe')}`}>
+                      <AlertTriangle size={24} className="text-red-600" />
+                      <div>
+                        <p className="font-semibold">Severe</p>
+                        <p className="text-sm opacity-80">Requires immediate attention</p>
+                      </div>
+                    </div>
+                    <div className={`flex items-center gap-3 p-4 rounded-lg ${getSeverityColor('Moderate')}`}>
+                      <Activity size={24} className="text-yellow-600" />
+                      <div>
+                        <p className="font-semibold">Moderate</p>
+                        <p className="text-sm opacity-80">Needs prompt follow-up</p>
+                      </div>
+                    </div>
+                    <div className={`flex items-center gap-3 p-4 rounded-lg ${getSeverityColor('Mild')}`}>
+                      <Shield size={24} className="text-green-600" />
+                      <div>
+                        <p className="font-semibold">Mild</p>
+                        <p className="text-sm opacity-80">Standard procedure required</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 p-6 bg-white">
+              <p className="text-sm text-gray-600 text-center">
+                Powered by OpenAI • Analysis helps prioritize reports based on severity
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dropdown Menu Portal - Fixed Position Overlay */}
       {openDropdown && (
         <div 
@@ -746,6 +1171,27 @@ const AdminReports = () => {
             <MessageSquare size={16} />
             Message User
           </button>
+          
+          {!sentimentResults[openDropdown] && (
+            <button
+              onClick={() => {
+                const report = paginatedReports.find(r => r._id === openDropdown);
+                if (report) {
+                  analyzeSentiment(report._id, {
+                    incidentDescription: report.incidentDescription,
+                    incidentTypes: report.incidentTypes,
+                    timestamp: report.submittedAt
+                  });
+                }
+                setOpenDropdown(null);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
+              disabled={analyzing}
+            >
+              <Brain size={16} />
+              {analyzing && selectedReportForAnalysis?._id === openDropdown ? "Analyzing..." : "Analyze Severity"}
+            </button>
+          )}
           
           {isReportRead(openDropdown) ? (
             <button
@@ -825,7 +1271,7 @@ const AdminReports = () => {
         </div>
       )}
 
-      {/* Enhanced Details Modal */}
+      {/* Enhanced Details Modal with Sentiment Analysis */}
       {showDetailsModal && selectedReport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -834,6 +1280,15 @@ const AdminReports = () => {
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
                 <p className="text-sm text-gray-600 mt-1">{selectedReport.ticketNumber}</p>
+                {sentimentResults[selectedReport._id] && (
+                  <div className="mt-2">
+                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
+                      {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
+                      AI Analysis: {sentimentResults[selectedReport._id].severity} 
+                      ({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
+                    </span>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setShowDetailsModal(false)}
@@ -846,6 +1301,87 @@ const AdminReports = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div>
+                {/* Sentiment Analysis Section */}
+                {!sentimentResults[selectedReport._id] ? (
+                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <Brain size={20} className="text-purple-600" />
+                          AI Severity Analysis
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Analyze this report's severity level using OpenAI
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => analyzeSentiment(selectedReport._id, {
+                          incidentDescription: selectedReport.incidentDescription,
+                          incidentTypes: selectedReport.incidentTypes,
+                          timestamp: selectedReport.submittedAt
+                        })}
+                        disabled={analyzing}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50"
+                      >
+                        <Brain size={16} />
+                        {analyzing ? "Analyzing..." : "Analyze Severity"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`border rounded-lg p-4 mb-6 ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
+                          AI Analysis Results
+                        </h3>
+                        <div className="space-y-2">
+                          <p className="text-sm">
+                            <span className="font-medium">Severity:</span> {sentimentResults[selectedReport._id].severity}
+                            <span className="ml-2 text-xs opacity-75">
+                              ({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
+                            </span>
+                          </p>
+                          {sentimentResults[selectedReport._id].explanation && (
+                            <p className="text-sm">
+                              <span className="font-medium">Analysis:</span> {sentimentResults[selectedReport._id].explanation}
+                            </p>
+                          )}
+                          {sentimentResults[selectedReport._id].keywords && sentimentResults[selectedReport._id].keywords.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium mb-1">Key Indicators:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {sentimentResults[selectedReport._id].keywords.map((keyword, idx) => (
+                                  <span key={idx} className="text-xs bg-white/50 px-2 py-1 rounded">
+                                    {keyword}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            Analyzed on {new Date(sentimentResults[selectedReport._id].analyzedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newResults = { ...sentimentResults };
+                          delete newResults[selectedReport._id];
+                          setSentimentResults(newResults);
+                          localStorage.setItem('reportSentiments', JSON.stringify(newResults));
+                          showToast("Analysis removed", "success");
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                        title="Remove analysis"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Timeline */}
                 {selectedReport.timeline?.length > 0 && (
                   <div className="bg-gray-50 rounded-lg p-4 mb-6">
@@ -863,6 +1399,7 @@ const AdminReports = () => {
                   </div>
                 )}
 
+                {/* Rest of the details modal content remains the same */}
                 <div className="space-y-6">
                   {/* Basic Information */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -924,11 +1461,11 @@ const AdminReports = () => {
                       </div>
                     )}
                   </div>
-
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Victim / Reporter Details
                     </h3>
+
                     <div className="grid grid-cols-2 gap-4">
                       <InfoItem label="Last Name" value={selectedReport.lastName} />
                       <InfoItem label="First Name" value={selectedReport.firstName} />
@@ -952,10 +1489,12 @@ const AdminReports = () => {
                     </div>
                   </div>
 
+
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Guardian Information
                     </h3>
+
                     <div className="grid grid-cols-2 gap-4">
                       <InfoItem label="Last Name" value={selectedReport.guardianLastName} />
                       <InfoItem label="First Name" value={selectedReport.guardianFirstName} />
@@ -969,10 +1508,12 @@ const AdminReports = () => {
                     </div>
                   </div>
 
+
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Perpetrator Information
                     </h3>
+
                     <div className="grid grid-cols-2 gap-4">
                       <InfoItem label="Last Name" value={selectedReport.perpLastName} />
                       <InfoItem label="First Name" value={selectedReport.perpFirstName} />
@@ -989,6 +1530,23 @@ const AdminReports = () => {
                       <InfoItem label="Barangay" value={selectedReport.perpBarangay} />
                     </div>
                   </div>
+
+
+                  {/* <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
+                      Services & Referrals
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InfoItem label="Crisis Intervention" value={selectedReport.crisisIntervention ? "Yes" : "No"} />
+                      <InfoItem label="Protection Order" value={selectedReport.protectionOrder ? "Yes" : "No"} />
+                      <InfoItem label="Refer to SWDO" value={selectedReport.referToSWDO ? "Yes" : "No"} />
+                      <InfoItem label="Healthcare Referral" value={selectedReport.referToHealthcare ? "Yes" : "No"} />
+                      <InfoItem label="Law Enforcement Referral" value={selectedReport.referToLawEnforcement ? "Yes" : "No"} />
+                      <InfoItem label="Other Referral" value={selectedReport.referToOther ? "Yes" : "No"} />
+                    </div>
+                  </div> */}
+
 
                   {/* Incident Information */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -1038,9 +1596,25 @@ const AdminReports = () => {
               </div>
             </div>
 
+
             {/* Footer Actions */}
             <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
               <div className="flex flex-col sm:flex-row gap-3">
+                {!sentimentResults[selectedReport._id] && (
+                  <button
+                    onClick={() => analyzeSentiment(selectedReport._id, {
+                      incidentDescription: selectedReport.incidentDescription,
+                      incidentTypes: selectedReport.incidentTypes,
+                      timestamp: selectedReport.submittedAt
+                    })}
+                    disabled={analyzing}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Brain size={18} />
+                    {analyzing ? "Analyzing..." : "AI Analyze Severity"}
+                  </button>
+                )}
+
                 {selectedReport.caseStatus === "For Interview" && (
                   <button
                     onClick={() => setShowReferralModal(true)}
@@ -1074,6 +1648,7 @@ const AdminReports = () => {
         </div>
       )}
 
+      {/* All other modals remain unchanged */}
       {/* Enhanced Case Status Modal */}
       {showCaseStatusModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
