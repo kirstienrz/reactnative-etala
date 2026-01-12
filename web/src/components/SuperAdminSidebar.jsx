@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Users,
   LogOut,
@@ -29,10 +29,19 @@ import { logout } from "../store/authSlice";
 const SuperAdminSidebar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [expandedMenus, setExpandedMenus] = useState({
     knowledgeHub: false,
     // Add other expandable menus here if needed
   });
+
+ const isKnowledgeHubActive = [
+    "/superadmin/datasets",
+    "/superadmin/infographics",
+    "/superadmin/gallery",
+    "/superadmin/knowledge",
+    "/superadmin/research"
+  ].includes(location.pathname);
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
@@ -96,16 +105,17 @@ const SuperAdminSidebar = () => {
             <div className="mb-1">
               <button
                 onClick={() => toggleMenu('knowledgeHub')}
-                className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-all duration-200"
+                className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+                  ${isKnowledgeHubActive 
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50" 
+                    : "bg-[#111827] text-gray-300 hover:bg-gray-800 hover:text-white" // <-- changed here
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <BookOpen size={18} />
                   <span>Knowledge Hub</span>
                 </div>
-                {expandedMenus.knowledgeHub ?
-                  <ChevronDown size={16} /> :
-                  <ChevronRight size={16} />
-                }
+                {expandedMenus.knowledgeHub ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </button>
 
               {/* Submenu Items */}

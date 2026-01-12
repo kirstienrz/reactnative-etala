@@ -1,325 +1,431 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
-  TextInput,
-  Modal,
+  ActivityIndicator,
+  StyleSheet,
+  Animated,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getChats, createOrGetChat, getAllUsers } from '../../api/chat';
-import { getItem } from '../../utils/storage';
+import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getMyTickets, markMessagesAsRead } from '../../api/tickets';
+import socketService from '../../api/socket';
 
-const InboxScreen = () => {
+// Icons - you can replace these with react-native-vector-icons
+const MessageSquareIcon = () => (
+  <View style={styles.emptyIcon}>
+    <Text style={styles.emptyIconText}>💬</Text>
+  </View>
+);
+
+const MoreVerticalIcon = () => (
+  <Text style={styles.menuIcon}>⋮</Text>
+);
+
+const Inbox = () => {
   const navigation = useNavigation();
-  const [chats, setChats] = useState([]);
+  const currentUser = useSelector((state) => state.auth.profile);
+  const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
+
+  const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState(null);
-  
-  // New message modal states
-  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
 
+  // ✅ Track read tickets in AsyncStorage
+  const [readTickets, setReadTickets] = useState([]);
+
+  // Load read tickets from AsyncStorage
   useEffect(() => {
-    loadCurrentUser();
+    const loadReadTickets = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('userReadTickets');
+        if (stored) {
+          setReadTickets(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.error('Error loading read tickets:', error);
+      }
+    };
+    loadReadTickets();
   }, []);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchChats();
-    }, [])
-  );
+  // ✅ Save read tickets to AsyncStorage whenever it changes
+  useEffect(() => {
+    const saveReadTickets = async () => {
+      try {
+        await AsyncStorage.setItem('userReadTickets', JSON.stringify(readTickets));
+      } catch (error) {
+        console.error('Error saving read tickets:', error);
+      }
+    };
+    if (readTickets.length > 0) {
+      saveReadTickets();
+    }
+  }, [readTickets]);
 
-  const loadCurrentUser = async () => {
-    try {
-      const userId = await getItem('userId');
-      setCurrentUserId(userId);
-    } catch (error) {
-      console.error('Error loading user ID:', error);
+  // ✅ Helper functions for read/unread status
+  const isTicketRead = (ticketNumber) => {
+    return readTickets.includes(ticketNumber);
+  };
+
+  const markTicketAsReadLocally = (ticketNumber) => {
+    if (!readTickets.includes(ticketNumber)) {
+      setReadTickets([...readTickets, ticketNumber]);
     }
   };
 
-  const fetchChats = async () => {
+  const markTicketAsUnreadLocally = (ticketNumber) => {
+    setReadTickets(readTickets.filter(t => t !== ticketNumber));
+  };
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchTickets();
+    } else {
+      setLoading(false);
+    }
+  }, [currentUserId]);
+
+  // 🔥 Setup Socket.IO for real-time updates
+  useEffect(() => {
+    if (!currentUserId) {
+      console.log('⚠️ No currentUserId, skipping socket setup');
+      return;
+    }
+
+    console.log('🔌 Setting up socket connection for user inbox');
+    console.log('👤 Current User ID:', currentUserId);
+    
+    socketService.connect();
+    
+    // Wait a bit for connection before joining room
+    setTimeout(() => {
+      console.log('📍 Joining user room:', `user-${currentUserId}`);
+      socketService.joinUserRoom(currentUserId);
+    }, 100);
+
+    // 📩 Listen for new messages
+    socketService.onNewMessage(({ message, ticket }) => {
+      console.log('🔥 New message received in inbox:', message);
+      console.log('📊 Updated ticket from new-message:', ticket);
+      
+      setTickets(prev => {
+        const existingTicket = prev.find(t => t.ticketNumber === ticket.ticketNumber);
+        
+        let updatedTickets;
+        if (!existingTicket) {
+          console.log('🆕 New ticket detected, adding to inbox as unread');
+          updatedTickets = [ticket, ...prev];
+          markTicketAsUnreadLocally(ticket.ticketNumber);
+        } else {
+          updatedTickets = prev.map(t => 
+            t.ticketNumber === ticket.ticketNumber ? ticket : t
+          );
+          
+          if (message.sender === 'admin') {
+            console.log('📨 Admin replied, marking as unread');
+            markTicketAsUnreadLocally(ticket.ticketNumber);
+          }
+        }
+        
+        const sorted = [...updatedTickets].sort((a, b) => {
+          const dateA = new Date(a.lastMessageAt);
+          const dateB = new Date(b.lastMessageAt);
+          return dateB - dateA;
+        });
+        
+        return sorted;
+      });
+    });
+
+    // 📩 Listen for ticket updates
+    socketService.onTicketUpdated((updatedTicket) => {
+      console.log('🔥 Ticket updated in inbox:', updatedTicket);
+      
+      setTickets(prev => {
+        const existingTicket = prev.find(t => t.ticketNumber === updatedTicket.ticketNumber);
+        
+        let newTickets;
+        if (!existingTicket) {
+          console.log('🆕 New ticket detected via update event');
+          newTickets = [updatedTicket, ...prev];
+          markTicketAsUnreadLocally(updatedTicket.ticketNumber);
+        } else {
+          newTickets = prev.map(t => 
+            t.ticketNumber === updatedTicket.ticketNumber ? updatedTicket : t
+          );
+        }
+        
+        const sorted = [...newTickets].sort((a, b) => {
+          const dateA = new Date(a.lastMessageAt);
+          const dateB = new Date(b.lastMessageAt);
+          return dateB - dateA;
+        });
+        
+        return sorted;
+      });
+    });
+
+    // 📩 Listen for ticket closed
+    socketService.onTicketClosed(({ ticket }) => {
+      console.log('🔥 Ticket closed in inbox:', ticket);
+      setTickets(prev => prev.map(t => 
+        t.ticketNumber === ticket.ticketNumber ? ticket : t
+      ));
+    });
+
+    // 📩 Listen for ticket reopened
+    socketService.onTicketReopened(({ ticket }) => {
+      console.log('🔥 Ticket reopened in inbox:', ticket);
+      setTickets(prev => prev.map(t => 
+        t.ticketNumber === ticket.ticketNumber ? ticket : t
+      ));
+    });
+
+    return () => {
+      console.log('🧹 Cleaning up inbox socket listeners');
+      socketService.removeAllListeners();
+    };
+  }, [currentUserId]);
+
+  const fetchTickets = async () => {
     try {
-      const data = await getChats();
-      // ✅ Only show chats that have at least one message
-      const chatsWithMessages = data.filter(chat => chat.latestMessage);
-      setChats(chatsWithMessages);
+      setLoading(true);
+      const data = await getMyTickets();
+      console.log('📥 Loaded user tickets:', data);
+      
+      const sortedTickets = [...(data || [])].sort((a, b) => {
+        const dateA = new Date(a.lastMessageAt);
+        const dateB = new Date(b.lastMessageAt);
+        return dateB - dateA;
+      });
+      
+      setTickets(sortedTickets);
     } catch (error) {
-      console.error('Error fetching chats:', error);
+      console.error('❌ Error fetching tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      const data = await getAllUsers();
-      // ✅ Filter out current user from the list
-      const otherUsers = data.filter(user => user._id !== currentUserId);
-      setUsers(otherUsers);
-      setFilteredUsers(otherUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredUsers(users);
-      return;
-    }
-
-    const query = searchQuery.toLowerCase();
-    const filtered = users.filter(user => {
-      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-      const email = user.email?.toLowerCase() || '';
-      return fullName.includes(query) || email.includes(query);
-    });
-    setFilteredUsers(filtered);
-  }, [searchQuery, users]);
-
-  const handleNewMessage = () => {
-    setShowNewMessageModal(true);
-    setSearchQuery('');
-    fetchUsers();
-  };
-
-  const handleUserSelect = async (user) => {
-    try {
-      setLoadingUsers(true);
-      const chat = await createOrGetChat(user._id);
-      setShowNewMessageModal(false);
-      navigation.navigate('ChatDetail', {
-        chatId: chat._id,
-        receiverId: user._id,
-        receiverName: `${user.firstName} ${user.lastName}`,
-      });
-      // ✅ Refresh chats after creating new chat
-      fetchChats();
-    } catch (error) {
-      console.error('Error creating/getting chat:', error);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  const onRefresh = () => {
+  const handleRefresh = () => {
     setRefreshing(true);
-    fetchChats();
-  };
-
-  const getOtherUser = (users) => {
-    if (!currentUserId) return null;
-    return users.find(user => user._id !== currentUserId);
+    fetchTickets();
   };
 
   const formatTime = (timestamp) => {
+    if (!timestamp) return '';
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now - date) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
       });
-    } else if (diffInHours < 168) {
+    }
+    if (diffInHours < 168) {
       return date.toLocaleDateString('en-US', { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
+    }
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  // ✅ Mark ticket as read on server AND locally
+  const markTicketAsRead = async (ticketNumber) => {
+    try {
+      await markMessagesAsRead(ticketNumber);
+      console.log('✅ Marked ticket as read:', ticketNumber);
+      
+      markTicketAsReadLocally(ticketNumber);
+      
+      setTickets(prev => prev.map(t => 
+        t.ticketNumber === ticketNumber 
+          ? { ...t, unreadCount: { ...t.unreadCount, user: 0 } } 
+          : t
+      ));
+    } catch (error) {
+      console.error('❌ Error marking as read:', error);
     }
   };
 
-  const handleChatPress = (chat) => {
-    const otherUser = getOtherUser(chat.users);
-    if (otherUser) {
-      navigation.navigate('ChatDetail', {
-        chatId: chat._id,
-        receiverId: otherUser._id,
-        receiverName: `${otherUser.firstName} ${otherUser.lastName}`,
-      });
-    }
+  // ❌ Mark ticket as unread (AsyncStorage only)
+  const markTicketAsUnread = (ticketNumber) => {
+    markTicketAsUnreadLocally(ticketNumber);
+    
+    setTickets(prev => prev.map(t => 
+      t.ticketNumber === ticketNumber 
+        ? { ...t, unreadCount: { ...t.unreadCount, user: 1 } } 
+        : t
+    ));
   };
 
-  const renderChatItem = ({ item }) => {
-    const otherUser = getOtherUser(item.users);
-    if (!otherUser) return null;
+  const handleTicketPress = async (ticket) => {
+    await markTicketAsRead(ticket.ticketNumber);
+    
+    navigation.navigate('ChatDetail', {
+      ticketNumber: ticket.ticketNumber,
+      ticketId: ticket._id || ticket.id,
+      displayName: ticket.displayName,
+      status: ticket.status,
+    });
+  };
 
-    const userName = `${otherUser.firstName} ${otherUser.lastName}`;
-    // ✅ FIXED: Handle chats with no messages yet
-    const latestMessageContent = item.latestMessage?.content || 'Start a conversation';
-    const timeStamp = item.updatedAt ? formatTime(item.updatedAt) : '';
-    const isUnread = item.latestMessage && !item.latestMessage.read && 
-                     item.latestMessage.receiver === currentUserId;
+  const toggleMenu = (ticketNumber) => {
+    setOpenMenuId(openMenuId === ticketNumber ? null : ticketNumber);
+  };
+
+  const renderTicketItem = ({ item: ticket }) => {
+    const timeStamp = ticket.lastMessageAt ? formatTime(ticket.lastMessageAt) : '';
+    const ticketNumber = ticket.ticketNumber;
+    const hasUnread = !isTicketRead(ticketNumber) || (ticket.unreadCount?.user > 0);
+    const isMenuOpen = openMenuId === ticketNumber;
 
     return (
       <TouchableOpacity
-        style={styles.chatItem}
-        onPress={() => handleChatPress(item)}
+        style={[styles.ticketItem, hasUnread && styles.ticketItemUnread]}
+        onPress={() => handleTicketPress(ticket)}
         activeOpacity={0.7}
       >
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {otherUser.firstName.charAt(0).toUpperCase()}
+        {/* Unread indicator */}
+        <View style={styles.unreadIndicatorContainer}>
+          {hasUnread && <View style={styles.unreadIndicator} />}
+        </View>
+
+        {/* Content */}
+        <View style={styles.ticketContent}>
+          <View style={styles.ticketHeader}>
+            <Text style={[styles.ticketNumber, hasUnread && styles.ticketNumberUnread]}>
+              Ticket #{ticket.ticketNumber || ticket.reportId?.ticketNumber || 'N/A'}
             </Text>
+            {timeStamp && (
+              <Text style={styles.timestamp}>{timeStamp}</Text>
+            )}
+          </View>
+
+          {ticket.lastMessage && (
+            <View style={styles.messageRow}>
+              <Text 
+                style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]} 
+                numberOfLines={1}
+              >
+                {ticket.lastMessage}
+              </Text>
+              {ticket.reportId?.status && (
+                <Text style={styles.reportStatus}>{ticket.reportId.status}</Text>
+              )}
+            </View>
+          )}
+
+          {/* Status Badge */}
+          <View style={styles.statusContainer}>
+            <View style={[
+              styles.statusBadge,
+              ticket.status === 'Open' ? styles.statusOpen : styles.statusClosed
+            ]}>
+              <Text style={[
+                styles.statusText,
+                ticket.status === 'Open' ? styles.statusTextOpen : styles.statusTextClosed
+              ]}>
+                {ticket.status}
+              </Text>
+            </View>
           </View>
         </View>
-        <View style={styles.chatContent}>
-          <View style={styles.chatHeader}>
-            <Text style={[styles.userName, isUnread && styles.unreadText]}>
-              {userName}
-            </Text>
-            {timeStamp && <Text style={styles.timeStamp}>{timeStamp}</Text>}
-          </View>
-          <Text
-            style={[
-              styles.messagePreview,
-              isUnread && styles.unreadText,
-              !item.latestMessage && styles.placeholderText
-            ]}
-            numberOfLines={1}
+
+        {/* Three Dots Menu */}
+        <View style={styles.menuContainer}>
+          <TouchableOpacity
+            onPress={() => toggleMenu(ticketNumber)}
+            style={styles.menuButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            {latestMessageContent}
-          </Text>
+            <MoreVerticalIcon />
+          </TouchableOpacity>
+
+          {/* Dropdown Menu */}
+          {isMenuOpen && (
+            <View style={styles.dropdown}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (hasUnread) {
+                    markTicketAsRead(ticketNumber);
+                  } else {
+                    markTicketAsUnread(ticketNumber);
+                  }
+                  setOpenMenuId(null);
+                }}
+                style={styles.dropdownItem}
+              >
+                <Text style={styles.dropdownText}>
+                  {hasUnread ? 'Mark as read' : 'Mark as unread'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-        {isUnread && <View style={styles.unreadBadge} />}
       </TouchableOpacity>
     );
   };
 
-  const renderUserItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.userItem}
-      onPress={() => handleUserSelect(item)}
-      disabled={loadingUsers}
-      activeOpacity={0.7}
-    >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>
-          {item.firstName.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>
-          {item.firstName} {item.lastName}
-        </Text>
-        {item.email && <Text style={styles.userEmail}>{item.email}</Text>}
-      </View>
-    </TouchableOpacity>
-  );
-
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4338CA" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#7c3aed" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.header}>Messages</Text>
-        <TouchableOpacity
-          style={styles.newMessageButton}
-          onPress={handleNewMessage}
-          activeOpacity={0.8}
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Inbox</Text>
+        <TouchableOpacity 
+          onPress={handleRefresh} 
+          disabled={refreshing}
         >
-          <Text style={styles.newMessageButtonText}>+ New</Text>
+          <Text style={[styles.refreshButton, refreshing && styles.refreshButtonDisabled]}>
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Text>
         </TouchableOpacity>
       </View>
-      
-      {chats.length === 0 ? (
+
+      <Text style={styles.subtitle}>Your messages and support tickets.</Text>
+
+      {/* Tickets List */}
+      {tickets.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No conversations yet</Text>
-          <Text style={styles.emptySubtext}>
-            Tap "+ New" to start a conversation
-          </Text>
+          <MessageSquareIcon />
+          <Text style={styles.emptyTitle}>No tickets yet</Text>
+          <Text style={styles.emptySubtitle}>Your support tickets will appear here</Text>
         </View>
       ) : (
         <FlatList
-          data={chats}
-          renderItem={renderChatItem}
+          data={tickets}
+          renderItem={renderTicketItem}
           keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh}
-              tintColor="#4338CA"
-              colors={["#4338CA"]}
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#7c3aed"
             />
           }
         />
       )}
-
-      {/* New Message Modal */}
-      <Modal
-        visible={showNewMessageModal}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowNewMessageModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              onPress={() => setShowNewMessageModal(false)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cancelButton}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>New Message</Text>
-            <View style={{ width: 60 }} />
-          </View>
-
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search users..."
-              placeholderTextColor="#9CA3AF"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoFocus
-            />
-          </View>
-
-          {loadingUsers ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#4338CA" />
-            </View>
-          ) : filteredUsers.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {searchQuery ? 'No users found' : 'No users available'}
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredUsers}
-              renderItem={renderUserItem}
-              keyExtractor={(item) => item._id}
-            />
-          )}
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -327,189 +433,203 @@ const InboxScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f9fafb',
+    paddingTop: 40,
+    paddingHorizontal: 16,
   },
-  centerContainer: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f9fafb',
   },
-  headerContainer: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 3,
+    marginBottom: 12,
   },
-  header: {
+  title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontWeight: 'bold',
+    color: '#581c87',
   },
-  newMessageButton: {
-    backgroundColor: '#4338CA',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: '#4338CA',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  newMessageButtonText: {
-    color: '#FFFFFF',
+  refreshButton: {
     fontSize: 14,
-    fontWeight: '600',
+    color: '#4b5563',
   },
-  chatItem: {
+  refreshButtonDisabled: {
+    opacity: 0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 24,
+  },
+  listContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  ticketItem: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
   },
-  avatarContainer: {
+  ticketItemUnread: {
+    backgroundColor: '#faf5ff',
+  },
+  unreadIndicatorContainer: {
+    width: 8,
+    justifyContent: 'center',
     marginRight: 12,
   },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#4338CA',
-    justifyContent: 'center',
-    alignItems: 'center',
+  unreadIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#7c3aed',
   },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  chatContent: {
+  ticketContent: {
     flex: 1,
+    minWidth: 0,
   },
-  chatHeader: {
+  ticketHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
   },
-  userName: {
-    fontSize: 16,
+  ticketNumber: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#374151',
   },
-  timeStamp: {
+  ticketNumberUnread: {
+    color: '#581c87',
+  },
+  timestamp: {
     fontSize: 12,
-    color: '#9CA3AF',
-  },
-  messagePreview: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-  placeholderText: {
-    fontStyle: 'italic',
-    color: '#9CA3AF',
-  },
-  unreadText: {
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  unreadBadge: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#4338CA',
+    color: '#9ca3af',
     marginLeft: 8,
+  },
+  messageRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  lastMessage: {
+    flex: 1,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  lastMessageUnread: {
+    fontWeight: '600',
+    color: '#581c87',
+  },
+  reportStatus: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  statusContainer: {
+    marginTop: 4,
+    flexDirection: 'row',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusOpen: {
+    backgroundColor: '#d1fae5',
+  },
+  statusClosed: {
+    backgroundColor: '#f3f4f6',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  statusTextOpen: {
+    color: '#065f46',
+  },
+  statusTextClosed: {
+    color: '#374151',
+  },
+  menuContainer: {
+    position: 'relative',
+    marginLeft: 8,
+  },
+  menuButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  menuIcon: {
+    fontSize: 20,
+    color: '#4b5563',
+  },
+  dropdown: {
+    position: 'absolute',
+    right: 0,
+    top: 36,
+    width: 160,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: '#374151',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#4338CA',
-    fontWeight: '600',
-  },
-  searchContainer: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  searchInput: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 60,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
-    fontSize: 16,
-    color: '#1F2937',
+    marginTop: 20,
   },
-  userItem: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    marginBottom: 16,
   },
-  userInfo: {
-    flex: 1,
-    marginLeft: 12,
+  emptyIconText: {
+    fontSize: 32,
   },
-  userEmail: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#9ca3af',
   },
 });
 
-export default InboxScreen;
+export default Inbox;

@@ -4,6 +4,59 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const auth = require("../middleware/auth"); // ✅ import your JWT middleware
 
+router.get("/analytics", auth(), async (req, res) => {
+  try {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Access denied." });
+    }
+
+    const users = await User.find();
+
+    // Basic counts
+    const totalUsers = users.length;
+    const activeUsers = users.filter(u => !u.isArchived).length;
+    const archivedUsers = users.filter(u => u.isArchived).length;
+
+    // User type distribution
+    const userTypeCount = {};
+    users.forEach(u => {
+      userTypeCount[u.userType] = (userTypeCount[u.userType] || 0) + 1;
+    });
+
+    // Department distribution
+    const deptCount = {};
+    users.forEach(u => {
+      deptCount[u.department] = (deptCount[u.department] || 0) + 1;
+    });
+
+    // Monthly registrations (last 6 months)
+    const months = [];
+    const counts = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      months.push(d.toLocaleDateString('en-US', { month: 'short' }));
+      
+      const count = users.filter(u => {
+        if (!u.createdAt) return false;
+        const diff = (new Date().getFullYear() - u.createdAt.getFullYear()) * 12 +
+                     (new Date().getMonth() - u.createdAt.getMonth());
+        return diff === i;
+      }).length;
+      counts.push(count);
+    }
+
+    res.json({
+      overview: { totalUsers, activeUsers, archivedUsers },
+      userType: userTypeCount,
+      department: deptCount,
+      trend: { months, counts }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // GET /api/user/me → get current user profile
 router.get("/me", auth(), async (req, res) => {
@@ -407,6 +460,145 @@ router.put("/manage/users/:id/unarchive", auth(), async (req, res) => {
   } catch (err) {
     console.error("❌ Error restoring user:", err);
     res.status(500).json({ message: "Failed to restore user" });
+  }
+});
+
+// Add this to your user routes file
+
+// 📊 GET user analytics (superadmin only)
+router.get("/analytics", auth(), async (req, res) => {
+  try {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Access denied. Superadmin only." });
+    }
+
+    const users = await User.find();
+
+    // 📊 Total counts
+    const totalUsers = users.length;
+    const activeUsers = users.filter(u => !u.isArchived).length;
+    const archivedUsers = users.filter(u => u.isArchived).length;
+    const activatedUsers = users.filter(u => u.isActivated).length;
+    const pendingActivation = users.filter(u => !u.isActivated).length;
+
+    // 👥 User type distribution
+    const userTypeDistribution = users.reduce((acc, user) => {
+      acc[user.userType] = (acc[user.userType] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 🏢 Department distribution
+    const departmentDistribution = users.reduce((acc, user) => {
+      acc[user.department] = (acc[user.department] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 👤 Gender distribution
+    const genderDistribution = users.reduce((acc, user) => {
+      if (user.gender) {
+        acc[user.gender] = (acc[user.gender] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    // 🔐 Role distribution
+    const roleDistribution = users.reduce((acc, user) => {
+      acc[user.role] = (acc[user.role] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 📅 Monthly registration trend (last 12 months)
+    const monthlyRegistrations = Array(12).fill(0);
+    const currentDate = new Date();
+    
+    users.forEach(user => {
+      if (user.createdAt) {
+        const monthDiff = 
+          (currentDate.getFullYear() - user.createdAt.getFullYear()) * 12 +
+          (currentDate.getMonth() - user.createdAt.getMonth());
+        
+        if (monthDiff >= 0 && monthDiff < 12) {
+          monthlyRegistrations[11 - monthDiff]++;
+        }
+      }
+    });
+
+    // 📆 Get month labels
+    const monthLabels = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      monthLabels.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+    }
+
+    // 📖 Booking access stats
+    const usersWithBookingAccess = users.filter(u => u.bookingAccess?.granted).length;
+    const usedBookingAccess = users.filter(u => u.bookingAccess?.used).length;
+    const unusedBookingAccess = usersWithBookingAccess - usedBookingAccess;
+
+    // 🎂 Age distribution (by ranges)
+    const ageRanges = {
+      "Under 18": 0,
+      "18-25": 0,
+      "26-35": 0,
+      "36-45": 0,
+      "46-55": 0,
+      "56+": 0
+    };
+
+    users.forEach(user => {
+      if (user.age) {
+        if (user.age < 18) ageRanges["Under 18"]++;
+        else if (user.age <= 25) ageRanges["18-25"]++;
+        else if (user.age <= 35) ageRanges["26-35"]++;
+        else if (user.age <= 45) ageRanges["36-45"]++;
+        else if (user.age <= 55) ageRanges["46-55"]++;
+        else ageRanges["56+"]++;
+      }
+    });
+
+    // 📍 PIN setup status
+    const usersWithPin = users.filter(u => u.hasPin).length;
+    const usersWithoutPin = totalUsers - usersWithPin;
+
+    // 🆕 First login status
+    const firstTimeUsers = users.filter(u => u.isFirstLogin).length;
+    const returningUsers = totalUsers - firstTimeUsers;
+
+    res.json({
+      overview: {
+        totalUsers,
+        activeUsers,
+        archivedUsers,
+        activatedUsers,
+        pendingActivation
+      },
+      distributions: {
+        userType: userTypeDistribution,
+        department: departmentDistribution,
+        gender: genderDistribution,
+        role: roleDistribution,
+        ageRanges
+      },
+      trends: {
+        monthlyRegistrations,
+        monthLabels
+      },
+      bookingAccess: {
+        total: usersWithBookingAccess,
+        used: usedBookingAccess,
+        unused: unusedBookingAccess
+      },
+      security: {
+        usersWithPin,
+        usersWithoutPin,
+        firstTimeUsers,
+        returningUsers
+      }
+    });
+  } catch (err) {
+    console.error("❌ Error fetching analytics:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

@@ -57,3 +57,8 @@ export const unarchiveUser = async (userId) => {
   const res = await API.put(`/user/manage/users/${userId}/unarchive`);
   return res.data;
 };
+
+export const getUserAnalytics = async () => {
+  const res = await API.get("/user/analytics");
+  return res.data;
+};

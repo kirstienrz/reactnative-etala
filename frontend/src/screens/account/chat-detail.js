@@ -5,269 +5,462 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
-  ActivityIndicator,
   Platform,
-  Alert,
+  ActivityIndicator,
   StyleSheet,
+  SafeAreaView,
+  Keyboard,
+  Alert,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { sendMessage, getMessages, createOrGetChat } from "../../api/chat";
-import { getItem } from "../../utils/storage";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { useSelector } from "react-redux";
+import { Ionicons } from "@expo/vector-icons"; // or react-native-vector-icons
+import { getTicketMessages, sendTicketMessage } from "../../api/tickets";
+import socketService from "../../api/socket";
 
-export default function ChatScreen({ navigation, route }) {
+const ChatScreen = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const currentUser = useSelector((state) => state.auth.user);
+  const currentUserId = currentUser?._id || currentUser?.id;
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [chatId, setChatId] = useState(null);
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const [ticketStatus, setTicketStatus] = useState(null);
+  const [typingUser, setTypingUser] = useState(null);
+  const [inputHeight, setInputHeight] = useState(40);
 
-  const insets = useSafeAreaInsets();
   const flatListRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const ticketNumberRef = useRef(null);
 
-  const { receiverId, receiverName, chatId: existingChatId } = route.params || {};
-  
-  const userId = receiverId;
-  const userName = receiverName;
-
-  useEffect(() => {
-    const keyboardDidShow = Keyboard.addListener("keyboardDidShow", (e) =>
-      setKeyboardHeight(e.endCoordinates.height)
-    );
-    const keyboardDidHide = Keyboard.addListener("keyboardDidHide", () =>
-      setKeyboardHeight(0)
-    );
-
-    return () => {
-      keyboardDidShow.remove();
-      keyboardDidHide.remove();
-    };
-  }, []);
+  const { ticketNumber, ticketId, displayName, status } = route.params || {};
 
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const storedUserId = await getItem("userId");
-        console.log("📱 Current User ID from storage:", storedUserId);
-        setCurrentUserId(storedUserId);
-      } catch (error) {
-        console.error("Error getting user ID:", error);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (!userId) {
-      console.error("❌ User ID is missing from route params:", route.params);
-      Alert.alert("Error", "Receiver ID is missing");
+    if (!ticketNumber) {
+      Alert.alert("Error", "No ticket selected");
+      navigation.goBack();
       return;
     }
 
-    if (currentUserId) {
-      initializeChat();
-    }
-  }, [userId, currentUserId]);
+    ticketNumberRef.current = ticketNumber;
+    setTicketStatus(status);
+    loadMessages();
+  }, [ticketNumber]);
 
-  const initializeChat = async () => {
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Socket setup
+  useEffect(() => {
+    if (!ticketNumber) return;
+
+    console.log("🔌 Setting up socket connection for ticket:", ticketNumber);
+    socketService.connect();
+    socketService.joinTicket(ticketNumber);
+    socketService.joinUserRoom(currentUserId);
+
+    // Listen for new messages
+    socketService.onNewMessage(({ message, ticket }) => {
+      console.log("🔥 New message received:", message);
+
+      if (message.ticketNumber === ticketNumberRef.current) {
+        console.log("✅ Ticket match! Adding message...");
+        setMessages((prev) => {
+          const exists = prev.some((m) => m._id === message._id);
+          if (exists) {
+            console.log("⚠️ Duplicate message, skipping");
+            return prev;
+          }
+          console.log("✅ Adding new message");
+          return [...prev, message];
+        });
+      }
+    });
+
+    // Listen for ticket closed
+    socketService.onTicketClosed(({ ticket, message }) => {
+      console.log("🔥 Ticket closed:", ticket);
+      if (ticket.ticketNumber === ticketNumberRef.current) {
+        setTicketStatus("Closed");
+        setMessages((prev) => {
+          const exists = prev.some((m) => m._id === message._id);
+          if (!exists) {
+            return [...prev, message];
+          }
+          return prev;
+        });
+      }
+    });
+
+    // Listen for ticket reopened
+    socketService.onTicketReopened(({ ticket, message }) => {
+      console.log("🔥 Ticket reopened:", ticket);
+      if (ticket.ticketNumber === ticketNumberRef.current) {
+        setTicketStatus("Open");
+        setMessages((prev) => {
+          const exists = prev.some((m) => m._id === message._id);
+          if (!exists) {
+            return [...prev, message];
+          }
+          return prev;
+        });
+      }
+    });
+
+    // Listen for typing
+    socketService.onUserTyping(({ userName, isTyping }) => {
+      console.log("👤 Typing event:", userName, isTyping);
+      if (isTyping) {
+        setTypingUser(userName);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+          setTypingUser(null);
+        }, 3000);
+      } else {
+        setTypingUser(null);
+      }
+    });
+
+    // Listen for read receipts
+    socketService.onMessagesRead(({ ticketNumber: readTicketNumber, readBy }) => {
+      console.log("📖 Messages read event received for ticket:", readTicketNumber, "by:", readBy);
+      if (readTicketNumber === ticketNumberRef.current && readBy === "admin") {
+        setMessages((prev) =>
+          prev.map((msg) => ({
+            ...msg,
+            isRead: msg.sender === "user" ? true : msg.isRead,
+          }))
+        );
+      }
+    });
+
+    // Cleanup
+    return () => {
+      console.log("🧹 Cleaning up socket listeners for ticket:", ticketNumber);
+      if (ticketNumberRef.current) {
+        socketService.leaveTicket(ticketNumberRef.current);
+      }
+      socketService.removeAllListeners();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [ticketNumber, currentUserId]);
+
+  const scrollToBottom = () => {
+    if (flatListRef.current && messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  };
+
+  const loadMessages = async () => {
     try {
       setLoading(true);
-      console.log("🔄 Initializing chat with receiver:", userId);
-      
-      let chatDataId = existingChatId;
-      
-      if (!chatDataId) {
-        const chatData = await createOrGetChat(userId);
-        console.log("💬 Chat data received:", chatData);
-        chatDataId = chatData._id || chatData.id;
-      } else {
-        console.log("💬 Using existing chatId:", chatDataId);
-      }
-      
-      setChatId(chatDataId);
-
-      const messagesData = await getMessages(chatDataId);
-      console.log("📩 Messages loaded:", messagesData.length);
-      setMessages(messagesData);
+      const data = await getTicketMessages(ticketNumber, { limit: 100 });
+      console.log("📥 Loaded messages:", data);
+      setMessages(data || []);
     } catch (error) {
-      console.error("❌ Error initializing chat:", error);
-      Alert.alert("Error", "Failed to load chat");
+      console.error("❌ Error loading messages:", error);
+      Alert.alert("Error", "Failed to load messages");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSend = async () => {
-    if (!inputText.trim() || !chatId) return;
+    if (!inputText.trim() || !ticketNumber) return;
 
     const tempMessage = {
-      id: Date.now().toString(),
+      _id: `temp-${Date.now()}`,
       content: inputText,
-      sender: { _id: currentUserId },
+      sender: "user",
+      senderName: currentUser?.firstName || currentUser?.name || "You",
       createdAt: new Date().toISOString(),
       isTemp: true,
+      isRead: false,
     };
 
     setMessages((prev) => [...prev, tempMessage]);
     const messageText = inputText;
     setInputText("");
+    setInputHeight(40);
     setSending(true);
+    Keyboard.dismiss();
+
+    socketService.sendTyping(ticketNumber, currentUser?.firstName || "You", false);
 
     try {
-      console.log("📤 Sending message:", { chatId, userId, messageText });
-      
-      const savedMessage = await sendMessage(chatId, userId, messageText);
-      console.log("✅ Message saved:", savedMessage);
-      
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessage.id ? savedMessage : msg
-        )
-      );
+      console.log("📤 Sending message to:", ticketNumber);
+      const savedMessage = await sendTicketMessage(ticketNumber, {
+        content: messageText,
+        attachments: [],
+      });
 
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      console.log("✅ Message sent successfully:", savedMessage);
+
+      setMessages((prev) => {
+        const filtered = prev.filter((msg) => msg._id !== tempMessage._id);
+        const exists = filtered.some((m) => m._id === savedMessage._id);
+        if (!exists) {
+          return [...filtered, savedMessage];
+        }
+        return filtered;
+      });
+
+      setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error("❌ Error sending message:", error);
       Alert.alert("Error", "Failed to send message");
-      
-      setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
+      setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
       setInputText(messageText);
     } finally {
       setSending(false);
     }
   };
 
-  const renderMessage = ({ item }) => {
-    const isMe = item.sender?._id === currentUserId || item.sender === currentUserId;
-    
+  const handleTyping = (text) => {
+    setInputText(text);
+
+    if (text.trim()) {
+      const userName = currentUser?.firstName || currentUser?.name || "User";
+      socketService.sendTyping(ticketNumber, userName, true);
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        socketService.sendTyping(ticketNumber, userName, false);
+      }, 2000);
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const getLastUserMessageIndex = () => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender === "user" && !messages[i].isTemp) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  const renderMessage = ({ item, index }) => {
+    const isMe = item.sender === "user";
+    const lastUserMessageIndex = getLastUserMessageIndex();
+    const isLastUserMessage = isMe && index === lastUserMessageIndex;
+
     return (
       <View
         style={[
-          styles.messageBubble,
-          isMe ? styles.myMessage : styles.theirMessage,
-          item.isTemp && styles.tempMessage,
+          styles.messageContainer,
+          isMe ? styles.messageContainerRight : styles.messageContainerLeft,
         ]}
       >
-        <Text
+        <View
           style={[
-            styles.messageText,
-            isMe ? styles.myMessageText : styles.theirMessageText,
+            styles.messageBubble,
+            isMe ? styles.messageBubbleUser : styles.messageBubbleAdmin,
+            item.isTemp && styles.messageBubbleTemp,
           ]}
         >
-          {item.content || item.text}
-        </Text>
-        {item.isTemp && (
-          <Text style={[styles.sendingText, isMe && styles.sendingTextMy]}>
-            Sending...
+          <Text
+            style={[
+              styles.messageText,
+              isMe ? styles.messageTextUser : styles.messageTextAdmin,
+            ]}
+          >
+            {item.content || item.text}
           </Text>
-        )}
+          <View style={styles.messageFooter}>
+            <Text
+              style={[
+                styles.messageTime,
+                isMe ? styles.messageTimeUser : styles.messageTimeAdmin,
+              ]}
+            >
+              {formatTime(item.createdAt)}
+            </Text>
+            {item.isTemp && (
+              <Text
+                style={[
+                  styles.messageSending,
+                  isMe ? styles.messageTimeUser : styles.messageTimeAdmin,
+                ]}
+              >
+                Sending...
+              </Text>
+            )}
+            {isMe && !item.isTemp && isLastUserMessage && item.isRead && (
+              <Text style={styles.messageRead}>Read</Text>
+            )}
+          </View>
+        </View>
       </View>
     );
   };
 
+  const renderTypingIndicator = () => {
+    if (!typingUser) return null;
+
+    return (
+      <View style={[styles.messageContainer, styles.messageContainerLeft]}>
+        <View style={[styles.messageBubble, styles.typingBubble]}>
+          <Text style={styles.typingText}>{typingUser} is typing...</Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="chatbubbles-outline" size={48} color="#9CA3AF" />
+      </View>
+      <Text style={styles.emptyTitle}>No messages yet</Text>
+      <Text style={styles.emptySubtitle}>
+        Start the conversation with System Admin!
+      </Text>
+    </View>
+  );
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4338CA" />
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#9333EA" />
         <Text style={styles.loadingText}>Loading chat...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {userName || "User"}
-        </Text>
-      </View>
+  const isTicketClosed = ticketStatus === "Closed";
 
-      {/* Message List */}
-      {messages.length === 0 ? (
-        <View
-          style={[
-            styles.emptyContainer,
-            { paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0 },
-          ]}
-        >
-          <Text style={styles.emptyText}>
-            No messages yet
-          </Text>
-          <Text style={styles.emptySubtext}>
-            Start the conversation with {userName}!
-          </Text>
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTop}>
+              <Text style={styles.headerTitle}>#{ticketNumber}</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  ticketStatus === "Open"
+                    ? styles.statusBadgeOpen
+                    : styles.statusBadgeClosed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    ticketStatus === "Open"
+                      ? styles.statusTextOpen
+                      : styles.statusTextClosed,
+                  ]}
+                >
+                  {ticketStatus || "Open"}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.headerSubtitle}>Chatting with System Admin</Text>
+          </View>
         </View>
-      ) : (
+
+        {/* Messages */}
         <FlatList
           ref={flatListRef}
           data={messages}
           keyExtractor={(item) => item._id || item.id}
           renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: true })
-          }
-        />
-      )}
-
-      {/* Input Field */}
-      <View
-        style={[
-          styles.inputContainer,
-          {
-            paddingBottom:
-              Platform.OS === "ios"
-                ? insets.bottom + 8
-                : insets.bottom + 20,
-            marginBottom:
-              Platform.OS === "android" && keyboardHeight > 0
-                ? keyboardHeight - 10
-                : 0,
-          },
-        ]}
-      >
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor="#9CA3AF"
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          editable={!sending}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            !inputText.trim() && styles.sendButtonDisabled,
+          contentContainerStyle={[
+            styles.messagesList,
+            messages.length === 0 && styles.messagesListEmpty,
           ]}
-          disabled={!inputText.trim() || sending}
-          onPress={handleSend}
-          activeOpacity={0.8}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderTypingIndicator}
+          onContentSizeChange={scrollToBottom}
+          onLayout={scrollToBottom}
+        />
+
+        {/* Input */}
+        <View style={styles.inputContainer}>
+          {isTicketClosed ? (
+            <View style={styles.closedContainer}>
+              <Text style={styles.closedText}>
+                This ticket is closed. You cannot send new messages.
+              </Text>
+            </View>
           ) : (
-            <Text style={styles.sendButtonText}>Send</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.input, { height: Math.max(40, inputHeight) }]}
+                value={inputText}
+                onChangeText={handleTyping}
+                placeholder="Type a message..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                editable={!sending}
+                onContentSizeChange={(e) => {
+                  const height = e.nativeEvent.contentSize.height;
+                  setInputHeight(Math.min(Math.max(40, height), 120));
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleSend}
+                disabled={!inputText.trim() || sending}
+                style={[
+                  styles.sendButton,
+                  (!inputText.trim() || sending) && styles.sendButtonDisabled,
+                ]}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="send" size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </View>
           )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -276,125 +469,200 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 12,
+    fontSize: 16,
     color: "#6B7280",
-    fontSize: 14,
   },
   header: {
     flexDirection: "row",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 3,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#581C87",
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusBadgeOpen: {
+    backgroundColor: "#D1FAE5",
+  },
+  statusBadgeClosed: {
+    backgroundColor: "#F3F4F6",
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  statusTextOpen: {
+    color: "#047857",
+  },
+  statusTextClosed: {
+    color: "#374151",
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  messagesList: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  messagesListEmpty: {
+    flexGrow: 1,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32,
   },
-  emptyText: {
-    color: "#6B7280",
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 6,
+    color: "#374151",
+    marginBottom: 4,
   },
-  emptySubtext: {
-    color: "#9CA3AF",
+  emptySubtitle: {
     fontSize: 14,
-    textAlign: "center",
+    color: "#9CA3AF",
   },
-  messageList: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  messageBubble: {
-    padding: 12,
-    borderRadius: 16,
-    marginVertical: 4,
+  messageContainer: {
+    marginBottom: 12,
     maxWidth: "80%",
   },
-  myMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: "#4338CA",
-  },
-  theirMessage: {
+  messageContainerLeft: {
     alignSelf: "flex-start",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
-  tempMessage: {
+  messageContainerRight: {
+    alignSelf: "flex-end",
+  },
+  messageBubble: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  messageBubbleUser: {
+    backgroundColor: "#9333EA",
+  },
+  messageBubbleAdmin: {
+    backgroundColor: "#F3F4F6",
+  },
+  messageBubbleTemp: {
     opacity: 0.6,
   },
   messageText: {
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 20,
   },
-  myMessageText: {
+  messageTextUser: {
     color: "#FFFFFF",
   },
-  theirMessageText: {
+  messageTextAdmin: {
     color: "#1F2937",
   },
-  sendingText: {
-    fontSize: 11,
-    marginTop: 2,
-    color: "#9CA3AF",
-  },
-  sendingTextMy: {
-    color: "#E0E7FF",
-  },
-  inputContainer: {
+  messageFooter: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: 8,
+    marginTop: 4,
+  },
+  messageTime: {
+    fontSize: 11,
+  },
+  messageTimeUser: {
+    color: "#E9D5FF",
+  },
+  messageTimeAdmin: {
+    color: "#6B7280",
+  },
+  messageSending: {
+    fontSize: 11,
+    fontStyle: "italic",
+  },
+  messageRead: {
+    fontSize: 11,
+    color: "#E9D5FF",
+  },
+  typingBubble: {
+    backgroundColor: "#E5E7EB",
+  },
+  typingText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  inputContainer: {
+    backgroundColor: "#F9FAFB",
     borderTopWidth: 1,
-    borderColor: "#E5E7EB",
+    borderTopColor: "#E5E7EB",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  closedContainer: {
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  closedText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 12,
   },
   input: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
     borderRadius: 20,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    fontSize: 15,
+    fontSize: 14,
     color: "#1F2937",
+    maxHeight: 120,
   },
   sendButton: {
-    marginLeft: 8,
-    backgroundColor: "#4338CA",
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    shadowColor: "#4338CA",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#9333EA",
+    justifyContent: "center",
+    alignItems: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: "#D1D5DB",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  sendButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 15,
+    opacity: 0.5,
   },
 });
+
+export default ChatScreen;

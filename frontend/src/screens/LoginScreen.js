@@ -9,87 +9,94 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { useDispatch } from "react-redux";
 import { IdCard, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { loginUser } from "../api/auth";
+import { loginSuccess } from "../store/authSlice";
 import * as SecureStore from "expo-secure-store";
 import Header from "../components/Header";
 
 export default function LoginScreen({ navigation }) {
+  const dispatch = useDispatch();
   const [tuptId, setTuptId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-const handleLogin = async () => {
-  if (!tuptId || !email || !password) {
-    Alert.alert("Missing Fields", "Please fill in all fields.");
-    return;
-  }
+  const handleLogin = async () => {
+    if (!tuptId || !email || !password) {
+      Alert.alert("Missing Fields", "Please fill in all fields.");
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const data = await loginUser(email, password, tuptId);
+    try {
+      const data = await loginUser(email, password, tuptId);
 
-    if (data?.token) {
-      // Save token & user data
-      await SecureStore.setItemAsync("token", data.token);
-      await SecureStore.setItemAsync("email", email);
-      await SecureStore.setItemAsync("hasPin", "true");
-      await SecureStore.setItemAsync("userId", data._id);
+      if (data?.token) {
+        // ✅ FIX: Dispatch login to Redux immediately
+        dispatch(loginSuccess({
+          token: data.token,
+          role: data.user?.role || data.role,
+          profile: data.user || { _id: data._id, email: email }
+        }));
 
-      // Navigate based on first login or PIN setup
-      if (data.isFirstLogin) {
-        navigation.replace("ChangePasswordScreen");
-      } else if (!data.hasPin) {
-        navigation.replace("SetPinScreen");
+        // Save additional data to SecureStore
+        await SecureStore.setItemAsync("token", data.token);
+        await SecureStore.setItemAsync("email", email);
+        await SecureStore.setItemAsync("hasPin", data.hasPin ? "true" : "false");
+        
+        // Save userId
+        const userId = data.user?._id || data._id;
+        if (userId) {
+          await SecureStore.setItemAsync("userId", userId);
+        }
+
+        // Navigate based on first login or PIN setup
+        if (data.isFirstLogin) {
+          navigation.replace("ChangePasswordScreen");
+        } else if (!data.hasPin) {
+          navigation.replace("SetPinScreen");
+        } else {
+          navigation.replace("PinLoginScreen");
+        }
       } else {
-        navigation.replace("PinLoginScreen");
+        Alert.alert(
+          "Login Failed",
+          data?.msg || "Invalid TUPT ID, email, or password. Please try again."
+        );
       }
-    } else {
-      // Kung walang token pero may msg, ipakita ito
-      Alert.alert(
-        "Login Failed",
-        data?.msg || "Invalid TUPT ID, email, or password. Please try again."
-      );
-    }
-  } catch (error) {
-    console.error("Login error:", error.response?.data || error.message);
+    } catch (error) {
+      console.error("Login error:", error.response?.data || error.message);
 
-    // Custom message kapag 400
-    if (error.response?.status === 400) {
-      Alert.alert(
-        "Login Failed",
-        error.response?.data?.msg || "Invalid credentials. Please try again."
-      );
-    } else {
-      Alert.alert(
-        "Error",
-        "Unable to connect to server. Please check your connection."
-      );
+      if (error.response?.status === 400) {
+        Alert.alert(
+          "Login Failed",
+          error.response?.data?.msg || "Invalid credentials. Please try again."
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          "Unable to connect to server. Please check your connection."
+        );
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const handleFocus = () => {
-    // Kung walang laman, automatic lagay ng "TUPT-"
     if (tuptId.length === 0) {
       setTuptId("TUPT-");
     }
   };
 
   const formatTuptId = (text) => {
-    // Palitan lahat ng lowercase to uppercase
     let formatted = text.toUpperCase();
-
-    // Tanggalin lahat ng non-alphanumeric characters maliban sa dash
     formatted = formatted.replace(/[^A-Z0-9]/g, "");
 
-    // Automatic dash insertion after TUPT-
     if (formatted.length > 4) {
       formatted = formatted.slice(0, 4) + "-" + formatted.slice(4);
     }
@@ -97,10 +104,8 @@ const handleLogin = async () => {
       formatted = formatted.slice(0, 7) + "-" + formatted.slice(7, 11);
     }
 
-    // Limit length to TUPT-00-0000 (12 characters including dashes)
     return formatted.slice(0, 12);
   };
-
 
   return (
     <View style={styles.container}>
@@ -116,13 +121,11 @@ const handleLogin = async () => {
             placeholder="TUPT-00-0000"
             value={tuptId}
             onChangeText={(text) => setTuptId(formatTuptId(text))}
-            onFocus={handleFocus} // <-- dito automatic "TUPT-" kapag walang laman
+            onFocus={handleFocus}
             style={styles.input}
             autoCapitalize="characters"
           />
-
         </View>
-
 
         {/* Email */}
         <View style={styles.inputContainer}>

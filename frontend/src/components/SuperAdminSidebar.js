@@ -30,6 +30,7 @@ import Events from "../screens/superadmin/Events";
 import Suggestions from "../screens/superadmin/Suggestions";
 import Exports from "../screens/superadmin/Exports";
 import Templates from "../screens/superadmin/Templates";
+import Messages from "../screens/superadmin/Messages";
 
 // Knowledge Hub sub-screens
 import SexDisaggregatedData from "../screens/superadmin/SexDisaggregatedData";
@@ -329,7 +330,7 @@ export default function SuperAdminDrawer() {
         <Drawer.Screen name="UserManagement" component={UserManagement} options={{ title: "User Management" }} />
         <Drawer.Screen name="Reports" component={Reports} options={{ title: "Report Management" }} />
         <Drawer.Screen name="Referral" component={PlaceholderScreen} options={{ title: "Referral & Assignment" }} />
-        <Drawer.Screen name="Messages" component={PlaceholderScreen} options={{ title: "Messaging System" }} />
+        <Drawer.Screen name="Messages" component={Messages} options={{ title: "Messaging System" }} />
         <Drawer.Screen name="Infographics" component={Infographics} options={{ title: "Infographics & Posters" }} />
         <Drawer.Screen name="Carousel" component={Carousel} options={{ title: "Carousel" }} />
         <Drawer.Screen name="Events" component={Events} options={{ title: "Calendar" }} />

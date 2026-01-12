@@ -65,7 +65,6 @@
 // });
 
 // module.exports = mongoose.model("User", userSchema);
-
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
@@ -120,16 +119,19 @@ const userSchema = new mongoose.Schema({
   activationToken: String,
   activationTokenExpiry: Date,
 
-  // ✅ UPDATED: Now tracks booking access per report
   bookingAccess: {
     token: { type: String },
     expiresAt: { type: Date },
     granted: { type: Boolean, default: false },
-    reportTicketNumber: { type: String }, // ✅ NEW: Which report this booking is for
+    reportTicketNumber: { type: String },
     used: { type: Boolean, default: false }
   },
 
   isArchived: { type: Boolean, default: false },
+}, 
+// ✅ ADD THIS: Automatically adds createdAt and updatedAt fields
+{ 
+  timestamps: true 
 });
 
 module.exports = mongoose.model("User", userSchema);
