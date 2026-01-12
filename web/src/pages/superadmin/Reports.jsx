@@ -124,35 +124,44 @@ const AdminReports = () => {
   };
 
   // Sentiment Analysis Function
-  const analyzeSentiment = async (reportId, reportData) => {
-    setAnalyzing(true);
-    try {
-      const res = await analyzeReportSeverity(reportData);
-      if (res.success) {
-        const newSentimentResults = {
-          ...sentimentResults,
-          [reportId]: {
-            severity: res.data.severity,
-            confidence: res.data.confidence,
-            explanation: res.data.explanation,
-            keywords: res.data.keywords,
-            analyzedAt: new Date().toISOString()
-          }
-        };
-        setSentimentResults(newSentimentResults);
-        showToast(`Severity analysis complete: ${res.data.severity}`, "success");
-        
-        // Store in localStorage
-        localStorage.setItem('reportSentiments', JSON.stringify(newSentimentResults));
-      } else {
-        showToast(res.message || "Failed to analyze sentiment", "error");
+ const analyzeSentiment = async (reportId, reportData) => {
+  setAnalyzing(true);
+  setSelectedReportForAnalysis(reportId);
+  
+  try {
+    const res = await analyzeReportSeverity({
+      incidentDescription: reportData.incidentDescription,
+      incidentTypes: reportData.incidentTypes,
+      reportId: reportId, // Send actual report ID
+      additionalContext: {
+        timestamp: reportData.timestamp,
+        location: reportData.location || 'Not specified',
+        peopleInvolved: reportData.peopleInvolved || 'Not specified'
       }
-    } catch (error) {
-      showToast(`Analysis failed: ${error.message}`, "error");
-    } finally {
-      setAnalyzing(false);
+    });
+    
+    if (res.success) {
+      const newSentimentResults = {
+        ...sentimentResults,
+        [reportId]: {
+          ...res.data,
+          analyzedAt: new Date().toISOString()
+        }
+      };
+      setSentimentResults(newSentimentResults);
+      showToast(`Severity analysis complete: ${res.data.severity}`, "success");
+      localStorage.setItem('reportSentiments', JSON.stringify(newSentimentResults));
+    } else {
+      showToast(res.message || "Failed to analyze severity", "error");
     }
-  };
+  } catch (error) {
+    console.error('Analysis error:', error);
+    showToast(`Analysis failed: ${error.response?.data?.message || error.message}`, "error");
+  } finally {
+    setAnalyzing(false);
+    setSelectedReportForAnalysis(null);
+  }
+};
 
   // Get severity color
   const getSeverityColor = (severity) => {

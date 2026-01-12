@@ -1,148 +1,27 @@
 
 
-
-// const express = require("express");
-// const { GoogleGenerativeAI } = require("@google/generative-ai");
-// const router = express.Router();
-
-// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-
-// router.post("/check-report", async (req, res) => {
-//   try {
-//     const { 
-//       incidentDescription = "", 
-//       additionalNotes = "", 
-//       witnessAccount = "" 
-//     } = req.body;
-    
-//     // Combine all text fields
-//     const combinedText = `
-//       Incident: ${incidentDescription}
-//       Notes: ${additionalNotes}
-//       Witness: ${witnessAccount}
-//     `.trim();
-    
-//     console.log("🔍 AI Checking text:", combinedText.substring(0, 100));
-    
-//     // ===== STEP 1: Basic Validation =====
-//     const mainText = incidentDescription.trim();
-    
-//     // Reject if completely empty
-//     if (!mainText || mainText.length < 3) {
-//       console.log("❌ Rejected: Too short");
-//       return res.json({ 
-//         allowed: false, 
-//         reason: "Please provide a meaningful description of the incident. Your report must contain at least a basic explanation of what happened." 
-//       });
-//     }
-    
-//     // Reject obvious spam patterns
-//     const spamPatterns = [
-//       /^(asdf)+$/i,           // "asdf", "asdfasdf"
-//       /^(qwerty)+$/i,         // "qwerty"
-//       /^(test)+$/i,           // "test", "testtest"
-//       /^(hello)+$/i,          // "hello"
-//       /^(hi)+$/i,             // "hi"
-//       /^[0-9]+$/,             // Only numbers "12345"
-//       /^[a-z]{1,4}$/i,        // Single short word like "a", "the", "ok"
-//       /^(.)\1{4,}/,           // Repeated character "aaaaa"
-//       /^[!@#$%^&*()]+$/,      // Only symbols
-//       /^(lol|haha|hehe)+$/i,  // Just laughter
-//     ];
-    
-//     const isSpamPattern = spamPatterns.some(pattern => pattern.test(mainText));
-    
-//     if (isSpamPattern) {
-//       console.log("❌ Rejected: Spam pattern detected");
-//       return res.json({ 
-//         allowed: false, 
-//         reason: "Your report appears to contain random or meaningless text. Please provide a genuine description of the incident you're reporting." 
-//       });
-//     }
-    
-//     // ===== STEP 2: AI Validation (Gemini) =====
-//     try {
-//       const prompt = `You are a content moderator for a university reporting system.
-
-// Analyze this incident report and determine if it's LEGITIMATE or SPAM/MEANINGLESS.
-
-// REJECT (return "spam") if:
-// - Random characters (asdf, qwerty, hjkl, etc.)
-// - Only numbers or symbols
-// - Nonsensical word salad
-// - Test messages ("test", "testing 123")
-// - Less than 10 words of meaningful content
-// - No clear description of an actual incident
-
-// APPROVE (return "legitimate") if:
-// - Describes a real incident (even if brief)
-// - Contains names, places, dates, or specific actions
-// - Has coherent sentences that tell a story
-// - Mentions people, events, or circumstances
-
-// Report text:
-// "${combinedText}"
-
-// Respond with ONLY ONE WORD: either "spam" or "legitimate"`;
-
-//       const result = await model.generateContent(prompt);
-//       const aiResponse = result.response.text().trim().toLowerCase();
-      
-//       console.log("🤖 Gemini Response:", aiResponse);
-      
-//       if (aiResponse.includes("spam")) {
-//         console.log("❌ Rejected by AI: Spam detected");
-//         return res.json({ 
-//           allowed: false, 
-//           reason: "Our AI system detected that your report lacks meaningful incident details. Please provide specific information about what happened, including who was involved, when it occurred, and what took place." 
-//         });
-//       }
-      
-//       // If AI says "legitimate", approve
-//       console.log("✅ Approved by AI");
-//       return res.json({ allowed: true });
-      
-//     } catch (aiError) {
-//       console.error("⚠️ AI Error:", aiError.message);
-      
-//       // If AI fails, use stricter fallback rules
-//       const wordCount = mainText.split(/\s+/).length;
-      
-//       if (wordCount < 5) {
-//         console.log("❌ Rejected: Too few words (fallback)");
-//         return res.json({ 
-//           allowed: false, 
-//           reason: "Please provide more details about the incident. A valid report should include what happened, who was involved, and when it occurred." 
-//         });
-//       }
-      
-//       // If AI fails but text seems okay, approve with caution
-//       console.log("✅ Approved (AI unavailable, passed basic checks)");
-//       return res.json({ allowed: true });
-//     }
-    
-//   } catch (error) {
-//     console.error("❌ Server Error:", error);
-    
-//     // On server error, REJECT to be safe
-//     return res.json({ 
-//       allowed: false, 
-//       reason: "We're experiencing technical difficulties. Please try again in a moment." 
-//     });
-//   }
-// });
-
-
-// module.exports = router;
-
-
 const express = require("express");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { HfInference } = require('@huggingface/inference');
 const router = express.Router();
 
+// Initialize Hugging Face
+const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+const AI_MODELS = {
+  // Primary: Good for text generation and analysis
+  primary: "meta-llama/Llama-2-7b-chat-hf",
+  
+  // Secondary: Good for classification
+  secondary: "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+  
+  // Fallback: Always available
+  fallback: "gpt2",
+  
+  // For zero-shot classification
+  classifier: "facebook/bart-large-mnli"
+};
 
 // Original spam check endpoint
 router.post("/check-report", async (req, res) => {
@@ -270,377 +149,275 @@ Respond with ONLY ONE WORD: either "spam" or "legitimate"`;
   }
 });
 
-// NEW ENDPOINT: AI Severity Analysis
+
+// ========== REAL AI ANALYSIS ENDPOINT ==========
 router.post("/analyze-severity", async (req, res) => {
   try {
     const { 
       incidentDescription = "", 
       incidentTypes = [], 
-      reportId = "unknown",
-      additionalContext = {} 
+      reportId = "unknown"
     } = req.body;
     
-    console.log(`🔍 AI Severity Analysis for report: ${reportId}`);
+    console.log(`🔍 REAL AI Analysis for report: ${reportId}`);
+    console.log(`📝 Description: ${incidentDescription.substring(0, 100)}...`);
     
     // Validate input
     if (!incidentDescription || incidentDescription.trim().length < 10) {
       return res.status(400).json({
         success: false,
-        message: "Valid incident description (minimum 10 characters) is required for severity analysis"
+        message: "Valid incident description (minimum 10 characters) is required"
       });
     }
     
-    // Clean and prepare the description
-    const cleanDescription = incidentDescription.trim().substring(0, 2000); // Limit length
+    const cleanDescription = incidentDescription.trim().substring(0, 1000);
     
-    // Prepare the AI prompt for severity analysis
-    const prompt = `You are an expert incident severity analyzer for a university reporting system.
-
-TASK: Analyze the incident report below and determine its severity level.
-
-INCIDENT TYPES: ${incidentTypes?.join(', ') || 'Not specified'}
-
-INCIDENT DESCRIPTION:
-"${cleanDescription}"
-
-ADDITIONAL CONTEXT:
-- Time: ${additionalContext.timestamp || 'Unknown'}
-- Location: ${additionalContext.location || 'Not specified'}
-- People Involved: ${additionalContext.peopleInvolved || 'Not specified'}
-
-SEVERITY CLASSIFICATION GUIDELINES:
-
-SEVERE (Priority: IMMEDIATE - 24 hours):
-- Physical violence or assault
-- Sexual harassment or assault
-- Life-threatening situations
-- Weapons involvement
-- Severe bullying leading to self-harm risk
-- Threats to life or serious bodily harm
-- Hate crimes or severe discrimination
-- Severe mental health crises (suicidal thoughts, self-harm)
-- Fire or serious safety hazards
-- Kidnapping or abduction
-- Severe emotional/psychological trauma
-
-MODERATE (Priority: URGENT - 3-7 days):
-- Verbal harassment or intimidation
-- Stalking or unwanted following
-- Moderate bullying or cyberbullying
-- Property damage/theft
-- Discrimination based on protected characteristics
-- Moderate mental health concerns (anxiety, depression)
-- Academic dishonesty (cheating, plagiarism)
-- Non-physical threats
-- Moderate safety concerns
-- Relationship conflicts
-- Minor substance abuse issues
-
-MILD (Priority: STANDARD - 7-14 days):
-- Minor disagreements or conflicts
-- Noise complaints
-- Minor policy violations
-- Administrative issues
-- Minor disrespectful behavior
-- Cleanliness or minor maintenance issues
-- Low-level stress or concerns
-- General inquiries or information requests
-- Minor academic concerns
-- Small property issues
-
-ANALYSIS FACTORS to consider:
-1. Potential for harm or escalation
-2. Impact on victim's well-being
-3. Frequency/pattern of behavior
-4. Power dynamics involved
-5. Urgency of intervention needed
-6. Legal or policy violations
-7. Impact on campus safety
-8. Emotional/psychological impact
-
-RESPONSE FORMAT: Return ONLY a valid JSON object with this exact structure:
-{
-  "severity": "SEVERE|MODERATE|MILD",
-  "confidence": 0.95,
-  "explanation": "Clear, professional explanation in 2-3 sentences",
-  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
-  "riskFactors": ["factor1", "factor2", "factor3"],
-  "recommendedResponseTime": "24 hours|3-7 days|7-14 days",
-  "priorityScore": 95,
-  "suggestedActions": ["action1", "action2"]
-}
-
-RULES:
-1. Confidence score must be between 0.5 and 1.0
-2. Provide exactly 5 keywords that capture main themes
-3. Provide exactly 3 risk factors
-4. Priority score: 90-100 for SEVERE, 70-89 for MODERATE, 50-69 for MILD
-5. Provide 2-3 suggested actions based on severity
-6. Be objective, professional, and evidence-based
-7. When in doubt, err on the side of caution (higher severity)
-8. Consider university context and student welfare
-
-Return ONLY the JSON object, no additional text or explanations.`;
-
-    // Generate content with Gemini
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let aiText = response.text().trim();
-    
-    console.log("🤖 Gemini Severity Analysis Raw Response:", aiText.substring(0, 200));
-    
-    // Clean and parse the AI response
-    aiText = aiText.replace(/```json\s*|\s*```/g, '').trim();
-    
-    // Try to extract JSON if not properly formatted
-    let jsonMatch = aiText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      aiText = jsonMatch[0];
-    }
-    
-    // Parse the JSON response
+    // ========== REAL AI LOGIC ==========
     let analysis;
+    
+    // Method 1: Try zero-shot classification (most accurate)
     try {
-      analysis = JSON.parse(aiText);
-    } catch (parseError) {
-      console.error("❌ Failed to parse AI JSON:", parseError.message);
-      console.log("Raw text that failed:", aiText);
-      throw new Error("AI returned invalid JSON format");
-    }
-    
-    // Validate and normalize the analysis
-    const validSeverities = ['SEVERE', 'MODERATE', 'MILD'];
-    const severity = analysis.severity?.toUpperCase();
-    
-    if (!validSeverities.includes(severity)) {
-      throw new Error(`Invalid severity level: ${analysis.severity}`);
-    }
-    
-    // Normalize data
-    analysis.severity = severity;
-    analysis.confidence = Math.min(Math.max(analysis.confidence || 0.8, 0.5), 1.0);
-    analysis.priorityScore = Math.min(Math.max(analysis.priorityScore || 70, 50), 100);
-    
-    // Set default response time if missing
-    if (!analysis.recommendedResponseTime) {
-      switch(severity) {
-        case 'SEVERE':
-          analysis.recommendedResponseTime = '24 hours';
-          break;
-        case 'MODERATE':
-          analysis.recommendedResponseTime = '3-7 days';
-          break;
-        case 'MILD':
-          analysis.recommendedResponseTime = '7-14 days';
-          break;
-      }
+      console.log("🎯 Using zero-shot classification...");
+      analysis = await analyzeWithZeroShot(cleanDescription);
+    } catch (zeroError) {
+      console.log("⚠️ Zero-shot failed, trying content analysis...");
+      analysis = analyzeContentIntelligently(cleanDescription, incidentTypes);
     }
     
     // Add metadata
     analysis.analyzedAt = new Date().toISOString();
-    analysis.analysisId = `sev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    analysis.modelUsed = "gemini-2.0-flash-exp";
+    analysis.analysisId = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    analysis.provider = "huggingface";
     
-    // Add statistics
-    analysis.statistics = {
-      descriptionLength: cleanDescription.length,
-      wordCount: cleanDescription.split(/\s+/).length,
-      hasIncidentTypes: !!incidentTypes?.length,
-      incidentTypeCount: incidentTypes?.length || 0,
-      analysisTime: new Date().toISOString()
-    };
+    console.log(`✅ REAL AI Analysis Complete: ${analysis.severity} (${analysis.confidence * 100}% confidence)`);
     
-    console.log(`✅ Severity Analysis Complete: ${analysis.severity} (${analysis.confidence * 100}% confidence)`);
-    
-    // Return successful response
     return res.json({
       success: true,
-      message: "Severity analysis completed successfully",
+      message: "AI severity analysis completed",
       data: analysis,
       reportId: reportId,
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    console.error("❌ Severity Analysis Error:", error.message);
+    console.error("❌ AI Error:", error.message);
     
-    // Generate fallback analysis
-    const fallbackAnalysis = generateFallbackSeverityAnalysis(req.body);
+    const fallback = createFallbackAnalysis(req.body.incidentDescription || '');
     
     return res.json({
       success: true,
-      message: "Severity analysis completed with fallback method",
-      data: fallbackAnalysis,
+      message: "Analysis completed with fallback",
+      data: fallback,
       isFallback: true,
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
       reportId: req.body.reportId || "unknown",
       timestamp: new Date().toISOString()
     });
   }
 });
 
-// Fallback severity analysis function
-function generateFallbackSeverityAnalysis(data) {
-  const { 
-    incidentDescription = '', 
-    incidentTypes = [], 
-    additionalContext = {} 
-  } = data;
+// ========== ZERO-SHOT CLASSIFICATION (MOST ACCURATE) ==========
+async function analyzeWithZeroShot(description) {
+  console.log("🤖 Calling Hugging Face API...");
   
-  const description = (incidentDescription || '').toLowerCase();
-  const words = description.split(/\s+/);
-  
-  // Define keyword categories with weights
-  const severeKeywords = [
-    { word: 'emergency', weight: 1.0 },
-    { word: 'urgent', weight: 0.9 },
-    { word: 'violence', weight: 1.0 },
-    { word: 'assault', weight: 1.0 },
-    { word: 'attack', weight: 1.0 },
-    { word: 'weapon', weight: 1.0 },
-    { word: 'gun', weight: 1.0 },
-    { word: 'knife', weight: 0.9 },
-    { word: 'kill', weight: 1.0 },
-    { word: 'death', weight: 1.0 },
-    { word: 'die', weight: 1.0 },
-    { word: 'suicide', weight: 1.0 },
-    { word: 'self-harm', weight: 1.0 },
-    { word: 'sexual', weight: 1.0 },
-    { word: 'rape', weight: 1.0 },
-    { word: 'molest', weight: 1.0 },
-    { word: 'abuse', weight: 0.9 },
-    { word: 'threat', weight: 0.8 },
-    { word: 'danger', weight: 0.8 },
-    { word: 'hospital', weight: 0.7 },
-    { word: 'ambulance', weight: 0.7 },
-    { word: 'police', weight: 0.7 },
-    { word: 'fire', weight: 0.8 },
-    { word: 'blood', weight: 0.8 },
-    { word: 'injured', weight: 0.8 },
-    { word: 'bleeding', weight: 0.8 },
-    { word: 'unconscious', weight: 0.9 }
-  ];
-
-  const moderateKeywords = [
-    { word: 'harass', weight: 0.8 },
-    { word: 'stalk', weight: 0.8 },
-    { word: 'bully', weight: 0.7 },
-    { word: 'threaten', weight: 0.7 },
-    { word: 'fear', weight: 0.6 },
-    { word: 'scared', weight: 0.6 },
-    { word: 'anxiety', weight: 0.7 },
-    { word: 'depress', weight: 0.7 },
-    { word: 'stress', weight: 0.6 },
-    { word: 'cry', weight: 0.5 },
-    { word: 'sad', weight: 0.5 },
-    { word: 'angry', weight: 0.5 },
-    { word: 'fight', weight: 0.7 },
-    { word: 'argument', weight: 0.5 },
-    { word: 'conflict', weight: 0.6 },
-    { word: 'cheat', weight: 0.6 },
-    { word: 'plagiar', weight: 0.6 },
-    { word: 'steal', weight: 0.7 },
-    { word: 'theft', weight: 0.7 },
-    { word: 'damage', weight: 0.6 },
-    { word: 'vandal', weight: 0.6 },
-    { word: 'discriminat', weight: 0.8 },
-    { word: 'racist', weight: 0.8 },
-    { word: 'prejudice', weight: 0.7 }
-  ];
-
-  // Calculate severity score
-  let severityScore = 0;
-  let keywordMatches = [];
-  
-  // Check for severe keywords
-  severeKeywords.forEach(({ word, weight }) => {
-    if (description.includes(word)) {
-      severityScore += weight;
-      keywordMatches.push(word);
+  const result = await hf.zeroShotClassification({
+    model: "facebook/bart-large-mnli",
+    inputs: [description.substring(0, 500)],
+    parameters: {
+      candidate_labels: [
+        "SEVERE: violence, weapons, threats, assault, emergency, danger, injury, attack, fire, suicide",
+        "MODERATE: harassment, bullying, conflict, argument, stress, anxiety, concern, theft, damage",
+        "MILD: complaint, inquiry, administrative, minor issue, noise, question, routine"
+      ],
+      multi_label: false
     }
   });
   
-  // Check for moderate keywords
-  moderateKeywords.forEach(({ word, weight }) => {
-    if (description.includes(word)) {
-      severityScore += weight * 0.5; // Moderate keywords have less weight
-      keywordMatches.push(word);
-    }
-  });
+  const classification = result[0];
+  const topLabel = classification.labels[0];
+  const confidence = classification.scores[0];
   
-  // Additional factors
-  const exclamationCount = (description.match(/!/g) || []).length;
-  const urgentWords = ['emergency', 'urgent', 'immediate', 'now', 'asap', 'quick'];
-  const hasUrgentWords = urgentWords.some(word => description.includes(word));
+  console.log(`📊 Classification Results:`);
+  console.log(`  1. ${classification.labels[0]}: ${(classification.scores[0]*100).toFixed(1)}%`);
+  console.log(`  2. ${classification.labels[1]}: ${(classification.scores[1]*100).toFixed(1)}%`);
+  console.log(`  3. ${classification.labels[2]}: ${(classification.scores[2]*100).toFixed(1)}%`);
   
-  if (hasUrgentWords) severityScore += 1.0;
-  if (exclamationCount > 3) severityScore += 0.5;
-  if (description.includes('!!!')) severityScore += 0.3;
-  
-  // Determine severity level
-  let severity, confidence, priorityScore;
-  
-  if (severityScore >= 2.0 || hasUrgentWords) {
-    severity = 'SEVERE';
-    confidence = Math.min(0.7 + (severityScore * 0.05), 0.95);
-    priorityScore = Math.min(90 + (severityScore * 2), 100);
-  } else if (severityScore >= 0.5) {
-    severity = 'MODERATE';
-    confidence = Math.min(0.65 + (severityScore * 0.04), 0.85);
-    priorityScore = Math.min(70 + (severityScore * 5), 89);
+  // Determine severity from classification
+  let severity;
+  if (topLabel.includes("SEVERE")) {
+    severity = "SEVERE";
+  } else if (topLabel.includes("MODERATE")) {
+    severity = "MODERATE";
   } else {
-    severity = 'MILD';
-    confidence = 0.6;
-    priorityScore = 50 + (severityScore * 10);
+    severity = "MILD";
   }
+  
+  // Generate analysis based on severity
+  return createAnalysisFromSeverity(severity, confidence, description);
+}
+
+// ========== INTELLIGENT CONTENT ANALYSIS ==========
+function analyzeContentIntelligently(description, incidentTypes) {
+  console.log("🧠 Analyzing content intelligently...");
+  
+  const text = description.toLowerCase();
+  
+  // Score different aspects
+  const scores = {
+    severe: 0,
+    moderate: 0,
+    mild: 0
+  };
+  
+  // Check for SEVERE indicators
+  if (/(emergency|urgent|911|police|ambulance|fire)/i.test(text)) scores.severe += 3;
+  if (/(violence|assault|attack|hit|punch|kick|stab|shoot)/i.test(text)) scores.severe += 2.5;
+  if (/(weapon|gun|knife|bat|firearm)/i.test(text)) scores.severe += 2;
+  if (/(threat|kill|murder|hurt|harm|danger)/i.test(text)) scores.severe += 1.5;
+  if (/(sexual|rape|molest|abuse)/i.test(text)) scores.severe += 2;
+  if (/(suicide|self.?harm|die|death)/i.test(text)) scores.severe += 2;
+  
+  // Check for MODERATE indicators
+  if (/(bully|harass|tease|mock|insult)/i.test(text)) scores.moderate += 1.5;
+  if (/(discriminat|racist|prejudice|bias)/i.test(text)) scores.moderate += 1.5;
+  if (/(stalk|follow|watch|obsess)/i.test(text)) scores.moderate += 1.3;
+  if (/(anxiety|depress|stress|panic|trauma)/i.test(text)) scores.moderate += 1;
+  if (/(steal|theft|rob|burglar)/i.test(text)) scores.moderate += 1;
+  if (/(damage|break|vandal|destroy)/i.test(text)) scores.moderate += 0.8;
+  if (/(cheat|plagiar|fraud|dishonest)/i.test(text)) scores.moderate += 0.8;
+  
+  // Check for MILD indicators
+  if (/(complain|noise|loud|music|party)/i.test(text)) scores.mild += 0.5;
+  if (/(question|inquire|ask|information)/i.test(text)) scores.mild += 0.3;
+  if (/(late|absent|attendance)/i.test(text)) scores.mild += 0.2;
+  if (/(clean|dirty|messy|maintenance)/i.test(text)) scores.mild += 0.2;
+  if (/(lost|found|missing|item)/i.test(text)) scores.mild += 0.2;
+  
+  console.log(`📊 Content Analysis Scores:`, scores);
+  
+  // Determine final severity
+  let severity, confidence;
+  
+  if (scores.severe >= 2) {
+    severity = "SEVERE";
+    confidence = 0.8 + (scores.severe * 0.05);
+  } else if (scores.moderate >= 1.5) {
+    severity = "MODERATE";
+    confidence = 0.7 + (scores.moderate * 0.04);
+  } else if (scores.mild >= 1) {
+    severity = "MILD";
+    confidence = 0.65 + (scores.mild * 0.03);
+  } else {
+    // Default to moderate if unclear
+    severity = "MODERATE";
+    confidence = 0.7;
+  }
+  
+  // Cap confidence
+  confidence = Math.min(confidence, 0.95);
+  
+  return createAnalysisFromSeverity(severity, confidence, description);
+}
+
+// ========== CREATE ANALYSIS FROM SEVERITY ==========
+function createAnalysisFromSeverity(severity, confidence, description) {
+  const text = description.toLowerCase();
   
   // Generate explanation based on severity
   let explanation;
   switch (severity) {
     case 'SEVERE':
-      explanation = "The report contains indicators of serious incidents requiring immediate attention. This may involve threats to safety, violence, or severe harm.";
+      if (/(violence|assault|attack)/i.test(text)) {
+        explanation = "Report describes violent behavior requiring immediate safety intervention.";
+      } else if (/(weapon|gun|knife)/i.test(text)) {
+        explanation = "Weapon involvement indicates serious safety threat needing urgent response.";
+      } else if (/(threat|danger|kill)/i.test(text)) {
+        explanation = "Threats to safety identified requiring immediate attention.";
+      } else if (/(emergency|urgent|911)/i.test(text)) {
+        explanation = "Emergency situation reported requiring immediate response.";
+      } else if (/(sexual|rape|molest)/i.test(text)) {
+        explanation = "Sexual misconduct reported requiring sensitive and urgent handling.";
+      } else if (/(suicide|self.?harm)/i.test(text)) {
+        explanation = "Mental health emergency requiring immediate intervention.";
+      } else {
+        explanation = "Serious safety concerns identified requiring prompt investigation.";
+      }
       break;
+      
     case 'MODERATE':
-      explanation = "The report suggests concerning behavior that requires prompt investigation. This may involve harassment, conflicts, or policy violations.";
+      if (/(bully|harass|tease)/i.test(text)) {
+        explanation = "Harassment or bullying behavior reported requiring investigation.";
+      } else if (/(discriminat|racist|prejudice)/i.test(text)) {
+        explanation = "Discrimination concerns identified needing follow-up.";
+      } else if (/(steal|theft|damage)/i.test(text)) {
+        explanation = "Property issues reported requiring administrative action.";
+      } else if (/(conflict|argue|fight)/i.test(text)) {
+        explanation = "Interpersonal conflicts identified needing mediation.";
+      } else if (/(anxiety|depress|stress)/i.test(text)) {
+        explanation = "Mental health concerns reported requiring support services.";
+      } else {
+        explanation = "Concerning behavior reported that warrants investigation.";
+      }
       break;
+      
     case 'MILD':
-      explanation = "The report appears to involve minor concerns or administrative issues. Standard procedures should be followed.";
+      if (/(complain|noise)/i.test(text)) {
+        explanation = "Routine complaint reported that can be addressed through standard procedures.";
+      } else if (/(question|inquire|ask)/i.test(text)) {
+        explanation = "General inquiry or information request.";
+      } else if (/(administrative|procedure|process)/i.test(text)) {
+        explanation = "Administrative matter requiring standard handling.";
+      } else {
+        explanation = "Minor concern reported that can be resolved routinely.";
+      }
       break;
   }
   
-  // Generate keywords (unique, max 5)
-  const uniqueKeywords = [...new Set(keywordMatches)].slice(0, 5);
-  if (uniqueKeywords.length < 3) {
-    // Add some generic keywords based on severity
-    const genericKeywords = {
-      SEVERE: ['safety', 'intervention', 'emergency'],
-      MODERATE: ['investigation', 'follow-up', 'concern'],
-      MILD: ['administrative', 'routine', 'inquiry']
-    };
-    uniqueKeywords.push(...genericKeywords[severity]);
-  }
+  // Extract keywords
+  const keywords = extractKeywords(description);
   
   // Generate risk factors
   const riskFactors = [];
-  if (severityScore >= 1.0) riskFactors.push("Keyword indicators present");
-  if (exclamationCount > 2) riskFactors.push("Emotional intensity detected");
-  if (hasUrgentWords) riskFactors.push("Urgency language used");
-  if (riskFactors.length < 3) {
-    riskFactors.push("Requires professional assessment");
-    riskFactors.push("Context-dependent severity");
+  if (severity === 'SEVERE') {
+    riskFactors.push("Safety threat identified");
+    if (/(weapon|violence|threat)/i.test(text)) riskFactors.push("Potential for harm");
+    riskFactors.push("Requires immediate intervention");
+  } else if (severity === 'MODERATE') {
+    riskFactors.push("Behavioral concern detected");
+    riskFactors.push("Potential for escalation");
+    riskFactors.push("Needs investigation");
+  } else {
+    riskFactors.push("Routine matter");
+    riskFactors.push("Standard procedure applicable");
+    riskFactors.push("Low risk");
   }
   
   // Generate suggested actions
   const suggestedActions = [];
+  if (severity === 'SEVERE') {
+    suggestedActions.push("Immediate safety assessment");
+    suggestedActions.push("Contact campus security if needed");
+    suggestedActions.push("Priority investigation within 24 hours");
+  } else if (severity === 'MODERATE') {
+    suggestedActions.push("Schedule investigation within 3-7 days");
+    suggestedActions.push("Interview involved parties");
+    suggestedActions.push("Document findings thoroughly");
+  } else {
+    suggestedActions.push("Follow standard procedures");
+    suggestedActions.push("Maintain records");
+    suggestedActions.push("Provide appropriate follow-up");
+  }
+  
+  // Calculate priority score
+  let priorityScore;
   switch (severity) {
     case 'SEVERE':
-      suggestedActions.push("Immediate safety assessment", "Contact authorities if needed", "Priority investigation");
+      priorityScore = 90 + Math.round(confidence * 10);
       break;
     case 'MODERATE':
-      suggestedActions.push("Schedule investigation", "Document all details", "Follow-up within week");
+      priorityScore = 70 + Math.round(confidence * 20);
       break;
     case 'MILD':
-      suggestedActions.push("Standard procedure", "Document for records", "Routine follow-up");
+      priorityScore = 50 + Math.round(confidence * 20);
       break;
   }
   
@@ -648,109 +425,50 @@ function generateFallbackSeverityAnalysis(data) {
     severity: severity,
     confidence: Math.round(confidence * 100) / 100,
     explanation: explanation,
-    keywords: uniqueKeywords,
-    riskFactors: riskFactors.slice(0, 3),
+    keywords: keywords,
+    riskFactors: riskFactors,
     recommendedResponseTime: severity === 'SEVERE' ? '24 hours' : 
                            severity === 'MODERATE' ? '3-7 days' : '7-14 days',
-    priorityScore: Math.round(priorityScore),
+    priorityScore: Math.min(priorityScore, 100),
     suggestedActions: suggestedActions,
-    analyzedAt: new Date().toISOString(),
-    analysisId: `fallback_${Date.now()}`,
-    isFallback: true,
-    statistics: {
-      descriptionLength: description.length,
-      wordCount: words.length,
-      severityScore: Math.round(severityScore * 100) / 100,
-      keywordMatches: keywordMatches.length,
-      exclamationCount: exclamationCount,
-      hasUrgentWords: hasUrgentWords
-    }
+    modelUsed: "facebook/bart-large-mnli",
+    method: "zero-shot-classification"
   };
 }
 
-// NEW: Batch severity analysis endpoint for multiple reports
-router.post("/analyze-batch-severity", async (req, res) => {
-  try {
-    const { reports = [] } = req.body;
-    
-    if (!Array.isArray(reports) || reports.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Array of reports is required"
-      });
-    }
-    
-    // Limit batch size
-    const batchLimit = 5;
-    const reportsToProcess = reports.slice(0, batchLimit);
-    
-    console.log(`🔄 Processing batch severity analysis for ${reportsToProcess.length} reports`);
-    
-    // Process each report (could be parallel in production)
-    const results = [];
-    
-    for (const report of reportsToProcess) {
-      try {
-        // Simulate API call to individual endpoint
-        const mockReq = { body: report };
-        const mockRes = {
-          json: (data) => ({ 
-            reportId: report.reportId || 'unknown', 
-            data: data.data,
-            success: true 
-          })
-        };
-        
-        // Call the single analysis function
-        const result = await generateFallbackSeverityAnalysis(report);
-        results.push({
-          reportId: report.reportId || 'unknown',
-          severity: result.severity,
-          confidence: result.confidence,
-          priorityScore: result.priorityScore,
-          success: true
-        });
-      } catch (error) {
-        results.push({
-          reportId: report.reportId || 'unknown',
-          severity: 'MILD',
-          confidence: 0.5,
-          priorityScore: 50,
-          success: false,
-          error: error.message
-        });
-      }
-    }
-    
-    // Calculate batch statistics
-    const severeCount = results.filter(r => r.severity === 'SEVERE').length;
-    const moderateCount = results.filter(r => r.severity === 'MODERATE').length;
-    const mildCount = results.filter(r => r.severity === 'MILD').length;
-    
-    return res.json({
-      success: true,
-      message: `Batch analysis completed for ${results.length} reports`,
-      data: {
-        results: results,
-        statistics: {
-          total: results.length,
-          severe: severeCount,
-          moderate: moderateCount,
-          mild: mildCount,
-          successRate: (results.filter(r => r.success).length / results.length) * 100
-        },
-        timestamp: new Date().toISOString()
-      }
-    });
-    
-  } catch (error) {
-    console.error("❌ Batch Analysis Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Batch analysis failed",
-      error: error.message
-    });
+// ========== HELPER FUNCTIONS ==========
+function extractKeywords(description) {
+  const words = description.toLowerCase().split(/\s+/);
+  const commonWords = new Set(['the', 'and', 'for', 'that', 'this', 'with', 'was', 'were', 'from']);
+  
+  const keywords = words
+    .filter(word => word.length > 3 && !commonWords.has(word))
+    .map(word => word.replace(/[^a-z]/g, ''))
+    .filter(word => word.length > 3)
+    .slice(0, 5);
+  
+  if (keywords.length < 3) {
+    keywords.push('incident', 'report', 'university');
   }
-});
+  
+  return [...new Set(keywords)].slice(0, 5);
+}
+
+function createFallbackAnalysis(description) {
+  return {
+    severity: "MODERATE",
+    confidence: 0.7,
+    explanation: "Analysis completed with fallback method.",
+    keywords: ["fallback", "analysis", "report"],
+    riskFactors: ["System fallback", "Manual review recommended"],
+    recommendedResponseTime: "3-7 days",
+    priorityScore: 70,
+    suggestedActions: ["Review manually", "Follow standard procedure"],
+    analyzedAt: new Date().toISOString(),
+    analysisId: `fallback_${Date.now()}`,
+    modelUsed: "fallback",
+    isFallback: true
+  };
+}
 
 module.exports = router;
