@@ -14,14 +14,14 @@ import {
   Lightbulb,
   Newspaper,
   FileSpreadsheet,
-  FileSignature,
   Briefcase,
   DollarSign,
   Award,
   ChevronDown,
   ChevronRight,
   Video,
-  File
+  Menu,
+  X
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "../store/authSlice";
@@ -30,12 +30,12 @@ const SuperAdminSidebar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({
     knowledgeHub: false,
-    // Add other expandable menus here if needed
   });
 
- const isKnowledgeHubActive = [
+  const isKnowledgeHubActive = [
     "/superadmin/datasets",
     "/superadmin/infographics",
     "/superadmin/gallery",
@@ -58,15 +58,30 @@ const SuperAdminSidebar = () => {
     }));
   };
 
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+    if (!isCollapsed) {
+      setExpandedMenus({ knowledgeHub: false });
+    }
+  };
+
   return (
-    <div className="flex flex-col bg-gray-900 text-white w-64 h-screen">
+    <div className={`flex flex-col bg-gray-900 text-white h-screen transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
       {/* Header */}
-      <div
-        className="p-6 border-b border-gray-700 cursor-pointer"
-        onClick={() => navigate("/superadmin/dashboard")}
-      >
-        <h1 className="text-xl font-bold text-white">SuperAdmin Panel</h1>
-        <p className="text-xs text-gray-400 mt-1">Management Dashboard</p>
+      <div className={`p-6 border-b border-gray-700 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        {!isCollapsed && (
+          <div className="cursor-pointer" onClick={() => navigate("/superadmin/dashboard")}>
+            <h1 className="text-xl font-bold text-white">Admin Panel</h1>
+            <p className="text-xs text-gray-400 mt-1">Management Dashboard</p>
+          </div>
+        )}
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded-lg hover:bg-gray-800 hover:text-white transition-colors text-black"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? <Menu size={20} /> : <X size={20} />}
+        </button>
       </div>
 
       {/* Scrollable Menu */}
@@ -85,90 +100,101 @@ const SuperAdminSidebar = () => {
 
         <nav>
           {/* MAIN */}
-          <SidebarSection title="Main">
-            <SidebarItem icon={<User size={18} />} label="My Profile" to="/superadmin/profile" />
-            <SidebarItem icon={<Users size={18} />} label="User Management" to="/superadmin/users" />
+          <SidebarSection title="Main" isCollapsed={isCollapsed}>
+            <SidebarItem icon={<User size={18} />} label="My Profile" to="/superadmin/profile" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<Users size={18} />} label="User Management" to="/superadmin/users" isCollapsed={isCollapsed} />
           </SidebarSection>
 
           {/* REPORT HANDLING */}
-          <SidebarSection title="Report Handling">
-            <SidebarItem icon={<FileText size={18} />} label="Report Management" to="/superadmin/reports" />
-            <SidebarItem icon={<Repeat size={18} />} label="Referral & Assignment" to="/superadmin/referral" />
-            <SidebarItem icon={<MessageSquare size={18} />} label="Messaging System" to="/superadmin/messages" />
+          <SidebarSection title="Report Handling" isCollapsed={isCollapsed}>
+            <SidebarItem icon={<FileText size={18} />} label="Report Management" to="/superadmin/reports" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<Repeat size={18} />} label="Referral & Assignment" to="/superadmin/referral" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<MessageSquare size={18} />} label="Messaging System" to="/superadmin/messages" isCollapsed={isCollapsed} />
           </SidebarSection>
 
           {/* CONTENT MANAGEMENT */}
-          <SidebarSection title="Content Management">
-            <SidebarItem icon={<Image size={18} />} label="Carousel" to="/superadmin/carousel" />
+          <SidebarSection title="Content Management" isCollapsed={isCollapsed}>
+            <SidebarItem icon={<Image size={18} />} label="Highlights" to="/superadmin/carousel" isCollapsed={isCollapsed} />
 
             {/* KNOWLEDGE HUB WITH SUBMENU */}
-            <div className="mb-1">
-              <button
-                onClick={() => toggleMenu('knowledgeHub')}
-                className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-                  ${isKnowledgeHubActive 
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50" 
-                    : "bg-[#111827] text-gray-300 hover:bg-gray-800 hover:text-white" // <-- changed here
-                  }`}
-              >
-                <div className="flex items-center gap-3">
-                  <BookOpen size={18} />
-                  <span>Knowledge Hub</span>
-                </div>
-                {expandedMenus.knowledgeHub ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </button>
+            {!isCollapsed ? (
+              <div className="mb-1">
+                <button
+                  onClick={() => toggleMenu('knowledgeHub')}
+                  className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+                    ${isKnowledgeHubActive 
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50" 
+                      : "bg-[#111827] text-gray-300 hover:bg-gray-800 hover:text-white"
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <BookOpen size={18} />
+                    <span>Knowledge Hub</span>
+                  </div>
+                  {expandedMenus.knowledgeHub ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </button>
 
-              {/* Submenu Items */}
-              {expandedMenus.knowledgeHub && (
-                <div className="ml-7 mt-1 space-y-1 border-l border-gray-700 pl-3">
-                  <SidebarItem
-                    icon={<BarChart3 size={16} />} // Sex-Disaggregated Data icon
-                    label="Sex-Disaggregated Data"
-                    to="/superadmin/datasets"
-                    indent={true}
-                  />
-                  <SidebarItem
-                    icon={<Image size={16} />} // Infographics icon (changed from Video)
-                    label="Infographics & Posters"
-                    to="/superadmin/infographics"
-                    indent={true}
-                  />
-                  <SidebarItem
-                    icon={<Image size={16} />} // Gallery icon
-                    label="Gallery"
-                    to="/superadmin/gallery"
-                    indent={true}
-                  />
-                  <SidebarItem
-                    icon={<Video size={16} />} // Videos icon (stays as Video)
-                    label="Videos"
-                    to="/superadmin/knowledge"
-                    indent={true}
-                  />
-                  <SidebarItem
-                    icon={<BookOpen size={16} />} // Research icon
-                    label="Research"
-                    to="/superadmin/research"
-                    indent={true}
-                  />
-                </div>
-              )}
-            </div>
+                {expandedMenus.knowledgeHub && (
+                  <div className="ml-7 mt-1 space-y-1 border-l border-gray-700 pl-3">
+                    <SidebarItem
+                      icon={<BarChart3 size={16} />}
+                      label="Sex-Disaggregated Data"
+                      to="/superadmin/datasets"
+                      indent={true}
+                      isCollapsed={isCollapsed}
+                    />
+                    <SidebarItem
+                      icon={<Image size={16} />}
+                      label="Infographics & Posters"
+                      to="/superadmin/infographics"
+                      indent={true}
+                      isCollapsed={isCollapsed}
+                    />
+                    <SidebarItem
+                      icon={<Image size={16} />}
+                      label="Gallery"
+                      to="/superadmin/gallery"
+                      indent={true}
+                      isCollapsed={isCollapsed}
+                    />
+                    <SidebarItem
+                      icon={<Video size={16} />}
+                      label="Videos"
+                      to="/superadmin/knowledge"
+                      indent={true}
+                      isCollapsed={isCollapsed}
+                    />
+                    <SidebarItem
+                      icon={<BookOpen size={16} />}
+                      label="Research"
+                      to="/superadmin/research"
+                      indent={true}
+                      isCollapsed={isCollapsed}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <SidebarItem 
+                icon={<BookOpen size={18} />} 
+                label="Knowledge Hub" 
+                to="/superadmin/datasets" 
+                isCollapsed={isCollapsed}
+              />
+            )}
 
-            <SidebarItem icon={<Newspaper size={18} />} label="News & Announcements" to="/superadmin/news" />
-            <SidebarItem icon={<Briefcase size={18} />} label="Projects" to="/superadmin/projects" />
-            <SidebarItem icon={<DollarSign size={18} />} label="Budget & Programs" to="/superadmin/budget" />
-            <SidebarItem icon={<Award size={18} />} label="Accomplishments" to="/superadmin/accomplishments" />
-            <SidebarItem icon={<FileText size={18} />} label="Policies & Issuances" to="/superadmin/policies" />
-            <SidebarItem icon={<FileSpreadsheet size={18} />} label="Organizational Chart" to="/superadmin/organizational" />
-            <SidebarItem icon={<Image size={18} />} label="Highlights" to="/superadmin/highlights" />
+            <SidebarItem icon={<Newspaper size={18} />} label="News & Announcements" to="/superadmin/news" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<Briefcase size={18} />} label="Projects" to="/superadmin/projects" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<DollarSign size={18} />} label="Budget & Programs" to="/superadmin/budget" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<Award size={18} />} label="Accomplishments" to="/superadmin/accomplishments" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<FileText size={18} />} label="Policies & Issuances" to="/superadmin/policies" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<FileSpreadsheet size={18} />} label="Organizational Chart" to="/superadmin/organizational" isCollapsed={isCollapsed} />
           </SidebarSection>
 
           {/* ADMIN TOOLS */}
-          <SidebarSection title="Admin Tools">
-            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
-            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
-            {/* <SidebarItem icon={<FileSignature size={18} />} label="Templates" to="/superadmin/templates" /> */}
+          <SidebarSection title="Admin Tools" isCollapsed={isCollapsed}>
+            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" isCollapsed={isCollapsed} />
           </SidebarSection>
         </nav>
       </div>
@@ -177,18 +203,18 @@ const SuperAdminSidebar = () => {
       <div className="border-t border-gray-700 p-4">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+          className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-white rounded-lg hover:bg-red-600 transition-colors duration-200 ${isCollapsed ? 'justify-center' : ''}`}
+          title={isCollapsed ? "Logout" : ""}
         >
           <LogOut size={18} />
-          <span>Logout</span>
+          {!isCollapsed && <span>Logout</span>}
         </button>
       </div>
     </div>
   );
 };
 
-// Updated SidebarItem to support indentation
-const SidebarItem = ({ icon, label, to, indent = false }) => (
+const SidebarItem = ({ icon, label, to, indent = false, isCollapsed = false }) => (
   <li>
     <NavLink
       to={to}
@@ -196,20 +222,23 @@ const SidebarItem = ({ icon, label, to, indent = false }) => (
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
           ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
           : "text-gray-300 hover:bg-gray-800 hover:text-white"
-        } ${indent ? 'ml-2' : ''}`
+        } ${indent ? 'ml-2' : ''} ${isCollapsed ? 'justify-center' : ''}`
       }
+      title={isCollapsed ? label : ""}
     >
       {icon}
-      <span>{label}</span>
+      {!isCollapsed && <span>{label}</span>}
     </NavLink>
   </li>
 );
 
-const SidebarSection = ({ title, children }) => (
+const SidebarSection = ({ title, children, isCollapsed = false }) => (
   <div className="mb-6">
-    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-3">
-      {title}
-    </h2>
+    {!isCollapsed && (
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-3">
+        {title}
+      </h2>
+    )}
     <ul className="space-y-1">{children}</ul>
   </div>
 );

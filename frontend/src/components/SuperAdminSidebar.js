@@ -95,7 +95,7 @@ function CustomDrawerContent(props) {
         style={styles.header}
         onPress={() => props.navigation.navigate("Dashboard")}
       >
-        <Text style={styles.headerTitle}>SuperAdmin Panel</Text>
+        <Text style={styles.headerTitle}>Admin Panel</Text>
         <Text style={styles.headerSubtitle}>Management Dashboard</Text>
       </TouchableOpacity>
 

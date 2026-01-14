@@ -36,7 +36,7 @@ export default function CarouselManagement() {
       setImages(data);
       setSelectedImages(new Set());
     } catch (err) {
-      setError("Failed to load carousel images");
+      setError("Failed to load Hightlights images");
     } finally {
       setLoading(false);
     }
@@ -197,7 +197,7 @@ export default function CarouselManagement() {
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-xl">Loading carousel images...</p>
+          <p className="text-gray-600 text-xl">Loading Hightlights images...</p>
         </div>
       </div>
     );
@@ -208,12 +208,12 @@ export default function CarouselManagement() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Carousel Management
+            Highlights Management
           </h1>
           <p className="text-gray-600 mt-1">
             {viewArchived
-              ? "View and restore archived carousel images"
-              : "Upload and manage active carousel images"}
+              ? "View and restore archived Hightlights images"
+              : "Upload and manage active hightlights images"}
           </p>
         </div>
         <button

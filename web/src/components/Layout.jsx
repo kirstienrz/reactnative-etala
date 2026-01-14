@@ -2,7 +2,6 @@ import React from "react";
 import { useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
-import AdminSidebar from "../components/AdminSidebar";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
@@ -15,9 +14,6 @@ const Layout = ({ children }) => {
 
   const isSuperAdmin = effectiveRole === "superadmin";
   const isSuperAdminRoute = location.pathname.startsWith("/superadmin");
-
-  const isAdminRoute = location.pathname.startsWith("/admin");
-  const isAdmin = ["osa", "hr", "depthead"].includes(effectiveDepartment);
 
   // Check if current route is user chat details
   const isUserChatRoute = location.pathname === "/user/chat";
@@ -34,20 +30,6 @@ const Layout = ({ children }) => {
     );
   }
 
-  // ================= ADMIN LAYOUT =================
-  if (isAdminRoute && isAdmin) {
-    return (
-      <div className="flex h-screen w-screen overflow-hidden">
-        <AdminSidebar
-          role={effectiveDepartment}
-          userName={user?.name}
-        />
-        <main className="flex-1 p-6 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    );
-  }
 
   // ================= USER CHAT LAYOUT (FULL SCREEN) =================
   if (isUserChatRoute) {

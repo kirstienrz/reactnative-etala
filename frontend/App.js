@@ -61,10 +61,6 @@ import SettingsScreen from "./src/screens/account/settings";
 import SuperadminDashboard from "./src/screens/superadmin/dashboard";
 import SuperAdminSidebar from "./src/components/SuperAdminSidebar";
 
-import DeptHeadDashboard from "./src/screens/admin/depthead/dashboard";
-import HRDashboard from "./src/screens/admin/hr/dashboard";
-import OSADashboard from "./src/screens/admin/osa/dashboard";
-
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -120,7 +116,7 @@ export default function App() {
               <Stack.Screen name="PlanBudgetPage" component={PlanBudgetPage} options={{ title: "Plan and Budget" }} />
               <Stack.Screen name="AccomplishmentPage">
                 {(props) => (
-                  <ProtectedRoute {...props} allowedRoles={["admin"]}>
+                  <ProtectedRoute {...props} allowedRoles={["admin", "superadmin"]}>
                     <AccomplishmentPage {...props} />
                   </ProtectedRoute>
                 )}
@@ -128,7 +124,7 @@ export default function App() {
               <Stack.Screen name="GADProjectsPage" component={GADProjectsPage} options={{ title: "Projects" }} />
               <Stack.Screen name="CommitteeReportPage">
                 {(props) => (
-                  <ProtectedRoute {...props} allowedRoles={["admin"]}>
+                  <ProtectedRoute {...props} allowedRoles={["admin", "superadmin"]}>
                     <CommitteeReportPage {...props} />
                   </ProtectedRoute>
                 )}
@@ -178,40 +174,18 @@ export default function App() {
               <Stack.Screen name="SettingsScreen" component={SettingsScreen} options={{ title: "Settings" }} />
 
               {/* Dashboards */}
-<Stack.Screen name="SuperadminDashboard" options={{ headerShown: false }}>
-  {(props) => (
-    <ProtectedRoute 
-      {...props} 
-      allowedRoles={["superadmin"]} 
-      setUser={props.setUser}   // <-- ADD THIS
-    >
-      <SuperAdminSidebar {...props} />
-    </ProtectedRoute>
-  )}
-</Stack.Screen>
-              <Stack.Screen name="DeptHeadDashboard">
+              <Stack.Screen name="SuperadminDashboard" options={{ headerShown: false }}>
                 {(props) => (
-                  <ProtectedRoute {...props} allowedRoles={["admin"]}>
-                    <DeptHeadDashboard {...props} />
+                  <ProtectedRoute 
+                    {...props} 
+                    allowedRoles={["superadmin"]} 
+                    setUser={props.setUser}   // <-- ADD THIS
+                  >
+                    <SuperAdminSidebar {...props} />
                   </ProtectedRoute>
                 )}
               </Stack.Screen>
-
-              <Stack.Screen name="HRDashboard">
-                {(props) => (
-                  <ProtectedRoute {...props} allowedRoles={["admin"]}>
-                    <HRDashboard {...props} />
-                  </ProtectedRoute>
-                )}
-              </Stack.Screen>
-
-              <Stack.Screen name="OSADashboard">
-                {(props) => (
-                  <ProtectedRoute {...props} allowedRoles={["admin"]}>
-                    <OSADashboard {...props} />
-                  </ProtectedRoute>
-                )}
-              </Stack.Screen>
+            
             </Stack.Navigator>
           </SafeAreaView>
         </NavigationContainer>
