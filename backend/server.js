@@ -57,7 +57,7 @@ app.use("/api/research", require("./routes/researchRoutes"));
 app.use("/api/contact", require("./routes/contactRoutes"));
 app.use("/api/datasets", require("./routes/datasetRoutes"));
 app.use("/api/ai", require("./routes/aiModeration"));
-
+app.use("/api/documentation", require("./routes/documentationRoutes"));
 
 
 app.use("/api/tickets", require("./routes/tickets"));

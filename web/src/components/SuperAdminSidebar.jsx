@@ -192,9 +192,11 @@ const SuperAdminSidebar = () => {
           </SidebarSection>
 
           {/* ADMIN TOOLS */}
-          <SidebarSection title="Admin Tools" isCollapsed={isCollapsed}>
-            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" isCollapsed={isCollapsed} />
-            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" isCollapsed={isCollapsed} />
+
+          <SidebarSection title="Admin Tools">
+            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
+            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
+            <SidebarItem icon={<FileSignature size={18} />} label="Documentation Hub" to="/superadmin/documentation" />
           </SidebarSection>
         </nav>
       </div>

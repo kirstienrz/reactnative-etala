@@ -39,6 +39,7 @@ import Organizational from "./pages/superadmin/Organizational";
 import GalleryPage from "./pages/superadmin/Gallery";
 import ResearchAdmin from "./pages/superadmin/Research";
 import DatasetPage from "./pages/superadmin/sexData";
+import Documentation from "./pages/superadmin/Documentation";
 
 import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
@@ -123,6 +124,7 @@ const App = () => {
               <Route path="/superadmin/gallery" element={<GalleryPage />} />
               <Route path="/superadmin/research" element={<ResearchAdmin />} />
               <Route path="/superadmin/datasets" element={<DatasetPage />} />
+              <Route path="/superadmin/documentation" element={<Documentation />} />
 
             </Route>
 
