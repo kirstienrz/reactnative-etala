@@ -40,6 +40,7 @@ import GalleryPage from "./pages/superadmin/Gallery";
 import ResearchAdmin from "./pages/superadmin/Research";
 import DatasetPage from "./pages/superadmin/sexData";
 import Documentation from "./pages/superadmin/Documentation";
+import FinancePage from "./pages/superadmin/Finance";
 
 import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
@@ -125,6 +126,8 @@ const App = () => {
               <Route path="/superadmin/research" element={<ResearchAdmin />} />
               <Route path="/superadmin/datasets" element={<DatasetPage />} />
               <Route path="/superadmin/documentation" element={<Documentation />} />
+              <Route path="/superadmin/finance" element={<FinancePage />} />
+
 
             </Route>
 

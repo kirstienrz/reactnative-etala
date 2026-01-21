@@ -12,6 +12,7 @@ import {
   CalendarDays,
   BookOpen,
   Lightbulb,
+  FileSignature,
   Newspaper,
   FileSpreadsheet,
   Briefcase,
@@ -197,6 +198,7 @@ const SuperAdminSidebar = () => {
             <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
             <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
             <SidebarItem icon={<FileSignature size={18} />} label="Documentation Hub" to="/superadmin/documentation" />
+            <SidebarItem icon={<DollarSign size={18} />} label="Finance" to="/superadmin/finance" />
           </SidebarSection>
         </nav>
       </div>
