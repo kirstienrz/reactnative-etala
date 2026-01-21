@@ -225,14 +225,6 @@ const Finance = () => {
                                 />
                             </div>
                             
-                            <button 
-                                onClick={() => setShowExpenseModal(true)}
-                                disabled={categories.length === 0}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Quick Add
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -550,49 +542,7 @@ const Finance = () => {
 
                     {/* Right Column - Actions & Insights */}
                     <div className="space-y-6">
-                        {/* Quick Actions */}
-                        <div className="bg-white rounded-xl shadow-sm border p-6">
-                            <h4 className="font-bold text-lg mb-4">Quick Actions</h4>
-                            <div className="space-y-3">
-                                <button 
-                                    onClick={() => setShowBudgetModal(true)}
-                                    className="w-full flex items-center gap-3 p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition text-left"
-                                >
-                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                        <Plus className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">Create New Budget</p>
-                                        <p className="text-sm text-gray-600">Set up a spending category</p>
-                                    </div>
-                                </button>
-
-                                <button 
-                                    onClick={() => setShowExpenseModal(true)}
-                                    disabled={categories.length === 0}
-                                    className="w-full flex items-center gap-3 p-4 border rounded-lg hover:bg-green-50 hover:border-green-300 transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                        <Receipt className="h-5 w-5 text-green-600" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">Add New Expense</p>
-                                        <p className="text-sm text-gray-600">Record a transaction</p>
-                                    </div>
-                                </button>
-
-                                <button className="w-full flex items-center gap-3 p-4 border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition text-left">
-                                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                        <Download className="h-5 w-5 text-purple-600" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">Export Report</p>
-                                        <p className="text-sm text-gray-600">Download CSV or PDF</p>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-
+                       
                         {/* Category Insights */}
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
                             <h4 className="font-bold text-lg mb-4 text-blue-900">Budget Insights</h4>
@@ -688,7 +638,7 @@ const Finance = () => {
                                 <label className="block text-sm font-medium mb-2">Category Name</label>
                                 <input
                                     type="text"
-                                    placeholder="e.g., Groceries, Transportation, Entertainment"
+                                    placeholder="e.g., Event 1, Program 1"
                                     value={budgetCategory}
                                     onChange={(e) => setBudgetCategory(e.target.value)}
                                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
