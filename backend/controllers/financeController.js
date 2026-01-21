@@ -111,21 +111,28 @@ exports.getSummary = async (req, res) => {
         summary[r.category] = {
           budget: 0,
           spent: 0,
-          remaining: 0
+          remaining: 0,
+          expenses: [] // <-- add this
         };
       }
 
       if (r.type === "budget") {
         summary[r.category].budget += r.amount;
-      } else {
+      } else if (r.type === "expense") {
         summary[r.category].spent += r.amount;
+        summary[r.category].expenses.push({
+          id: r._id,
+          title: r.title,
+          amount: r.amount,
+          date: r.date,
+          notes: r.notes || ""
+        });
       }
     }
 
     // compute remaining
     for (let cat in summary) {
-      summary[cat].remaining =
-        summary[cat].budget - summary[cat].spent;
+      summary[cat].remaining = summary[cat].budget - summary[cat].spent;
     }
 
     res.json({ success: true, data: summary });
@@ -134,6 +141,7 @@ exports.getSummary = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 // =======================
 // GET ALL EXPENSES (OPTIONAL)
