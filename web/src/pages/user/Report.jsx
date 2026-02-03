@@ -593,7 +593,7 @@ const ReportForm = () => {
     guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
     guardianRelationship: '', guardianRegion: '', guardianProvince: '',
     guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-    
+
     // Reporter Context
     reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
 
@@ -742,7 +742,7 @@ const ReportForm = () => {
 
   //   setLoading(true);
   //   setAiValidationResult(null); // Reset previous results
-    
+
   //   try {
   //     // 🧠 AI SPAM CHECK
   //     const aiCheck = await checkSpamReport({
@@ -762,7 +762,7 @@ const ReportForm = () => {
   //           witnessAccount: formData.witnessAccount
   //         }
   //       });
-        
+
   //       // Show the AI validation modal instead of just alert
   //       setShowAIValidation(true);
   //       setLoading(false);
@@ -770,312 +770,312 @@ const ReportForm = () => {
   //     }
 
 
-//  const handleSubmit = async () => {
-//   if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
-//     showAlert("Required", "Please confirm all statements before submitting.");
-//     return;
-//   }
+  //  const handleSubmit = async () => {
+  //   if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
+  //     showAlert("Required", "Please confirm all statements before submitting.");
+  //     return;
+  //   }
 
-//   setLoading(true);
-//   setAiValidationResult(null);
-  
-//   try {
-//     console.log("🔍 Starting AI validation...");
-    
-//     // TEMPORARY: SIMULATE AI RESPONSE FOR TESTING
-//     // Comment this out when AI API is working
-//     const simulatedAIResponse = {
-//       data: {
-//         allowed: false,
-//         reason: "Incident description contains random, meaningless text."
-//       }
-//     };
-    
-//     if (!simulatedAIResponse.data.allowed) {
-//       console.log("❌ AI Blocked (SIMULATED) - Showing modal...");
-      
-//       setAiValidationResult({
-//         allowed: false,
-//         reason: simulatedAIResponse.data.reason,
-//         details: {
-//           incidentDescription: formData.incidentDescription,
-//           additionalNotes: formData.additionalNotes,
-//           witnessAccount: formData.witnessAccount
-//         }
-//       });
-      
-//       setShowAIValidation(true);
-//       setLoading(false);
-//       return;
-//     }
-    
-    
-//     // UNCOMMENT THIS WHEN AI API IS WORKING
-//     let aiCheck;
-//     try {
-//       aiCheck = await checkSpamReport({
-//         incidentDescription: formData.incidentDescription || "",
-//         additionalNotes: formData.additionalNotes || "",
-//         witnessAccount: formData.witnessAccount || "",
-//       });
-//       console.log("✅ AI Response:", aiCheck.data);
-      
-//       if (!aiCheck.data.allowed) {
-//         console.log("❌ AI Blocked - Showing modal...");
-//         setAiValidationResult({
-//           allowed: false,
-//           reason: aiCheck.data.reason || "Your report lacks meaningful details.",
-//           details: {
-//             incidentDescription: formData.incidentDescription,
-//             additionalNotes: formData.additionalNotes,
-//             witnessAccount: formData.witnessAccount
-//           }
-//         });
-//         setShowAIValidation(true);
-//         setLoading(false);
-//         return;
-//       }
-      
-//     } catch (aiError) {
-//       console.error("❌ AI API Error:", aiError);
-//       // Handle error...
-//     }
-    
+  //   setLoading(true);
+  //   setAiValidationResult(null);
 
-//     console.log("✅ AI Approved - Continuing submission...");
-//       // ---- EXISTING CODE BELOW ----
-//       const submitData = new FormData();
+  //   try {
+  //     console.log("🔍 Starting AI validation...");
 
-//       // Determine if anonymous based on whether personal info is provided
-//       const isAnonymous = !formData.firstName && !formData.lastName;
-//       submitData.append('isAnonymous', String(isAnonymous));
+  //     // TEMPORARY: SIMULATE AI RESPONSE FOR TESTING
+  //     // Comment this out when AI API is working
+  //     const simulatedAIResponse = {
+  //       data: {
+  //         allowed: false,
+  //         reason: "Incident description contains random, meaningless text."
+  //       }
+  //     };
 
-//       Object.keys(formData).forEach(key => {
-//         if (key === 'attachments') return;
-//         const value = formData[key];
-//         if (Array.isArray(value)) {
-//           value.forEach(item => submitData.append(`${key}[]`, item));
-//         } else if (typeof value === 'boolean') {
-//           submitData.append(key, value.toString());
-//         } else if (value !== '' && value !== null && value !== undefined) {
-//           submitData.append(key, value.toString());
-//         }
-//       });
+  //     if (!simulatedAIResponse.data.allowed) {
+  //       console.log("❌ AI Blocked (SIMULATED) - Showing modal...");
 
-//       formData.attachments.forEach(attachment => {
-//         submitData.append('attachments', attachment.file);
-//       });
+  //       setAiValidationResult({
+  //         allowed: false,
+  //         reason: simulatedAIResponse.data.reason,
+  //         details: {
+  //           incidentDescription: formData.incidentDescription,
+  //           additionalNotes: formData.additionalNotes,
+  //           witnessAccount: formData.witnessAccount
+  //         }
+  //       });
 
-//       // ✅ STEP 1: Submit the report
-//       const response = await createReport(submitData);
-//       const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+  //       setShowAIValidation(true);
+  //       setLoading(false);
+  //       return;
+  //     }
 
-//       // ✅ STEP 2: Generate PDF - This will auto-download
-//       const pdfBlob = generateReportPDF({
-//         formData,
-//         ticketNumber,
-//         isAnonymous,
-//       });
 
-//       // ✅ STEP 3: Send PDF via Email
-//       try {
-//         await sendPDFToEmail(pdfBlob, ticketNumber);
-//         console.log('✅ PDF sent to your registered email successfully');
-//       } catch (emailError) {
-//         console.error('❌ Failed to send PDF email:', emailError);
-//         showAlert(
-//           'Report Submitted',
-//           `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nNote: Email delivery failed. Please download the PDF manually.`
-//         );
-//       }
+  //     // UNCOMMENT THIS WHEN AI API IS WORKING
+  //     let aiCheck;
+  //     try {
+  //       aiCheck = await checkSpamReport({
+  //         incidentDescription: formData.incidentDescription || "",
+  //         additionalNotes: formData.additionalNotes || "",
+  //         witnessAccount: formData.witnessAccount || "",
+  //       });
+  //       console.log("✅ AI Response:", aiCheck.data);
 
-//       await clearProgress();
+  //       if (!aiCheck.data.allowed) {
+  //         console.log("❌ AI Blocked - Showing modal...");
+  //         setAiValidationResult({
+  //           allowed: false,
+  //           reason: aiCheck.data.reason || "Your report lacks meaningful details.",
+  //           details: {
+  //             incidentDescription: formData.incidentDescription,
+  //             additionalNotes: formData.additionalNotes,
+  //             witnessAccount: formData.witnessAccount
+  //           }
+  //         });
+  //         setShowAIValidation(true);
+  //         setLoading(false);
+  //         return;
+  //       }
 
-//       showAlert(
-//         'Report Submitted Successfully',
-//         `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy has been downloaded and sent to your registered email.`
-//       );
+  //     } catch (aiError) {
+  //       console.error("❌ AI API Error:", aiError);
+  //       // Handle error...
+  //     }
 
-//       // Reset form
-//       setCurrentStep(1);
-//       setFormData({
-//         lastName: '', firstName: '', middleName: '', alias: '', sex: '',
-//         dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
-//         nationality: '', passportNo: '', occupation: '', religion: '',
-//         region: '', province: '', cityMun: '', barangay: '',
-//         disability: '', numberOfChildren: '', agesOfChildren: '',
-//         guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
-//         guardianRelationship: '', guardianRegion: '', guardianProvince: '',
-//         guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-//         reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
-//         perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
-//         perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
-//         perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
-//         perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
-//         perpBarangay: '', perpRelationship: '',
-//         incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
-//         incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
-//         placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
-//         witnessAccount: '', witnessDate: '',
-//         attachments: [], additionalNotes: '', confirmAccuracy: false,
-//         confirmConfidentiality: false,
-//       });
 
-//     } catch (error) {
-//       console.error('Submit error:', error);
-//       let errorMessage = 'Failed to submit report. Please try again.';
-//       if (error.response?.data?.message) {
-//         errorMessage = error.response.data.message;
-//       }
-//       showAlert('Error', errorMessage);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  //     console.log("✅ AI Approved - Continuing submission...");
+  //       // ---- EXISTING CODE BELOW ----
+  //       const submitData = new FormData();
 
-const handleSubmit = async () => {
-  if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
-    showAlert("Required", "Please confirm all statements before submitting.");
-    return;
-  }
+  //       // Determine if anonymous based on whether personal info is provided
+  //       const isAnonymous = !formData.firstName && !formData.lastName;
+  //       submitData.append('isAnonymous', String(isAnonymous));
 
-  setLoading(true);
-  setAiValidationResult(null);
-  
-  try {
-    console.log("🔍 [1] Starting submission...");
-    console.log("📝 Text being submitted:", formData.incidentDescription);
-    
-    // CALL AI CHECK
-    const aiCheck = await checkSpamReport({
-      incidentDescription: formData.incidentDescription || "",
-      additionalNotes: formData.additionalNotes || "",
-      witnessAccount: formData.witnessAccount || "",
-    });
+  //       Object.keys(formData).forEach(key => {
+  //         if (key === 'attachments') return;
+  //         const value = formData[key];
+  //         if (Array.isArray(value)) {
+  //           value.forEach(item => submitData.append(`${key}[]`, item));
+  //         } else if (typeof value === 'boolean') {
+  //           submitData.append(key, value.toString());
+  //         } else if (value !== '' && value !== null && value !== undefined) {
+  //           submitData.append(key, value.toString());
+  //         }
+  //       });
 
-    console.log("✅ [2] AI Response RECEIVED:", aiCheck.data);
-    console.log("✅ [3] aiCheck.data.allowed =", aiCheck.data.allowed);
-    console.log("✅ [4] aiCheck.data.reason =", aiCheck.data.reason);
+  //       formData.attachments.forEach(attachment => {
+  //         submitData.append('attachments', attachment.file);
+  //       });
 
-    // CRITICAL: Check if AI blocked it
-    if (!aiCheck.data.allowed) {
-      console.log("❌ [5] AI BLOCKED DETECTED! Showing modal...");
-      
-      setAiValidationResult({
-        allowed: false,
-        reason: aiCheck.data.reason || "Your report lacks meaningful details.",
-        details: {
-          incidentDescription: formData.incidentDescription,
-          additionalNotes: formData.additionalNotes,
-          witnessAccount: formData.witnessAccount
+  //       // ✅ STEP 1: Submit the report
+  //       const response = await createReport(submitData);
+  //       const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+
+  //       // ✅ STEP 2: Generate PDF - This will auto-download
+  //       const pdfBlob = generateReportPDF({
+  //         formData,
+  //         ticketNumber,
+  //         isAnonymous,
+  //       });
+
+  //       // ✅ STEP 3: Send PDF via Email
+  //       try {
+  //         await sendPDFToEmail(pdfBlob, ticketNumber);
+  //         console.log('✅ PDF sent to your registered email successfully');
+  //       } catch (emailError) {
+  //         console.error('❌ Failed to send PDF email:', emailError);
+  //         showAlert(
+  //           'Report Submitted',
+  //           `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nNote: Email delivery failed. Please download the PDF manually.`
+  //         );
+  //       }
+
+  //       await clearProgress();
+
+  //       showAlert(
+  //         'Report Submitted Successfully',
+  //         `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy has been downloaded and sent to your registered email.`
+  //       );
+
+  //       // Reset form
+  //       setCurrentStep(1);
+  //       setFormData({
+  //         lastName: '', firstName: '', middleName: '', alias: '', sex: '',
+  //         dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
+  //         nationality: '', passportNo: '', occupation: '', religion: '',
+  //         region: '', province: '', cityMun: '', barangay: '',
+  //         disability: '', numberOfChildren: '', agesOfChildren: '',
+  //         guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
+  //         guardianRelationship: '', guardianRegion: '', guardianProvince: '',
+  //         guardianCityMun: '', guardianBarangay: '', guardianContact: '',
+  //         reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
+  //         perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
+  //         perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
+  //         perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
+  //         perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
+  //         perpBarangay: '', perpRelationship: '',
+  //         incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+  //         incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
+  //         placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
+  //         witnessAccount: '', witnessDate: '',
+  //         attachments: [], additionalNotes: '', confirmAccuracy: false,
+  //         confirmConfidentiality: false,
+  //       });
+
+  //     } catch (error) {
+  //       console.error('Submit error:', error);
+  //       let errorMessage = 'Failed to submit report. Please try again.';
+  //       if (error.response?.data?.message) {
+  //         errorMessage = error.response.data.message;
+  //       }
+  //       showAlert('Error', errorMessage);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  const handleSubmit = async () => {
+    if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
+      showAlert("Required", "Please confirm all statements before submitting.");
+      return;
+    }
+
+    setLoading(true);
+    setAiValidationResult(null);
+
+    try {
+      console.log("🔍 [1] Starting submission...");
+      console.log("📝 Text being submitted:", formData.incidentDescription);
+
+      // CALL AI CHECK
+      const aiCheck = await checkSpamReport({
+        incidentDescription: formData.incidentDescription || "",
+        additionalNotes: formData.additionalNotes || "",
+        witnessAccount: formData.witnessAccount || "",
+      });
+
+      console.log("✅ [2] AI Response RECEIVED:", aiCheck.data);
+      console.log("✅ [3] aiCheck.data.allowed =", aiCheck.data.allowed);
+      console.log("✅ [4] aiCheck.data.reason =", aiCheck.data.reason);
+
+      // CRITICAL: Check if AI blocked it
+      if (!aiCheck.data.allowed) {
+        console.log("❌ [5] AI BLOCKED DETECTED! Showing modal...");
+
+        setAiValidationResult({
+          allowed: false,
+          reason: aiCheck.data.reason || "Your report lacks meaningful details.",
+          details: {
+            incidentDescription: formData.incidentDescription,
+            additionalNotes: formData.additionalNotes,
+            witnessAccount: formData.witnessAccount
+          }
+        });
+
+        console.log("✅ [6] Setting showAIValidation to TRUE");
+        setShowAIValidation(true);
+        setLoading(false);
+        console.log("✅ [7] Modal should now appear!");
+        return;
+      } else {
+        console.log("✅ [5] AI APPROVED - continuing to submission");
+      }
+
+      // ALWAYS CONTINUE TO SUBMISSION
+      console.log("✅ [6] Continuing to submission...");
+
+      // ---- EXISTING SUBMISSION CODE ----
+      const submitData = new FormData();
+      const isAnonymous = !formData.firstName && !formData.lastName;
+      submitData.append('isAnonymous', String(isAnonymous));
+
+      Object.keys(formData).forEach(key => {
+        if (key === 'attachments') return;
+        const value = formData[key];
+        if (Array.isArray(value)) {
+          value.forEach(item => submitData.append(`${key}[]`, item));
+        } else if (typeof value === 'boolean') {
+          submitData.append(key, value.toString());
+        } else if (value !== '' && value !== null && value !== undefined) {
+          submitData.append(key, value.toString());
         }
       });
-      
-      console.log("✅ [6] Setting showAIValidation to TRUE");
-      setShowAIValidation(true);
-      setLoading(false);
-      console.log("✅ [7] Modal should now appear!");
-      return;
-    } else {
-      console.log("✅ [5] AI APPROVED - continuing to submission");
-    }
 
-    // ALWAYS CONTINUE TO SUBMISSION
-    console.log("✅ [6] Continuing to submission...");
-    
-    // ---- EXISTING SUBMISSION CODE ----
-    const submitData = new FormData();
-    const isAnonymous = !formData.firstName && !formData.lastName;
-    submitData.append('isAnonymous', String(isAnonymous));
+      formData.attachments.forEach(attachment => {
+        submitData.append('attachments', attachment.file);
+      });
 
-    Object.keys(formData).forEach(key => {
-      if (key === 'attachments') return;
-      const value = formData[key];
-      if (Array.isArray(value)) {
-        value.forEach(item => submitData.append(`${key}[]`, item));
-      } else if (typeof value === 'boolean') {
-        submitData.append(key, value.toString());
-      } else if (value !== '' && value !== null && value !== undefined) {
-        submitData.append(key, value.toString());
+      // Submit the report
+      const response = await createReport(submitData);
+      const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+
+      // Generate PDF
+      const pdfBlob = generateReportPDF({
+        formData,
+        ticketNumber,
+        isAnonymous,
+      });
+
+      // Send PDF via Email
+      try {
+        await sendPDFToEmail(pdfBlob, ticketNumber);
+        console.log('✅ PDF sent to your registered email successfully');
+      } catch (emailError) {
+        console.error('❌ Failed to send PDF email:', emailError);
+        showAlert(
+          'Report Submitted',
+          `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nNote: Email delivery failed. Please download the PDF manually.`
+        );
       }
-    });
 
-    formData.attachments.forEach(attachment => {
-      submitData.append('attachments', attachment.file);
-    });
+      await clearProgress();
 
-    // Submit the report
-    const response = await createReport(submitData);
-    const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
-
-    // Generate PDF
-    const pdfBlob = generateReportPDF({
-      formData,
-      ticketNumber,
-      isAnonymous,
-    });
-
-    // Send PDF via Email
-    try {
-      await sendPDFToEmail(pdfBlob, ticketNumber);
-      console.log('✅ PDF sent to your registered email successfully');
-    } catch (emailError) {
-      console.error('❌ Failed to send PDF email:', emailError);
       showAlert(
-        'Report Submitted',
-        `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nNote: Email delivery failed. Please download the PDF manually.`
+        'Report Submitted Successfully',
+        `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy has been downloaded and sent to your registered email.`
       );
+
+      // Reset form
+      setCurrentStep(1);
+      setFormData({
+        // ... reset all form fields ...
+        lastName: '', firstName: '', middleName: '', alias: '', sex: '',
+        dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
+        nationality: '', passportNo: '', occupation: '', religion: '',
+        region: '', province: '', cityMun: '', barangay: '',
+        disability: '', numberOfChildren: '', agesOfChildren: '',
+        guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
+        guardianRelationship: '', guardianRegion: '', guardianProvince: '',
+        guardianCityMun: '', guardianBarangay: '', guardianContact: '',
+        reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
+        perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
+        perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
+        perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
+        perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
+        perpBarangay: '', perpRelationship: '',
+        incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+        incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
+        placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
+        witnessAccount: '', witnessDate: '',
+        attachments: [], additionalNotes: '', confirmAccuracy: false,
+        confirmConfidentiality: false,
+      });
+
+    } catch (error) {
+      console.error('Submit error:', error);
+      let errorMessage = 'Failed to submit report. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      showAlert('Error', errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    await clearProgress();
-
-    showAlert(
-      'Report Submitted Successfully',
-      `Your report has been received.\n\nTicket Number: ${ticketNumber}\n\nA copy has been downloaded and sent to your registered email.`
-    );
-
-    // Reset form
-    setCurrentStep(1);
-    setFormData({
-      // ... reset all form fields ...
-      lastName: '', firstName: '', middleName: '', alias: '', sex: '',
-      dateOfBirth: '', age: '', civilStatus: '', educationalAttainment: '',
-      nationality: '', passportNo: '', occupation: '', religion: '',
-      region: '', province: '', cityMun: '', barangay: '',
-      disability: '', numberOfChildren: '', agesOfChildren: '',
-      guardianLastName: '', guardianFirstName: '', guardianMiddleName: '',
-      guardianRelationship: '', guardianRegion: '', guardianProvince: '',
-      guardianCityMun: '', guardianBarangay: '', guardianContact: '',
-      reporterRole: '', tupRole: '', reporterGender: '', reporterDepartment: '',
-      perpLastName: '', perpFirstName: '', perpMiddleName: '', perpAlias: '',
-      perpSex: '', perpDateOfBirth: '', perpAge: '', perpCivilStatus: '',
-      perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
-      perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
-      perpBarangay: '', perpRelationship: '',
-      incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
-      incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
-      placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
-      witnessAccount: '', witnessDate: '',
-      attachments: [], additionalNotes: '', confirmAccuracy: false,
-      confirmConfidentiality: false,
-    });
-    
-  } catch (error) {
-    console.error('Submit error:', error);
-    let errorMessage = 'Failed to submit report. Please try again.';
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    }
-    showAlert('Error', errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const validateStep = () => {
     if (currentStep === 1) {
-      if (!formData.reporterRole || !formData.tupRole) {
-        showAlert('Required', 'Please provide your role and TUP affiliation.');
+      if (!formData.reporterRole || !formData.tupRole || !formData.reporterDepartment) {
+        showAlert('Required', 'Please provide your role / TUP affiliation / Department.');
         return false;
       }
     }
@@ -1129,469 +1129,469 @@ const handleSubmit = async () => {
     return titles[currentStep - 1] || "";
   };
 
- const renderAIValidationModal = () => {
-  if (!showAIValidation || !aiValidationResult) {
-    console.log("❌ Modal conditions not met:", { showAIValidation, aiValidationResult });
-    return null;
-  }
+  const renderAIValidationModal = () => {
+    if (!showAIValidation || !aiValidationResult) {
+      console.log("❌ Modal conditions not met:", { showAIValidation, aiValidationResult });
+      return null;
+    }
 
-  console.log("✅ Rendering AI Validation Modal...");
+    console.log("✅ Rendering AI Validation Modal...");
 
-  return (
-   <div style={{
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.85)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 9999,
-  padding: '20px'
-}} onClick={() => {
-  console.log("Closing modal");
-  setShowAIValidation(false);
-}}>
-  <div style={{
-    backgroundColor: '#FFFFFF',
-    borderRadius: '12px',
-    width: '90%',
-    maxWidth: '700px',
-    maxHeight: '90vh',
-    overflow: 'auto',
-    boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
-  }} onClick={(e) => {
-    e.stopPropagation();
-    console.log("Modal content clicked");
-  }}>
-    
-    {/* MODAL HEADER */}
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '24px 32px',
-      borderBottom: '1px solid #E5E7EB',
-      backgroundColor: '#FFFFFF'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '8px',
-          backgroundColor: '#FEF2F2',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Shield size={24} color="#DC2626" />
-        </div>
-        <div>
-          <h3 style={{ 
-            margin: 0, 
-            fontSize: '20px', 
-            color: '#111827',
-            fontWeight: '600',
-            lineHeight: '1.4'
-          }}>
-            Content Validation Required
-          </h3>
-          <p style={{
-            margin: '4px 0 0 0',
-            fontSize: '14px',
-            color: '#6B7280',
-            fontWeight: '400'
-          }}>
-            AI-assisted quality assessment
-          </p>
-        </div>
-      </div>
-      <button 
-        onClick={() => {
-          console.log("Close button clicked");
-          setShowAIValidation(false);
-        }}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '8px',
-          borderRadius: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#6B7280',
-          transition: 'all 0.2s'
-        }}
-        onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
-        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-      >
-        <X size={20} />
-      </button>
-    </div>
-
-    {/* MODAL CONTENT */}
-    <div style={{ padding: '32px' }}>
-      
-      {/* VALIDATION STATUS */}
+    return (
       <div style={{
-        backgroundColor: '#FEF2F2',
-        borderRadius: '8px',
-        padding: '20px',
-        marginBottom: '24px',
-        border: '1px solid #FECACA'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '12px',
-          marginBottom: '16px' 
-        }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '6px',
-            backgroundColor: '#FEE2E2',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <X size={18} color="#DC2626" />
-          </div>
-          <span style={{
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#DC2626'
-          }}>
-            Report Not Approved
-          </span>
-        </div>
-
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          padding: '16px',
-          borderRadius: '6px',
-          marginBottom: '20px',
-          borderLeft: '3px solid #DC2626'
-        }}>
-          <p style={{
-            margin: 0,
-            fontSize: '15px',
-            color: '#374151',
-            lineHeight: '1.6',
-            fontWeight: '400'
-          }}>
-            {aiValidationResult.reason}
-          </p>
-        </div>
-
-        {/* CONTENT ANALYSIS */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '6px',
-          padding: '20px',
-          border: '1px solid #E5E7EB'
-        }}>
-          <h4 style={{
-            fontSize: '15px',
-            fontWeight: '600',
-            margin: '0 0 20px 0',
-            color: '#111827',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}>
-            Content Analysis
-          </h4>
-          
-          {formData.incidentDescription && (
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <span>Incident Description</span>
-                <span style={{
-                  fontSize: '11px',
-                  backgroundColor: '#F3F4F6',
-                  padding: '2px 8px',
-                  borderRadius: '10px'
-                }}>
-                  {formData.incidentDescription.length} characters
-                </span>
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: '#374151',
-                backgroundColor: '#F9FAFB',
-                padding: '16px',
-                borderRadius: '6px',
-                borderLeft: '2px solid #DC2626',
-                fontFamily: 'monospace',
-                lineHeight: '1.5'
-              }}>
-                {formData.incidentDescription.length > 120 
-                  ? formData.incidentDescription.substring(0, 120) + '...' 
-                  : formData.incidentDescription}
-              </div>
-            </div>
-          )}
-          
-          {formData.additionalNotes && (
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <span>Additional Notes</span>
-                <span style={{
-                  fontSize: '11px',
-                  backgroundColor: '#F3F4F6',
-                  padding: '2px 8px',
-                  borderRadius: '10px'
-                }}>
-                  {formData.additionalNotes.length} characters
-                </span>
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: '#374151',
-                backgroundColor: '#F9FAFB',
-                padding: '16px',
-                borderRadius: '6px',
-                borderLeft: '2px solid #F59E0B'
-              }}>
-                {formData.additionalNotes.length > 80 
-                  ? formData.additionalNotes.substring(0, 80) + '...' 
-                  : formData.additionalNotes}
-              </div>
-            </div>
-          )}
-          
-          {formData.witnessAccount && (
-            <div>
-              <div style={{
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#6B7280',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <span>Witness Account</span>
-                <span style={{
-                  fontSize: '11px',
-                  backgroundColor: '#F3F4F6',
-                  padding: '2px 8px',
-                  borderRadius: '10px'
-                }}>
-                  {formData.witnessAccount.length} characters
-                </span>
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: '#374151',
-                backgroundColor: '#F9FAFB',
-                padding: '16px',
-                borderRadius: '6px',
-                borderLeft: '2px solid #10B981'
-              }}>
-                {formData.witnessAccount.length > 80 
-                  ? formData.witnessAccount.substring(0, 80) + '...' 
-                  : formData.witnessAccount}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* GUIDELINES */}
-      <div style={{
-        backgroundColor: '#F8FAFC',
-        borderRadius: '8px',
-        padding: '24px',
-        marginBottom: '28px',
-        border: '1px solid #E2E8F0'
-      }}>
-        <h4 style={{
-          fontSize: '16px',
-          fontWeight: '600',
-          margin: '0 0 20px 0',
-          color: '#1E293B'
-        }}>
-          Report Quality Guidelines
-        </h4>
-        
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          marginBottom: '24px'
-        }}>
-          <div>
-            <p style={{
-              fontSize: '13px',
-              fontWeight: '500',
-              color: '#64748B',
-              margin: '0 0 8px 0'
-            }}>
-              Specificity
-            </p>
-            <p style={{
-              fontSize: '14px',
-              color: '#334155',
-              margin: 0,
-              lineHeight: '1.5'
-            }}>
-              Include precise dates, times, locations, and identifiable details
-            </p>
-          </div>
-          <div>
-            <p style={{
-              fontSize: '13px',
-              fontWeight: '500',
-              color: '#64748B',
-              margin: '0 0 8px 0'
-            }}>
-              Clarity
-            </p>
-            <p style={{
-              fontSize: '14px',
-              color: '#334155',
-              margin: 0,
-              lineHeight: '1.5'
-            }}>
-              Present events in chronological order with clear context
-            </p>
-          </div>
-          <div>
-            <p style={{
-              fontSize: '13px',
-              fontWeight: '500',
-              color: '#64748B',
-              margin: '0 0 8px 0'
-            }}>
-              Completeness
-            </p>
-            <p style={{
-              fontSize: '14px',
-              color: '#334155',
-              margin: 0,
-              lineHeight: '1.5'
-            }}>
-              Provide all relevant information while maintaining focus
-            </p>
-          </div>
-        </div>
-        
-        <div style={{
-          padding: '16px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '6px',
-          borderLeft: '3px solid #3B82F6'
-        }}>
-          <p style={{
-            margin: 0,
-            fontSize: '14px',
-            color: '#1E40AF',
-            fontWeight: '500',
-            marginBottom: '8px'
-          }}>
-            Exemplary Report Structure
-          </p>
-          <p style={{
-            margin: 0,
-            fontSize: '13px',
-            color: '#4B5563',
-            lineHeight: '1.6',
-            fontStyle: 'italic'
-          }}>
-            "On [Date] at approximately [Time] in [Location], [specific incident] occurred involving [individuals]. The sequence of events began when... This incident resulted in [consequences]. I am reporting this because [rationale]."
-          </p>
-        </div>
-      </div>
-
-      {/* ACTION BUTTONS */}
-      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
         display: 'flex',
-        gap: '16px',
-        justifyContent: 'flex-end'
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '20px'
+      }} onClick={() => {
+        console.log("Closing modal");
+        setShowAIValidation(false);
       }}>
-        <button
-          onClick={() => {
-            console.log("Edit Report clicked");
-            setShowAIValidation(false);
-            setTimeout(() => {
-              const textarea = document.querySelector('textarea');
-              if (textarea) {
-                textarea.focus();
-                textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }, 100);
-          }}
-          style={{
-            backgroundColor: '#DC2626',
-            color: '#FFFFFF',
-            border: 'none',
-            padding: '14px 28px',
-            borderRadius: '8px',
-            fontSize: '15px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            letterSpacing: '0.025em'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.backgroundColor = '#B91C1C';
-            e.target.style.transform = 'translateY(-1px)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.backgroundColor = '#DC2626';
-            e.target.style.transform = 'translateY(0)';
-          }}
-        >
-          Revise Report
-        </button>
-      </div>
-
-      {/* FOOTER */}
-      <div style={{
-        marginTop: '24px',
-        paddingTop: '20px',
-        borderTop: '1px solid #E5E7EB'
-      }}>
-        <p style={{
-          margin: 0,
-          fontSize: '12px',
-          color: '#6B7280',
-          lineHeight: '1.5',
-          textAlign: 'center'
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '12px',
+          width: '90%',
+          maxWidth: '700px',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }} onClick={(e) => {
+          e.stopPropagation();
+          console.log("Modal content clicked");
         }}>
-          This automated validation ensures report quality and prevents system misuse.
-          All submissions are handled in accordance with institutional policies.
-        </p>
+
+          {/* MODAL HEADER */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '24px 32px',
+            borderBottom: '1px solid #E5E7EB',
+            backgroundColor: '#FFFFFF'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                backgroundColor: '#FEF2F2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Shield size={24} color="#DC2626" />
+              </div>
+              <div>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '20px',
+                  color: '#111827',
+                  fontWeight: '600',
+                  lineHeight: '1.4'
+                }}>
+                  Content Validation Required
+                </h3>
+                <p style={{
+                  margin: '4px 0 0 0',
+                  fontSize: '14px',
+                  color: '#6B7280',
+                  fontWeight: '400'
+                }}>
+                  AI-assisted quality assessment
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                console.log("Close button clicked");
+                setShowAIValidation(false);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#6B7280',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* MODAL CONTENT */}
+          <div style={{ padding: '32px' }}>
+
+            {/* VALIDATION STATUS */}
+            <div style={{
+              backgroundColor: '#FEF2F2',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '24px',
+              border: '1px solid #FECACA'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '6px',
+                  backgroundColor: '#FEE2E2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <X size={18} color="#DC2626" />
+                </div>
+                <span style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#DC2626'
+                }}>
+                  Report Not Approved
+                </span>
+              </div>
+
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                padding: '16px',
+                borderRadius: '6px',
+                marginBottom: '20px',
+                borderLeft: '3px solid #DC2626'
+              }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: '15px',
+                  color: '#374151',
+                  lineHeight: '1.6',
+                  fontWeight: '400'
+                }}>
+                  {aiValidationResult.reason}
+                </p>
+              </div>
+
+              {/* CONTENT ANALYSIS */}
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '6px',
+                padding: '20px',
+                border: '1px solid #E5E7EB'
+              }}>
+                <h4 style={{
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  margin: '0 0 20px 0',
+                  color: '#111827',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  Content Analysis
+                </h4>
+
+                {formData.incidentDescription && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: '#6B7280',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span>Incident Description</span>
+                      <span style={{
+                        fontSize: '11px',
+                        backgroundColor: '#F3F4F6',
+                        padding: '2px 8px',
+                        borderRadius: '10px'
+                      }}>
+                        {formData.incidentDescription.length} characters
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#374151',
+                      backgroundColor: '#F9FAFB',
+                      padding: '16px',
+                      borderRadius: '6px',
+                      borderLeft: '2px solid #DC2626',
+                      fontFamily: 'monospace',
+                      lineHeight: '1.5'
+                    }}>
+                      {formData.incidentDescription.length > 120
+                        ? formData.incidentDescription.substring(0, 120) + '...'
+                        : formData.incidentDescription}
+                    </div>
+                  </div>
+                )}
+
+                {formData.additionalNotes && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: '#6B7280',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span>Additional Notes</span>
+                      <span style={{
+                        fontSize: '11px',
+                        backgroundColor: '#F3F4F6',
+                        padding: '2px 8px',
+                        borderRadius: '10px'
+                      }}>
+                        {formData.additionalNotes.length} characters
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#374151',
+                      backgroundColor: '#F9FAFB',
+                      padding: '16px',
+                      borderRadius: '6px',
+                      borderLeft: '2px solid #F59E0B'
+                    }}>
+                      {formData.additionalNotes.length > 80
+                        ? formData.additionalNotes.substring(0, 80) + '...'
+                        : formData.additionalNotes}
+                    </div>
+                  </div>
+                )}
+
+                {formData.witnessAccount && (
+                  <div>
+                    <div style={{
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: '#6B7280',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span>Witness Account</span>
+                      <span style={{
+                        fontSize: '11px',
+                        backgroundColor: '#F3F4F6',
+                        padding: '2px 8px',
+                        borderRadius: '10px'
+                      }}>
+                        {formData.witnessAccount.length} characters
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#374151',
+                      backgroundColor: '#F9FAFB',
+                      padding: '16px',
+                      borderRadius: '6px',
+                      borderLeft: '2px solid #10B981'
+                    }}>
+                      {formData.witnessAccount.length > 80
+                        ? formData.witnessAccount.substring(0, 80) + '...'
+                        : formData.witnessAccount}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* GUIDELINES */}
+            <div style={{
+              backgroundColor: '#F8FAFC',
+              borderRadius: '8px',
+              padding: '24px',
+              marginBottom: '28px',
+              border: '1px solid #E2E8F0'
+            }}>
+              <h4 style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                margin: '0 0 20px 0',
+                color: '#1E293B'
+              }}>
+                Report Quality Guidelines
+              </h4>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '20px',
+                marginBottom: '24px'
+              }}>
+                <div>
+                  <p style={{
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#64748B',
+                    margin: '0 0 8px 0'
+                  }}>
+                    Specificity
+                  </p>
+                  <p style={{
+                    fontSize: '14px',
+                    color: '#334155',
+                    margin: 0,
+                    lineHeight: '1.5'
+                  }}>
+                    Include precise dates, times, locations, and identifiable details
+                  </p>
+                </div>
+                <div>
+                  <p style={{
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#64748B',
+                    margin: '0 0 8px 0'
+                  }}>
+                    Clarity
+                  </p>
+                  <p style={{
+                    fontSize: '14px',
+                    color: '#334155',
+                    margin: 0,
+                    lineHeight: '1.5'
+                  }}>
+                    Present events in chronological order with clear context
+                  </p>
+                </div>
+                <div>
+                  <p style={{
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#64748B',
+                    margin: '0 0 8px 0'
+                  }}>
+                    Completeness
+                  </p>
+                  <p style={{
+                    fontSize: '14px',
+                    color: '#334155',
+                    margin: 0,
+                    lineHeight: '1.5'
+                  }}>
+                    Provide all relevant information while maintaining focus
+                  </p>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#FFFFFF',
+                borderRadius: '6px',
+                borderLeft: '3px solid #3B82F6'
+              }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: '14px',
+                  color: '#1E40AF',
+                  fontWeight: '500',
+                  marginBottom: '8px'
+                }}>
+                  Exemplary Report Structure
+                </p>
+                <p style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  color: '#4B5563',
+                  lineHeight: '1.6',
+                  fontStyle: 'italic'
+                }}>
+                  "On [Date] at approximately [Time] in [Location], [specific incident] occurred involving [individuals]. The sequence of events began when... This incident resulted in [consequences]. I am reporting this because [rationale]."
+                </p>
+              </div>
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  console.log("Edit Report clicked");
+                  setShowAIValidation(false);
+                  setTimeout(() => {
+                    const textarea = document.querySelector('textarea');
+                    if (textarea) {
+                      textarea.focus();
+                      textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }, 100);
+                }}
+                style={{
+                  backgroundColor: '#DC2626',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '14px 28px',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  letterSpacing: '0.025em'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#B91C1C';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#DC2626';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                Revise Report
+              </button>
+            </div>
+
+            {/* FOOTER */}
+            <div style={{
+              marginTop: '24px',
+              paddingTop: '20px',
+              borderTop: '1px solid #E5E7EB'
+            }}>
+              <p style={{
+                margin: 0,
+                fontSize: '12px',
+                color: '#6B7280',
+                lineHeight: '1.5',
+                textAlign: 'center'
+              }}>
+                This automated validation ensures report quality and prevents system misuse.
+                All submissions are handled in accordance with institutional policies.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
-  );
-};
+    );
+  };
 
   const renderProgressBar = () => (
     <div style={styles.progressContainer}>
@@ -1708,13 +1708,22 @@ const handleSubmit = async () => {
               </select>
             </div>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>College/Department</label>
-              <input
+              <label style={styles.inputLabel}>Department
+                <span style={styles.requiredStar}> *</span>
+              </label>
+              <select
                 style={styles.input}
-                placeholder="e.g., College of Engineering"
                 value={formData.reporterDepartment}
                 onChange={(e) => setFormData(prev => ({ ...prev, reporterDepartment: e.target.value }))}
-              />
+                required
+              >
+
+                <option value="">Select Department</option>
+                <option value="Civil and Allied Department">Civil and Allied Department</option>
+                <option value="Electrical and Allied Department">Electrical and Allied Department</option>
+                <option value="Mechanical and Allied Department">Mechanical and Allied Department</option>
+                <option value="Basic Arts and Science Department">Basic Arts and Science Department</option>
+              </select>
             </div>
           </div>
         </div>
@@ -1724,7 +1733,7 @@ const handleSubmit = async () => {
             Personal Information (Optional)
           </h4>
           <p style={{ fontSize: '13px', color: styles.colors.textSecondary, marginBottom: '24px', lineHeight: '1.6' }}>
-            Providing your personal information helps us provide better support and follow-up. 
+            Providing your personal information helps us provide better support and follow-up.
             Leave blank if you wish to remain anonymous.
           </p>
 
@@ -1821,7 +1830,7 @@ const handleSubmit = async () => {
               Privacy & Confidentiality
             </p>
             <p style={{ margin: 0, fontSize: '13px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
-              All reports are handled with strict confidentiality by the TUP GAD Office. 
+              All reports are handled with strict confidentiality by the TUP GAD Office.
               Whether you choose to remain anonymous or provide your details, your privacy is our priority.
             </p>
           </div>
@@ -2011,7 +2020,7 @@ const handleSubmit = async () => {
 
   const renderConfirmation = () => {
     const isAnonymous = !formData.firstName && !formData.lastName;
-    
+
     return (
       <div style={styles.stepContainer}>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>

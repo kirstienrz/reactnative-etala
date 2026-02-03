@@ -20,16 +20,19 @@ const generateTicketNumber = (isAnonymous) => {
 const createReport = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // Get user info first
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     // Parse form data
     const formData = { ...req.body };
-    
+
+    const reporterDepartment = formData.reporterDepartment;
+    console.log("📝 Reporter Department:", reporterDepartment); // Debug log
+
     // Parse arrays if they're strings
     if (typeof formData.incidentTypes === 'string') {
       try {
@@ -39,24 +42,24 @@ const createReport = async (req, res) => {
         formData.incidentTypes = [];
       }
     }
-    
+
     // Determine if anonymous
     const isAnonymous = formData.isAnonymous === "true" || formData.isAnonymous === true;
-    
+
     // Handle file attachments
     const attachments = req.files ? req.files.map(file => ({
       uri: file.path,
       type: file.mimetype,
       fileName: file.originalname,
     })) : [];
-    
+
     // ✅ GENERATE TICKET NUMBER FIRST
     const ticketNumber = generateTicketNumber(isAnonymous);
     console.log(`✅ Generated ticket number: ${ticketNumber}`);
-    
+
     // ✅ STEP 1: Create ticket WITH the generated ticket number
     const displayName = isAnonymous ? "Anonymous User" : `${user.firstName} ${user.lastName}`;
-    
+
     const ticket = new Ticket({
       ticketNumber: ticketNumber,
       userId: userId,
@@ -66,10 +69,10 @@ const createReport = async (req, res) => {
       lastMessageAt: new Date(),
       lastMessage: formData.incidentDescription?.substring(0, 100) || "New report submitted",
     });
-    
+
     await ticket.save();
     console.log(`✅ Ticket created: ${ticket.ticketNumber}`);
-    
+
     // ✅ STEP 2: Create report WITH ticketNumber
     const report = new Report({
       ...formData,
@@ -79,15 +82,17 @@ const createReport = async (req, res) => {
       attachments: attachments,
       status: "Pending",
       caseStatus: "For Queuing",
+      reporterDepartment: reporterDepartment, // ✅ ADD THIS LINE
+
     });
-    
+
     await report.save();
     console.log(`✅ Report created with ID: ${report._id}`);
-    
+
     // ✅ STEP 3: Update ticket with reportId
     ticket.reportId = report._id;
     await ticket.save();
-    
+
     // ✅ STEP 4: Create system welcome message
     const Message = require("../models/message");
     const systemMessage = new Message({
@@ -98,10 +103,10 @@ const createReport = async (req, res) => {
       content: `Thank you for submitting your report. Your ticket number is ${report.ticketNumber}. Our team will review your case shortly.`,
       isRead: false
     });
-    
+
     await systemMessage.save();
     console.log(`✅ System message created for ticket: ${report.ticketNumber}`);
-    
+
     // 🔥 EMIT SOCKET EVENT FOR NEW MESSAGE (if socket.io is available)
     const io = req.app.get("io");
     if (io) {
@@ -110,9 +115,9 @@ const createReport = async (req, res) => {
         ticket: ticket
       });
     }
-    
+
     console.log(`✅ Report created successfully: ${ticket.ticketNumber}`);
-    
+
     res.status(201).json({
       success: true,
       message: "Report submitted successfully",
@@ -122,8 +127,8 @@ const createReport = async (req, res) => {
   } catch (error) {
     console.error("❌ Error creating report:", error);
     console.error("Error stack:", error.stack);
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       success: false,
       message: error.message || "Failed to create report",
       error: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -150,9 +155,9 @@ const getUserReports = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user reports:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -171,9 +176,9 @@ const getUserReportById = async (req, res) => {
       .populate("createdBy", "firstName lastName email");
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found" 
+        message: "Report not found"
       });
     }
 
@@ -183,9 +188,9 @@ const getUserReportById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching report:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -222,9 +227,9 @@ const getAllReports = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching all reports:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -242,9 +247,9 @@ const getReportById = async (req, res) => {
       .populate("createdBy", "firstName lastName email tupId");
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found" 
+        message: "Report not found"
       });
     }
 
@@ -255,9 +260,9 @@ const getReportById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching report:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -274,9 +279,9 @@ const updateReportStatus = async (req, res) => {
 
     const validStatuses = ["Pending", "Reviewed", "In Progress", "Resolved", "Closed"];
     if (status && !validStatuses.includes(status)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Invalid status" 
+        message: "Invalid status"
       });
     }
 
@@ -284,7 +289,7 @@ const updateReportStatus = async (req, res) => {
     if (status) updateData.status = status;
     if (caseStatus) updateData.caseStatus = caseStatus;
     if (remarks) updateData.adminNotes = remarks;
-    
+
     if (status === "Resolved" || status === "Closed") {
       updateData.resolvedAt = new Date();
     }
@@ -295,9 +300,9 @@ const updateReportStatus = async (req, res) => {
       .populate("createdBy", "firstName lastName email");
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found" 
+        message: "Report not found"
       });
     }
 
@@ -308,9 +313,9 @@ const updateReportStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating report status:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -326,9 +331,9 @@ const addReferral = async (req, res) => {
     const { department, note } = req.body;
 
     if (!department) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Department is required" 
+        message: "Department is required"
       });
     }
 
@@ -341,7 +346,7 @@ const addReferral = async (req, res) => {
 
     const report = await Report.findByIdAndUpdate(
       id,
-      { 
+      {
         $push: { referrals: referral },
         $set: { lastUpdated: new Date() }
       },
@@ -349,9 +354,9 @@ const addReferral = async (req, res) => {
     ).populate("createdBy", "firstName lastName email");
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found" 
+        message: "Report not found"
       });
     }
 
@@ -362,9 +367,9 @@ const addReferral = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding referral:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -385,22 +390,22 @@ const archiveReport = async (req, res) => {
     ).populate("createdBy", "firstName lastName email");
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found" 
+        message: "Report not found"
       });
     }
 
-    res.json({ 
+    res.json({
       success: true,
-      message: "Report archived successfully", 
-      data: report 
+      message: "Report archived successfully",
+      data: report
     });
   } catch (error) {
     console.error("Error archiving report:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -423,9 +428,9 @@ const getArchivedReports = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching archived reports:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -446,22 +451,22 @@ const restoreReport = async (req, res) => {
     ).populate("createdBy", "firstName lastName email");
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found" 
+        message: "Report not found"
       });
     }
 
-    res.json({ 
+    res.json({
       success: true,
-      message: "Report restored successfully", 
-      data: report 
+      message: "Report restored successfully",
+      data: report
     });
   } catch (error) {
     console.error("Error restoring report:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -481,26 +486,26 @@ const discloseReport = async (req, res) => {
     const report = await Report.findOne({ _id: id, createdBy: userId });
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found or access denied" 
+        message: "Report not found or access denied"
       });
     }
 
     // Check if already disclosed
     if (!report.isAnonymous) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Report is already disclosed" 
+        message: "Report is already disclosed"
       });
     }
 
     // Get user info
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "User not found" 
+        message: "User not found"
       });
     }
 
@@ -513,7 +518,7 @@ const discloseReport = async (req, res) => {
       const displayName = `${user.firstName} ${user.lastName}`;
       await Ticket.findOneAndUpdate(
         { ticketNumber: report.ticketNumber },
-        { 
+        {
           isAnonymous: false,
           displayName: displayName
         }
@@ -527,9 +532,9 @@ const discloseReport = async (req, res) => {
     });
   } catch (error) {
     console.error("Error disclosing report:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -549,17 +554,17 @@ const updateReportByUser = async (req, res) => {
     const report = await Report.findOne({ _id: id, createdBy: userId });
 
     if (!report) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Report not found or access denied" 
+        message: "Report not found or access denied"
       });
     }
 
     // Only allow updates if report is not anonymous (identity disclosed)
     if (report.isAnonymous) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "You must disclose your identity before updating the report" 
+        message: "You must disclose your identity before updating the report"
       });
     }
 
@@ -576,9 +581,9 @@ const updateReportByUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating report:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -601,25 +606,25 @@ const sendReportPDF = async (req, res) => {
 
     // Validate PDF file
     if (!pdfFile) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "PDF file is required" 
+        message: "PDF file is required"
       });
     }
 
     if (pdfFile.mimetype !== "application/pdf") {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Only PDF files are allowed" 
+        message: "Only PDF files are allowed"
       });
     }
 
     // Get user's email
     const user = await User.findById(userId);
     if (!user || !user.email) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "User email not found" 
+        message: "User email not found"
       });
     }
 
@@ -699,18 +704,18 @@ const sendReportPDF = async (req, res) => {
 
     console.log(`✅ Report PDF sent to ${userEmail}`);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: "Report sent to your email successfully",
       emailSentTo: userEmail
     });
 
   } catch (error) {
     console.error("❌ Failed to send report PDF:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Failed to send report email", 
-      error: error.message 
+      message: "Failed to send report email",
+      error: error.message
     });
   }
 };

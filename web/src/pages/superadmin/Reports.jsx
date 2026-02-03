@@ -731,156 +731,219 @@ const AdminReports = () => {
         </div>
 
         {/* Reports Table */}
-        <div className="p-6">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="animate-spin text-blue-600" size={32} />
-            </div>
-          ) : filteredReports.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-              <FileText size={48} className="mb-3 text-gray-300" />
-              <p className="text-lg font-medium mb-1">No reports found</p>
-              <p className="text-sm">Adjust your search criteria or filters</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ticket
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Reporter
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Severity
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Case Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedReports.map((report) => {
-                      const sentiment = sentimentResults[report._id];
-                      return (
-                        <tr
-                          key={report._id}
-                          className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {!isReportRead(report._id) && (
-                              <div className="flex items-center">
-                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
-                              {report.ticketNumber}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {report.isAnonymous ? (
-                                <span className="text-gray-500 italic">Anonymous</span>
-                              ) : (
-                                report.createdBy?.tupId || "Unknown User"
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">
-                              {report.incidentTypes?.slice(0, 2).join(", ") || "N/A"}
-                              {report.incidentTypes?.length > 2 && (
-                                <span className="text-gray-500"> +{report.incidentTypes.length - 2}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {sentiment ? (
-                              <div className="flex flex-col gap-1">
-                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
-                                  {getSeverityIcon(sentiment.severity)}
-                                  {sentiment.severity}
-                                  <span className="text-xs opacity-75">({Math.round(sentiment.confidence * 100)}%)</span>
-                                </span>
-                                {sentiment.keywords && sentiment.keywords.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {sentiment.keywords.slice(0, 2).map((keyword, idx) => (
-                                      <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                                        {keyword}
-                                      </span>
-                                    ))}
-                                    {sentiment.keywords.length > 2 && (
-                                      <span className="text-xs text-gray-400">+{sentiment.keywords.length - 2}</span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setSelectedReportForAnalysis(report);
-                                  analyzeSentiment(report._id, {
-                                    incidentDescription: report.incidentDescription,
-                                    incidentTypes: report.incidentTypes,
-                                    timestamp: report.submittedAt
-                                  });
-                                }}
-                                disabled={analyzing}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <Brain size={12} />
-                                {analyzing && selectedReportForAnalysis?._id === report._id ? "Analyzing..." : "Analyze"}
-                              </button>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {report.caseStatus ? (
-                              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
-                                {getCaseStatusIcon(report.caseStatus)}
-                                {report.caseStatus}
+<div className="p-6">
+  {loading ? (
+    <div className="flex items-center justify-center py-12">
+      <RefreshCw className="animate-spin text-blue-600" size={32} />
+    </div>
+  ) : filteredReports.length === 0 ? (
+    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+      <FileText size={48} className="mb-3 text-gray-300" />
+      <p className="text-lg font-medium mb-1">No reports found</p>
+      <p className="text-sm">Adjust your search criteria or filters</p>
+    </div>
+  ) : (
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ticket
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Severity
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Case Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {paginatedReports.map((report) => {
+              const sentiment = sentimentResults[report._id];
+              return (
+                <tr
+                  key={report._id}
+                  className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {!isReportRead(report._id) && (
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                      {report.ticketNumber}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {sentiment ? (
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
+                          {getSeverityIcon(sentiment.severity)}
+                          {sentiment.severity}
+                          <span className="text-xs opacity-75">({Math.round(sentiment.confidence * 100)}%)</span>
+                        </span>
+                        {sentiment.keywords && sentiment.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {sentiment.keywords.slice(0, 2).map((keyword, idx) => (
+                              <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                {keyword}
                               </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">Not Set</span>
+                            ))}
+                            {sentiment.keywords.length > 2 && (
+                              <span className="text-xs text-gray-400">+{sentiment.keywords.length - 2}</span>
                             )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(report.submittedAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="relative">
-                              <button
-                                ref={(el) => (dropdownRefs.current[report._id] = el)}
-                                onClick={() => setOpenDropdown(openDropdown === report._id ? null : report._id)}
-                                className="dropdown-trigger p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="Actions"
-                              >
-                                <MoreVertical size={18} className="text-gray-600" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSelectedReportForAnalysis(report);
+                          analyzeSentiment(report._id, {
+                            incidentDescription: report.incidentDescription,
+                            incidentTypes: report.incidentTypes,
+                            timestamp: report.submittedAt
+                          });
+                        }}
+                        disabled={analyzing}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Brain size={12} />
+                        {analyzing && selectedReportForAnalysis?._id === report._id ? "Analyzing..." : "Analyze"}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {report.caseStatus ? (
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
+                        {getCaseStatusIcon(report.caseStatus)}
+                        {report.caseStatus}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">Not Set</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(report.submittedAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {/* INLINE ACTIONS - Lahat ng actions ay DIRECT NA MAKIKITA */}
+                    <div className="flex items-center gap-1">
+                      {/* View Details Button */}
+                      <button
+                        onClick={() => handleViewDetails(report._id)}
+                        className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
+                        title="View Details"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      
+                      {/* Message Button */}
+                      <button
+                        onClick={() => handleMessageUser(report)}
+                        className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
+                        title="Message User"
+                      >
+                        <MessageSquare size={16} />
+                      </button>
+                      
+                      {/* Mark as Read/Unread Button */}
+                      {isReportRead(report._id) ? (
+                        <button
+                          onClick={() => markAsUnread(report._id)}
+                          className="p-1.5 hover:bg-gray-100 text-gray-600 rounded transition-colors"
+                          title="Mark as Unread"
+                        >
+                          <Mail size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => markAsRead(report._id)}
+                          className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
+                          title="Mark as Read"
+                        >
+                          <CheckCircle size={16} />
+                        </button>
+                      )}
+                      
+                      {/* Edit Case Status Button */}
+                      <button
+                        onClick={() => {
+                          setSelectedReport(report);
+                          setNewCaseStatus(report.caseStatus || "");
+                          setShowCaseStatusModal(true);
+                        }}
+                        className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors"
+                        title="Edit Case Status"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      
+                      {/* Archive/Restore Button */}
+                      {activeTab === "active" ? (
+                        <button
+                          onClick={() => {
+                            setSelectedReport(report);
+                            setShowArchiveModal(true);
+                          }}
+                          className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
+                          title="Archive Report"
+                        >
+                          <Archive size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setSelectedReport(report);
+                            setShowRestoreModal(true);
+                          }}
+                          className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
+                          title="Restore Report"
+                        >
+                          <RefreshCw size={16} />
+                        </button>
+                      )}
+                      
+                      {/* Sentiment Analysis Button (if not analyzed) */}
+                      {!sentimentResults[report._id] && (
+                        <button
+                          onClick={() => {
+                            setSelectedReportForAnalysis(report);
+                            analyzeSentiment(report._id, {
+                              incidentDescription: report.incidentDescription,
+                              incidentTypes: report.incidentTypes,
+                              timestamp: report.submittedAt
+                            });
+                          }}
+                          disabled={analyzing}
+                          className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Analyze Severity"
+                        >
+                          <Brain size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
@@ -934,8 +997,8 @@ const AdminReports = () => {
                               key={page}
                               onClick={() => goToPage(page)}
                               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${currentPage === page
-                                  ? 'bg-blue-600 text-white'
-                                  : 'border border-gray-300 hover:bg-gray-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'border border-gray-300 hover:bg-gray-100'
                                 }`}
                             >
                               {page}
@@ -1436,6 +1499,12 @@ const AdminReports = () => {
                               <p className="text-yellow-900">{selectedReport.anonymousGender}</p>
                             </div>
                           )}
+                          <div className="mb-4">
+                            <label className="block text-sm text-gray-600 mb-1">Department</label>
+                            <p className="text-gray-900 font-medium">
+                              {selectedReport.reporterDepartment || "Not specified"}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ) : (

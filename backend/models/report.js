@@ -72,6 +72,9 @@ const reportSchema = new mongoose.Schema({
   anonymousGender: String,
   anonymousDepartment: String,
 
+  reporterDepartment: String, // <<< DAGDAG DITO
+
+
   // Perpetrator Info
   perpLastName: String,
   perpFirstName: String,
