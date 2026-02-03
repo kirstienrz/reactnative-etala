@@ -56,6 +56,8 @@ const AdminReports = () => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
+  const [newReferralType, setNewReferralType] = useState("");
+
   const dropdownRefs = useRef({});
 
   const [readReports, setReadReports] = useState(() => {
@@ -124,44 +126,44 @@ const AdminReports = () => {
   };
 
   // Sentiment Analysis Function
- const analyzeSentiment = async (reportId, reportData) => {
-  setAnalyzing(true);
-  setSelectedReportForAnalysis(reportId);
-  
-  try {
-    const res = await analyzeReportSeverity({
-      incidentDescription: reportData.incidentDescription,
-      incidentTypes: reportData.incidentTypes,
-      reportId: reportId, // Send actual report ID
-      additionalContext: {
-        timestamp: reportData.timestamp,
-        location: reportData.location || 'Not specified',
-        peopleInvolved: reportData.peopleInvolved || 'Not specified'
-      }
-    });
-    
-    if (res.success) {
-      const newSentimentResults = {
-        ...sentimentResults,
-        [reportId]: {
-          ...res.data,
-          analyzedAt: new Date().toISOString()
+  const analyzeSentiment = async (reportId, reportData) => {
+    setAnalyzing(true);
+    setSelectedReportForAnalysis(reportId);
+
+    try {
+      const res = await analyzeReportSeverity({
+        incidentDescription: reportData.incidentDescription,
+        incidentTypes: reportData.incidentTypes,
+        reportId: reportId, // Send actual report ID
+        additionalContext: {
+          timestamp: reportData.timestamp,
+          location: reportData.location || 'Not specified',
+          peopleInvolved: reportData.peopleInvolved || 'Not specified'
         }
-      };
-      setSentimentResults(newSentimentResults);
-      showToast(`Severity analysis complete: ${res.data.severity}`, "success");
-      localStorage.setItem('reportSentiments', JSON.stringify(newSentimentResults));
-    } else {
-      showToast(res.message || "Failed to analyze severity", "error");
+      });
+
+      if (res.success) {
+        const newSentimentResults = {
+          ...sentimentResults,
+          [reportId]: {
+            ...res.data,
+            analyzedAt: new Date().toISOString()
+          }
+        };
+        setSentimentResults(newSentimentResults);
+        showToast(`Severity analysis complete: ${res.data.severity}`, "success");
+        localStorage.setItem('reportSentiments', JSON.stringify(newSentimentResults));
+      } else {
+        showToast(res.message || "Failed to analyze severity", "error");
+      }
+    } catch (error) {
+      console.error('Analysis error:', error);
+      showToast(`Analysis failed: ${error.response?.data?.message || error.message}`, "error");
+    } finally {
+      setAnalyzing(false);
+      setSelectedReportForAnalysis(null);
     }
-  } catch (error) {
-    console.error('Analysis error:', error);
-    showToast(`Analysis failed: ${error.response?.data?.message || error.message}`, "error");
-  } finally {
-    setAnalyzing(false);
-    setSelectedReportForAnalysis(null);
-  }
-};
+  };
 
   // Get severity color
   const getSeverityColor = (severity) => {
@@ -194,11 +196,11 @@ const AdminReports = () => {
   // ✅ Navigate to messaging with selected ticket
   const handleMessageUser = async (report) => {
     // Navigate to messages page with the ticket number as state
-    navigate('/superadmin/messages', { 
-      state: { 
+    navigate('/superadmin/messages', {
+      state: {
         selectedTicketNumber: report.ticketNumber,
-        reportId: report._id 
-      } 
+        reportId: report._id
+      }
     });
   };
 
@@ -245,17 +247,26 @@ const AdminReports = () => {
 
   const handleUpdateCaseStatus = async () => {
     if (!newCaseStatus) return;
+
+    // Determine final status
+    let finalStatus = newCaseStatus;
+    if (newCaseStatus === "For Referral") {
+      finalStatus = newReferralType || "For Referral"; // Internal/External or fallback
+    }
+
     try {
       const res = await updateReportStatus(
-        selectedReport._id, 
-        selectedReport.status,
-        "",
-        newCaseStatus
+        selectedReport._id,
+        selectedReport.status, // assuming this is current status
+        "", // if you need some other param, keep it
+        finalStatus // send the updated status
       );
+
       if (res.success) {
         showToast("Case status updated successfully");
         setShowCaseStatusModal(false);
         setNewCaseStatus("");
+        setNewReferralType(""); // reset referral type
         fetchReports();
       } else {
         showToast(res.message || "Failed to update case status", "error");
@@ -336,7 +347,6 @@ const AdminReports = () => {
     const colors = {
       "For Queuing": "bg-orange-100 text-orange-800",
       "For Interview": "bg-cyan-100 text-cyan-800",
-      "For Appointment": "bg-indigo-100 text-indigo-800",
       "For Referral": "bg-pink-100 text-pink-800",
       "Case Closed": "bg-gray-100 text-gray-800"
     };
@@ -347,7 +357,6 @@ const AdminReports = () => {
     const icons = {
       "For Queuing": <ClipboardList size={14} />,
       "For Interview": <Users size={14} />,
-      "For Appointment": <Calendar size={14} />,
       "For Referral": <Share2 size={14} />,
       "Case Closed": <XCircle size={14} />
     };
@@ -366,14 +375,14 @@ const AdminReports = () => {
       r.incidentDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.createdBy?.tupId || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesReadStatus = readStatusFilter === "All" || 
+    const matchesReadStatus = readStatusFilter === "All" ||
       (readStatusFilter === "Read" && isReportRead(r._id)) ||
       (readStatusFilter === "Unread" && !isReportRead(r._id));
 
     const matchesCaseStatus = caseStatusFilter === "All" || r.caseStatus === caseStatusFilter;
     const matchesCategory = categoryFilter === "All" || r.incidentTypes?.includes(categoryFilter);
 
-    const matchesSentiment = sentimentFilter === "All" || 
+    const matchesSentiment = sentimentFilter === "All" ||
       (sentimentResults[r._id]?.severity?.toLowerCase() === sentimentFilter.toLowerCase());
 
     const reportDate = new Date(r.submittedAt);
@@ -476,13 +485,13 @@ const AdminReports = () => {
               </div>
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-red-500 rounded-full" 
+              <div
+                className="h-full bg-red-500 rounded-full"
                 style={{ width: `${(severityStats.severe / reports.length) * 100 || 0}%` }}
               ></div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -494,13 +503,13 @@ const AdminReports = () => {
               </div>
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-yellow-500 rounded-full" 
+              <div
+                className="h-full bg-yellow-500 rounded-full"
                 style={{ width: `${(severityStats.moderate / reports.length) * 100 || 0}%` }}
               ></div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -512,13 +521,13 @@ const AdminReports = () => {
               </div>
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-green-500 rounded-full" 
+              <div
+                className="h-full bg-green-500 rounded-full"
                 style={{ width: `${(severityStats.mild / reports.length) * 100 || 0}%` }}
               ></div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -530,8 +539,8 @@ const AdminReports = () => {
               </div>
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gray-500 rounded-full" 
+              <div
+                className="h-full bg-gray-500 rounded-full"
                 style={{ width: `${(severityStats.unanalyzed / reports.length) * 100 || 0}%` }}
               ></div>
             </div>
@@ -617,8 +626,8 @@ const AdminReports = () => {
                   <option>All</option>
                   <option>For Queuing</option>
                   <option>For Interview</option>
-                  <option>For Appointment</option>
-                  <option>For Referral</option>
+                  <option>Internal</option>
+                  <option>External</option>
                   <option>Case Closed</option>
                 </select>
               </div>
@@ -641,22 +650,6 @@ const AdminReports = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  value={categoryFilter}
-                  onChange={(e) => {
-                    setCategoryFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option>All</option>
-                  {allCategories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
@@ -785,8 +778,8 @@ const AdminReports = () => {
                     {paginatedReports.map((report) => {
                       const sentiment = sentimentResults[report._id];
                       return (
-                        <tr 
-                          key={report._id} 
+                        <tr
+                          key={report._id}
                           className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -927,7 +920,7 @@ const AdminReports = () => {
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    
+
                     <div className="flex items-center gap-1">
                       {[...Array(totalPages)].map((_, idx) => {
                         const page = idx + 1;
@@ -940,11 +933,10 @@ const AdminReports = () => {
                             <button
                               key={page}
                               onClick={() => goToPage(page)}
-                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                                currentPage === page
+                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${currentPage === page
                                   ? 'bg-blue-600 text-white'
                                   : 'border border-gray-300 hover:bg-gray-100'
-                              }`}
+                                }`}
                             >
                               {page}
                             </button>
@@ -1150,7 +1142,7 @@ const AdminReports = () => {
 
       {/* Dropdown Menu Portal - Fixed Position Overlay */}
       {openDropdown && (
-        <div 
+        <div
           className="dropdown-menu fixed bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-48"
           style={{
             top: `${dropdownPosition.top}px`,
@@ -1168,7 +1160,7 @@ const AdminReports = () => {
             <Eye size={16} />
             View Details
           </button>
-          
+
           <button
             onClick={() => {
               const report = paginatedReports.find(r => r._id === openDropdown);
@@ -1180,7 +1172,7 @@ const AdminReports = () => {
             <MessageSquare size={16} />
             Message User
           </button>
-          
+
           {!sentimentResults[openDropdown] && (
             <button
               onClick={() => {
@@ -1201,7 +1193,7 @@ const AdminReports = () => {
               {analyzing && selectedReportForAnalysis?._id === openDropdown ? "Analyzing..." : "Analyze Severity"}
             </button>
           )}
-          
+
           {isReportRead(openDropdown) ? (
             <button
               onClick={() => {
@@ -1227,7 +1219,7 @@ const AdminReports = () => {
               Mark as Read
             </button>
           )}
-          
+
           <button
             onClick={() => {
               const report = paginatedReports.find(r => r._id === openDropdown);
@@ -1243,9 +1235,9 @@ const AdminReports = () => {
             <Edit size={16} />
             Edit Case Status
           </button>
-          
+
           <div className="border-t border-gray-200 my-1"></div>
-          
+
           {activeTab === "active" ? (
             <button
               onClick={() => {
@@ -1293,7 +1285,7 @@ const AdminReports = () => {
                   <div className="mt-2">
                     <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
                       {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
-                      AI Analysis: {sentimentResults[selectedReport._id].severity} 
+                      AI Analysis: {sentimentResults[selectedReport._id].severity}
                       ({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
                     </span>
                   </div>
@@ -1470,7 +1462,7 @@ const AdminReports = () => {
                       </div>
                     )}
                   </div>
-  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
                       Victim / Reporter Details
                     </h3>
@@ -1682,10 +1674,24 @@ const AdminReports = () => {
                   <option value="">Choose a case status</option>
                   <option>For Queuing</option>
                   <option>For Interview</option>
-                  <option>For Appointment</option>
                   <option>For Referral</option>
                   <option>Case Closed</option>
                 </select>
+                {/* Secondary dropdown for Internal/External if For Referral */}
+                {newCaseStatus === "For Referral" && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Referral Type</label>
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={newReferralType}
+                      onChange={(e) => setNewReferralType(e.target.value)}
+                    >
+                      <option value="">Select type</option>
+                      <option>Internal</option>
+                      <option>External</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex gap-3 p-6 border-t border-gray-200">
@@ -1697,7 +1703,7 @@ const AdminReports = () => {
               </button>
               <button
                 onClick={handleUpdateCaseStatus}
-                disabled={!newCaseStatus}
+                disabled={!newCaseStatus || (newCaseStatus === "For Referral" && !newReferralType)}
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition-colors"
               >
                 Update Case Status
@@ -1707,59 +1713,6 @@ const AdminReports = () => {
         </div>
       )}
 
-      {/* Enhanced Referral Modal */}
-      {showReferralModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Add Referral</h2>
-              <button
-                onClick={() => setShowReferralModal(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} className="text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., OSA, HR, Legal..."
-                  value={referralDept}
-                  onChange={(e) => setReferralDept(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Referral Note</label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows="3"
-                  placeholder="Enter referral details..."
-                  value={referralNote}
-                  onChange={(e) => setReferralNote(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 p-6 border-t border-gray-200">
-              <button
-                onClick={() => setShowReferralModal(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddReferral}
-                disabled={!referralDept}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition-colors"
-              >
-                Add Referral
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Enhanced Archive Modal */}
       {showArchiveModal && (
