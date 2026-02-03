@@ -1079,12 +1079,6 @@ const handleSubmit = async () => {
         return false;
       }
     }
-    if (currentStep === 2) {
-      if (formData.incidentTypes.length === 0 || !formData.latestIncidentDate) {
-        showAlert('Required', 'Please select at least one incident type and provide the date.');
-        return false;
-      }
-    }
     return true;
   };
 
@@ -1838,7 +1832,7 @@ const handleSubmit = async () => {
 
   const renderIncidentDetails = () => (
     <div style={styles.stepContainer}>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
+      <div style={{ display: 'grid' }}>
         <div>
           <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
             <div style={styles.sectionHeader}>
@@ -1891,58 +1885,6 @@ const handleSubmit = async () => {
                 value={formData.incidentBarangay}
                 onChange={(e) => setFormData(prev => ({ ...prev, incidentBarangay: e.target.value }))}
               />
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.sectionCard}>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>Incident Classification</h3>
-            <p style={styles.sectionDescription}>
-              Select all that apply
-              <span style={{ fontSize: '12px', color: '#666', display: 'block', marginTop: '4px' }}>
-                Not sure? Chat with our chatbot
-              </span>
-            </p>
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>
-              Type of Incident
-              <span style={styles.requiredStar}> *</span>
-            </label>
-            <div style={{ maxHeight: '500px', overflowY: 'auto', paddingRight: '8px' }}>
-              {incidentTypesList.map(type => (
-                <div
-                  key={type}
-                  style={{
-                    ...styles.optionCard,
-                    borderColor: formData.incidentTypes.includes(type) ? styles.colors.primary : styles.colors.border,
-                    backgroundColor: formData.incidentTypes.includes(type) ? styles.colors.ultraLightBackground : 'white',
-                    marginBottom: '8px'
-                  }}
-                  onClick={() => toggleIncidentType(type)}
-                >
-                  <span style={{
-                    fontSize: '13px',
-                    color: formData.incidentTypes.includes(type) ? styles.colors.primary : styles.colors.textPrimary
-                  }}>
-                    {type}
-                  </span>
-                  {formData.incidentTypes.includes(type) && (
-                    <div style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '10px',
-                      backgroundColor: styles.colors.primary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Check size={12} color="white" />
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
         </div>
