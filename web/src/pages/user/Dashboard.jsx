@@ -24,37 +24,37 @@ export default function Dashboard() {
             title: "File a Report",
             subtitle: "Submit new case or incident",
             icon: FileText,
-            color: "#7C3AED",
+            color: "#1E40AF",
             path: "/user/report",
         },
         {
             title: "My Reports",
             subtitle: "View and track your submissions",
             icon: ListTodo,
-            color: "#10B981",
+            color: "#047857",
             path: "/user/reports",
         },
         {
             title: "Inbox",
             subtitle: "Check your messages",
             icon: Inbox,
-            color: "#0EA5E9",
+            color: "#7C2D12",
             path: "/user/inbox",
         },
         {
             title: "Edit Profile",
             subtitle: "Update your account information",
             icon: User,
-            color: "#F59E0B",
+            color: "#6B21A8",
             path: "/user/profile",
         },
     ];
 
     return (
         <div style={{ 
-            background: "linear-gradient(135deg, #f6f8ff 0%, #f0f4ff 100%)", 
+            backgroundColor: "#F9FAFB", 
             minHeight: "100vh", 
-            fontFamily: "system-ui, -apple-system, sans-serif" 
+            fontFamily: "'Inter', -apple-system, sans-serif" 
         }}>
           
             {/* Main Content */}
@@ -67,44 +67,78 @@ export default function Dashboard() {
                 flexDirection: "column"
             }}>
                 
-                {/* Welcome Banner */}
+                {/* Welcome Banner - More Professional */}
                 <div style={{
-                    background: "linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)",
-                    borderRadius: 16,
-                    padding: "40px 32px",
-                    color: "#fff",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: 12,
+                    padding: "32px",
+                    color: "#111827",
                     marginBottom: 48,
-                    boxShadow: "0 10px 30px rgba(124, 58, 237, 0.25)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                 }}>
-                    <h1 style={{ 
-                        margin: "0 0 12px 0", 
-                        fontSize: 36, 
-                        fontWeight: 700,
-                        letterSpacing: "-0.5px"
+                    <div style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 16,
+                        marginBottom: 16
                     }}>
-                        Welcome back, {user.name}! 👋
-                    </h1>
+                        <div style={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: 12,
+                            background: "linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#FFFFFF",
+                            fontWeight: 600,
+                            fontSize: 20
+                        }}>
+                            {user.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h1 style={{ 
+                                margin: "0 0 4px 0", 
+                                fontSize: 24, 
+                                fontWeight: 700,
+                                color: "#111827"
+                            }}>
+                                Welcome back, {user.name}
+                            </h1>
+                            <div style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                                backgroundColor: "#F3F4F6",
+                                padding: "4px 12px",
+                                borderRadius: 20,
+                                fontSize: 13,
+                                color: "#4B5563"
+                            }}>
+                                <span style={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: "50%",
+                                    backgroundColor: "#10B981"
+                                }}></span>
+                                {user.role} • GAD Reporting System
+                            </div>
+                        </div>
+                    </div>
                     <p style={{ 
-                        margin: 0, 
-                        fontSize: 18, 
-                        opacity: 0.95,
-                        fontWeight: 400
+                        fontSize: 14, 
+                        color: "#6B7280",
+                        margin: 0,
+                        lineHeight: 1.6
                     }}>
-                        {user.role} • GAD Reporting System
+                        Access your reports, submit new cases, and manage your profile from this dashboard.
                     </p>
                 </div>
 
                 {/* Main Actions Grid - ONLY 4 FUNCTIONS */}
                 <div style={{ flex: 1 }}>
-                    <h2 style={{ 
-                        fontSize: 24, 
-                        fontWeight: 600, 
-                        color: "#1F1F1F", 
-                        marginBottom: 32,
-                        textAlign: "center"
-                    }}>
-                        What would you like to do today?
-                    </h2>
+                  
                     
                     <div style={{ 
                         display: "grid", 
@@ -114,7 +148,7 @@ export default function Dashboard() {
                             md: "repeat(2, 1fr)",
                             lg: "repeat(4, 1fr)"
                         }, 
-                        gap: 24,
+                        gap: 16,
                         maxWidth: 1000,
                         margin: "0 auto"
                     }}>
@@ -125,90 +159,86 @@ export default function Dashboard() {
                                     key={i}
                                     onClick={() => navigate(action.path)}
                                     style={{
-                                        background: "#fff",
-                                        border: "none",
-                                        borderRadius: 20,
-                                        padding: "32px 24px",
+                                        backgroundColor: "#FFFFFF",
+                                        border: "1px solid #E5E7EB",
+                                        borderRadius: 12,
+                                        padding: "24px",
                                         display: "flex",
                                         flexDirection: "column",
-                                        alignItems: "center",
+                                        alignItems: "flex-start",
                                         cursor: "pointer",
-                                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                                        boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-                                        textAlign: "center",
+                                        transition: "all 0.2s ease",
+                                        textAlign: "left",
                                         height: "100%"
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = "translateY(-8px)";
-                                        e.currentTarget.style.boxShadow = `0 20px 40px ${action.color}20, 0 8px 30px rgba(0,0,0,0.12)`;
+                                        e.currentTarget.style.transform = "translateY(-2px)";
+                                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+                                        e.currentTarget.style.borderColor = action.color;
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.transform = "translateY(0)";
-                                        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.06)";
+                                        e.currentTarget.style.boxShadow = "none";
+                                        e.currentTarget.style.borderColor = "#E5E7EB";
                                     }}
                                 >
                                     <div style={{
-                                        width: 80,
-                                        height: 80,
-                                        borderRadius: 20,
-                                        background: `${action.color}10`,
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 10,
+                                        backgroundColor: `${action.color}10`,
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
-                                        marginBottom: 24,
-                                        border: `2px solid ${action.color}20`
+                                        marginBottom: 20,
+                                        border: `1px solid ${action.color}20`
                                     }}>
-                                        <Icon size={40} color={action.color} />
+                                        <Icon size={24} color={action.color} />
                                     </div>
                                     <h3 style={{ 
-                                        fontSize: 20, 
-                                        fontWeight: 700, 
-                                        color: action.color, 
+                                        fontSize: 16, 
+                                        fontWeight: 600, 
+                                        color: "#111827", 
                                         marginBottom: 8,
                                         marginTop: 0
                                     }}>
                                         {action.title}
                                     </h3>
                                     <p style={{ 
-                                        fontSize: 14, 
-                                        color: "#666",
+                                        fontSize: 13, 
+                                        color: "#6B7280",
                                         lineHeight: 1.5,
-                                        margin: 0
+                                        margin: 0,
+                                        flex: 1
                                     }}>
                                         {action.subtitle}
                                     </p>
+                                    <div style={{
+                                        marginTop: 20,
+                                        width: "100%",
+                                        height: 1,
+                                        backgroundColor: "#F3F4F6"
+                                    }}></div>
+                                    <div style={{
+                                        marginTop: 16,
+                                        fontSize: 12,
+                                        color: action.color,
+                                        fontWeight: 500,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4
+                                    }}>
+                                        Access
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 12L10 8L6 4" stroke={action.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
 
-                    {/* Quick Info */}
-                    <div style={{
-                        marginTop: 64,
-                        padding: "32px",
-                        background: "rgba(255, 255, 255, 0.7)",
-                        borderRadius: 20,
-                        border: "1px solid rgba(124, 58, 237, 0.1)",
-                        textAlign: "center"
-                    }}>
-                        <h3 style={{ 
-                            fontSize: 18, 
-                            fontWeight: 600, 
-                            color: "#7C3AED", 
-                            marginBottom: 12 
-                        }}>
-                            Need Help?
-                        </h3>
-                        <p style={{ 
-                            fontSize: 14, 
-                            color: "#666", 
-                            margin: 0,
-                            lineHeight: 1.6
-                        }}>
-                            If you're unsure about reporting or need assistance,<br />
-                            please contact your supervisor or use the help resources.
-                        </p>
-                    </div>
+                    
                 </div>
             </div>
         </div>
