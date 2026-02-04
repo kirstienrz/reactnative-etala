@@ -1181,9 +1181,9 @@ export default function DocumentationAdmin() {
             <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-xl font-bold text-gray-900">📁 Documentation Drive</h1>
+                        <h1 className="text-xl font-bold text-gray-900"> Documentation Drive</h1>
                         <p className="text-xs text-gray-500 mt-1">
-                            {viewArchived ? '📦 Archived' : '📂 Active'} • {filteredDocs.length} docs • {docs.reduce((sum, doc) => sum + (doc.files?.length || 0), 0)} files
+                            {viewArchived ? ' Archived' : ' Active'} • {filteredDocs.length} docs • {docs.reduce((sum, doc) => sum + (doc.files?.length || 0), 0)} files
                         </p>
                     </div>
                     
