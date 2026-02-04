@@ -155,3 +155,14 @@ export const updateReportByUser = async (reportId, payload) => {
     throw err;
   }
 };
+
+// api/report.js - Idagdag ito sa mga existing na exports
+export const getReportAnalytics = async () => {
+  try {
+    const response = await API.get('/reports/analytics');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching report analytics:', error);
+    throw error;
+  }
+};

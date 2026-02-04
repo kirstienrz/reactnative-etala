@@ -720,6 +720,220 @@ const sendReportPDF = async (req, res) => {
   }
 };
 
+/**
+ * Get report analytics for dashboard
+ * @route GET /api/reports/analytics
+ * @access Admin, Superadmin
+ */
+const getReportAnalytics = async (req, res) => {
+  try {
+    // Kunin ang lahat ng reports
+    const reports = await Report.find()
+      .populate("createdBy", "firstName lastName email")
+      .lean();
+
+    const archivedReports = await Report.find({ archived: true }).lean();
+
+    // Severity analysis (kung may AI analysis field)
+    const severityCounts = {
+      'Severe': 0,
+      'Moderate': 0,
+      'Mild': 0,
+      'Unanalyzed': 0
+    };
+
+    // Status counts
+    const statusCounts = {
+      'For Queuing': 0,
+      'For Interview': 0,
+      'Internal': 0,
+      'External': 0,
+      'Case Closed': 0,
+      'Not Set': 0
+    };
+
+    // Incident type distribution
+    const incidentTypeCounts = {};
+    
+    // Department distribution
+    const departmentCounts = {};
+
+    // Process each report
+    reports.forEach(report => {
+      // Severity counts - check for severity field (from AI analysis)
+      if (report.severity) {
+        const severity = report.severity.charAt(0).toUpperCase() + report.severity.slice(1);
+        if (severityCounts.hasOwnProperty(severity)) {
+          severityCounts[severity] += 1;
+        } else {
+          severityCounts[severity] = 1;
+        }
+      } else {
+        severityCounts['Unanalyzed'] += 1;
+      }
+
+      // Status counts
+      if (report.caseStatus) {
+        const status = report.caseStatus;
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      } else {
+        statusCounts['Not Set'] += 1;
+      }
+
+      // Incident types count
+      if (report.incidentTypes && Array.isArray(report.incidentTypes)) {
+        report.incidentTypes.forEach(type => {
+          if (type) {
+            incidentTypeCounts[type] = (incidentTypeCounts[type] || 0) + 1;
+          }
+        });
+      }
+
+      // Department counts (reporterDepartment field)
+      if (report.reporterDepartment) {
+        const dept = report.reporterDepartment;
+        departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
+      }
+    });
+
+    // Monthly trends (last 6 months)
+    const months = [];
+    const monthCounts = [];
+    const monthArchivedCounts = [];
+    const now = new Date();
+
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = month.toLocaleString('default', { month: 'short' });
+      months.push(monthName);
+      
+      // Start and end of month
+      const startOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
+      const endOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+
+      // Count total reports this month
+      const count = await Report.countDocuments({
+        submittedAt: {
+          $gte: startOfMonth,
+          $lte: endOfMonth
+        }
+      });
+
+      // Count archived reports this month
+      const archivedCount = await Report.countDocuments({
+        archived: true,
+        submittedAt: {
+          $gte: startOfMonth,
+          $lte: endOfMonth
+        }
+      });
+
+      monthCounts.push(count);
+      monthArchivedCounts.push(archivedCount);
+    }
+
+    // Get top 10 most common incident types
+    const topIncidentTypes = Object.entries(incidentTypeCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, value]) => ({ name, value }));
+
+    // Get top 10 departments with most reports
+    const topDepartments = Object.entries(departmentCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, value]) => ({ name, value }));
+
+    // Calculate response times (average days from submission to last update)
+    const reportsWithResponse = reports.filter(r => r.submittedAt && r.lastUpdated);
+    let avgResponseDays = 0;
+    if (reportsWithResponse.length > 0) {
+      const totalDays = reportsWithResponse.reduce((sum, report) => {
+        const submitted = new Date(report.submittedAt);
+        const updated = new Date(report.lastUpdated || report.submittedAt);
+        const diffTime = Math.abs(updated - submitted);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return sum + diffDays;
+      }, 0);
+      avgResponseDays = Math.round(totalDays / reportsWithResponse.length);
+    }
+
+    // Resolution rate (percentage of closed cases)
+    const totalClosed = statusCounts['Case Closed'] || 0;
+    const resolutionRate = reports.length > 0 
+      ? Math.round((totalClosed / reports.length) * 100) 
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          totalReports: reports.length,
+          activeReports: reports.length - archivedReports.length,
+          archivedReports: archivedReports.length,
+          severeReports: severityCounts['Severe'],
+          moderateReports: severityCounts['Moderate'],
+          mildReports: severityCounts['Mild'],
+          pendingAnalysis: severityCounts['Unanalyzed'],
+          avgResponseDays: avgResponseDays,
+          resolutionRate: resolutionRate
+        },
+        byStatus: statusCounts,
+        bySeverity: severityCounts,
+        monthlyTrend: {
+          months,
+          counts: monthCounts,
+          archived: monthArchivedCounts
+        },
+        topIncidentTypes,
+        topDepartments,
+        recentActivity: {
+          // Last 5 reports
+          recentReports: reports
+            .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+            .slice(0, 5)
+            .map(report => ({
+              ticketNumber: report.ticketNumber,
+              incidentDescription: report.incidentDescription?.substring(0, 100) + '...',
+              caseStatus: report.caseStatus || 'Not Set',
+              submittedAt: report.submittedAt,
+              severity: report.severity || 'Unanalyzed'
+            })),
+          // Today's new reports
+          todayCount: await Report.countDocuments({
+            submittedAt: {
+              $gte: new Date().setHours(0, 0, 0, 0),
+              $lte: new Date()
+            }
+          }),
+          // This week's new reports
+          weekCount: await Report.countDocuments({
+            submittedAt: {
+              $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            }
+          })
+        },
+        performanceMetrics: {
+          // Average reports per day this month
+          avgDailyReports: monthCounts[monthCounts.length - 1] > 0 
+            ? Math.round(monthCounts[monthCounts.length - 1] / 30) 
+            : 0,
+          // Peak month
+          peakMonth: months[monthCounts.indexOf(Math.max(...monthCounts))],
+          peakMonthCount: Math.max(...monthCounts)
+        }
+      },
+      message: "Report analytics fetched successfully"
+    });
+  } catch (error) {
+    console.error("Error fetching report analytics:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 
 module.exports = {
   createReport,
@@ -736,4 +950,5 @@ module.exports = {
   updateReportByUser,
   sendReportPDF,
   generateTicketNumber,
+  getReportAnalytics
 };

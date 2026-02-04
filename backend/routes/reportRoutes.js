@@ -20,6 +20,7 @@ const {
   discloseReport,
   updateReportByUser, 
   sendReportPDF,
+  getReportAnalytics
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -79,5 +80,8 @@ router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);
 
 // 📌 Restore archived report
 router.put("/admin/:id/restore", auth(["admin", "superadmin"]), restoreReport);
+
+// 📊 Get report analytics
+router.get("/analytics", auth(["admin", "superadmin"]), getReportAnalytics);
 
 module.exports = router;
