@@ -284,7 +284,7 @@ export default function UserManagement() {
             <option value="OSA">OSA</option>
             <option value="HR">HR</option>
             <option value="Department Head">Department Head</option>
-            <option value="CIT">CIT</option>
+            {/* <option value="CIT">CIT</option> */}
             <option value="Faculty">Faculty</option>
             <option value="Staff">Staff</option>
             <option value="Student">Student</option>
@@ -493,12 +493,13 @@ export default function UserManagement() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Department
+                    Department *
                   </label>
                   <select
                     name="department"
                     value={formData.department}
                     onChange={handleChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Department</option>
@@ -517,13 +518,14 @@ export default function UserManagement() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Birthday (Optional)
+                    Birthday *
                   </label>
                   <input
                     type="date"
                     name="birthday"
                     value={formData.birthday}
                     onChange={handleChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -544,12 +546,13 @@ export default function UserManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender
+                  Gender *
                 </label>
                 <select
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Gender</option>
