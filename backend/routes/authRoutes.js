@@ -233,6 +233,9 @@ router.post("/verify-pin", async (req, res) => {
       role: user.role,
       department: user.department,
       tupId: user.tupId,
+      firstName: user.firstName,    // ✅ ADD THIS
+      lastName: user.lastName,      // ✅ ADD THIS
+      email: user.email,            // ✅ ADD THIS
     });
   } catch (err) {
     console.error("💥 Server error:", err);

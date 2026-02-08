@@ -21,11 +21,10 @@ const userSchema = new mongoose.Schema({
     default: "user"
   },
 
-  // department: {
-  //   type: String,
-  //   enum: ["BASD", "CAAD", "EEAD", "MAAD"],
-  
-  // },
+  department: {
+    type: String,
+    // enum: ["BASD", "CAAD", "EEAD", "MAAD"],
+  },
 
   // userType: {
   //   type: String,
@@ -33,7 +32,7 @@ const userSchema = new mongoose.Schema({
   // },
 
   birthday: { type: Date },
-  age: { type: Number },
+  // age: { type: Number },
 
   gender: { 
     type: String,

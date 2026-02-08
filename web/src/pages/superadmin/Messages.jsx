@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Plus, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, MoreVertical, Calendar, AlertCircle, CheckCircle, Mail } from 'lucide-react';
+import { Send, Plus, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, MoreVertical, Calendar, AlertCircle, CheckCircle, Mail, Search, Filter } from 'lucide-react';
 import { 
   getAllTickets, 
   getTicketMessages, 
@@ -156,13 +156,15 @@ const TicketMessagingSystem = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [showTicketList, setShowTicketList] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showTicketList, setShowTicketList] = useState(true);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [typingUser, setTypingUser] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'open', 'closed', 'unread'
+  
   // Modal states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showIdentityModal, setShowIdentityModal] = useState(false);
@@ -177,24 +179,18 @@ const TicketMessagingSystem = () => {
   const messagesEndRef = useRef(null);
   const menuRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const ticketListRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  
-  // 🔥 FIX: Use ref to avoid stale closure
   const selectedTicketRef = useRef(null);
 
-  // ✅ Track read tickets in localStorage (like AdminReports)
   const [readTickets, setReadTickets] = useState(() => {
     const stored = localStorage.getItem('adminReadTickets');
     return stored ? JSON.parse(stored) : [];
   });
 
-  // ✅ Save read tickets to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('adminReadTickets', JSON.stringify(readTickets));
   }, [readTickets]);
 
-  // ✅ Helper functions for read/unread status
   const isTicketRead = (ticketNumber) => {
     return readTickets.includes(ticketNumber);
   };
@@ -217,105 +213,67 @@ const TicketMessagingSystem = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 🔥 Update ref whenever selectedTicket changes
   useEffect(() => {
     selectedTicketRef.current = selectedTicket;
   }, [selectedTicket]);
 
-  // 🔥 Initialize Socket.IO - Setup ONCE
+  // Socket initialization
   useEffect(() => {
     console.log('🔌 Initializing socket connection...');
     socketService.connect();
     
-    // Small delay to ensure connection before joining room
     setTimeout(() => {
       console.log('👑 Attempting to join admin room...');
       socketService.joinAdminRoom();
     }, 100);
 
-    // 📩 Listen for new messages
     socketService.onNewMessage(({ message, ticket }) => {
       console.log('🔥 New message received:', message);
-      console.log('🔍 Message ticket:', message.ticketNumber);
-      console.log('🔍 Current ticket:', selectedTicketRef.current?.ticketNumber);
       
-      // Update messages if viewing this ticket
       if (selectedTicketRef.current?.ticketNumber === message.ticketNumber) {
         console.log('✅ Ticket match! Adding to messages...');
         setMessages(prev => {
-          console.log('📊 Current messages:', prev.length);
           const exists = prev.some(m => m._id === message._id);
-          console.log('🔍 Message exists?', exists);
-          
-          if (exists) {
-            console.log('⚠️ Duplicate, skipping');
-            return prev;
-          }
-          
-          console.log('✅ Adding message');
+          if (exists) return prev;
           return [...prev, message];
         });
       } else {
-        console.log('⚠️ Different ticket, updating list only');
-        // ✅ Mark as unread if it's a new message from user
         if (message.sender === 'user') {
           markTicketAsUnreadLocally(ticket.ticketNumber);
         }
       }
 
-      // ✅ Always update ticket list with latest data and sort by most recent
       setTickets(prev => {
         const updatedTickets = prev.map(t => 
           t.ticketNumber === ticket.ticketNumber ? ticket : t
         );
-        
-        // 🔥 Sort tickets: most recent message first (like Messenger)
         return [...updatedTickets].sort((a, b) => {
           const dateA = new Date(a.lastMessageAt);
           const dateB = new Date(b.lastMessageAt);
-          return dateB - dateA; // Most recent first
+          return dateB - dateA;
         });
       });
     });
 
-    // 📩 Listen for ticket updates
     socketService.onTicketUpdated((updatedTicket) => {
-      console.log('🔥 Ticket updated:', updatedTicket);
-      console.log('📊 Updated ticket hasUnreadMessages:', updatedTicket.hasUnreadMessages);
-      console.log('📊 Updated ticket unreadCount:', updatedTicket.unreadCount);
-      
       setTickets(prev => {
-        // Update the ticket in the list
         const newTickets = prev.map(t => 
           t.ticketNumber === updatedTicket.ticketNumber ? updatedTicket : t
         );
-        
-        // 🔥 Sort tickets: most recent message first (like Messenger)
         const sortedTickets = [...newTickets].sort((a, b) => {
           const dateA = new Date(a.lastMessageAt);
           const dateB = new Date(b.lastMessageAt);
-          return dateB - dateA; // Most recent first
+          return dateB - dateA;
         });
-        
-        console.log('📊 Tickets after update:', sortedTickets.map(t => ({ 
-          ticketNumber: t.ticketNumber, 
-          hasUnreadMessages: t.hasUnreadMessages,
-          unreadCount: t.unreadCount,
-          lastMessageAt: t.lastMessageAt
-        })));
-        
         return sortedTickets;
       });
       
-      // Also update selected ticket if it's the one that was updated
       if (selectedTicketRef.current?.ticketNumber === updatedTicket.ticketNumber) {
         setSelectedTicket(updatedTicket);
       }
     });
 
-    // 📩 Listen for ticket closed
     socketService.onTicketClosed(({ ticket, message }) => {
-      console.log('🔥 Ticket closed:', ticket);
       if (selectedTicketRef.current?.ticketNumber === ticket.ticketNumber) {
         setSelectedTicket(ticket);
         setMessages(prev => [...prev, message]);
@@ -325,9 +283,7 @@ const TicketMessagingSystem = () => {
       ));
     });
 
-    // 📩 Listen for ticket reopened
     socketService.onTicketReopened(({ ticket, message }) => {
-      console.log('🔥 Ticket reopened:', ticket);
       if (selectedTicketRef.current?.ticketNumber === ticket.ticketNumber) {
         setSelectedTicket(ticket);
         setMessages(prev => [...prev, message]);
@@ -337,9 +293,7 @@ const TicketMessagingSystem = () => {
       ));
     });
 
-    // 📩 Listen for typing
     socketService.onUserTyping(({ userName, isTyping }) => {
-      console.log('👤 Typing event:', userName, isTyping);
       if (isTyping) {
         setTypingUser(userName);
         if (typingTimeoutRef.current) {
@@ -353,21 +307,14 @@ const TicketMessagingSystem = () => {
       }
     });
 
-    // 📩 Listen for read receipts
     socketService.onMessagesRead(({ ticketNumber, readBy }) => {
-      console.log('📖 Messages read event received for ticket:', ticketNumber, 'by:', readBy);
-      
-      // Update messages in current view
       if (selectedTicketRef.current?.ticketNumber === ticketNumber) {
         setMessages(prev => prev.map(msg => ({
           ...msg,
-          // Mark messages as read based on who read them
           isRead: msg.sender === 'admin' && readBy === 'user' ? true : msg.isRead
         })));
       }
       
-      // ✅ Update ticket list to show as read (for admin view)
-      // Only update hasUnreadMessages if user read the admin's messages
       if (readBy === 'user') {
         setTickets(prev => prev.map(t => 
           t.ticketNumber === ticketNumber 
@@ -377,7 +324,6 @@ const TicketMessagingSystem = () => {
       }
     });
 
-    // Cleanup only typing timeout, keep socket connected
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -385,15 +331,10 @@ const TicketMessagingSystem = () => {
     };
   }, []);
 
-  // 🔥 Join/leave ticket rooms when selection changes
   useEffect(() => {
     if (selectedTicket) {
-      console.log('🎫 Joining ticket room:', selectedTicket.ticketNumber);
       socketService.joinTicket(selectedTicket.ticketNumber);
-      
-      // Only leave the room when switching tickets, not when unmounting
       return () => {
-        console.log('🚪 Leaving ticket room:', selectedTicket.ticketNumber);
         socketService.leaveTicket(selectedTicket.ticketNumber);
       };
     }
@@ -414,38 +355,28 @@ const TicketMessagingSystem = () => {
     loadTickets();
   }, []);
 
-  // 🔥 NEW: Handle pre-selected ticket from navigation (from Reports page)
   useEffect(() => {
     const handleNavigationState = async () => {
-      // Get state from navigation (passed from Reports page)
       const state = window.history.state?.usr;
       
       if (state?.selectedTicketNumber && tickets.length > 0) {
-        console.log('🎯 Pre-selecting ticket from navigation:', state.selectedTicketNumber);
-        
-        // Find the ticket in the loaded tickets
         const ticketToSelect = tickets.find(t => t.ticketNumber === state.selectedTicketNumber);
         
         if (ticketToSelect) {
-          console.log('✅ Found ticket, selecting it:', ticketToSelect);
           await handleSelectTicket(ticketToSelect);
-        } else {
-          console.log('⚠️ Ticket not found in list:', state.selectedTicketNumber);
         }
         
-        // Clear the navigation state so it doesn't auto-select on refresh
         window.history.replaceState({}, document.title);
       }
     };
     
     handleNavigationState();
-  }, [tickets]); // Run when tickets are loaded
+  }, [tickets]);
 
   const loadTickets = async () => {
     setLoading(true);
     try {
       const data = await getAllTickets({ sortBy: 'lastMessageAt' });
-      console.log('📥 Loaded tickets:', data);
       setTickets(data);
     } catch (error) {
       console.error('❌ Error loading tickets:', error);
@@ -464,7 +395,6 @@ const TicketMessagingSystem = () => {
     setLoading(true);
     try {
       const data = await getTicketMessages(ticketNumber, { limit: 50 });
-      console.log('📥 Loaded messages:', data);
       setMessages(data);
     } catch (error) {
       console.error('❌ Error loading messages:', error);
@@ -473,16 +403,10 @@ const TicketMessagingSystem = () => {
     }
   };
 
-  // ✅ Mark ticket as read on server
   const markTicketAsRead = async (ticketNumber) => {
     try {
       await markMessagesAsRead(ticketNumber);
-      console.log('✅ Marked ticket as read:', ticketNumber);
-      
-      // Update local storage
       markTicketAsReadLocally(ticketNumber);
-      
-      // Update local state
       setTickets(prev => prev.map(t => 
         t.ticketNumber === ticketNumber 
           ? { ...t, hasUnreadMessages: false } 
@@ -493,16 +417,10 @@ const TicketMessagingSystem = () => {
     }
   };
 
-  // ❌ Mark ticket as unread (calls API to update server and broadcasts via socket)
   const handleMarkAsUnread = async (ticketNumber) => {
     try {
       await markTicketAsUnread(ticketNumber);
-      console.log('✅ Marked ticket as unread:', ticketNumber);
-      
-      // Update local storage
       markTicketAsUnreadLocally(ticketNumber);
-      
-      // Update will come via socket event, but update local state immediately for responsiveness
       setTickets(prev => prev.map(t => 
         t.ticketNumber === ticketNumber 
           ? { ...t, hasUnreadMessages: true, unreadCount: { ...t.unreadCount, admin: 1 } } 
@@ -516,13 +434,7 @@ const TicketMessagingSystem = () => {
   const handleSelectTicket = async (ticket) => {
     setSelectedTicket(ticket);
     setShowTicketList(false);
-    
-    console.log('🔍 Selected ticket:', ticket);
-    console.log('🔍 Using ticketNumber:', ticket.ticketNumber);
-    
-    // ✅ Mark as read when opening
     await markTicketAsRead(ticket.ticketNumber);
-    
     await loadMessages(ticket.ticketNumber);
   };
 
@@ -531,16 +443,11 @@ const TicketMessagingSystem = () => {
 
     setSending(true);
     try {
-      console.log('📤 Sending to ticketNumber:', selectedTicket.ticketNumber);
-      
       const message = await sendTicketMessage(selectedTicket.ticketNumber, {
         content: newMessage.trim(),
         attachments: []
       });
       
-      console.log('✅ Message sent:', message);
-      
-      // 🔥 FIX: Add message immediately for instant feedback
       setMessages(prev => {
         const exists = prev.some(m => m._id === message._id);
         if (!exists) {
@@ -564,46 +471,30 @@ const TicketMessagingSystem = () => {
     }
   };
 
-  // Show modal helper
   const showModal = (config) => {
     setModalConfig(config);
     setShowConfirmModal(true);
   };
 
-  // 🔥 NEW: Handle sending appointment booking link
   const handleSendAppointmentLink = () => {
-    // First check if user is anonymous
     const user = selectedTicket.userId;
-  const report = selectedTicket.reportId;
-  
-  // ✅ Check if user exists and has required info
-  const isAnonymous = !user?.firstName || 
-                     !user?.lastName ||
-                     !user?.email;
-  
-  console.log('🔍 Checking user data:', {
-    hasUser: !!user,
-    hasReport: !!report,
-    firstName: user?.firstName,
-    lastName: user?.lastName,
-    email: user?.email,
-    reportIsAnonymous: report?.isAnonymous,
-    finalResult: isAnonymous
-  });
-  
-  if (isAnonymous) {
-    setShowIdentityModal(true);
-    return;
-  }
+    const report = selectedTicket.reportId;
+    
+    const isAnonymous = !user?.firstName || 
+                       !user?.lastName ||
+                       !user?.email;
+    
+    if (isAnonymous) {
+      setShowIdentityModal(true);
+      return;
+    }
 
-  setShowCalendarReminder(true);
-};
+    setShowCalendarReminder(true);
+  };
 
-  // 🔥 After calendar reminder confirmed
   const handleCalendarConfirmed = () => {
     setShowCalendarReminder(false);
     
-    // Show final confirmation
     const userEmail = selectedTicket.reportId?.personalInfo?.email || 'the user';
     const userName = selectedTicket.displayName || 'User';
     
@@ -616,130 +507,84 @@ const TicketMessagingSystem = () => {
     });
   };
 
-  // 🔥 Actually send the booking link
-// Replace your handleConfirmSendLink function in Messages.jsx with this:
-
-const handleConfirmSendLink = async () => {
-  try {
-    setIsSending(true);
-    
-    // ✅ Use selectedTicket (not selectedMessage)
-    const ticket = selectedTicket;
-    
-    if (!ticket) {
-      alert("❌ No ticket selected");
-      return;
-    }
-
-    console.log("🔍 FULL TICKET DATA:", JSON.stringify(ticket, null, 2));
-
-    // ✅ Extract user ID from ticket.userId
-    const userId = ticket.userId?._id || ticket.userId;
-    
-    // ✅ Get email - try multiple sources
-    const userEmail = ticket.userId?.email || 
-                     ticket.reportId?.email ||
-                     ticket.email;
-    
-    // ✅ Get name - try multiple sources
-    let userName = "";
-    
-    // Try displayName first (this is what shows in the UI)
-    if (ticket.displayName && ticket.displayName !== "Anonymous User") {
-      userName = ticket.displayName;
-    }
-    // Try userId object
-    else if (ticket.userId?.firstName && ticket.userId?.lastName) {
-      userName = `${ticket.userId.firstName} ${ticket.userId.lastName}`;
-    }
-    // Try reportId
-    else if (ticket.reportId?.firstName && ticket.reportId?.lastName) {
-      userName = `${ticket.reportId.firstName} ${ticket.reportId.lastName}`;
-    }
-    // Fallback
-    else {
-      userName = "User";
-    }
-
-    // ✅ Get ticket number
-    const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
-
-    console.log("📤 Extracted data:", {
-      userId,
-      userEmail,
-      userName,
-      ticketNumber,
-      ticketUserId: ticket.userId,
-      ticketReportId: ticket.reportId
-    });
-
-    // ✅ Validate required fields
-    if (!userId) {
-      console.error("❌ Missing userId. Available data:", {
-        ticketUserId: ticket.userId,
-        hasUserId: !!ticket.userId,
-        userIdType: typeof ticket.userId
-      });
-      alert("❌ Error: User ID not found. Cannot send booking link.");
-      return;
-    }
-    
-    if (!userEmail) {
-      console.error("❌ Missing email. Available data:", {
-        ticketUserIdEmail: ticket.userId?.email,
-        ticketReportIdEmail: ticket.reportId?.email,
-        ticketEmail: ticket.email
-      });
-      alert("❌ Error: User email not found. Cannot send booking link.");
-      return;
-    }
-
-    if (!ticketNumber) {
-      console.error("❌ Missing ticket number. Available data:", {
-        ticketReportIdTicketNumber: ticket.reportId?.ticketNumber,
-        ticketTicketNumber: ticket.ticketNumber
-      });
-      alert("❌ Error: Ticket number not found.");
-      return;
-    }
-
-    console.log("✅ All validation passed. Sending booking link...");
-
-    // ✅ Send booking link
-    const response = await sendBookingLinkEmail({
-      userId,           
-      userEmail,        
-      userName,         
-      ticketNumber
-    });
-
-    if (response.success) {
-      alert(`✅ Booking link sent successfully to ${userEmail}!\nLink expires in 24 hours.`);
-      setShowConfirmModal(false);
+  const handleConfirmSendLink = async () => {
+    try {
+      setIsSending(true);
       
-      // ✅ Optional: Send a message in the chat
-      try {
-        await sendTicketMessage(ticket.ticketNumber, {
-          content: `📅 An appointment booking link has been sent to your email (${userEmail}).\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`,
-          metadata: { type: 'appointment_link' }
-        });
-        
-        console.log("✅ Sent notification message to chat");
-      } catch (msgError) {
-        console.error("⚠️ Failed to send chat message:", msgError);
-        // Don't block the success flow if chat message fails
+      const ticket = selectedTicket;
+      
+      if (!ticket) {
+        alert("❌ No ticket selected");
+        return;
       }
-    } else {
-      alert(`❌ ${response.message || "Failed to send booking link"}`);
-    }
 
-  } catch (error) {
-    console.error("❌ Error sending appointment link:", error);
-    alert(`❌ Error: ${error.message || "Failed to send booking link"}`);
-  } finally {
-    setIsSending(false);
-  }
-};
+      const userId = ticket.userId?._id || ticket.userId;
+      const userEmail = ticket.userId?.email || 
+                       ticket.reportId?.email ||
+                       ticket.email;
+      
+      let userName = "";
+      
+      if (ticket.displayName && ticket.displayName !== "Anonymous User") {
+        userName = ticket.displayName;
+      }
+      else if (ticket.userId?.firstName && ticket.userId?.lastName) {
+        userName = `${ticket.userId.firstName} ${ticket.userId.lastName}`;
+      }
+      else if (ticket.reportId?.firstName && ticket.reportId?.lastName) {
+        userName = `${ticket.reportId.firstName} ${ticket.reportId.lastName}`;
+      }
+      else {
+        userName = "User";
+      }
+
+      const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
+
+      if (!userId) {
+        alert("❌ Error: User ID not found. Cannot send booking link.");
+        return;
+      }
+      
+      if (!userEmail) {
+        alert("❌ Error: User email not found. Cannot send booking link.");
+        return;
+      }
+
+      if (!ticketNumber) {
+        alert("❌ Error: Ticket number not found.");
+        return;
+      }
+
+      const response = await sendBookingLinkEmail({
+        userId,           
+        userEmail,        
+        userName,         
+        ticketNumber
+      });
+
+      if (response.success) {
+        alert(`✅ Booking link sent successfully to ${userEmail}!\nLink expires in 24 hours.`);
+        setShowConfirmModal(false);
+        
+        try {
+          await sendTicketMessage(ticket.ticketNumber, {
+            content: `📅 An appointment booking link has been sent to your email (${userEmail}).\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`,
+            metadata: { type: 'appointment_link' }
+          });
+        } catch (msgError) {
+          console.error("⚠️ Failed to send chat message:", msgError);
+        }
+      } else {
+        alert(`❌ ${response.message || "Failed to send booking link"}`);
+      }
+
+    } catch (error) {
+      console.error("❌ Error sending appointment link:", error);
+      alert(`❌ Error: ${error.message || "Failed to send booking link"}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -792,7 +637,6 @@ const handleConfirmSendLink = async () => {
     });
   };
 
-  // Find the last message sent by admin
   const getLastAdminMessageIndex = () => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].sender === 'admin') {
@@ -804,9 +648,30 @@ const handleConfirmSendLink = async () => {
 
   const lastAdminMessageIndex = getLastAdminMessageIndex();
 
+  // Filter tickets based on search and filter
+  const filteredTickets = tickets.filter(ticket => {
+    // Search filter
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || 
+      ticket.displayName?.toLowerCase().includes(searchLower) ||
+      ticket.ticketNumber?.toLowerCase().includes(searchLower) ||
+      ticket.reportId?.ticketNumber?.toLowerCase().includes(searchLower);
+
+    // Status filter
+    let matchesFilter = true;
+    if (filterStatus === 'open') {
+      matchesFilter = ticket.status === 'Open';
+    } else if (filterStatus === 'closed') {
+      matchesFilter = ticket.status === 'Closed';
+    } else if (filterStatus === 'unread') {
+      matchesFilter = !isTicketRead(ticket.ticketNumber);
+    }
+
+    return matchesSearch && matchesFilter;
+  });
+
   return (
     <>
-      {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
@@ -819,186 +684,147 @@ const handleConfirmSendLink = async () => {
         isLoading={sending}
       />
 
-      {/* Identity Disclosure Modal */}
       <IdentityDisclosureModal
         isOpen={showIdentityModal}
         onClose={() => setShowIdentityModal(false)}
         ticketNumber={selectedTicket?.reportId?.ticketNumber || selectedTicket?.ticketNumber}
       />
 
-      {/* Calendar Reminder Modal */}
       <CalendarReminderModal
         isOpen={showCalendarReminder}
         onClose={() => setShowCalendarReminder(false)}
         onConfirm={handleCalendarConfirmed}
       />
 
-      {/* 🔥 Main container - takes full available height from parent */}
-      <div className="flex bg-gray-50" style={{ height: '100%', overflow: 'hidden' }}>
-        {/* 🔥 TICKET LIST SIDEBAR */}
+      {/* Main Container - Messenger-style Layout */}
+      <div className="flex bg-white" style={{ height: '100%', overflow: 'hidden' }}>
+        {/* Sidebar - Always visible on desktop, toggleable on mobile */}
         <div 
-          className={`${showTicketList ? 'block' : 'hidden'} md:block ${
-            sidebarCollapsed ? 'md:w-16' : 'w-full md:w-80'
-          } bg-white border-r border-gray-200 transition-all duration-300`}
+          className={`${
+            showTicketList ? 'flex' : 'hidden'
+          } md:flex flex-col w-full md:w-96 border-r border-gray-200 bg-white`}
           style={{ 
-            display: 'flex',
-            flexDirection: 'column',
             height: '100%',
             minHeight: 0
           }}
         >
-          {/* FIXED HEADER */}
-          <div 
-            className="p-4 border-b border-gray-200"
-            style={{ 
-              flexShrink: 0
-            }}
-          >
+          {/* Sidebar Header - Fixed */}
+          <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
             <div className="flex items-center justify-between mb-4">
-              {!sidebarCollapsed && (
-                <h2 className="text-xl font-bold text-gray-900">Tickets</h2>
-              )}
-              <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+              <button
+                onClick={() => setShowTicketList(false)}
+                className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search tickets..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-2 overflow-x-auto">
+              {['all', 'unread', 'open', 'closed'].map((filter) => (
                 <button
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="hidden md:block p-1 hover:bg-gray-100 rounded transition-colors"
-                  title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  key={filter}
+                  onClick={() => setFilterStatus(filter)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    filterStatus === filter
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
                 >
-                  {sidebarCollapsed ? (
-                    <ChevronRight className="w-5 h-5" />
-                  ) : (
-                    <ChevronLeft className="w-5 h-5" />
-                  )}
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
                 </button>
-                <button
-                  onClick={() => setShowTicketList(false)}
-                  className="md:hidden p-1 hover:bg-gray-100 rounded"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* SCROLLABLE TICKET LIST */}
+          {/* Ticket List - Scrollable */}
           <div 
-            ref={ticketListRef}
-            style={{ 
-              flex: '1 1 auto',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              minHeight: 0
-            }}
+            className="flex-1 overflow-y-auto"
+            style={{ minHeight: 0 }}
           >
             {loading ? (
               <div className="flex items-center justify-center p-8">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
               </div>
-            ) : tickets.length === 0 ? (
+            ) : filteredTickets.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                {!sidebarCollapsed && <p>No tickets found</p>}
+                <p className="text-sm">
+                  {searchQuery || filterStatus !== 'all' 
+                    ? 'No tickets match your search' 
+                    : 'No tickets found'}
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {tickets.map((ticket) => {
+                {filteredTickets.map((ticket) => {
                   const hasUnread = !isTicketRead(ticket.ticketNumber);
-                  const isMenuOpen = openMenuId === ticket.ticketNumber;
                   const isSelected = selectedTicket?.ticketNumber === ticket.ticketNumber;
                   
                   return (
-                    <div
+                    <button
                       key={ticket._id}
-                      className={`relative flex items-stretch transition-colors ${
+                      onClick={() => handleSelectTicket(ticket)}
+                      className={`w-full p-4 text-left transition-colors ${
                         isSelected 
-                          ? 'bg-blue-100' 
+                          ? 'bg-blue-50 border-l-4 border-blue-500' 
                           : hasUnread 
-                          ? 'bg-blue-50 hover:bg-blue-100' 
+                          ? 'bg-gray-50 hover:bg-gray-100' 
                           : 'hover:bg-gray-50'
                       }`}
                     >
-                      <button
-                        onClick={() => handleSelectTicket(ticket)}
-                        className="flex-1 p-4 text-left bg-transparent"
-                        title={sidebarCollapsed ? `${ticket.reportId?.ticketNumber || ticket.ticketNumber} - ${ticket.displayName}` : ''}
-                      >
-                        {sidebarCollapsed ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${hasUnread ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
+                      <div className="flex items-start gap-3">
+                        {/* Avatar */}
+                        <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
+                          hasUnread ? 'bg-blue-500' : 'bg-gray-400'
+                        }`}>
+                          {ticket.displayName?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-sm ${hasUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
+                              {ticket.displayName || 'Anonymous User'}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2">
+                              {formatDate(ticket.lastMessageAt)}
+                            </span>
                           </div>
-                        ) : (
-                          <div className="flex gap-3">
-                            <div className="w-2 flex-shrink-0 pt-1">
-                              {hasUnread && (
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              )}
-                            </div>
+                          
+                          <p className="text-xs text-gray-600 mb-1">
+                            {ticket.reportId?.ticketNumber || ticket.ticketNumber}
+                          </p>
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-sm ${hasUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-900'}`}>
-                                      {ticket.reportId?.ticketNumber || ticket.ticketNumber}
-                                    </span>
-                                  </div>
-                                  <p className={`text-sm truncate ${hasUnread ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-                                    {ticket.displayName}
-                                  </p>
-                                  {ticket.reportId?.caseStatus && (
-                                    <span className="text-xs text-gray-500">
-                                      {ticket.reportId.caseStatus}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center text-xs text-gray-500">
-                                <Clock className="w-3 h-3 mr-1" />
-                                {formatDate(ticket.lastMessageAt)}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </button>
-
-                      {!sidebarCollapsed && (
-                        <div className="relative flex items-center pr-4" ref={isMenuOpen ? menuRef : null}>
-                          <button
-                            onClick={(e) => toggleMenu(e, ticket.ticketNumber)}
-                            className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-                          >
-                            <MoreVertical className="w-4 h-4 text-gray-600" />
-                          </button>
-
-                          {isMenuOpen && (
-                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                              {hasUnread ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    markTicketAsRead(ticket.ticketNumber);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                                >
-                                  Mark as read
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleMarkAsUnread(ticket.ticketNumber);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                                >
-                                  Mark as unread
-                                </button>
-                              )}
-                            </div>
+                          {ticket.reportId?.caseStatus && (
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
+                              ticket.status === 'Open'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {ticket.reportId.caseStatus}
+                            </span>
                           )}
                         </div>
-                      )}
-                    </div>
+
+                        {/* Unread indicator */}
+                        {hasUnread && (
+                          <div className="flex-shrink-0 w-3 h-3 bg-blue-500 rounded-full mt-1"></div>
+                        )}
+                      </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1006,166 +832,186 @@ const handleConfirmSendLink = async () => {
           </div>
         </div>
 
-        {/* 🔥 CHAT AREA */}
+        {/* Chat Area */}
         <div 
-          className="flex-1"
+          className={`${showTicketList ? 'hidden md:flex' : 'flex'} flex-col flex-1`} 
           style={{ 
-            display: 'flex',
-            flexDirection: 'column',
             height: '100%',
             minHeight: 0
           }}
         >
           {selectedTicket ? (
             <>
-              {/* FIXED CHAT HEADER */}
-              <div 
-                className="bg-white border-b border-gray-200 p-4 flex items-center justify-between"
-                style={{ 
-                  flexShrink: 0
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowTicketList(true)}
-                    className="md:hidden p-2 hover:bg-gray-100 rounded"
-                  >
-                    <Plus className="w-5 h-5 rotate-45" />
-                  </button>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {selectedTicket.reportId?.ticketNumber || selectedTicket.ticketNumber}
-                    </h3>
-                    <p className="text-sm text-gray-500">{selectedTicket.displayName}</p>
-                    {selectedTicket.reportId?.caseStatus && (
-                      <p className="text-xs text-gray-400">{selectedTicket.reportId.caseStatus}</p>
-                    )}
+              {/* Chat Header - Fixed */}
+              <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowTicketList(true)}
+                      className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                      {selectedTicket.displayName?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {selectedTicket.displayName || 'Anonymous User'}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        {selectedTicket.reportId?.ticketNumber || selectedTicket.ticketNumber}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSendAppointmentLink}
+                      className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all text-sm font-medium"
+                      title="Send appointment booking link"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Book Appointment
+                    </button>
+                    
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      selectedTicket.status === 'Open' 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {selectedTicket.status}
+                    </span>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  selectedTicket.status === 'Open' 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {selectedTicket.status}
-                </span>
               </div>
 
-              {/* SCROLLABLE MESSAGES */}
+              {/* Messages - Scrollable */}
               <div 
                 ref={messagesContainerRef}
-                className="p-4 space-y-4"
-                style={{ 
-                  flex: '1 1 auto',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  minHeight: 0
-                }}
+                className="flex-1 overflow-y-auto p-4 bg-gray-50"
+                style={{ minHeight: 0 }}
               >
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <p>No messages yet</p>
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                      <Mail className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm">No messages yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Start the conversation</p>
                   </div>
                 ) : (
-                  messages.map((msg, idx) => {
-                    const isCurrentUser = msg.sender === 'admin';
-                    const isLastAdminMessage = isCurrentUser && idx === lastAdminMessageIndex;
-                    const isAppointmentLink = msg.metadata?.type === 'appointment_link';
-                    
-                    return (
-                      <div
-                        key={idx}
-                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div className={`max-w-xs md:max-w-md lg:max-w-lg ${
-                          isAppointmentLink 
-                            ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white border-2 border-purple-300' 
-                            : isCurrentUser 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-white'
-                        } rounded-lg p-3 shadow-sm`}>
-                          {isAppointmentLink && (
-                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
-                              <Mail className="w-4 h-4" />
-                              <span className="text-xs font-semibold">Appointment Booking Link Sent</span>
-                            </div>
-                          )}
-                          <p className={`text-sm whitespace-pre-line ${
-                            isAppointmentLink || isCurrentUser ? 'text-white' : 'text-gray-900'
-                          }`}>
-                            {msg.content}
-                          </p>
-                          {msg.attachments?.length > 0 && (
-                            <div className="mt-2 flex items-center gap-1 text-xs">
-                              <Paperclip className="w-3 h-3" />
-                              {msg.attachments.length} attachment(s)
-                            </div>
-                          )}
-                          <div className="flex items-center justify-between gap-2 mt-1">
-                            <span className={`text-xs ${
-                              isAppointmentLink || isCurrentUser ? 'text-white/70' : 'text-gray-400'
-                            }`}>
-                              {formatTime(msg.createdAt)}
-                            </span>
-                            {isCurrentUser && isLastAdminMessage && msg.isRead && (
-                              <span className={`text-xs ${isAppointmentLink ? 'text-white/70' : 'text-blue-200'}`}>
-                                Read
-                              </span>
+                  <div className="space-y-4 max-w-4xl mx-auto">
+                    {messages.map((msg, idx) => {
+                      const isCurrentUser = msg.sender === 'admin';
+                      const isLastAdminMessage = isCurrentUser && idx === lastAdminMessageIndex;
+                      const isAppointmentLink = msg.metadata?.type === 'appointment_link';
+                      
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`max-w-md ${
+                            isAppointmentLink 
+                              ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg' 
+                              : isCurrentUser 
+                              ? 'bg-blue-500 text-white' 
+                              : 'bg-white shadow-sm'
+                          } rounded-2xl p-3`}>
+                            {isAppointmentLink && (
+                              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30">
+                                <Calendar className="w-4 h-4" />
+                                <span className="text-xs font-semibold">Appointment Booking</span>
+                              </div>
                             )}
+                            <p className={`text-sm whitespace-pre-line ${
+                              isAppointmentLink || isCurrentUser ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              {msg.content}
+                            </p>
+                            {msg.attachments?.length > 0 && (
+                              <div className="mt-2 flex items-center gap-1 text-xs opacity-80">
+                                <Paperclip className="w-3 h-3" />
+                                {msg.attachments.length} attachment(s)
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between gap-2 mt-1">
+                              <span className={`text-xs ${
+                                isAppointmentLink || isCurrentUser ? 'text-white/70' : 'text-gray-400'
+                              }`}>
+                                {formatTime(msg.createdAt)}
+                              </span>
+                              {isCurrentUser && isLastAdminMessage && msg.isRead && (
+                                <span className={`text-xs ${isAppointmentLink ? 'text-white/70' : 'text-blue-200'}`}>
+                                  ✓ Read
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {typingUser && (
+                      <div className="flex justify-start">
+                        <div className="bg-white shadow-sm rounded-2xl px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                            </div>
+                            <span className="text-xs text-gray-500">{typingUser} is typing</span>
                           </div>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-                
-                {typingUser && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-200 rounded-lg px-4 py-2">
-                      <span className="text-sm text-gray-600">
-                        {typingUser} is typing...
-                      </span>
-                    </div>
+                    )}
+                    
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
-                
-                <div ref={messagesEndRef} />
               </div>
 
-              {/* FIXED MESSAGE INPUT */}
+              {/* Message Input - Fixed */}
               {selectedTicket.status === 'Open' && (
-                <div 
-                  className="bg-white border-t border-gray-200 p-4"
-                  style={{ 
-                    flexShrink: 0
-                  }}
-                >
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSendAppointmentLink}
-                      className="px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center gap-2"
-                      title="Send appointment booking link to user's email"
-                    >
-                      <Calendar className="w-5 h-5" />
-                      <span className="hidden sm:inline text-sm font-medium">Send Booking Link</span>
-                    </button>
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={handleTyping}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Type your message..."
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      disabled={sending}
-                    />
+                <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4">
+                  {/* Mobile Calendar Button */}
+                  <button
+                    onClick={handleSendAppointmentLink}
+                    className="sm:hidden w-full mb-3 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Send Booking Link
+                  </button>
+
+                  <div className="flex gap-3 items-end max-w-4xl mx-auto">
+                    <div className="flex-1 relative">
+                      <textarea
+                        value={newMessage}
+                        onChange={handleTyping}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Type a message..."
+                        rows="1"
+                        className="w-full px-4 py-3 pr-12 bg-gray-100 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                        style={{ 
+                          minHeight: '44px',
+                          maxHeight: '120px',
+                          overflowY: 'auto'
+                        }}
+                        disabled={sending}
+                      />
+                    </div>
                     <button
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim() || sending}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                      className="flex-shrink-0 w-11 h-11 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                     >
                       {sending ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -1178,8 +1024,18 @@ const handleConfirmSendLink = async () => {
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              <p>Select a ticket to start messaging</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-500 bg-gray-50">
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+                <Mail className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Conversation Selected</h3>
+              <p className="text-sm text-gray-500 mb-6">Choose a ticket to start messaging</p>
+              <button
+                onClick={() => setShowTicketList(true)}
+                className="md:hidden px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                View Tickets
+              </button>
             </div>
           )}
         </div>

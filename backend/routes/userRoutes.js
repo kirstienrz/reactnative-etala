@@ -135,6 +135,7 @@ router.get("/:id", auth(), async (req, res) => {
 });
 
 // ✏️ UPDATE user profile (Protected + Password verification)
+// ✏️ UPDATE user profile (Protected + Password verification)
 router.put("/:id", auth(), async (req, res) => {
   try {
     const {
@@ -143,8 +144,8 @@ router.put("/:id", auth(), async (req, res) => {
       birthday,
       age,
       gender,
-      currentPassword, // 🧩 old password
-      newPassword, // 🆕 new password
+      currentPassword,
+      newPassword,
     } = req.body;
 
     // 🔒 Ensure user can only edit their own profile
@@ -171,16 +172,21 @@ router.put("/:id", auth(), async (req, res) => {
     }
 
     // 🧠 Update allowed fields only
-    user.firstName = firstName || user.firstName;
-    user.lastName = lastName || user.lastName;
-    user.birthday = birthday || user.birthday;
-    user.age = age || user.age;
-    user.gender = gender || user.gender;
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    
+    // ✅ FIX: Properly handle birthday - allow null/undefined to clear it
+    if (birthday !== undefined) {
+      user.birthday = birthday ? new Date(birthday) : null;
+    }
+    
+    if (age !== undefined) user.age = age;
+    if (gender !== undefined) user.gender = gender;
 
     // Save changes
     const updatedUser = await user.save();
     const userResponse = updatedUser.toObject();
-    delete userResponse.password; // remove password from response
+    delete userResponse.password;
 
     res.json(userResponse);
   } catch (err) {

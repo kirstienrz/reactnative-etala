@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { useSelector } from "react-redux"; // Add this import
 import { 
   FileText, 
   ListTodo, 
@@ -9,15 +10,13 @@ import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const [user, setUser] = useState({ name: "User", role: "Case Worker" });
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setUser({ name: "Kirst", role: "GAD Focal Person" });
-        }, 300);
-        return () => clearTimeout(timer);
-    }, []);
-
+    
+    // Get actual user from Redux store
+    const { user, role } = useSelector((state) => state.auth);
+    
+    // Fallback if user data is missing
+    const displayName = user?.firstName || user?.username || "User";
+    const displayRole = user?.role || role || "User";
     // ONLY 4 MAIN FUNCTIONS
     const mainActions = [
         {
@@ -95,7 +94,7 @@ export default function Dashboard() {
                             fontWeight: 600,
                             fontSize: 20
                         }}>
-                            {user.name.charAt(0)}
+                            {displayName.charAt(0).toUpperCase()}
                         </div>
                         <div>
                             <h1 style={{ 
@@ -104,7 +103,7 @@ export default function Dashboard() {
                                 fontWeight: 700,
                                 color: "#111827"
                             }}>
-                                Welcome back, {user.name}
+                                Welcome back, {displayName}
                             </h1>
                             <div style={{
                                 display: "inline-flex",
@@ -122,7 +121,7 @@ export default function Dashboard() {
                                     borderRadius: "50%",
                                     backgroundColor: "#10B981"
                                 }}></span>
-                                {user.role} • GAD Reporting System
+                                {displayRole} • GAD Reporting System
                             </div>
                         </div>
                     </div>

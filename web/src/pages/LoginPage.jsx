@@ -63,79 +63,65 @@ const LoginPage = () => {
     setPin(numbers);
   };
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      // 🔹 BASIC FIELD VALIDATION (client-side trapping)
-      if (!email || (!usePin && (!password || !tupId)) || (usePin && !pin)) {
-        toast.warning("Please fill in all required fields.");
-        setLoading(false);
-        return; // stop the process
-      }
-
-      // 🔹 EMAIL FORMAT CHECK
-      // if (!email.endsWith("@tup.edu.ph")) {
-      //   toast.warning("Please use your TUP email address only.");
-      //   setLoading(false);
-      //   return;
-      // }
-      let data;
-
-      if (usePin) {
-        if (pin.length !== 6) {
-          throw new Error("PIN must be exactly 6 digits");
-        }
-        data = await verifyPin(email, pin);
-      } else {
-        if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
-          throw new Error("TUPT ID must be in format: TUPT-XX-XXXX");
-        }
-        data = await login(email, password, tupId);
-      }
-
-      dispatch(loginSuccess({
-        token: data.token,
-        role: data.role,
-        department: data.department,
-        user: {
-          _id: data.id,      // ✅ Use _id to match MongoDB convention
-          name: data.name,
-          role: data.role,
-          department: data.department
-        }
-      }));
-
-      toast.success("Login successful!");
-
-      if (data.role === "superadmin") navigate("/superadmin/dashboard");
-      else navigate("/user/dashboard");
-
-    } catch (err) {
-      // ✅ Custom error handling
-      if (err.response) {
-        const { status, data } = err.response;
-
-        if (status === 403 && data?.msg?.toLowerCase().includes("deactivated")) {
-          toast.error("Your account has been deactivated. Please contact the administrator.");
-        } else if (status === 403 && data?.msg?.toLowerCase().includes("archived")) {
-          toast.error("Your account is archived. Please contact support.");
-        } else if (status === 400) {
-          toast.error(data?.msg || "Invalid credentials. Please try again.");
-        } else {
-          toast.error(data?.msg || "Login failed. Please try again later.");
-        }
-      } else {
-        toast.error("Invalid. Please try again");
-      }
-
-      setError(err.message || "Invalid credentials");
-    } finally {
+  try {
+    // 🔹 BASIC FIELD VALIDATION (client-side trapping)
+    if (!email || (!usePin && (!password || !tupId)) || (usePin && !pin)) {
+      toast.warning("Please fill in all required fields.");
       setLoading(false);
+      return; // stop the process
     }
-  };
 
+    let data;
+
+    if (usePin) {
+      if (pin.length !== 6) {
+        throw new Error("PIN must be exactly 6 digits");
+      }
+      data = await verifyPin(email, pin);
+    } else {
+      if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
+        throw new Error("TUPT ID must be in format: TUPT-XX-XXXX");
+      }
+      data = await login(email, password, tupId);
+    }
+
+    console.log("📥 Backend Response:", data); // ✅ Debug log
+
+    // ✅ Dispatch the ENTIRE backend response - authSlice will handle restructuring
+    dispatch(loginSuccess(data));
+
+    toast.success("Login successful!");
+
+    if (data.role === "superadmin") navigate("/superadmin/dashboard");
+    else navigate("/user/dashboard");
+
+  } catch (err) {
+    // ✅ Custom error handling
+    if (err.response) {
+      const { status, data } = err.response;
+
+      if (status === 403 && data?.msg?.toLowerCase().includes("deactivated")) {
+        toast.error("Your account has been deactivated. Please contact the administrator.");
+      } else if (status === 403 && data?.msg?.toLowerCase().includes("archived")) {
+        toast.error("Your account is archived. Please contact support.");
+      } else if (status === 400) {
+        toast.error(data?.msg || "Invalid credentials. Please try again.");
+      } else {
+        toast.error(data?.msg || "Login failed. Please try again later.");
+      }
+    } else {
+      toast.error("Invalid. Please try again");
+    }
+
+    setError(err.message || "Invalid credentials");
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background elements */}

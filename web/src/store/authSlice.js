@@ -49,9 +49,10 @@ const authSlice = createSlice({
     // LOGIN SUCCESS
     // =========================
     loginSuccess: (state, action) => {
-      const { token, role, user } = action.payload;
+      // ✅ Backend returns a FLAT object with all fields at root level
+      const { token, role, _id, ...restOfUserData } = action.payload;
 
-      console.log("✅ Login Success - Payload:", action.payload);
+      console.log("✅ Login Success - Full Payload:", action.payload);
 
       // 🔑 Extract user ID from JWT as fallback
       let userIdFromToken = null;
@@ -64,13 +65,16 @@ const authSlice = createSlice({
         console.error("❌ Failed to decode JWT:", error);
       }
 
-      // 👤 Build complete user object
+      // 👤 Build complete user object from the FLAT response
       const completeUser = {
-        ...user,
-        _id: user?._id || user?.id || userIdFromToken,
-        id: user?._id || user?.id || userIdFromToken,
-        role,
+        _id: _id || userIdFromToken,
+        id: _id || userIdFromToken,
+        role: role,
+        // Spread all other fields from backend (firstName, lastName, email, department, tupId, etc.)
+        ...restOfUserData,
       };
+
+      console.log("👤 Complete User Object:", completeUser);
 
       if (!completeUser._id && !completeUser.id) {
         console.error("⚠️ CRITICAL: No user ID found!");
@@ -87,7 +91,7 @@ const authSlice = createSlice({
       localStorage.setItem("role", role);
       localStorage.setItem("user", JSON.stringify(completeUser));
 
-      console.log("💾 Saved auth data:", completeUser);
+      console.log("💾 Saved complete auth data to localStorage");
     },
 
     // =========================

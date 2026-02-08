@@ -66,14 +66,15 @@ const reportSchema = new mongoose.Schema({
   guardianBarangay: String,
   guardianContact: String,
 
-  // Anonymous Reporter
+  // Reporter Context (both anonymous and identified)
   reporterRole: String,
   tupRole: String,
+  reporterGender: String,  // ✅ ADDED: Used for both anonymous and identified reporters
+  reporterDepartment: String,
+
+  // Legacy fields (keeping for backward compatibility)
   anonymousGender: String,
   anonymousDepartment: String,
-
-  reporterDepartment: String, // <<< DAGDAG DITO
-
 
   // Perpetrator Info
   perpLastName: String,
@@ -108,6 +109,7 @@ const reportSchema = new mongoose.Schema({
 
   // Incident Info
   incidentTypes: [String],
+  otherIncidentType: String,  // ✅ ADDED: For "Other" incident type details
   incidentDescription: String,
   latestIncidentDate: String,
   incidentRegion: String,

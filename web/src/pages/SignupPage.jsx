@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Calendar } from "lucide-react";
 import { toast } from "react-toastify";
 import { signup } from "../api/auth"; // iyong signup API
 
@@ -21,7 +21,8 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState("Student");
   const [department, setDepartment] = useState("");
-  const [gender, setGender] = useState(""); // ✅ new
+  const [gender, setGender] = useState("");
+  const [birthday, setBirthday] = useState(""); // ✅ new
   const [loading, setLoading] = useState(false);
 
   const showDepartment = userType === "Student" || userType === "Faculty";
@@ -50,7 +51,8 @@ const SignupPage = () => {
         !password ||
         !tupId ||
         !userType ||
-        !gender || // ✅ gender required
+        !gender ||
+        !birthday || // ✅ birthday required
         (showDepartment && !department)
       ) {
         toast.warning("Please fill in all required fields.");
@@ -84,6 +86,7 @@ const SignupPage = () => {
         password,
         userType,
         gender,
+        birthday, // ✅ include birthday
         department: showDepartment ? department : null,
       });
 
@@ -185,22 +188,39 @@ const SignupPage = () => {
               <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX</p>
             </div>
 
-            {/* Gender */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Gender <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                required
-                className="w-full pl-3 pr-3 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
+            {/* Gender & Birthday */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  required
+                  className="w-full pl-3 pr-3 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Birthday <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                  <input
+                    type="date"
+                    value={birthday}
+                    onChange={(e) => setBirthday(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-3 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Password */}
