@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // 🔹 Change this to your backend URL
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL = "https://reactnative-etala.vercel.app/api/auth";
 
 /**
  * Login with email + TUPT ID + password
