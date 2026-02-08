@@ -2,7 +2,7 @@ import axios from "axios";
 import { getToken } from "./auth"; // helper to get JWT
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: "https://reactnative-etala.vercel.app/api",
   headers: {
     "Content-Type": "application/json",
   },
