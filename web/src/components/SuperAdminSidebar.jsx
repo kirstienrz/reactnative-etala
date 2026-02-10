@@ -109,7 +109,6 @@ const SuperAdminSidebar = () => {
           {/* REPORT HANDLING */}
           <SidebarSection title="Report Handling" isCollapsed={isCollapsed}>
             <SidebarItem icon={<FileText size={18} />} label="Report Management" to="/superadmin/reports" isCollapsed={isCollapsed} />
-            <SidebarItem icon={<Repeat size={18} />} label="Referral & Assignment" to="/superadmin/referral" isCollapsed={isCollapsed} />
             <SidebarItem icon={<MessageSquare size={18} />} label="Messaging System" to="/superadmin/messages" isCollapsed={isCollapsed} />
           </SidebarSection>
 

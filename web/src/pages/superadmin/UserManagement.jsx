@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   getAllUsersForManagement, 
@@ -99,41 +98,29 @@ export default function UserManagement() {
     setSuccess('');
   };
 
- const handleChange = (e) => {
-  const { name, value } = e.target;
-  let updatedForm = { ...formData, [name]: value };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    let updatedForm = { ...formData, [name]: value };
 
-  // Auto-calculate age when birthday changes
-  if (name === 'birthday') {
-    updatedForm.age = calculateAge(value);
-  }
+    // Auto-calculate age when birthday changes
+    if (name === 'birthday') {
+      updatedForm.age = calculateAge(value);
+    }
 
-  // Auto-generate email when first name or last name changes
- if (name === 'firstName' || name === 'lastName') {
-  const first = (name === 'firstName' ? value : updatedForm.firstName)
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ''); // remove spaces
-  
-  const last = (name === 'lastName' ? value : updatedForm.lastName)
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '');
-
-  if (first && last) {
-    updatedForm.email = `${first}.${last}@etala.com`;
-  }
-}
-
-
-  setFormData(updatedForm);
-};
-
+    setFormData(updatedForm);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
 
     try {
       const submitData = { ...formData };
@@ -408,7 +395,7 @@ export default function UserManagement() {
               </div>
             )}
 
-            <div className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -463,9 +450,13 @@ export default function UserManagement() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  disabled
+                  placeholder="user@example.com"
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Enter the email address manually
+                </p>
               </div>
 
               {modalMode === 'create' && (
@@ -571,14 +562,13 @@ export default function UserManagement() {
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={handleSubmit}
+                  type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                 >
                   {modalMode === 'create' ? 'Create User' : 'Update User'}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

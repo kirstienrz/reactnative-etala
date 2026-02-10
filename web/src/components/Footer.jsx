@@ -79,16 +79,6 @@ const Footer = () => {
             </div>
           </div>
         </div>
-
-        {/* Bottom Section */}
-        <div className="border-t border-violet-700/50">
-          <div className="w-full px-6 md:px-12 lg:px-20 py-4">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm text-violet-200">
-              <p>© 2024 GAD Office - Technological University of the Philippines Taguig | All Rights Reserved</p>
-              <p>Developed and Maintained by UITC</p>
-            </div>
-          </div>
-        </div>
       </div>
     </footer>
   );

@@ -243,7 +243,7 @@ const LoginPage = () => {
                       required
                       className="w-full pl-11 pr-12 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
                       autoComplete="current-password"
-                      minLength={6}
+                      minLength={0}
                     />
                     <button
                       type="button"
