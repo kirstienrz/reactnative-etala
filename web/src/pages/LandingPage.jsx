@@ -276,10 +276,6 @@ const LandingPage = () => {
                   institutional systems.
                 </p>
               </div>
-
-              <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-14 py-5 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-xl">
-                Know more about GAD Office
-              </button>
             </div>
 
           </div>
