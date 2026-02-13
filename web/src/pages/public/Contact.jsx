@@ -469,7 +469,7 @@ const Contact = () => {
                   <span className="text-violet-600 text-xl">📱</span>
                 </div>
                 <h4 className="font-bold text-slate-900 mb-2">Response Time</h4>
-                <p className="text-slate-600">Within 24-48 hours</p>
+                <p className="text-slate-600">3-5 Business Day</p>
               </div>
               <div className="text-center p-4">
                 <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">

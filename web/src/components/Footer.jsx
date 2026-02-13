@@ -62,10 +62,10 @@ const Footer = () => {
                       <p className="text-sm text-violet-200">KM14 East Service Road, Western Bicutan, Taguig City</p>
                     </div>
                   </div>
-                  <div className="flex gap-3 items-center">
+                  {/* <div className="flex gap-3 items-center">
                     <Phone size={20} className="text-violet-300 flex-shrink-0" />
                     <p className="text-sm text-violet-200">(+632) 8247-5250 to 54</p>
-                  </div>
+                  </div> */}
                   <div className="flex gap-3 items-center">
                     <Mail size={20} className="text-violet-300 flex-shrink-0" />
                     <a href="mailto:gad@tup.edu.ph" className="text-sm text-violet-200 hover:text-white transition-colors">gad@tup.edu.ph</a>
