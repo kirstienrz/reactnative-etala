@@ -393,7 +393,6 @@ const LandingPage = () => {
                 If you've experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and improved.
               </p>
             </div>
-
             <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-16 py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-2xl inline-flex items-center gap-4">
               Report Now
               <ArrowRight className="w-7 h-7" />
