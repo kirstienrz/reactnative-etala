@@ -53,7 +53,7 @@ router.post("/signup", async (req, res) => {
     });
 
     // Activation link
-    const activationLink = `${process.env.FRONTEND_URL}/activate/${activationToken}`;
+    const activationLink = `https://etala.vercel.app/activate/${activationToken}`;
 
     try {
       await sendEmail({
