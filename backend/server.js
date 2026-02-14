@@ -4,8 +4,8 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const http = require("http");
 const { Server } = require("socket.io");
-const setupSocketIO = require("./config/socket"); // 🔥 Import socket config
-const path = require('path'); // ✅ ADD THIS
+const setupSocketIO = require("./config/socket");
+const path = require("path");
 
 dotenv.config();
 connectDB();
@@ -13,25 +13,46 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Initialize Socket.IO with CORS
-const io = new Server(server, {
-  cors: { 
-    origin: "*", // Change to your frontend URL in production
-    methods: ["GET", "POST"]
+// ✅ Allowed origins (DEV + PROD)
+const allowedOrigins = [
+  "http://localhost:5173", // Local frontend
+  process.env.FRONTEND_URL // Production frontend
+];
+
+// ✅ Express CORS
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow Postman / mobile apps
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
   },
-});
-
-// ✅ Setup Socket.IO events
-setupSocketIO(io);
-
-// ✅ Make `io` globally available
-app.set("io", io);
+  credentials: true
+}));
 
 app.use(express.json());
-app.use(cors());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ✅ ROUTES
+// ✅ Static uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ✅ Socket.IO with same CORS
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// ✅ Setup Socket.IO
+setupSocketIO(io);
+
+// ✅ Make io available globally
+app.set("io", io);
+
+// ================= ROUTES =================
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/chatbot", require("./routes/chatbotRoutes"));
@@ -59,9 +80,13 @@ app.use("/api/datasets", require("./routes/datasetRoutes"));
 app.use("/api/ai", require("./routes/aiModeration"));
 app.use("/api/documentation", require("./routes/documentationRoutes"));
 app.use("/api/finance", require("./routes/financeRoutes"));
-
 app.use("/api/tickets", require("./routes/tickets"));
+app.use("/api/admin-availability", require("./routes/adminAvailabilityRoutes"));
 
-// ✅ SERVER LISTEN
+// ================= START SERVER =================
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log("Allowed origins:", allowedOrigins);
+});

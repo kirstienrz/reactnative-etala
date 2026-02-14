@@ -513,7 +513,6 @@
 //   sendInterviewBookingLink,
 //   verifyBookingAccess
 // };
-
 const CalendarEvent = require('../models/CalendarEvent');
 const Program = require('../models/Program');
 const User = require('../models/User');
@@ -831,13 +830,23 @@ const getAllCalendarEvents = async (req, res) => {
     });
 
     const formattedCalendarEvents = calendarEvents.map(event => {
+      // ✅ FIXED: Extract user data from populated userId
       const user = event.userId;
       const userName = user 
         ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
         : event.extendedProps?.userName || 'Unknown User';
       const userEmail = user?.email || event.extendedProps?.userEmail || 'N/A';
 
-      const displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
+      // ✅ Map 'scheduled' to 'upcoming' for frontend display
+      let displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
+
+      // 🟢 Auto-update status to 'completed' if event end date has passed
+      const now = new Date();
+      // Use end date if available, otherwise start date
+      const eventDate = event.end ? new Date(event.end) : new Date(event.start);
+      if ((displayStatus === 'upcoming' || displayStatus === 'scheduled') && eventDate < now) {
+        displayStatus = 'completed';
+      }
 
       return {
         id: event._id,
@@ -846,8 +855,8 @@ const getAllCalendarEvents = async (req, res) => {
         end: event.end,
         allDay: event.allDay,
         color: getEventColor(event.type),
-        userId: event.userId?._id,
-        reportTicketNumber: event.reportTicketNumber, // ✅ Include ticket number
+        userId: event.userId?._id, // Keep the ID reference
+        attachments: event.attachments || [], // Always include attachments at root
         extendedProps: {
           type: event.type,
           description: event.description,
@@ -857,7 +866,7 @@ const getAllCalendarEvents = async (req, res) => {
           userEmail: userEmail,
           mode: event.extendedProps?.mode || 'N/A',
           status: displayStatus || 'upcoming',
-          reportTicketNumber: event.reportTicketNumber // ✅ Include in extendedProps too
+          attachments: event.attachments || [] // Always include attachments in extendedProps
         }
       };
     });
@@ -879,9 +888,14 @@ const getAllCalendarEvents = async (req, res) => {
   }
 };
 
-// ✅ UPDATED: Create calendar event with report ticket validation
+// ✅ FIXED: Proper date handling for FormData
 const createCalendarEvent = async (req, res) => {
   try {
+    console.log('🟢 Incoming createCalendarEvent request:', {
+      body: req.body,
+      files: req.files
+    });
+
     const { type, userId, userName, userEmail, mode, status, reportTicketNumber } = req.body;
 
     console.log('📥 Received booking request:', {
@@ -892,6 +906,31 @@ const createCalendarEvent = async (req, res) => {
       mode,
       status,
       reportTicketNumber
+    });
+
+    // ✅ CRITICAL FIX: When using FormData, all fields come as strings
+    // Convert string booleans and prepare data for database
+    const eventData = {
+      title: req.body.title?.trim(),
+      type: req.body.type?.trim(),
+      // ✅ Convert date strings to proper Date objects
+      start: req.body.start ? new Date(req.body.start) : undefined,
+      end: req.body.end ? new Date(req.body.end) : undefined,
+      location: req.body.location?.trim() || undefined,
+      description: req.body.description?.trim() || undefined,
+      notes: req.body.notes?.trim() || undefined,
+      // ✅ Convert string boolean to actual boolean
+      allDay: req.body.allDay === 'true' || req.body.allDay === true,
+      color: req.body.color || undefined,
+      userId: req.body.userId || undefined,
+      reportTicketNumber: req.body.reportTicketNumber || undefined
+    };
+
+    console.log('🟣 Processed event data:', {
+      ...eventData,
+      startType: typeof eventData.start,
+      endType: typeof eventData.end,
+      allDayType: typeof eventData.allDay
     });
 
     if (type === 'consultation' && userId) {
@@ -937,27 +976,44 @@ const createCalendarEvent = async (req, res) => {
         reportTicketNumber
       });
 
-      req.body.extendedProps = {
-        ...req.body.extendedProps,
+      eventData.extendedProps = {
         userName: finalUserName || 'Unknown User',
         userEmail: finalUserEmail || 'N/A',
-        mode: mode || req.body.extendedProps?.mode || 'online',
-        status: status || req.body.extendedProps?.status || 'scheduled',
+        mode: mode || 'online',
+        status: status === 'upcoming' ? 'scheduled' : status || 'scheduled',
         reportTicketNumber
       };
 
-      if (req.body.status === 'upcoming') {
-        req.body.status = 'scheduled';
-      }
+      // ✅ Set root-level status (convert 'upcoming' to 'scheduled')
+      eventData.status = status === 'upcoming' ? 'scheduled' : status || 'scheduled';
 
       // Mark booking access as used for this specific report
       await markBookingAsUsed(userId, reportTicketNumber);
     }
 
-    const event = await CalendarEvent.create(req.body);
+    // Handle file uploads
+    let attachments = [];
+    if (req.files && req.files.length > 0) {
+      attachments = req.files.map(file => ({
+        url: file.path || file.secure_url || file.url,
+        public_id: file.public_id || file.filename,
+        type: file.mimetype.startsWith('image') ? 'image' : 
+              file.mimetype.startsWith('video') ? 'video' : 
+              file.mimetype.startsWith('application') ? 'document' : 'other',
+        originalName: file.originalname,
+        format: file.format || file.mimetype,
+        bytes: file.size,
+        uploadedAt: new Date()
+      }));
+      eventData.attachments = attachments;
+    }
+
+    console.log('💾 Final data to save:', eventData);
+
+    const event = await CalendarEvent.create(eventData);
     await event.populate('userId', 'firstName lastName email');
 
-    console.log('✅ Event created with user info:', {
+    console.log('✅ Event created successfully:', {
       eventId: event._id,
       userName: event.extendedProps?.userName,
       userEmail: event.extendedProps?.userEmail,
@@ -975,13 +1031,21 @@ const createCalendarEvent = async (req, res) => {
     
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
+      console.error('❌ Validation errors:', messages);
       return res.status(400).json({
         success: false,
         message: 'Validation Error',
         errors: messages
       });
     }
-
+    
+    console.error('❌ Server error details:', {
+      message: error.message,
+      stack: error.stack,
+      body: req.body,
+      files: req.files
+    });
+    
     res.status(500).json({
       success: false,
       message: 'Server Error',
@@ -992,9 +1056,38 @@ const createCalendarEvent = async (req, res) => {
 
 const updateCalendarEvent = async (req, res) => {
   try {
+    let updateData = { ...req.body };
+
+    // Map frontend status to valid root-level status
+    if (updateData.status) {
+      if (updateData.status === 'upcoming') {
+        updateData.status = 'scheduled';
+      } else if (updateData.status === 'completed') {
+        updateData.status = 'completed';
+      } else if (updateData.status === 'cancelled') {
+        updateData.status = 'cancelled';
+      } else if (updateData.status === 'ongoing') {
+        updateData.status = 'ongoing';
+      }
+    }
+
+    // Handle file uploads
+    if (req.files && req.files.length > 0) {
+      const attachments = req.files.map(file => ({
+        url: file.path || file.location || file.url || '',
+        public_id: file.public_id || undefined,
+        type: file.mimetype.startsWith('image/') ? 'image' : file.mimetype.startsWith('video/') ? 'video' : 'document',
+        originalName: file.originalname || file.filename || '',
+        format: file.mimetype ? file.mimetype.split('/')[1] : undefined,
+        bytes: file.size || file.bytes || undefined,
+        uploadedAt: new Date()
+      }));
+      updateData.attachments = attachments;
+    }
+
     const event = await CalendarEvent.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     ).populate('userId', 'firstName lastName email');
 

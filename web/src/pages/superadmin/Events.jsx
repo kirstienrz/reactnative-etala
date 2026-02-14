@@ -15,7 +15,18 @@ import {
   User,
   Mail,
   MapPin,
-  Clock
+  Clock,
+  FileText,
+  Download,
+  Eye,
+  Image as ImageIcon,
+  Video,
+  File,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { 
   getAllCalendarEvents, 
@@ -24,6 +35,7 @@ import {
   deleteCalendarEvent,
   getEventTypes
 } from "../../api/calendar";
+import API from '../../api/config';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -59,12 +71,88 @@ export default function SuperAdminCalendarUI() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [eventFiles, setEventFiles] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showFilePreview, setShowFilePreview] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const eventTypes = getEventTypes();
   
   // Get event color based on type
   const getEventColor = (type) => {
     const eventType = eventTypes.find(et => et.value === type);
     return eventType?.color || "#3b82f6";
+  };
+
+  // Get file icon based on file type
+  const getFileIcon = (filename, fileType, mimeType) => {
+    // Check mimeType first
+    if (mimeType) {
+      if (mimeType.startsWith('image/')) {
+        return <ImageIcon className="w-5 h-5" />;
+      } else if (mimeType.startsWith('video/')) {
+        return <Video className="w-5 h-5" />;
+      } else if (mimeType === 'application/pdf') {
+        return <FileText className="w-5 h-5" />;
+      }
+    }
+    
+    // Check fileType from database
+    if (fileType === 'image') {
+      return <ImageIcon className="w-5 h-5" />;
+    } else if (fileType === 'video') {
+      return <Video className="w-5 h-5" />;
+    }
+    
+    // Fallback to extension check
+    if (!filename) return <File className="w-5 h-5" />;
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
+      return <ImageIcon className="w-5 h-5" />;
+    } else if (['mp4', 'avi', 'mov', 'wmv', 'webm'].includes(ext)) {
+      return <Video className="w-5 h-5" />;
+    } else if (['pdf'].includes(ext)) {
+      return <FileText className="w-5 h-5" />;
+    } else {
+      return <File className="w-5 h-5" />;
+    }
+  };
+
+  // Check if file is an image
+  const isImageFile = (filename, fileType, mimeType) => {
+    // Check mimeType first
+    if (mimeType && mimeType.startsWith('image/')) return true;
+    
+    // Check fileType from database
+    if (fileType === 'image') return true;
+    
+    // Fallback to extension check
+    if (!filename) return false;
+    const ext = filename.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+  };
+
+  // Check if file is a video
+  const isVideoFile = (filename, fileType, mimeType) => {
+    // Check mimeType first
+    if (mimeType && mimeType.startsWith('video/')) return true;
+    
+    // Check fileType from database
+    if (fileType === 'video') return true;
+    
+    // Fallback to extension check
+    if (!filename) return false;
+    const ext = filename.split('.').pop().toLowerCase();
+    return ['mp4', 'avi', 'mov', 'wmv', 'webm'].includes(ext);
+  };
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return 'N/A';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   // Fetch events on mount
@@ -81,12 +169,6 @@ export default function SuperAdminCalendarUI() {
         const formattedEvents = formatEventsForCalendar(response.data);
         setEvents(formattedEvents);
         calculateStats(formattedEvents);
-        
-        console.log("📊 Events loaded:", {
-          total: formattedEvents.length,
-          types: [...new Set(formattedEvents.map(e => e.extendedProps?.type))]
-        });
-        
         toast.success(`Loaded ${formattedEvents.length} events`);
       } else {
         toast.error(response.message || "Failed to load events");
@@ -101,7 +183,7 @@ export default function SuperAdminCalendarUI() {
     }
   };
 
-  // Format events for FullCalendar
+  // Format events for calendar
   const formatEventsForCalendar = (apiEvents) => {
     return apiEvents.map(event => {
       const eventType = event.extendedProps?.type || event.type || 'consultation';
@@ -109,6 +191,34 @@ export default function SuperAdminCalendarUI() {
       
       // Map 'scheduled' to 'upcoming' for display consistency
       const displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
+      
+      // Get attachments - check multiple possible locations
+      let attachments = [];
+      
+      // Try to get attachments from various possible locations in the data structure
+      if (event.attachments && Array.isArray(event.attachments)) {
+        attachments = event.attachments;
+      } else if (event.extendedProps?.attachments && Array.isArray(event.extendedProps.attachments)) {
+        attachments = event.extendedProps.attachments;
+      } else if (event.files && Array.isArray(event.files)) {
+        attachments = event.files;
+      }
+      
+      // Format attachments
+      const formattedAttachments = attachments.map(attachment => {
+        return {
+          url: attachment.url || attachment.secure_url || '',
+          originalname: attachment.originalName || attachment.originalname || attachment.name || 'File',
+          filename: attachment.filename || attachment.name || 'File',
+          mimetype: attachment.mimeType || attachment.mimetype || attachment.format || 'application/octet-stream',
+          size: attachment.size || attachment.bytes || 0,
+          type: attachment.type || (attachment.mimetype?.startsWith('image/') ? 'image' : 
+                 attachment.mimetype?.startsWith('video/') ? 'video' : 'other'),
+          public_id: attachment.public_id,
+          uploadedAt: attachment.uploadedAt || attachment.createdAt,
+          _id: attachment._id
+        };
+      });
       
       return {
         id: event._id || event.id,
@@ -125,7 +235,8 @@ export default function SuperAdminCalendarUI() {
           userName: event.extendedProps?.userName || event.userName || "Super Admin",
           userEmail: event.extendedProps?.userEmail || event.userEmail || event.email || "admin@example.com",
           mode: event.extendedProps?.mode || event.mode || "N/A",
-          userId: event.userId || event.extendedProps?.userId
+          userId: event.userId || event.extendedProps?.userId,
+          attachments: formattedAttachments
         },
         backgroundColor: color,
         borderColor: color,
@@ -237,6 +348,7 @@ export default function SuperAdminCalendarUI() {
       status: event.status || "upcoming"
     });
     setShowModal(true);
+    setShowDetailsModal(false);
   };
 
   const handleDeleteEvent = async (eventId) => {
@@ -246,6 +358,7 @@ export default function SuperAdminCalendarUI() {
       const response = await deleteCalendarEvent(eventId);
       if (response.success) {
         toast.success(response.message || "Event deleted successfully");
+        setShowDetailsModal(false);
         fetchEvents();
       } else {
         toast.error(response.message || "Failed to delete event");
@@ -261,15 +374,32 @@ export default function SuperAdminCalendarUI() {
       toast.error("Please enter event title");
       return;
     }
-    
     if (!formData.start) {
       toast.error("Please select start date");
       return;
     }
+    if (!formData.type || !formData.type.trim()) {
+      toast.error("Please select event type");
+      return;
+    }
 
-    const eventData = {
+    // Get current user for userId
+    const userStr = localStorage.getItem('user');
+    let userId = null;
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        userId = user._id || user.id || null;
+      } catch (e) {
+        userId = null;
+      }
+    }
+
+    // Use FormData for file uploads
+    const form = new FormData();
+    Object.entries({
       title: formData.title.trim(),
-      type: formData.type,
+      type: formData.type.trim(),
       start: formData.allDay ? formData.start : `${formData.start}T09:00:00`,
       end: formData.allDay ? (formData.end || formData.start) : `${formData.end || formData.start}T17:00:00`,
       location: formData.location.trim() || undefined,
@@ -277,18 +407,19 @@ export default function SuperAdminCalendarUI() {
       notes: formData.notes.trim() || undefined,
       allDay: formData.allDay,
       color: formData.color || getEventColor(formData.type),
-      status: formData.status
-    };
-
-    console.log("📤 Saving event data:", eventData);
+      status: formData.status,
+      userId: userId
+    }).forEach(([key, value]) => {
+      if (value !== undefined) form.append(key, value);
+    });
+    eventFiles.forEach(file => form.append('attachments', file));
 
     try {
       let response;
-      
       if (modalMode === "edit" && selectedEvent) {
-        response = await updateCalendarEvent(selectedEvent.id, eventData);
+        response = await updateCalendarEvent(selectedEvent.id, form);
       } else {
-        response = await createCalendarEvent(eventData);
+        response = await createCalendarEvent(form);
       }
 
       if (response.success) {
@@ -297,6 +428,7 @@ export default function SuperAdminCalendarUI() {
         setShowModal(false);
         resetForm();
         setSelectedEvent(null);
+        setEventFiles([]);
       } else {
         if (response.errors && response.errors.length > 0) {
           response.errors.forEach(err => toast.error(err));
@@ -306,8 +438,54 @@ export default function SuperAdminCalendarUI() {
       }
     } catch (error) {
       console.error("Error saving event:", error);
-      toast.error("Failed to save event. Please try again.");
+      if (error.response && error.response.data) {
+        const errData = error.response.data;
+        if (errData.errors && errData.errors.length > 0) {
+          errData.errors.forEach(err => toast.error(err));
+        } else {
+          toast.error(errData.message || errData.error || "Failed to save event. Please try again.");
+        }
+      } else {
+        toast.error(error.message || "Failed to save event. Please try again.");
+      }
     }
+  };
+
+  const handleFilePreview = (file, files = []) => {
+    setPreviewFiles(files.length > 0 ? files : [file]);
+    setCurrentPreviewIndex(0);
+    setSelectedFile(file);
+    setShowFilePreview(true);
+  };
+
+  const handleNextPreview = () => {
+    if (previewFiles.length > 0) {
+      const nextIndex = (currentPreviewIndex + 1) % previewFiles.length;
+      setCurrentPreviewIndex(nextIndex);
+      setSelectedFile(previewFiles[nextIndex]);
+    }
+  };
+
+  const handlePrevPreview = () => {
+    if (previewFiles.length > 0) {
+      const prevIndex = (currentPreviewIndex - 1 + previewFiles.length) % previewFiles.length;
+      setCurrentPreviewIndex(prevIndex);
+      setSelectedFile(previewFiles[prevIndex]);
+    }
+  };
+
+  const handleFileDownload = (file) => {
+    const link = document.createElement('a');
+    link.href = file.url;
+    link.download = file.originalname || file.filename || 'download';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
   };
 
   // Reset form
@@ -338,6 +516,20 @@ export default function SuperAdminCalendarUI() {
     });
   };
 
+  // Format date and time
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -365,7 +557,7 @@ export default function SuperAdminCalendarUI() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-items-center gap-2">
             <CalendarIcon className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
             Superadmin Calendar
           </h1>
@@ -554,6 +746,9 @@ export default function SuperAdminCalendarUI() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Files
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -562,7 +757,7 @@ export default function SuperAdminCalendarUI() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredEvents.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                     <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-lg font-medium">No events found</p>
                     <p className="text-sm mt-1">
@@ -643,8 +838,76 @@ export default function SuperAdminCalendarUI() {
                       </span>
                     </td>
                     
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {event.extendedProps?.attachments?.length > 0 ? (
+                        <div className="flex items-center gap-1">
+                          <div className="flex -space-x-2">
+                            {event.extendedProps.attachments.slice(0, 3).map((file, idx) => {
+                              const isImage = isImageFile(
+                                file.originalname || file.filename, 
+                                file.type, 
+                                file.mimetype
+                              );
+                              
+                              return isImage ? (
+                                <div 
+                                  key={idx}
+                                  className="relative w-8 h-8 rounded-full border-2 border-white overflow-hidden cursor-pointer hover:z-10 transition-transform hover:scale-110"
+                                  onClick={() => handleFilePreview(file, event.extendedProps.attachments)}
+                                >
+                                  <img 
+                                    src={file.url} 
+                                    alt={file.originalname}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = 'https://via.placeholder.com/32?text=Image';
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div 
+                                  key={idx}
+                                  className="relative w-8 h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center cursor-pointer hover:z-10 transition-transform hover:scale-110"
+                                  onClick={() => handleFilePreview(file, event.extendedProps.attachments)}
+                                >
+                                  {getFileIcon(file.originalname || file.filename, file.type, file.mimetype)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {event.extendedProps.attachments.length > 3 && (
+                            <span className="text-xs text-gray-500 ml-1">
+                              +{event.extendedProps.attachments.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            const eventData = {
+                              id: event.id,
+                              title: event.title,
+                              ...event.extendedProps,
+                              start: event.start,
+                              end: event.end,
+                              allDay: event.allDay,
+                              backgroundColor: event.backgroundColor
+                            };
+                            setSelectedEvent(eventData);
+                            setShowDetailsModal(true);
+                          }}
+                          className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
+                          title="View details"
+                        >
+                          <Eye size={16} />
+                        </button>
                         <button
                           onClick={() => handleEditEvent({
                             id: event.id,
@@ -719,173 +982,375 @@ export default function SuperAdminCalendarUI() {
         )}
       </div>
 
-      {/* Event Details Modal */}
+      {/* Enhanced Event Details Modal */}
       {showDetailsModal && selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  Event Details
-                </h3>
-                <button 
-                  onClick={() => {
-                    setShowDetailsModal(false);
-                    setSelectedEvent(null);
-                  }}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden my-8">
+            {/* Sticky header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="text-2xl font-bold text-gray-900">
+                Event Details
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setSelectedEvent(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Event Title */}
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div 
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: selectedEvent.backgroundColor || '#3b82f6' }}
+                  ></div>
+                  <h4 className="text-xl font-semibold text-gray-900">
+                    {selectedEvent.title}
+                  </h4>
+                </div>
+              </div>
+
+              {/* Type and Status */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Type</p>
+                  <p className="text-sm font-medium text-gray-900 capitalize">
+                    {selectedEvent.type?.replace('_', ' ') || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Status</p>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    selectedEvent.status === 'completed' 
+                      ? 'bg-green-100 text-green-800' 
+                      : selectedEvent.status === 'cancelled'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {selectedEvent.status || 'upcoming'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Date and Time */}
+              <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
+                <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatDate(selectedEvent.start)}
+                  </p>
+                  {!selectedEvent.allDay && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      {new Date(selectedEvent.start).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                      {selectedEvent.end && ` - ${new Date(selectedEvent.end).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}`}
+                    </p>
+                  )}
+                  {selectedEvent.allDay && (
+                    <p className="text-sm text-gray-600 mt-1">All Day Event</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Location */}
+              {selectedEvent.location && (
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                  <MapPin className="w-5 h-5 text-gray-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Location</p>
+                    <p className="text-sm text-gray-900">{selectedEvent.location}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {selectedEvent.description && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-2">Description</p>
+                  <p className="text-sm text-gray-900 break-words whitespace-pre-line">{selectedEvent.description}</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedEvent.notes && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-2">Notes</p>
+                  <p className="text-sm text-gray-900 break-words whitespace-pre-line">{selectedEvent.notes}</p>
+                </div>
+              )}
+
+              {/* Enhanced Attachments Section */}
+              {selectedEvent.attachments && selectedEvent.attachments.length > 0 && (
+                <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                      <h4 className="text-sm font-semibold text-gray-900">
+                        Attachments ({selectedEvent.attachments.length})
+                      </h4>
+                    </div>
+                  </div>
+                  
+                  {/* Image Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {selectedEvent.attachments.map((file, idx) => {
+                      const isImage = isImageFile(
+                        file.originalname || file.filename, 
+                        file.type, 
+                        file.mimetype
+                      );
+                      const isVideo = isVideoFile(
+                        file.originalname || file.filename, 
+                        file.type, 
+                        file.mimetype
+                      );
+                      
+                      return (
+                        <div 
+                          key={idx}
+                          className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-lg transition-all"
+                          onClick={() => handleFilePreview(file, selectedEvent.attachments)}
+                        >
+                          {isImage ? (
+                            <div className="aspect-square">
+                              <img 
+                                src={file.url} 
+                                alt={file.originalname}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://via.placeholder.com/150?text=Image+Error';
+                                }}
+                              />
+                            </div>
+                          ) : isVideo ? (
+                            <div className="aspect-square bg-gray-900 flex items-center justify-center">
+                              <Video className="w-8 h-8 text-white opacity-50" />
+                            </div>
+                          ) : (
+                            <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                              {getFileIcon(file.originalname || file.filename, file.type, file.mimetype)}
+                            </div>
+                          )}
+                          
+                          {/* Overlay */}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <Eye className="w-6 h-6 text-white" />
+                          </div>
+                          
+                          {/* File type badge */}
+                          <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                            {isImage ? 'Image' : isVideo ? 'Video' : 'File'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* User Info */}
+              <div className="border-t border-gray-200 pt-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">Booked by</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedEvent.userName || 'Super Admin'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Mail className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedEvent.userEmail || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedEvent.mode && (
+                  <div className="flex items-center gap-3">
+                    <CalendarIcon className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500">Mode</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {selectedEvent.mode}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Sticky footer for actions */}
+            <div className="border-t border-gray-200 p-4 flex space-x-3 sticky bottom-0 bg-white z-10">
+              <button
+                onClick={() => handleEditEvent(selectedEvent)}
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                <Edit size={16} />
+                Edit Event
+              </button>
+              <button
+                onClick={() => handleDeleteEvent(selectedEvent.id)}
+                className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors"
+              >
+                <Trash2 size={16} />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced File Preview Modal */}
+      {showFilePreview && selectedFile && (
+        <div className={`fixed inset-0 bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} flex items-center justify-center z-[60] p-4 transition-all`}>
+          {/* Action buttons and file info bar OUTSIDE viewer, aligned */}
+          <div className="absolute top-8 left-0 w-full flex items-center justify-between z-30">
+            {/* File info bar for non-image/video files */}
+            {!isImageFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) &&
+             !isVideoFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
+              <div className="flex-1 flex items-center bg-black bg-opacity-75 text-white px-6 py-3 rounded-lg max-w-2xl ml-8">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {selectedFile.originalname || selectedFile.filename || 'File'}
+                  </p>
+                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-300">
+                    {selectedFile.size && selectedFile.size > 0 && (
+                      <span>{formatFileSize(selectedFile.size)}</span>
+                    )}
+                    {selectedFile.mimetype && (
+                      <span className="uppercase bg-gray-700 px-2 py-0.5 rounded">
+                        {selectedFile.mimetype.includes('/') ? selectedFile.mimetype.split('/')[1] : selectedFile.mimetype}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleFileDownload(selectedFile)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap"
                 >
-                  <X className="w-6 h-6" />
+                  <Download size={16} />
+                  Download
                 </button>
               </div>
-              
-              <div className="space-y-4">
-                {/* Event Title */}
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div 
-                      className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: selectedEvent.backgroundColor || '#3b82f6' }}
-                    ></div>
-                    <h4 className="text-xl font-semibold text-gray-900">
-                      {selectedEvent.title}
-                    </h4>
-                  </div>
-                </div>
+            )}
+            {/* Action buttons */}
+            <div className="flex gap-2 mr-8">
+              <button
+                onClick={() => {
+                  setShowFilePreview(false);
+                  setSelectedFile(null);
+                  setPreviewFiles([]);
+                  setIsFullscreen(false);
+                }}
+                className="pointer-events-auto text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
+                style={{ position: 'relative' }}
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <button
+                onClick={toggleFullscreen}
+                className="pointer-events-auto text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
+                style={{ position: 'relative' }}
+              >
+                {isFullscreen ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
+              </button>
+            </div>
+          </div>
+          <div className={`relative ${isFullscreen ? 'w-screen h-screen' : 'max-w-6xl w-full max-h-[90vh]'}`}>
+            {/* Navigation buttons */}
+            {previewFiles.length > 1 && (
+              <>
+                <button
+                  onClick={handlePrevPreview}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 z-10"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={handleNextPreview}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 z-10"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
 
-                {/* Type and Status */}
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Type</p>
-                    <p className="text-sm font-medium text-gray-900 capitalize">
-                      {selectedEvent.type?.replace('_', ' ') || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Status</p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      selectedEvent.status === 'completed' 
-                        ? 'bg-green-100 text-green-800' 
-                        : selectedEvent.status === 'cancelled'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {selectedEvent.status || 'upcoming'}
-                    </span>
-                  </div>
-                </div>
+            {/* File counter */}
+            {previewFiles.length > 1 && (
+              <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded-full text-sm z-10">
+                {currentPreviewIndex + 1} / {previewFiles.length}
+              </div>
+            )}
 
-                {/* Date and Time */}
-                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
-                  <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {formatDate(selectedEvent.start)}
-                    </p>
-                    {!selectedEvent.allDay && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {new Date(selectedEvent.start).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                        {selectedEvent.end && ` - ${new Date(selectedEvent.end).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}`}
-                      </p>
-                    )}
-                    {selectedEvent.allDay && (
-                      <p className="text-sm text-gray-600 mt-1">All Day Event</p>
-                    )}
-                  </div>
-                </div>
+            {/* Media display */}
+            <div className="flex items-center justify-center h-full">
+              {isImageFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
+                <img
+                  src={selectedFile.url}
+                  alt={selectedFile.originalname}
+                  className={`${isFullscreen ? 'w-full h-full object-contain' : 'max-w-full max-h-[85vh] object-contain'} rounded-lg`}
+                  onError={(e) => {
+                    console.error('Image preview error:', selectedFile.url);
+                    e.target.onerror = null;
+                    e.target.parentElement.innerHTML = '<p class="text-white">Failed to load image</p>';
+                  }}
+                />
+              )}
 
-                {/* Location */}
-                {selectedEvent.location && (
-                  <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
-                    <MapPin className="w-5 h-5 text-gray-600 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 mb-1">Location</p>
-                      <p className="text-sm text-gray-900">{selectedEvent.location}</p>
-                    </div>
-                  </div>
-                )}
+              {isVideoFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
+                <video
+                  controls
+                  autoPlay
+                  className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[85vh]'} rounded-lg`}
+                >
+                  <source src={selectedFile.url} type={selectedFile.mimetype} />
+                  Your browser does not support the video tag.
+                </video>
+              )}
 
-                {/* Description */}
-                {selectedEvent.description && (
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-2">Description</p>
-                    <p className="text-sm text-gray-900">{selectedEvent.description}</p>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {selectedEvent.notes && (
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-2">Notes</p>
-                    <p className="text-sm text-gray-900">{selectedEvent.notes}</p>
-                  </div>
-                )}
-
-                {/* User Info */}
-                <div className="border-t border-gray-200 pt-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <User className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-xs text-gray-500">Booked by</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {selectedEvent.userName || 'Super Admin'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-xs text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {selectedEvent.userEmail || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedEvent.mode && (
-                    <div className="flex items-center gap-3">
-                      <CalendarIcon className="w-5 h-5 text-gray-400" />
-                      <div>
-                        <p className="text-xs text-gray-500">Mode</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {selectedEvent.mode}
-                        </p>
-                      </div>
+              {/* Other file types */}
+              {!isImageFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) &&
+               !isVideoFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
+                <div className="flex flex-col items-center justify-center h-full w-full">
+                  {/* PDF preview - check both mimetype and type */}
+                  {['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type) ? (
+                    <iframe
+                      src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
+                      title={selectedFile.originalname}
+                      className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
+                      style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
+                    />
+                  ) : (
+                    <div className="text-center text-white">
+                      <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
+                      <p>Preview not available for this file type</p>
+                      <button
+                        onClick={() => handleFileDownload(selectedFile)}
+                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
+                      >
+                        <Download size={18} />
+                        Download File
+                      </button>
                     </div>
                   )}
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex space-x-3 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => {
-                      setShowDetailsModal(false);
-                      handleEditEvent(selectedEvent);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    <Edit size={16} />
-                    Edit Event
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDetailsModal(false);
-                      handleDeleteEvent(selectedEvent.id);
-                    }}
-                    className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                    Delete
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -904,13 +1369,13 @@ export default function SuperAdminCalendarUI() {
                   onClick={() => {
                     setShowModal(false);
                     setSelectedEvent(null);
+                    setEventFiles([]);
                   }}
                   className="text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
-              
               <div className="space-y-4">
                 {/* Event Title */}
                 <div>
@@ -946,11 +1411,10 @@ export default function SuperAdminCalendarUI() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                       required
                     >
-                      {eventTypes.map(type => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
+                      <option value="consultation">Consultation</option>
+                      <option value="program_event">Program Event</option>
+                      <option value="holiday">Holiday</option>
+                      <option value="not_available">Not Available</option>
                     </select>
                   </div>
                   
@@ -1074,6 +1538,34 @@ export default function SuperAdminCalendarUI() {
                     <option value="#10b981">Green (Default)</option>
                   </select>
                 </div>
+
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Attach Files (photos, videos, documents)
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    onChange={e => setEventFiles(Array.from(e.target.files))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  />
+                  {eventFiles.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs font-medium text-gray-600">Selected files:</p>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        {eventFiles.map((file, idx) => (
+                          <li key={idx} className="flex items-center gap-2">
+                            {getFileIcon(file.name, null)}
+                            <span className="truncate">{file.name}</span>
+                            <span className="text-gray-400">({formatFileSize(file.size)})</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Action Buttons */}
                 <div className="flex space-x-3 pt-4">
@@ -1081,6 +1573,7 @@ export default function SuperAdminCalendarUI() {
                     onClick={() => {
                       setShowModal(false);
                       setSelectedEvent(null);
+                      setEventFiles([]);
                     }}
                     className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                   >

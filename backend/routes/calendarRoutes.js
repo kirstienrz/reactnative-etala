@@ -7,18 +7,20 @@ const {
   updateCalendarEvent,
   deleteCalendarEvent,
   sendInterviewBookingLink,
-  verifyBookingAccess  // ✅ NEW
+  verifyBookingAccess
 } = require('../controllers/calendarController');
+const { uploadCalendarEvent } = require('../config/multer');
 
+// ✅ FIXED: Both POST and PUT now have file upload middleware
 router.route('/events')
   .get(getAllCalendarEvents)
-  .post(createCalendarEvent);
+  .post(uploadCalendarEvent.array('attachments', 10), createCalendarEvent);
 
 router.route('/events/:id')
-  .put(updateCalendarEvent)
+  .put(uploadCalendarEvent.array('attachments', 10), updateCalendarEvent)  // ✅ ADDED
   .delete(deleteCalendarEvent);
 
 router.post('/send-booking-link', sendInterviewBookingLink);
-router.get('/verify-booking-access', verifyBookingAccess);  // ✅ NEW
+router.get('/verify-booking-access', verifyBookingAccess);
 
 module.exports = router;

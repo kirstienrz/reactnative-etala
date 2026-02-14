@@ -312,7 +312,16 @@ const calendarEventSchema = new mongoose.Schema({
   requiresRegistration: {
     type: Boolean,
     default: false
-  }
+  },
+  attachments: [{
+    url: { type: String, required: true },
+    public_id: { type: String },
+    type: { type: String, enum: ['image', 'video', 'document', 'other'], default: 'other' },
+    originalName: { type: String },
+    format: { type: String },
+    bytes: { type: Number },
+    uploadedAt: { type: Date, default: Date.now }
+  }]
 }, { 
   timestamps: true 
 });
