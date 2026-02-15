@@ -154,7 +154,7 @@ const CommitteeReports = () => {
                 <div className="flex items-center gap-3 ml-6">
                   <button
                     onClick={() => handleView(report.title)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                    className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors dark:bg-white dark:text-violet-700 dark:hover:bg-violet-100"
                     title="View Report"
                   >
                     <Eye className="w-4 h-4" />
@@ -162,7 +162,7 @@ const CommitteeReports = () => {
                   </button>
                   <button
                     onClick={() => handleDownload(report.title)}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                    className="bg-white text-slate-600 border border-slate-300 rounded-lg px-4 py-2 shadow hover:bg-slate-100 transition-colors dark:bg-white dark:text-slate-600 dark:hover:bg-slate-200"
                     title="Download Report"
                   >
                     <Download className="w-4 h-4" />

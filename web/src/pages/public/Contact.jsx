@@ -64,7 +64,7 @@
 //                 value={formData.name}
 //                 onChange={handleChange}
 //                 required
-//                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+//                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
 //               />
 //               <input
 //                 type="email"
@@ -73,7 +73,7 @@
 //                 value={formData.email}
 //                 onChange={handleChange}
 //                 required
-//                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+//                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
 //               />
 //             </div>
 
@@ -84,7 +84,7 @@
 //               value={formData.subject}
 //               onChange={handleChange}
 //               required
-//               className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+//               className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
 //             />
 
 //             <textarea
@@ -94,7 +94,7 @@
 //               onChange={handleChange}
 //               required
 //               rows={6}
-//               className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+//               className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
 //             ></textarea>
 
 //             <button
@@ -309,7 +309,7 @@ const Contact = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
                 />
               </div>
               <div>
@@ -320,7 +320,7 @@ const Contact = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
                 />
               </div>
             </div>
@@ -333,7 +333,7 @@ const Contact = () => {
                 value={formData.subject}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
               />
             </div>
 
@@ -345,7 +345,7 @@ const Contact = () => {
                 onChange={handleChange}
                 required
                 rows={6}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none bg-white text-gray-900"
               ></textarea>
             </div>
 
@@ -409,8 +409,8 @@ const Contact = () => {
                           </div>
                           <button
                             type="button"
+                            className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors dark:bg-white dark:text-violet-700 dark:hover:bg-violet-100"
                             onClick={() => removeFile(index)}
-                            className="text-red-500 hover:text-red-700 p-1"
                           >
                             ✕
                           </button>
@@ -428,8 +428,7 @@ const Contact = () => {
 
             <button
               type="submit"
-              disabled={status === "loading"}
-              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-3 px-6 rounded-lg font-bold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-3 px-6 rounded-lg font-bold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl dark:from-violet-600 dark:to-purple-600 dark:text-white"
             >
               {status === "loading" ? "Sending..." : "Send Message"}
             </button>

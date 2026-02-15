@@ -1,13 +1,10 @@
-import axios from "axios";
-
-// 🔹 Change this to your backend URL
-const API_URL = "https://reactnative-etala.vercel.app/api/auth";
+import API from "./config";
 
 /**
  * Login with email + TUPT ID + password
  */
 export const login = async (email, password, tupId) => {
-  const response = await axios.post(`${API_URL}/login`, {
+  const response = await API.post("/auth/login", {
     email,
     password,
     tupId,
@@ -19,7 +16,7 @@ export const login = async (email, password, tupId) => {
  * Verify PIN login
  */
 export const verifyPin = async (email, pin) => {
-  const response = await axios.post(`${API_URL}/verify-pin`, { email, pin });
+  const response = await API.post("/auth/verify-pin", { email, pin });
   return response.data;
 };
 
@@ -28,7 +25,7 @@ export const verifyPin = async (email, pin) => {
  * Expects firstName, lastName, email, password, tupId, userType, department
  */
 export const signup = async (userData) => {
-  const response = await axios.post(`${API_URL}/signup`, userData);
+  const response = await API.post("/auth/signup", userData);
   return response.data;
 };
 
@@ -37,8 +34,8 @@ export const signup = async (userData) => {
  * Requires userId and newPassword
  */
 export const changePassword = async (userId, newPassword, token) => {
-  const response = await axios.post(
-    `${API_URL}/change-password`,
+  const response = await API.post(
+    "/auth/change-password",
     { userId, newPassword },
     {
       headers: {
@@ -54,8 +51,8 @@ export const changePassword = async (userId, newPassword, token) => {
  * Requires email + pin
  */
 export const setPin = async (email, pin, token) => {
-  const response = await axios.post(
-    `${API_URL}/set-pin`,
+  const response = await API.post(
+    "/auth/set-pin",
     { email, pin },
     {
       headers: {

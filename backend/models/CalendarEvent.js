@@ -303,7 +303,7 @@ const calendarEventSchema = new mongoose.Schema({
     userName: { type: String, trim: true, default: 'Unknown' },
     userEmail: { type: String, trim: true, default: 'N/A' },
     mode: { type: String, enum: ['online', 'face_to_face'], default: 'online' },
-    status: { type: String, enum: ['upcoming', 'completed', 'cancelled'], default: 'upcoming' }
+    status: { type: String, enum: ['upcoming', 'completed', 'cancelled', 'scheduled'], default: 'upcoming' }
   },
   isPublic: {
     type: Boolean,

@@ -209,7 +209,7 @@ const PlanAndBudget = () => {
                           <div className="flex items-center gap-4">
                             <button
                               onClick={() => handleView(doc)}
-                              className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-700 transition-colors"
+                              className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors"
                             >
                               <Eye className="w-5 h-5" />
                               View Document

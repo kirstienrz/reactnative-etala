@@ -784,12 +784,14 @@ const markBookingAsUsed = async (userId, ticketNumber) => {
   }
 };
 
+// Get all calendar events
 const getAllCalendarEvents = async (req, res) => {
   try {
-    const { startDate, endDate, type } = req.query;
+    const { startDate, endDate, type, userId } = req.query;
 
     const query = {};
     if (type) query.type = type;
+    if (userId) query.userId = userId;
     if (startDate || endDate) {
       query.start = {};
       if (startDate) query.start.$gte = new Date(startDate);
@@ -849,14 +851,14 @@ const getAllCalendarEvents = async (req, res) => {
       }
 
       return {
-        id: event._id,
+        _id: event._id, // Use _id for frontend compatibility
         title: event.title,
         start: event.start,
         end: event.end,
         allDay: event.allDay,
         color: getEventColor(event.type),
         userId: event.userId?._id, // Keep the ID reference
-        attachments: event.attachments || [], // Always include attachments at root
+        reportTicketNumber: event.reportTicketNumber, // <-- Ensure this is sent to frontend
         extendedProps: {
           type: event.type,
           description: event.description,
@@ -865,8 +867,7 @@ const getAllCalendarEvents = async (req, res) => {
           userName: userName,
           userEmail: userEmail,
           mode: event.extendedProps?.mode || 'N/A',
-          status: displayStatus || 'upcoming',
-          attachments: event.attachments || [] // Always include attachments in extendedProps
+          status: displayStatus || 'upcoming'
         }
       };
     });

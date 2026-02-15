@@ -143,7 +143,7 @@ const Header = () => {
           {/* Hamburger */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors"
+            className="md:hidden bg-white text-purple-900 p-2 hover:bg-purple-100 rounded-lg transition-colors shadow border border-gray-200 dark:bg-white dark:text-purple-900 dark:hover:bg-purple-200"
           >
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -182,7 +182,7 @@ const Header = () => {
               <div className="relative" ref={userDropdownRef}>
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all font-medium"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:text-purple-700 hover:bg-purple-100 rounded-lg transition-all font-medium border border-gray-200 dark:bg-white dark:text-gray-700 dark:hover:bg-purple-100"
                 >
                   <User size={18} />
                   <span></span>
@@ -207,7 +207,7 @@ const Header = () => {
                     <li className="border-t border-gray-100 mt-1 pt-1">
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors text-sm font-medium"
+                        className="flex items-center gap-3 w-full px-4 py-3 bg-white text-red-500 hover:bg-red-100 hover:text-red-600 transition-colors text-sm font-medium rounded-lg border border-gray-200 dark:bg-white dark:text-red-500 dark:hover:bg-red-100"
                       >
                         <LogOut size={16} />
                         <span>Logout</span>
@@ -241,7 +241,7 @@ const Header = () => {
                   <>
                     <button
                       onClick={() => toggleMobileDropdown(item.title)}
-                      className="flex items-center justify-between w-full px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all font-medium"
+                      className="flex items-center justify-between w-full px-4 py-3 bg-white text-gray-700 hover:bg-purple-100 hover:text-purple-700 rounded-lg transition-all font-medium border border-gray-200 dark:bg-white dark:text-gray-700 dark:hover:bg-purple-100"
                     >
                       <span>{item.title}</span>
                       <ChevronDown size={18} className={`${openDropdown === item.title ? 'rotate-180' : ''} transition-transform`} />
@@ -296,7 +296,7 @@ const Header = () => {
                     handleLogout();
                     setIsMenuOpen(false);
                   }}
-                  className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-lg transition-all font-medium mt-1"
+                  className="flex items-center gap-3 px-4 py-3 bg-white text-red-500 hover:bg-red-100 rounded-lg transition-all font-medium mt-1 border border-gray-200 dark:bg-white dark:text-red-500 dark:hover:bg-red-100"
                 >
                   <LogOut size={18} />
                   <span>Logout</span>

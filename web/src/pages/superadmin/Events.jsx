@@ -1218,37 +1218,33 @@ export default function SuperAdminCalendarUI() {
 
       {/* Enhanced File Preview Modal */}
       {showFilePreview && selectedFile && (
-        <div className={`fixed inset-0 bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} flex items-center justify-center z-[60] p-4 transition-all`}>
-          {/* Action buttons and file info bar OUTSIDE viewer, aligned */}
+        <div className={`fixed inset-0 bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} flex items-center justify-center z-[9999] p-4 transition-all`}>
+          {/* Info bar for ALL file types */}
           <div className="absolute top-8 left-0 w-full flex items-center justify-between z-30">
-            {/* File info bar for non-image/video files */}
-            {!isImageFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) &&
-             !isVideoFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
-              <div className="flex-1 flex items-center bg-black bg-opacity-75 text-white px-6 py-3 rounded-lg max-w-2xl ml-8">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {selectedFile.originalname || selectedFile.filename || 'File'}
-                  </p>
-                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-300">
-                    {selectedFile.size && selectedFile.size > 0 && (
-                      <span>{formatFileSize(selectedFile.size)}</span>
-                    )}
-                    {selectedFile.mimetype && (
-                      <span className="uppercase bg-gray-700 px-2 py-0.5 rounded">
-                        {selectedFile.mimetype.includes('/') ? selectedFile.mimetype.split('/')[1] : selectedFile.mimetype}
-                      </span>
-                    )}
-                  </div>
+            <div className="flex-1 flex items-center bg-black bg-opacity-75 text-white px-6 py-3 rounded-lg max-w-2xl ml-8">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {selectedFile.originalname || selectedFile.filename || 'File'}
+                </p>
+                <div className="flex items-center gap-4 mt-1 text-xs text-gray-300">
+                  {selectedFile.size && selectedFile.size > 0 && (
+                    <span>{formatFileSize(selectedFile.size)}</span>
+                  )}
+                  {selectedFile.mimetype && (
+                    <span className="uppercase bg-gray-700 px-2 py-0.5 rounded">
+                      {selectedFile.mimetype.includes('/') ? selectedFile.mimetype.split('/')[1] : selectedFile.mimetype}
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => handleFileDownload(selectedFile)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap"
-                >
-                  <Download size={16} />
-                  Download
-                </button>
               </div>
-            )}
+              <button
+                onClick={() => handleFileDownload(selectedFile)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap"
+              >
+                <Download size={16} />
+                Download
+              </button>
+            </div>
             {/* Action buttons */}
             <div className="flex gap-2 mr-8">
               <button
@@ -1300,7 +1296,7 @@ export default function SuperAdminCalendarUI() {
 
             {/* Media display */}
             <div className="flex items-center justify-center h-full">
-              {isImageFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
+              {isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) && (
                 <img
                   src={selectedFile.url}
                   alt={selectedFile.originalname}
@@ -1313,7 +1309,7 @@ export default function SuperAdminCalendarUI() {
                 />
               )}
 
-              {isVideoFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
+              {isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) && (
                 <video
                   controls
                   autoPlay
@@ -1324,31 +1320,32 @@ export default function SuperAdminCalendarUI() {
                 </video>
               )}
 
+              {/* PDF Preview - Google Docs viewer, Events style */}
+              {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+               !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+               (['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
+                  title={selectedFile.originalname}
+                  className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
+                  style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
+                />
+              )}
+
               {/* Other file types */}
-              {!isImageFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) &&
-               !isVideoFile(selectedFile.originalname || selectedFile.filename, selectedFile.type, selectedFile.mimetype) && (
-                <div className="flex flex-col items-center justify-center h-full w-full">
-                  {/* PDF preview - check both mimetype and type */}
-                  {['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type) ? (
-                    <iframe
-                      src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
-                      title={selectedFile.originalname}
-                      className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
-                      style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
-                    />
-                  ) : (
-                    <div className="text-center text-white">
-                      <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
-                      <p>Preview not available for this file type</p>
-                      <button
-                        onClick={() => handleFileDownload(selectedFile)}
-                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
-                      >
-                        <Download size={18} />
-                        Download File
-                      </button>
-                    </div>
-                  )}
+              {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) && 
+               !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+               !(['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
+                <div className="text-center text-white">
+                  <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
+                  <p>Preview not available for this file type</p>
+                  <button
+                    onClick={() => handleFileDownload(selectedFile)}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
+                  >
+                    <Download size={18} />
+                    Download File
+                  </button>
                 </div>
               )}
             </div>
@@ -1387,7 +1384,7 @@ export default function SuperAdminCalendarUI() {
                     placeholder="Enter event title"
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     required
                   />
                 </div>
@@ -1408,7 +1405,7 @@ export default function SuperAdminCalendarUI() {
                           color: getEventColor(newType)
                         });
                       }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                       required
                     >
                       <option value="consultation">Consultation</option>
@@ -1425,7 +1422,7 @@ export default function SuperAdminCalendarUI() {
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     >
                       <option value="upcoming">Upcoming</option>
                       <option value="completed">Completed</option>
@@ -1444,7 +1441,7 @@ export default function SuperAdminCalendarUI() {
                       type="date"
                       value={formData.start}
                       onChange={(e) => setFormData({...formData, start: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                       required
                     />
                   </div>
@@ -1458,7 +1455,7 @@ export default function SuperAdminCalendarUI() {
                       value={formData.end}
                       onChange={(e) => setFormData({...formData, end: e.target.value})}
                       min={formData.start}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -1473,7 +1470,7 @@ export default function SuperAdminCalendarUI() {
                     placeholder="Enter location (optional)"
                     value={formData.location}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                   />
                 </div>
                 
@@ -1486,7 +1483,7 @@ export default function SuperAdminCalendarUI() {
                     placeholder="Enter description (optional)"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     rows="3"
                   />
                 </div>
@@ -1500,7 +1497,7 @@ export default function SuperAdminCalendarUI() {
                     placeholder="Enter notes (optional)"
                     value={formData.notes}
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     rows="2"
                   />
                 </div>

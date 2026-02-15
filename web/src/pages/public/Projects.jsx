@@ -1068,36 +1068,34 @@ export default function SuperAdminCalendarRedux() {
 
       {/* File Preview Modal - Copied from SuperAdminCalendarUI */}
       {showFilePreview && selectedFile && (
-        <div className={`fixed inset-0 bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} flex items-center justify-center z-[9999] p-4 transition-all`}> {/* z-[9999] for topmost, p-4 for spacing */}
+        <div className={`fixed inset-0 bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} flex items-center justify-center z-[9999] p-4 transition-all`}> {/* Modal overlay covers entire viewport, sits above header */}
           {/* Action buttons and file info bar OUTSIDE viewer, aligned */}
           <div className="absolute top-8 left-0 w-full flex items-center justify-between z-30">
-            {/* File info bar for PDF */}
-            {selectedFile.mimetype === 'application/pdf' && (
-              <div className="flex-1 flex items-center bg-black bg-opacity-75 text-white px-6 py-3 rounded-lg max-w-2xl ml-8">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {selectedFile.originalname || selectedFile.filename || 'File'}
-                  </p>
-                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-300">
-                    {selectedFile.size && selectedFile.size > 0 && (
-                      <span>{formatFileSize(selectedFile.size)}</span>
-                    )}
-                    {selectedFile.mimetype && (
-                      <span className="uppercase bg-gray-700 px-2 py-0.5 rounded">
-                        {selectedFile.mimetype.includes('/') ? selectedFile.mimetype.split('/')[1] : selectedFile.mimetype}
-                      </span>
-                    )}
-                  </div>
+            {/* Info bar for ALL file types */}
+            <div className={`flex-1 flex items-center ${isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) || isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) ? 'bg-black bg-opacity-75 text-white' : 'bg-black bg-opacity-75 text-white'} px-6 py-3 rounded-lg max-w-2xl ml-8`}>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {selectedFile.originalname || selectedFile.filename || 'File'}
+                </p>
+                <div className="flex items-center gap-4 mt-1 text-xs text-gray-300">
+                  {selectedFile.size && selectedFile.size > 0 && (
+                    <span>{formatFileSize(selectedFile.size)}</span>
+                  )}
+                  {selectedFile.mimetype && (
+                    <span className="uppercase bg-gray-700 px-2 py-0.5 rounded">
+                      {selectedFile.mimetype.includes('/') ? selectedFile.mimetype.split('/')[1] : selectedFile.mimetype}
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => handleFileDownload(selectedFile)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap"
-                >
-                  <Download size={16} />
-                  Download
-                </button>
               </div>
-            )}
+              <button
+                onClick={() => handleFileDownload(selectedFile)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap"
+              >
+                <Download size={16} />
+                Download
+              </button>
+            </div>
             {/* Action buttons */}
             <div className="flex gap-2 mr-8">
               <button
@@ -1121,7 +1119,7 @@ export default function SuperAdminCalendarRedux() {
               </button>
             </div>
           </div>
-          <div className={`relative ${isFullscreen ? 'w-screen h-screen' : 'max-w-[1200px] w-full max-h-[95vh]'} mt-8 md:mt-16`}>
+          <div className={`relative ${isFullscreen ? 'w-screen h-screen' : 'max-w-6xl w-full max-h-[90vh]'}`}>
             {/* Navigation buttons */}
             {previewFiles.length > 1 && (
               <>
@@ -1173,65 +1171,33 @@ export default function SuperAdminCalendarRedux() {
                 </video>
               )}
 
-              {/* PDF Preview */}
-              {selectedFile.mimetype === 'application/pdf' && (
-                <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                  <iframe
-                    src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
-                    title={selectedFile.originalname}
-                    className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
-                    style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
-                  >
-                  </iframe>
-                </div>
+              {/* PDF Preview - Google Docs viewer, Events style */}
+              {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+               !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+               (['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
+                  title={selectedFile.originalname}
+                  className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
+                  style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
+                />
               )}
 
               {/* Other file types */}
               {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) && 
                !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
-               selectedFile.mimetype !== 'application/pdf' && (
-                <>
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center text-white">
-                      <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
-                      <p>Preview not available for this file type</p>
-                      <button
-                        onClick={() => handleFileDownload(selectedFile)}
-                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
-                      >
-                        <Download size={18} />
-                        Download File
-                      </button>
-                    </div>
-                  </div>
-                  {/* File info bar at bottom for other types */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-6 py-3 rounded-lg max-w-2xl w-full">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {selectedFile.originalname || selectedFile.filename || 'File'}
-                        </p>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-gray-300">
-                          {selectedFile.size && selectedFile.size > 0 && (
-                            <span>{formatFileSize(selectedFile.size)}</span>
-                          )}
-                          {selectedFile.mimetype && (
-                            <span className="uppercase bg-gray-700 px-2 py-0.5 rounded">
-                              {selectedFile.mimetype.includes('/') ? selectedFile.mimetype.split('/')[1] : selectedFile.mimetype}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleFileDownload(selectedFile)}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap"
-                      >
-                        <Download size={16} />
-                        Download
-                      </button>
-                    </div>
-                  </div>
-                </>
+               !(['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
+                <div className="text-center text-white">
+                  <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
+                  <p>Preview not available for this file type</p>
+                  <button
+                    onClick={() => handleFileDownload(selectedFile)}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
+                  >
+                    <Download size={18} />
+                    Download File
+                  </button>
+                </div>
               )}
             </div>
           </div>

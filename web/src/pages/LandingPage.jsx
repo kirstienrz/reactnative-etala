@@ -39,6 +39,7 @@ const InfographicModal = ({ image, onClose }) => {
       <button
         onClick={onClose}
         className="absolute top-6 right-6 text-white p-2 rounded-full bg-black/30 hover:bg-black/60 shadow-md transition"
+        style={{ backdropFilter: 'blur(4px)' }}
       >
         <X className="w-6 h-6" />
       </button>
@@ -221,15 +222,15 @@ const LandingPage = () => {
         {/* Carousel Controls */}
         <button
           onClick={prevSlide}
-          className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 p-4 transition-all duration-300 backdrop-blur-md border border-white/20 group"
+          className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
         >
-          <ChevronLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+          <ChevronLeft className="w-6 h-6 text-violet-700 group-hover:scale-110 transition-transform" />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 p-4 transition-all duration-300 backdrop-blur-md border border-white/20 group"
+          className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
         >
-          <ChevronRight className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+          <ChevronRight className="w-6 h-6 text-violet-700 group-hover:scale-110 transition-transform" />
         </button>
 
         {/* Carousel Indicators */}
@@ -238,7 +239,7 @@ const LandingPage = () => {
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
-              className={`h-2 transition-all duration-500 ${idx === currentSlide ? 'bg-white w-12' : 'bg-white/40 w-6 hover:bg-white/60'}`}
+              className={`h-2 transition-all duration-500 ${idx === currentSlide ? 'bg-violet-700 w-12' : 'bg-violet-300 w-6 hover:bg-violet-400'} rounded-full`}
             />
           ))}
         </div>
@@ -293,7 +294,7 @@ const LandingPage = () => {
             <h2 className="text-6xl font-black text-slate-800">Press Releases</h2>
             <button
               onClick={() => navigate("/news")}
-              className="text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors flex items-center gap-3"
+              className="bg-white text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors flex items-center gap-3 border border-violet-200 px-6 py-2 rounded-lg shadow dark:bg-white dark:text-violet-700 dark:hover:text-violet-600"
             >
               View All <ArrowRight className="w-7 h-7" />
             </button>

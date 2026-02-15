@@ -180,7 +180,7 @@ const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value.trim())}
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
                   autoComplete="email"
                 />
               </div>
@@ -201,7 +201,7 @@ const LoginPage = () => {
                     onPaste={handlePinPaste}
                     required
                     maxLength={6}
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-center text-2xl tracking-widest font-mono"
+                    className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-center text-2xl tracking-widest font-mono"
                     autoComplete="off"
                   />
                 </div>
@@ -222,7 +222,7 @@ const LoginPage = () => {
                       value={tupId}
                       onChange={handleTupIdChange}
                       required
-                      className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all font-mono"
+                      className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all font-mono"
                       autoComplete="off"
                       maxLength={14}
                     />
@@ -241,14 +241,14 @@ const LoginPage = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full pl-11 pr-12 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
+                      className="w-full pl-11 pr-12 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
                       autoComplete="current-password"
                       minLength={0}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white text-gray-400 hover:text-gray-600 p-1 rounded-full border border-gray-200 dark:bg-white dark:text-gray-400 dark:hover:text-gray-600"
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>

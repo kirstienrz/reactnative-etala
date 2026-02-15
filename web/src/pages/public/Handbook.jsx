@@ -69,7 +69,9 @@ const Handbook = () => {
                   Complete handbook containing academic policies, student rights and responsibilities, faculty guidelines, employee regulations, campus rules, support services, and institutional procedures.
                 </p>
                 <div className="space-y-4">
-                  <button className="w-full md:w-auto inline-flex items-center justify-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl">
+                  <button
+                    className="w-full md:w-auto inline-flex items-center justify-center gap-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl dark:from-violet-600 dark:to-purple-600 dark:text-white"
+                  >
                     <Download className="w-5 h-5" />
                     Download Handbook (PDF)
                   </button>

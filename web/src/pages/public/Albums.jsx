@@ -408,7 +408,7 @@ const Gallery = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleViewAlbum(album)}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold rounded-lg hover:from-violet-700 hover:to-purple-700 transition-colors"
+                        className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors dark:bg-white dark:text-violet-700 dark:hover:bg-violet-100"
                       >
                         <Eye className="w-4 h-4" /> View Album
                       </button>

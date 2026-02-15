@@ -208,7 +208,7 @@ const Announcement = () => {
                     {item.fileUrl && (
                       <button
                         onClick={() => handleDownload(item.fileUrl)}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white px-5 py-3 rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-medium text-sm flex-shrink-0 self-start"
+                        className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors dark:bg-white dark:text-violet-700 dark:hover:bg-violet-100"
                       >
                         <Download className="w-4 h-4" />
                         Download

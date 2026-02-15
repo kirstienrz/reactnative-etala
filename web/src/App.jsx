@@ -49,6 +49,7 @@ import UserChatDetailsPage from "./pages/user/UserChatDetails";
 import UserReports from "./pages/user/Reports";
 import UserReporting from "./pages/user/Report";
 import InterviewBooking from "./pages/user/Interview";
+import UserConsultations from "./pages/user/UserConsultations";
 
 import MissionVision from "./pages/public/MissionVision";
 import Organization from "./pages/public/Organization";
@@ -146,6 +147,7 @@ const App = () => {
   <Route index element={<InterviewBooking />} />
 </Route> */}
 <Route path="/user/interview" element={<InterviewBooking />} />
+<Route path="/user/consultations" element={<UserConsultations />} />
 
             </Route>
           </Routes>

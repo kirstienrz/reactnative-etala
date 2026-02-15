@@ -41,6 +41,13 @@ export default function Dashboard() {
             path: "/user/inbox",
         },
         {
+            title: "Consultation History",
+            subtitle: "Track your bookings and appointments",
+            icon: User, // You can use a calendar or history icon if you prefer
+            color: "#F59E42",
+            path: "/user/consultations",
+        },
+        {
             title: "Edit Profile",
             subtitle: "Update your account information",
             icon: User,
@@ -236,9 +243,9 @@ export default function Dashboard() {
                             );
                         })}
                     </div>
-
-                    
                 </div>
+
+                
             </div>
         </div>
     );

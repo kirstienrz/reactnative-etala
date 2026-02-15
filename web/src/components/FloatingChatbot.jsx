@@ -133,6 +133,7 @@ chatContainer: {
       padding: "16px",
       overflowY: "auto",
       backgroundColor: "#F7F5FF",
+      color: "#222", // Always dark text for readability
     },
     bubble: {
       padding: "14px 18px",
@@ -151,6 +152,7 @@ chatContainer: {
       backgroundColor: "#ECE2FF",
       marginRight: "auto",
       borderBottomLeftRadius: "6px",
+      color: "#222", // Always dark text for bot
     },
     inputArea: {
       padding: "14px 16px",
@@ -253,6 +255,7 @@ chatContainer: {
             <div style={styles.inputArea}>
               <input
                 style={styles.chatInput}
+                className="bg-white text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all px-4 py-2"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
