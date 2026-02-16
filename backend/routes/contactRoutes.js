@@ -74,7 +74,7 @@ router.post('/', upload.array('attachments', 5), async (req, res) => {
     // Email content
     const mailOptions = {
       from: `"Contact Form" <${process.env.EMAIL_USER || 'your-email@gmail.com'}>`,
-      to: 'kirstientruiz@gmail.com', // Your email address
+      to: 'officialgadtupt@gmail.com', // Your email address
       replyTo: email,
       subject: `Contact Form: ${subject}`,
       html: `

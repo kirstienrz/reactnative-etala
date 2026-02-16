@@ -1,29 +1,12 @@
-
-
 const express = require("express");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { HfInference } = require('@huggingface/inference');
 const router = express.Router();
 
-// Initialize Hugging Face
-const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
+// Initialize Gemini (same as your chatbot)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-const AI_MODELS = {
-  // Primary: Good for text generation and analysis
-  primary: "meta-llama/Llama-2-7b-chat-hf",
-  
-  // Secondary: Good for classification
-  secondary: "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
-  
-  // Fallback: Always available
-  fallback: "gpt2",
-  
-  // For zero-shot classification
-  classifier: "facebook/bart-large-mnli"
-};
+const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" });
 
-// Original spam check endpoint
+// ========== SPAM CHECK - AI LANG ==========
 router.post("/check-report", async (req, res) => {
   try {
     const { 
@@ -41,64 +24,29 @@ router.post("/check-report", async (req, res) => {
     
     console.log("🔍 AI Checking text:", combinedText.substring(0, 100));
     
-    // ===== STEP 1: Basic Validation =====
+    // Basic validation lang - para di ma-empty
     const mainText = incidentDescription.trim();
-    
-    // Reject if completely empty
-    if (!mainText || mainText.length < 3) {
-      console.log("❌ Rejected: Too short");
+    if (!mainText || mainText.length < 2) {
       return res.json({ 
         allowed: false, 
-        reason: "Please provide a meaningful description of the incident. Your report must contain at least a basic explanation of what happened." 
+        reason: "Please provide a description of the incident. / Mangyaring magbigay ng paglalarawan ng insidente." 
       });
     }
     
-    // Reject obvious spam patterns
-    const spamPatterns = [
-      /^(asdf)+$/i,           // "asdf", "asdfasdf"
-      /^(qwerty)+$/i,         // "qwerty"
-      /^(test)+$/i,           // "test", "testtest"
-      /^(hello)+$/i,          // "hello"
-      /^(hi)+$/i,             // "hi"
-      /^[0-9]+$/,             // Only numbers "12345"
-      /^[a-z]{1,4}$/i,        // Single short word like "a", "the", "ok"
-      /^(.)\1{4,}/,           // Repeated character "aaaaa"
-      /^[!@#$%^&*()]+$/,      // Only symbols
-      /^(lol|haha|hehe)+$/i,  // Just laughter
-    ];
-    
-    const isSpamPattern = spamPatterns.some(pattern => pattern.test(mainText));
-    
-    if (isSpamPattern) {
-      console.log("❌ Rejected: Spam pattern detected");
-      return res.json({ 
-        allowed: false, 
-        reason: "Your report appears to contain random or meaningless text. Please provide a genuine description of the incident you're reporting." 
-      });
-    }
-    
-    // ===== STEP 2: AI Validation (Gemini) =====
+    // ===== GEMINI LANG - parang chatbot =====
     try {
-      const prompt = `You are a content moderator for a university reporting system.
+      const prompt = `You are a content moderator for a university reporting system. You understand BOTH English and Filipino/Tagalog.
 
-Analyze this incident report and determine if it's LEGITIMATE or SPAM/MEANINGLESS.
+Analyze this incident report and determine if it's LEGITIMATE or SPAM.
 
-REJECT (return "spam") if:
-- Random characters (asdf, qwerty, hjkl, etc.)
-- Only numbers or symbols
-- Nonsensical word salad
-- Test messages ("test", "testing 123")
-- Less than 10 words of meaningful content
-- No clear description of an actual incident
-
-APPROVE (return "legitimate") if:
-- Describes a real incident (even if brief)
-- Contains names, places, dates, or specific actions
-- Has coherent sentences that tell a story
-- Mentions people, events, or circumstances
-
-Report text:
+Report text (could be English, Filipino, or Taglish):
 "${combinedText}"
+
+Think like this:
+- LEGITIMATE: May sense ang sinasabi, naglalarawan ng totoong insidente, may details (sino, saan, kailan, ano nangyari)
+- SPAM: Walang kwenta, random letters, test lang, paulit-ulit, walang meaning
+
+Important: Kahit maikli pero may sense, legitimate yun. Example: "May nambubully sa room 201" - kahit maikli, legitimate yan.
 
 Respond with ONLY ONE WORD: either "spam" or "legitimate"`;
 
@@ -108,369 +56,203 @@ Respond with ONLY ONE WORD: either "spam" or "legitimate"`;
       console.log("🤖 Gemini Response:", aiResponse);
       
       if (aiResponse.includes("spam")) {
-        console.log("❌ Rejected by AI: Spam detected");
         return res.json({ 
           allowed: false, 
-          reason: "Our AI system detected that your report lacks meaningful incident details. Please provide specific information about what happened, including who was involved, when it occurred, and what took place." 
+          reason: "Your report appears to be spam or lacking meaningful details. Please describe what happened. / Mukhang spam o kulang sa detalye ang iyong report. Pakilarawan po ang nangyari."
         });
       }
       
-      // If AI says "legitimate", approve
-      console.log("✅ Approved by AI");
       return res.json({ allowed: true });
       
     } catch (aiError) {
       console.error("⚠️ AI Error:", aiError.message);
       
-      // If AI fails, use stricter fallback rules
+      // Pag nag-fail si Gemini, safety net lang
       const wordCount = mainText.split(/\s+/).length;
-      
-      if (wordCount < 5) {
-        console.log("❌ Rejected: Too few words (fallback)");
+      if (wordCount < 3) {
         return res.json({ 
           allowed: false, 
-          reason: "Please provide more details about the incident. A valid report should include what happened, who was involved, and when it occurred." 
+          reason: "Please provide more details about the incident." 
         });
       }
       
-      // If AI fails but text seems okay, approve with caution
-      console.log("✅ Approved (AI unavailable, passed basic checks)");
       return res.json({ allowed: true });
     }
     
   } catch (error) {
     console.error("❌ Server Error:", error);
-    
-    // On server error, REJECT to be safe
     return res.json({ 
       allowed: false, 
-      reason: "We're experiencing technical difficulties. Please try again in a moment." 
+      reason: "Technical issue. Please try again." 
     });
   }
 });
 
-
-// ========== REAL AI ANALYSIS ENDPOINT ==========
+// ========== SEVERITY ANALYSIS - PARANG CHATBOT ==========
 router.post("/analyze-severity", async (req, res) => {
   try {
     const { 
       incidentDescription = "", 
-      incidentTypes = [], 
       reportId = "unknown"
     } = req.body;
     
-    console.log(`🔍 REAL AI Analysis for report: ${reportId}`);
-    console.log(`📝 Description: ${incidentDescription.substring(0, 100)}...`);
+    console.log(`🔍 Analyzing report: ${reportId}`);
     
-    // Validate input
-    if (!incidentDescription || incidentDescription.trim().length < 10) {
+    if (!incidentDescription || incidentDescription.trim().length < 5) {
       return res.status(400).json({
         success: false,
-        message: "Valid incident description (minimum 10 characters) is required"
+        message: "Valid incident description is required"
       });
     }
     
-    const cleanDescription = incidentDescription.trim().substring(0, 1000);
+    // ===== GEMINI LANG - parang chatbot =====
+    const analysis = await analyzeWithGemini(incidentDescription);
     
-    // ========== REAL AI LOGIC ==========
-    let analysis;
-    
-    // Method 1: Try zero-shot classification (most accurate)
-    try {
-      console.log("🎯 Using zero-shot classification...");
-      analysis = await analyzeWithZeroShot(cleanDescription);
-    } catch (zeroError) {
-      console.log("⚠️ Zero-shot failed, trying content analysis...");
-      analysis = analyzeContentIntelligently(cleanDescription, incidentTypes);
-    }
-    
-    // Add metadata
     analysis.analyzedAt = new Date().toISOString();
-    analysis.analysisId = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    analysis.provider = "huggingface";
+    analysis.analysisId = `ai_${Date.now()}`;
     
-    console.log(`✅ REAL AI Analysis Complete: ${analysis.severity} (${analysis.confidence * 100}% confidence)`);
+    console.log(`✅ Analysis Complete: ${analysis.severity}`);
     
     return res.json({
       success: true,
-      message: "AI severity analysis completed",
       data: analysis,
       reportId: reportId,
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    console.error("❌ AI Error:", error.message);
+    console.error("❌ Error:", error.message);
     
-    const fallback = createFallbackAnalysis(req.body.incidentDescription || '');
-    
-    return res.json({
-      success: true,
-      message: "Analysis completed with fallback",
-      data: fallback,
-      isFallback: true,
-      reportId: req.body.reportId || "unknown",
-      timestamp: new Date().toISOString()
-    });
+    // Last resort - Gemini ulit pero simpler prompt
+    try {
+      const fallbackAnalysis = await simpleGeminiAnalysis(req.body.incidentDescription || '');
+      return res.json({
+        success: true,
+        data: fallbackAnalysis,
+        isFallback: true,
+        reportId: req.body.reportId || "unknown"
+      });
+    } catch (finalError) {
+      return res.status(503).json({
+        success: false,
+        message: "AI service unavailable. Please try again later."
+      });
+    }
   }
 });
 
-// ========== ZERO-SHOT CLASSIFICATION (MOST ACCURATE) ==========
-async function analyzeWithZeroShot(description) {
-  console.log("🤖 Calling Hugging Face API...");
+async function analyzeWithGemini(description) {
+  const prompt = `You are an AI analyzing incident reports for a university. You understand BOTH English and Filipino/Tagalog.
+
+REPORT: "${description}"
+
+Analyze this report and determine:
+
+1. SEVERITY (choose one):
+   - SEVERE: 
+     * Physical violence or threats of violence
+     * Sexual assault or harassment
+     * Weapons involved
+     * Self-harm or suicide risk
+     * Medical emergency
+   
+   - MODERATE: 
+     * REPEATED/ONGOING harassment or bullying (paulit-ulit, hindi one-time)
+     * Discrimination with clear impact
+     * Theft or significant property damage
+     * Patterns of intimidation
+   
+   - MILD: 
+     * One-time teasing or minor conflict (minsan lang)
+     * Complaints without clear harm
+     * Administrative concerns
+     * Interpersonal disagreements
+     * Annoyance without threat or pattern
+
+2. CONFIDENCE: number between 0-1 (how sure are you)
+
+IMPORTANT RULES:
+- If report is vague or lacks details (walang specific incidents), use MILD + lower confidence
+- If "nangaasar" or "teasing" without violence/threat, default to MILD unless REPEATED
+- ONE-TIME incidents without harm = MILD
+- REPEATED + DISTRESS = MODERATE
+- PHYSICAL/THREAT = SEVERE
+
+3. EXPLANATION: 1-2 sentences explaining why, in the SAME LANGUAGE as the report
+
+4. RISK FACTORS: 2-3 specific risks (in same language as report)
+
+5. ACTIONS: 2-3 specific things to do (in same language as report)
+
+6. RESPONSE TIME: "Immediate", "Within 24 hours", "Within 3-7 days", or "Within 7-14 days"
+
+Return as JSON only, no other text. Format:
+{
+  "severity": "SEVERE/MODERATE/MILD",
+  "confidence": 0.95,
+  "explanation": "text here",
+  "riskFactors": ["risk1", "risk2"],
+  "suggestedActions": ["action1", "action2"],
+  "recommendedResponseTime": "text here",
+  "priorityScore": 85
+}`;
+
+  const result = await model.generateContent(prompt);
+  const responseText = result.response.text();
   
-  const result = await hf.zeroShotClassification({
-    model: "facebook/bart-large-mnli",
-    inputs: [description.substring(0, 500)],
-    parameters: {
-      candidate_labels: [
-        "SEVERE: violence, weapons, threats, assault, emergency, danger, injury, attack, fire, suicide",
-        "MODERATE: harassment, bullying, conflict, argument, stress, anxiety, concern, theft, damage",
-        "MILD: complaint, inquiry, administrative, minor issue, noise, question, routine"
-      ],
-      multi_label: false
-    }
-  });
-  
-  const classification = result[0];
-  const topLabel = classification.labels[0];
-  const confidence = classification.scores[0];
-  
-  console.log(`📊 Classification Results:`);
-  console.log(`  1. ${classification.labels[0]}: ${(classification.scores[0]*100).toFixed(1)}%`);
-  console.log(`  2. ${classification.labels[1]}: ${(classification.scores[1]*100).toFixed(1)}%`);
-  console.log(`  3. ${classification.labels[2]}: ${(classification.scores[2]*100).toFixed(1)}%`);
-  
-  // Determine severity from classification
-  let severity;
-  if (topLabel.includes("SEVERE")) {
-    severity = "SEVERE";
-  } else if (topLabel.includes("MODERATE")) {
-    severity = "MODERATE";
-  } else {
-    severity = "MILD";
+  // Extract JSON
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Invalid response format");
   }
   
-  // Generate analysis based on severity
-  return createAnalysisFromSeverity(severity, confidence, description);
+  const analysis = JSON.parse(jsonMatch[0]);
+  
+  // Ensure priority score exists
+  if (!analysis.priorityScore) {
+    const priorityMap = {
+      'SEVERE': 90,
+      'MODERATE': 70,
+      'MILD': 50
+    };
+    analysis.priorityScore = priorityMap[analysis.severity] || 70;
+  }
+  
+  analysis.modelUsed = "gemini-2.5-flash";
+  analysis.method = "chatbot-style";
+  
+  return analysis;
 }
 
-// ========== INTELLIGENT CONTENT ANALYSIS ==========
-function analyzeContentIntelligently(description, incidentTypes) {
-  console.log("🧠 Analyzing content intelligently...");
-  
-  const text = description.toLowerCase();
-  
-  // Score different aspects
-  const scores = {
-    severe: 0,
-    moderate: 0,
-    mild: 0
-  };
-  
-  // Check for SEVERE indicators
-  if (/(emergency|urgent|911|police|ambulance|fire)/i.test(text)) scores.severe += 3;
-  if (/(violence|assault|attack|hit|punch|kick|stab|shoot)/i.test(text)) scores.severe += 2.5;
-  if (/(weapon|gun|knife|bat|firearm)/i.test(text)) scores.severe += 2;
-  if (/(threat|kill|murder|hurt|harm|danger)/i.test(text)) scores.severe += 1.5;
-  if (/(sexual|rape|molest|abuse)/i.test(text)) scores.severe += 2;
-  if (/(suicide|self.?harm|die|death)/i.test(text)) scores.severe += 2;
-  
-  // Check for MODERATE indicators
-  if (/(bully|harass|tease|mock|insult)/i.test(text)) scores.moderate += 1.5;
-  if (/(discriminat|racist|prejudice|bias)/i.test(text)) scores.moderate += 1.5;
-  if (/(stalk|follow|watch|obsess)/i.test(text)) scores.moderate += 1.3;
-  if (/(anxiety|depress|stress|panic|trauma)/i.test(text)) scores.moderate += 1;
-  if (/(steal|theft|rob|burglar)/i.test(text)) scores.moderate += 1;
-  if (/(damage|break|vandal|destroy)/i.test(text)) scores.moderate += 0.8;
-  if (/(cheat|plagiar|fraud|dishonest)/i.test(text)) scores.moderate += 0.8;
-  
-  // Check for MILD indicators
-  if (/(complain|noise|loud|music|party)/i.test(text)) scores.mild += 0.5;
-  if (/(question|inquire|ask|information)/i.test(text)) scores.mild += 0.3;
-  if (/(late|absent|attendance)/i.test(text)) scores.mild += 0.2;
-  if (/(clean|dirty|messy|maintenance)/i.test(text)) scores.mild += 0.2;
-  if (/(lost|found|missing|item)/i.test(text)) scores.mild += 0.2;
-  
-  console.log(`📊 Content Analysis Scores:`, scores);
-  
-  // Determine final severity
-  let severity, confidence;
-  
-  if (scores.severe >= 2) {
-    severity = "SEVERE";
-    confidence = 0.8 + (scores.severe * 0.05);
-  } else if (scores.moderate >= 1.5) {
-    severity = "MODERATE";
-    confidence = 0.7 + (scores.moderate * 0.04);
-  } else if (scores.mild >= 1) {
-    severity = "MILD";
-    confidence = 0.65 + (scores.mild * 0.03);
-  } else {
-    // Default to moderate if unclear
-    severity = "MODERATE";
-    confidence = 0.7;
-  }
-  
-  // Cap confidence
-  confidence = Math.min(confidence, 0.95);
-  
-  return createAnalysisFromSeverity(severity, confidence, description);
-}
+// ===== SIMPLE FALLBACK - Gemini parin =====
+async function simpleGeminiAnalysis(description) {
+  const prompt = `Analyze this incident report and tell me the severity (SEVERE/MODERATE/MILD) and why.
 
-// ========== CREATE ANALYSIS FROM SEVERITY ==========
-function createAnalysisFromSeverity(severity, confidence, description) {
-  const text = description.toLowerCase();
+Report: "${description}"
+
+Respond in this format:
+Severity: [SEVERE/MODERATE/MILD]
+Reason: [1 sentence explanation]
+Actions: [2 quick actions]`;
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
   
-  // Generate explanation based on severity
-  let explanation;
-  switch (severity) {
-    case 'SEVERE':
-      if (/(violence|assault|attack)/i.test(text)) {
-        explanation = "Report describes violent behavior requiring immediate safety intervention.";
-      } else if (/(weapon|gun|knife)/i.test(text)) {
-        explanation = "Weapon involvement indicates serious safety threat needing urgent response.";
-      } else if (/(threat|danger|kill)/i.test(text)) {
-        explanation = "Threats to safety identified requiring immediate attention.";
-      } else if (/(emergency|urgent|911)/i.test(text)) {
-        explanation = "Emergency situation reported requiring immediate response.";
-      } else if (/(sexual|rape|molest)/i.test(text)) {
-        explanation = "Sexual misconduct reported requiring sensitive and urgent handling.";
-      } else if (/(suicide|self.?harm)/i.test(text)) {
-        explanation = "Mental health emergency requiring immediate intervention.";
-      } else {
-        explanation = "Serious safety concerns identified requiring prompt investigation.";
-      }
-      break;
-      
-    case 'MODERATE':
-      if (/(bully|harass|tease)/i.test(text)) {
-        explanation = "Harassment or bullying behavior reported requiring investigation.";
-      } else if (/(discriminat|racist|prejudice)/i.test(text)) {
-        explanation = "Discrimination concerns identified needing follow-up.";
-      } else if (/(steal|theft|damage)/i.test(text)) {
-        explanation = "Property issues reported requiring administrative action.";
-      } else if (/(conflict|argue|fight)/i.test(text)) {
-        explanation = "Interpersonal conflicts identified needing mediation.";
-      } else if (/(anxiety|depress|stress)/i.test(text)) {
-        explanation = "Mental health concerns reported requiring support services.";
-      } else {
-        explanation = "Concerning behavior reported that warrants investigation.";
-      }
-      break;
-      
-    case 'MILD':
-      if (/(complain|noise)/i.test(text)) {
-        explanation = "Routine complaint reported that can be addressed through standard procedures.";
-      } else if (/(question|inquire|ask)/i.test(text)) {
-        explanation = "General inquiry or information request.";
-      } else if (/(administrative|procedure|process)/i.test(text)) {
-        explanation = "Administrative matter requiring standard handling.";
-      } else {
-        explanation = "Minor concern reported that can be resolved routinely.";
-      }
-      break;
-  }
-  
-  // Extract keywords
-  const keywords = extractKeywords(description);
-  
-  // Generate risk factors
-  const riskFactors = [];
-  if (severity === 'SEVERE') {
-    riskFactors.push("Safety threat identified");
-    if (/(weapon|violence|threat)/i.test(text)) riskFactors.push("Potential for harm");
-    riskFactors.push("Requires immediate intervention");
-  } else if (severity === 'MODERATE') {
-    riskFactors.push("Behavioral concern detected");
-    riskFactors.push("Potential for escalation");
-    riskFactors.push("Needs investigation");
-  } else {
-    riskFactors.push("Routine matter");
-    riskFactors.push("Standard procedure applicable");
-    riskFactors.push("Low risk");
-  }
-  
-  // Generate suggested actions
-  const suggestedActions = [];
-  if (severity === 'SEVERE') {
-    suggestedActions.push("Immediate safety assessment");
-    suggestedActions.push("Contact campus security if needed");
-    suggestedActions.push("Priority investigation within 24 hours");
-  } else if (severity === 'MODERATE') {
-    suggestedActions.push("Schedule investigation within 3-7 days");
-    suggestedActions.push("Interview involved parties");
-    suggestedActions.push("Document findings thoroughly");
-  } else {
-    suggestedActions.push("Follow standard procedures");
-    suggestedActions.push("Maintain records");
-    suggestedActions.push("Provide appropriate follow-up");
-  }
-  
-  // Calculate priority score
-  let priorityScore;
-  switch (severity) {
-    case 'SEVERE':
-      priorityScore = 90 + Math.round(confidence * 10);
-      break;
-    case 'MODERATE':
-      priorityScore = 70 + Math.round(confidence * 20);
-      break;
-    case 'MILD':
-      priorityScore = 50 + Math.round(confidence * 20);
-      break;
-  }
+  // Simple parsing
+  const severity = text.includes("SEVERE") ? "SEVERE" : 
+                   text.includes("MODERATE") ? "MODERATE" : "MILD";
   
   return {
     severity: severity,
-    confidence: Math.round(confidence * 100) / 100,
-    explanation: explanation,
-    keywords: keywords,
-    riskFactors: riskFactors,
-    recommendedResponseTime: severity === 'SEVERE' ? '24 hours' : 
-                           severity === 'MODERATE' ? '3-7 days' : '7-14 days',
-    priorityScore: Math.min(priorityScore, 100),
-    suggestedActions: suggestedActions,
-    modelUsed: "facebook/bart-large-mnli",
-    method: "zero-shot-classification"
-  };
-}
-
-// ========== HELPER FUNCTIONS ==========
-function extractKeywords(description) {
-  const words = description.toLowerCase().split(/\s+/);
-  const commonWords = new Set(['the', 'and', 'for', 'that', 'this', 'with', 'was', 'were', 'from']);
-  
-  const keywords = words
-    .filter(word => word.length > 3 && !commonWords.has(word))
-    .map(word => word.replace(/[^a-z]/g, ''))
-    .filter(word => word.length > 3)
-    .slice(0, 5);
-  
-  if (keywords.length < 3) {
-    keywords.push('incident', 'report', 'university');
-  }
-  
-  return [...new Set(keywords)].slice(0, 5);
-}
-
-function createFallbackAnalysis(description) {
-  return {
-    severity: "MODERATE",
     confidence: 0.7,
-    explanation: "Analysis completed with fallback method.",
-    keywords: ["fallback", "analysis", "report"],
-    riskFactors: ["System fallback", "Manual review recommended"],
-    recommendedResponseTime: "3-7 days",
-    priorityScore: 70,
-    suggestedActions: ["Review manually", "Follow standard procedure"],
-    analyzedAt: new Date().toISOString(),
-    analysisId: `fallback_${Date.now()}`,
-    modelUsed: "fallback",
+    explanation: text.split('\n')[1]?.replace('Reason:', '').trim() || "Analysis completed",
+    riskFactors: ["Manual review recommended"],
+    suggestedActions: ["Review report", "Follow standard procedure"],
+    recommendedResponseTime: severity === 'SEVERE' ? 'Within 24 hours' : 'Within 3-7 days',
+    priorityScore: severity === 'SEVERE' ? 85 : severity === 'MODERATE' ? 70 : 55,
+    modelUsed: "gemini-2.5-flash-fallback",
     isFallback: true
   };
 }
 
 module.exports = router;
-
-
