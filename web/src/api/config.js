@@ -6,7 +6,7 @@ const isLocal = window.location.hostname === "localhost";
 
 const baseURL = isLocal
   ? "http://localhost:5000/api"
-  : "https://reactnative-etala.onrender.comapi"; // change to backend domain in prod
+  : "https://reactnative-etala.onrender.com/api"; // change to backend domain in prod
 
 const API = axios.create({
   baseURL,
