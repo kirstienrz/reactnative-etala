@@ -1,48 +1,25 @@
-const nodemailer = require("nodemailer");
+const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
 
-/**
- * Send an email with optional PDF attachment
- * @param {Object} options
- * @param {string} options.to - recipient email
- * @param {string} options.subject - email subject
- * @param {string} options.html - HTML content
- * @param {Buffer} options.pdfBuffer - PDF file buffer (optional)
- * @param {string} options.pdfFilename - PDF filename (optional)
- */
-const sendEmail = async ({ to, subject, html, pdfBuffer, pdfFilename }) => {
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
+});
+
+const sendEmail = async ({ to, subject, html }) => {
+  const sentFrom = new Sender(  "noreply@test-r9084zvy0qmgw63d.mlsender.net", "Etala");
+
+  const recipients = [new Recipient(to)];
+
+  const emailParams = new EmailParams()
+    .setFrom(sentFrom)
+    .setTo(recipients)
+    .setSubject(subject)
+    .setHtml(html);
+
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    const mailOptions = {
-      from: `"GAD Portal" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    };
-
-    // Add PDF attachment if provided
-    if (pdfBuffer && pdfFilename) {
-      mailOptions.attachments = [
-        {
-          filename: pdfFilename,
-          content: Buffer.from(pdfBuffer),
-          contentType: "application/pdf",
-        },
-      ];
-    }
-
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("✅ Email sent:", info.messageId);
-    return true;
-  } catch (err) {
-    console.error("❌ Email send error:", err);
+    await mailerSend.email.send(emailParams);
+    console.log("✅ Email sent successfully");
+  } catch (error) {
+    console.error("❌ Email send error:", error);
     throw new Error("Could not send email");
   }
 };
