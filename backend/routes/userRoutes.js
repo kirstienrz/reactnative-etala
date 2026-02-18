@@ -3,6 +3,9 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const auth = require("../middleware/auth"); // ✅ import your JWT middleware
+// const sendEmail = require("../utils/sendEmail"); // adjust path
+const sendEmail = require("../utils/sendEmailSendGrid");
+
 
 router.get("/analytics", auth(), async (req, res) => {
   try {
@@ -240,25 +243,12 @@ router.post("/manage/users", auth(), async (req, res) => {
       return res.status(403).json({ message: "Access denied. Superadmin only." });
     }
 
-    const { 
-      firstName, 
-      lastName, 
-      tupId, 
-      email, 
-      password, 
-      role, 
-      department, 
-      birthday, 
-      age, 
-      gender 
-    } = req.body;
+    const { firstName, lastName, tupId, email, password, role, department, birthday, age, gender } = req.body;
 
-    // Validation
     if (!tupId || !email || !password) {
       return res.status(400).json({ message: "TUP ID, email, and password are required" });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { tupId }] });
     if (existingUser) {
       return res.status(400).json({ 
@@ -270,7 +260,6 @@ router.post("/manage/users", auth(), async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
     const newUser = new User({
       firstName,
       lastName,
@@ -288,17 +277,38 @@ router.post("/manage/users", auth(), async (req, res) => {
 
     await newUser.save();
 
+    // Remove sensitive fields before sending response
     const userResponse = newUser.toObject();
     delete userResponse.password;
     delete userResponse.pin;
 
+    // ✉️ Send confirmation email
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Your Etala Account Has Been Created",
+        html: `
+          <p>Hello ${firstName},</p>
+          <p>Your account has been successfully created in Etala.</p>
+          <p><strong>Email:</strong> ${email}<br/>
+          <p>Password is your username in capital</p>
+          <p>Please log in and change your password immediately.</p>
+
+          <p>https://etala.vercel.app/</p>
+        `
+      });
+      console.log("✅ Confirmation email sent");
+    } catch (err) {
+      console.error("❌ Failed to send confirmation email:", err);
+    }
+
     res.status(201).json(userResponse);
+
   } catch (err) {
     console.error("❌ Error creating user:", err);
     res.status(500).json({ message: "Failed to create user" });
   }
 });
-
 // 📝 UPDATE user (superadmin only)
 router.put("/manage/users/:id", auth(), async (req, res) => {
   try {
