@@ -1,7 +1,7 @@
 // src/api/socket.js
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "https://reactnative-etala.vercel.app";
+const SOCKET_URL = "https://reactnative-etala.onrender.com";
 
 class SocketService {
   constructor() {

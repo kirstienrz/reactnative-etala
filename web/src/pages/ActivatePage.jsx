@@ -11,7 +11,7 @@ const ActivatePage = () => {
   useEffect(() => {
     const activateAccount = async () => {
       try {
-        const res = await axios.get(`https://reactnative-etala.vercel.app/api/auth/activate/${token}`);
+        const res = await axios.get(`https://reactnative-etala.onrender.com/api/auth/activate/${token}`);
         toast.success(res.data.msg);
         navigate("/login");
       } catch (err) {

@@ -29,7 +29,7 @@ const HighlightsSection = () => {
 
   // Socket.IO real-time updates
   useEffect(() => {
-    const newSocket = io('https://reactnative-etala.vercel.app', {
+    const newSocket = io('https://reactnative-etala.onrender.com', {
       transports: ['websocket'],
     });
 

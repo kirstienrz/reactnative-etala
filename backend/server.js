@@ -112,7 +112,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",
   "https://etala.vercel.app",
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL,
 ];
 
 // Allow all preflight requests FIRST (very important for Vercel)

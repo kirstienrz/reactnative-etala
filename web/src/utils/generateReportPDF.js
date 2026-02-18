@@ -120,7 +120,7 @@ export const sendPDFToEmail = async (pdfBlob, ticketNumber, userEmail = null) =>
     const token = localStorage.getItem('token');
     
     // Use the same base URL as your API config
-    const baseURL = import.meta.env.VITE_API_URL || 'https://reactnative-etala.vercel.app/api';
+    const baseURL = import.meta.env.VITE_API_URL || 'https://reactnative-etala.onrender.com/api';
     
     const response = await fetch(`${baseURL}/reports/send-pdf`, {
       method: 'POST',
