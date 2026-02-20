@@ -1,75 +1,86 @@
 import React, { useEffect, useState } from "react";
-import { Calendar as CalendarIcon, List, Loader, Clock, Info, Video, Phone, MapPin, CheckCircle, XCircle, Clock3 } from "lucide-react";
+import { Calendar as CalendarIcon, List, Loader, Clock, Info, Video, Phone, MapPin, CheckCircle, XCircle, Clock3, ChevronRight, CalendarDays, Filter, Search, AlertCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { getUserConsultations } from "../../api/calendar";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
-// Custom calendar CSS to make it larger
+// Custom calendar CSS to match Reports style
 const calendarStyles = `
   .custom-calendar {
     width: 100% !important;
-    border: none !important;
-    border-radius: 16px !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 12px !important;
     background: white !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
-    padding: 20px !important;
+    padding: 16px !important;
+    font-family: inherit !important;
   }
   .custom-calendar .react-calendar__navigation {
-    margin-bottom: 16px !important;
+    margin-bottom: 12px !important;
   }
   .custom-calendar .react-calendar__navigation button {
-    font-size: 18px !important;
-    color: #1E293B !important;
+    font-size: 14px !important;
+    color: #374151 !important;
     background: none !important;
-    border-radius: 8px !important;
-    padding: 8px 16px !important;
-    font-weight: 600 !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-weight: 500 !important;
   }
   .custom-calendar .react-calendar__navigation button:hover {
-    background: #F1F5F9 !important;
+    background: #F3F4F6 !important;
+  }
+  .custom-calendar .react-calendar__navigation button:disabled {
+    opacity: 0.5 !important;
   }
   .custom-calendar .react-calendar__month-view__weekdays {
-    font-weight: 600 !important;
-    color: #64748B !important;
+    font-weight: 500 !important;
+    color: #6B7280 !important;
     text-transform: uppercase !important;
-    font-size: 14px !important;
+    font-size: 12px !important;
   }
   .custom-calendar .react-calendar__month-view__weekdays__weekday {
-    padding: 12px !important;
+    padding: 8px 4px !important;
+  }
+  .custom-calendar .react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none !important;
   }
   .custom-calendar .react-calendar__tile {
-    padding: 16px 8px !important;
-    font-size: 16px !important;
-    font-weight: 500 !important;
-    color: #1E293B !important;
-    border-radius: 12px !important;
-    transition: all 0.2s !important;
+    padding: 10px 4px !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    color: #374151 !important;
+    border-radius: 6px !important;
+    transition: all 0.15s !important;
   }
   .custom-calendar .react-calendar__tile:hover {
-    background: #F1F5F9 !important;
+    background: #F3F4F6 !important;
   }
   .custom-calendar .react-calendar__tile--active {
-    background: #1E40AF !important;
+    background: #8B5CF6 !important;
     color: white !important;
   }
   .custom-calendar .react-calendar__tile--active:hover {
-    background: #1E3A8A !important;
+    background: #7C3AED !important;
   }
   .custom-calendar .has-consultation {
-    background: #EFF6FF !important;
-    color: #1E40AF !important;
-    font-weight: 600 !important;
+    background: #EDE9FE !important;
+    color: #6D28D9 !important;
+    font-weight: 500 !important;
     position: relative !important;
   }
   .custom-calendar .has-consultation::after {
-    content: "•" !important;
+    content: "" !important;
     position: absolute !important;
     bottom: 4px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    color: #1E40AF !important;
-    font-size: 20px !important;
+    width: 4px !important;
+    height: 4px !important;
+    background: #6D28D9 !important;
+    border-radius: 50% !important;
+  }
+  .custom-calendar .has-consultation.react-calendar__tile--active::after {
+    background: white !important;
   }
   .custom-calendar .react-calendar__tile--now {
     background: #FEF3C7 !important;
@@ -77,42 +88,29 @@ const calendarStyles = `
   }
 `;
 
-// Status badge component
+// Status badge component matching Reports style
 const StatusBadge = ({ status }) => {
   const getStatusConfig = () => {
     switch(status?.toLowerCase()) {
       case 'scheduled':
       case 'upcoming':
-        return { bg: '#EFF6FF', color: '#1E40AF', icon: Clock3, text: 'Upcoming' };
+        return { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Upcoming' };
       case 'ongoing':
-        return { bg: '#FEF3C7', color: '#92400E', icon: Video, text: 'Ongoing' };
+        return { bg: 'bg-blue-100', text: 'text-blue-800', label: 'In Progress' };
       case 'completed':
-        return { bg: '#ECFDF3', color: '#067647', icon: CheckCircle, text: 'Completed' };
+        return { bg: 'bg-green-100', text: 'text-green-800', label: 'Completed' };
       case 'cancelled':
-        return { bg: '#FEF3F2', color: '#B42318', icon: XCircle, text: 'Cancelled' };
+        return { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' };
       default:
-        return { bg: '#F2F4F7', color: '#344054', icon: Clock, text: status || 'Pending' };
+        return { bg: 'bg-gray-100', text: 'text-gray-800', label: status || 'Pending' };
     }
   };
 
   const config = getStatusConfig();
-  const Icon = config.icon;
 
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 6,
-      padding: '4px 12px',
-      background: config.bg,
-      color: config.color,
-      borderRadius: 100,
-      fontSize: 13,
-      fontWeight: 500,
-      width: 'fit-content'
-    }}>
-      <Icon size={14} />
-      {config.text}
+    <span className={`px-3 py-1 text-sm rounded-full font-medium ${config.bg} ${config.text}`}>
+      {config.label}
     </span>
   );
 };
@@ -121,13 +119,13 @@ const StatusBadge = ({ status }) => {
 const ModeIcon = ({ mode }) => {
   switch(mode?.toLowerCase()) {
     case 'video':
-      return <Video size={16} color="#2563EB" />;
+      return <Video size={16} className="text-purple-600" />;
     case 'phone':
-      return <Phone size={16} color="#16A34A" />;
+      return <Phone size={16} className="text-green-600" />;
     case 'in-person':
-      return <MapPin size={16} color="#DC2626" />;
+      return <MapPin size={16} className="text-red-600" />;
     default:
-      return <Info size={16} color="#64748B" />;
+      return <Info size={16} className="text-gray-500" />;
   }
 };
 
@@ -146,6 +144,8 @@ export default function UserConsultations() {
   const [selectedConsultation, setSelectedConsultation] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [filterStatus, setFilterStatus] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (!user?._id) return;
@@ -172,15 +172,34 @@ export default function UserConsultations() {
     }
   }, [consultations]);
 
+  // Filter consultations
+  const filteredConsultations = consultations.filter((c) => {
+    // Status filter
+    if (filterStatus) {
+      const status = (c.status || c.extendedProps?.status || "").toLowerCase();
+      if (status !== filterStatus.toLowerCase()) return false;
+    }
+    
+    // Search filter
+    if (searchTerm) {
+      const title = (c.title || "").toLowerCase();
+      const reportId = (c.reportTicketNumber || c.extendedProps?.reportTicketNumber || "").toLowerCase();
+      const term = searchTerm.toLowerCase();
+      if (!title.includes(term) && !reportId.includes(term)) return false;
+    }
+    
+    return true;
+  });
+
   // Helper: get consultations for selected date
-  const consultationsForDate = consultations.filter((c) => {
+  const consultationsForDate = filteredConsultations.filter((c) => {
     if (!c.start) return false;
     const d = new Date(c.start);
     return d.toDateString() === selectedDate.toDateString();
   });
 
   // Helper: get all consultation dates
-  const consultationDates = consultations
+  const consultationDates = filteredConsultations
     .filter(c => c.start)
     .map(c => new Date(c.start).toDateString());
 
@@ -192,607 +211,411 @@ export default function UserConsultations() {
     return null;
   };
 
+  // Handle modal scroll lock
+  useEffect(() => {
+    if (modalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [modalOpen]);
+
   return (
     <>
       <style>{calendarStyles}</style>
-      <div style={{ 
-        background: "#F8FAFC", 
-        borderRadius: 24, 
-        padding: 32, 
-        boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
-        marginTop: 32,
-        minHeight: 'calc(100vh - 200px)'
-      }}>
-        {/* Header */}
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "space-between", 
-          marginBottom: 32,
-          flexWrap: 'wrap',
-          gap: 16
-        }}>
-          <div>
-            <h2 style={{ 
-              fontSize: 28, 
-              fontWeight: 700, 
-              color: "#0F172A", 
-              margin: 0,
-              letterSpacing: '-0.01em'
-            }}>
-              My Consultations
-            </h2>
-            <p style={{ color: "#64748B", margin: '8px 0 0 0', fontSize: 15 }}>
-              {consultations.length} consultation{consultations.length !== 1 ? 's' : ''} scheduled
+      <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">My Consultations</h1>
+            <p className="text-gray-600 mt-2">
+              View and manage your scheduled consultations.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <button
-              onClick={() => setView("calendar")}
-              style={{
-                background: view === "calendar" ? "#0F172A" : "white",
-                color: view === "calendar" ? "#fff" : "#1E293B",
-                border: view === "calendar" ? "none" : "1px solid #E2E8F0",
-                borderRadius: 12,
-                padding: "10px 20px",
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                transition: 'all 0.2s',
-                boxShadow: view === "calendar" ? '0 4px 12px rgba(15,23,42,0.1)' : 'none'
-              }}
-            >
-              <CalendarIcon size={18} />
-              Calendar
-            </button>
-            <button
-              onClick={() => setView("list")}
-              style={{
-                background: view === "list" ? "#0F172A" : "white",
-                color: view === "list" ? "#fff" : "#1E293B",
-                border: view === "list" ? "none" : "1px solid #E2E8F0",
-                borderRadius: 12,
-                padding: "10px 20px",
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                transition: 'all 0.2s',
-                boxShadow: view === "list" ? '0 4px 12px rgba(15,23,42,0.1)' : 'none'
-              }}
-            >
-              <List size={18} />
-              List
-            </button>
-          </div>
-        </div>
 
-        {loading ? (
-          <div style={{ 
-            textAlign: "center", 
-            color: "#64748B", 
-            padding: 64,
-            background: 'white',
-            borderRadius: 24
-          }}>
-            <Loader size={40} className="animate-spin" style={{ margin: '0 auto 16px', color: '#0F172A' }} />
-            <p style={{ fontSize: 16, fontWeight: 500 }}>Loading your consultations...</p>
-          </div>
-        ) : consultations.length === 0 ? (
-          <div style={{ 
-            textAlign: "center", 
-            color: "#64748B", 
-            padding: 64,
-            background: 'white',
-            borderRadius: 24
-          }}>
-            <CalendarIcon size={48} style={{ margin: '0 auto 16px', color: '#94A3B8' }} />
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1E293B', marginBottom: 8 }}>No consultations booked yet</h3>
-            <p style={{ fontSize: 15 }}>Your scheduled consultations will appear here once booked.</p>
-          </div>
-        ) : view === "calendar" ? (
-          <div style={{ 
-            background: "white", 
-            borderRadius: 24, 
-            padding: 32,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
-          }}>
-            {/* Large Calendar */}
-            <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
-              <Calendar
-                value={selectedDate}
-                onChange={setSelectedDate}
-                tileClassName={tileClassName}
-                className="custom-calendar"
-                minDetail="month"
-                maxDetail="month"
-                showNeighboringMonth={false}
-              />
-            </div>
-
-            {/* Selected Date Consultations */}
-            <div style={{ marginTop: 32 }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                marginBottom: 20
-              }}>
-                <h4 style={{ 
-                  margin: 0, 
-                  fontSize: 18, 
-                  fontWeight: 600, 
-                  color: "#0F172A"
-                }}>
-                  <CalendarIcon size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  {selectedDate.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </h4>
-                <span style={{ 
-                  background: '#F1F5F9', 
-                  padding: '4px 12px', 
-                  borderRadius: 100, 
-                  fontSize: 13,
-                  color: '#475569',
-                  fontWeight: 500
-                }}>
-                  {consultationsForDate.length} consultation{consultationsForDate.length !== 1 ? 's' : ''}
-                </span>
+          {/* Filters and View Toggle */}
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search Consultations
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search by title or report ID..."
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
-
-              {consultationsForDate.length === 0 ? (
-                <div style={{ 
-                  background: "#F8FAFC", 
-                  borderRadius: 16, 
-                  padding: 40, 
-                  textAlign: "center",
-                  border: '1px dashed #E2E8F0'
-                }}>
-                  <Clock size={32} style={{ margin: '0 auto 12px', color: '#94A3B8' }} />
-                  <p style={{ color: "#64748B", fontSize: 15, margin: 0 }}>
-                    No consultations scheduled for this date.
-                  </p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {consultationsForDate.map((c, idx) => (
-                    <div
-                      key={c._id || idx}
-                      style={{
-                        background: "#F8FAFC",
-                        border: "1px solid #E2E8F0",
-                        borderRadius: 16,
-                        padding: 20,
-                        display: "flex",
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        flexWrap: 'wrap',
-                        gap: 16,
-                        transition: 'all 0.2s',
-                        cursor: 'pointer',
-                        ':hover': {
-                          borderColor: '#94A3B8',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                        }
-                      }}
-                      onClick={() => { setSelectedConsultation(c); setModalOpen(true); }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1 }}>
-                        <div style={{
-                          width: 48,
-                          height: 48,
-                          background: '#EFF6FF',
-                          borderRadius: 12,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <ModeIcon mode={c.extendedProps?.mode} />
-                        </div>
-                        <div>
-                          <h5 style={{ 
-                            margin: 0, 
-                            fontSize: 16, 
-                            fontWeight: 600, 
-                            color: "#0F172A",
-                            marginBottom: 6
-                          }}>
-                            {c.title || "Consultation"}
-                          </h5>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 14, color: '#475569' }}>
-                              {c.start ? new Date(c.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Time TBA'}
-                            </span>
-                            <span style={{ color: '#E2E8F0' }}>•</span>
-                            <StatusBadge status={c.status || c.extendedProps?.status} />
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        style={{
-                          background: "white",
-                          color: "#0F172A",
-                          border: "1px solid #E2E8F0",
-                          borderRadius: 12,
-                          padding: "10px 20px",
-                          fontSize: 14,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          transition: 'all 0.2s',
-                          ':hover': {
-                            background: '#F8FAFC',
-                            borderColor: '#94A3B8'
-                          }
-                        }}
-                        onClick={(e) => { e.stopPropagation(); setSelectedConsultation(c); setModalOpen(true); }}
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* List View */
-          <div style={{ 
-            background: "white", 
-            borderRadius: 24, 
-            padding: 32,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
-          }}>
-            <div style={{ marginBottom: 24 }}>
-              <h4 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#0F172A" }}>
-                All Consultations
-              </h4>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {consultations.map((c, idx) => {
-                const hasId = Boolean(c._id);
-                const dateStr = c.start ? new Date(c.start).toLocaleString(undefined, { 
-                  dateStyle: "medium", 
-                  timeStyle: "short" 
-                }) : "No date";
-
-                return (
-                  <div
-                    key={c._id || idx}
-                    style={{
-                      background: hasId ? "white" : "#FFFBEB",
-                      border: hasId ? "1px solid #E2E8F0" : "1px solid #FCD34D",
-                      borderRadius: 16,
-                      padding: 20,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      flexWrap: 'wrap',
-                      gap: 16,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1 }}>
-                      <div style={{
-                        width: 48,
-                        height: 48,
-                        background: hasId ? '#EFF6FF' : '#FEF3C7',
-                        borderRadius: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <ModeIcon mode={c.extendedProps?.mode} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
-                          <h5 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#0F172A" }}>
-                            {c.title || "Consultation"}
-                          </h5>
-                          {!hasId && (
-                            <span style={{
-                              background: '#FEF3C7',
-                              color: '#92400E',
-                              fontSize: 12,
-                              fontWeight: 600,
-                              padding: '2px 8px',
-                              borderRadius: 100
-                            }}>
-                              ID Missing
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 14, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Clock size={14} />
-                            {dateStr}
-                          </span>
-                          <StatusBadge status={c.status || c.extendedProps?.status} />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {hasId ? (
-                      <button
-                        style={{
-                          background: "#0F172A",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: 12,
-                          padding: "10px 24px",
-                          fontSize: 14,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          transition: 'all 0.2s',
-                          ':hover': {
-                            background: '#1E293B'
-                          }
-                        }}
-                        onClick={() => { setSelectedConsultation(c); setModalOpen(true); }}
-                      >
-                        View Details
-                      </button>
-                    ) : (
-                      <button
-                        style={{
-                          background: "#E2E8F0",
-                          color: "#64748B",
-                          border: "none",
-                          borderRadius: 12,
-                          padding: "10px 24px",
-                          fontSize: 14,
-                          fontWeight: 600,
-                          cursor: "not-allowed",
-                          opacity: 0.7
-                        }}
-                        disabled
-                      >
-                        Unavailable
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Modal */}
-      {modalOpen && selectedConsultation && (
-        <>
-          {console.log('Selected Consultation:', JSON.parse(JSON.stringify(selectedConsultation)))}
-        </>
-      )}
-      {modalOpen && selectedConsultation && (
-        (() => {
-          // Support both root and extendedProps for reportTicketNumber
-          const reportTicketNumber = selectedConsultation.reportTicketNumber || selectedConsultation.extendedProps?.reportTicketNumber;
-          return (
-            <div style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100vw",
-              height: "100vh",
-              background: "rgba(0,0,0,0.5)",
-              backdropFilter: "blur(4px)",
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 20
-            }}>
-              <div style={{
-                background: "#fff",
-                borderRadius: 24,
-                padding: 32,
-                width: '100%',
-                maxWidth: 500,
-                maxHeight: '90vh',
-                overflow: 'auto',
-                boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-                position: "relative",
-                zIndex: 10000
-              }}>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  style={{
-                    position: "absolute",
-                    top: 20,
-                    right: 24,
-                    background: "#F1F5F9",
-                    border: "none",
-                    borderRadius: 10,
-                    width: 32,
-                    height: 32,
-                    fontSize: 20,
-                    color: "#475569",
-                    cursor: "pointer",
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                    ':hover': {
-                      background: '#E2E8F0'
-                    }
-                  }}
+              <div className="w-full sm:w-48">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Filter by Status
+                </label>
+                <select
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white transition-all"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
                 >
-                  ×
-                </button>
-
-                <div style={{ marginBottom: 24 }}>
-                  <h3 style={{
-                    margin: 0,
-                    fontSize: 24,
-                    fontWeight: 700,
-                    color: "#0F172A",
-                    letterSpacing: '-0.01em'
-                  }}>
-                    {selectedConsultation.title || "Consultation Details"}
-                  </h3>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  {/* Status and Mode */}
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <StatusBadge status={selectedConsultation.status || selectedConsultation.extendedProps?.status} />
-                    {selectedConsultation.extendedProps?.mode && (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '4px 12px',
-                        background: '#F1F5F9',
-                        color: '#475569',
-                        borderRadius: 100,
-                        fontSize: 13,
-                        fontWeight: 500
-                      }}>
-                        <ModeIcon mode={selectedConsultation.extendedProps?.mode} />
-                        {selectedConsultation.extendedProps?.mode}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Report ID Row - always show if available */}
-                  {reportTicketNumber && (
-                    <DetailRow
-                      icon={<Info size={18} color="#64748B" />}
-                      label="Report ID"
-                      value={reportTicketNumber}
-                    />
-                  )}
-
-                  {/* Details Grid */}
-                  <div style={{
-                    background: '#F8FAFC',
-                    borderRadius: 16,
-                    padding: 20,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 16
-                  }}>
-                    <DetailRow
-                      icon={<Clock size={18} color="#64748B" />}
-                      label="Date & Time"
-                      value={selectedConsultation.start ? new Date(selectedConsultation.start).toLocaleString(undefined, {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : "No date set"}
-                    />
-
-                    <DetailRow
-                      icon={<Info size={18} color="#64748B" />}
-                      label="Description"
-                      value={selectedConsultation.description || selectedConsultation.extendedProps?.description || "No description provided"}
-                    />
-
-                    {selectedConsultation.extendedProps?.userName && (
-                      <DetailRow
-                        icon={<Info size={18} color="#64748B" />}
-                        label="User"
-                        value={selectedConsultation.extendedProps?.userName}
-                      />
-                    )}
-
-                    {selectedConsultation.extendedProps?.userEmail && (
-                      <DetailRow
-                        icon={<Info size={18} color="#64748B" />}
-                        label="Email"
-                        value={selectedConsultation.extendedProps?.userEmail}
-                      />
-                    )}
-
-                    {selectedConsultation.extendedProps?.duration && (
-                      <DetailRow
-                        icon={<Clock size={18} color="#64748B" />}
-                        label="Duration"
-                        value={`${selectedConsultation.extendedProps?.duration} minutes`}
-                      />
-                    )}
-                  </div>
-
-                  {/* View in My Reports Button - always show if reportTicketNumber exists */}
-                  {reportTicketNumber && (
-                    <button
-                      onClick={() => {
-                        window.location.href = `/user/reports?open=${encodeURIComponent(reportTicketNumber)}`;
-                      }}
-                      style={{
-                        background: '#2563EB',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 12,
-                        padding: '12px',
-                        fontSize: 15,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        width: '100%',
-                        marginTop: 8,
-                        marginBottom: 8,
-                        transition: 'all 0.2s',
-                        letterSpacing: 0.2
-                      }}
-                    >
-                      View in My Reports
-                    </button>
-                  )}
-
-                  {/* Close Button */}
+                  <option value="">All Statuses</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="ongoing">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div className="w-full sm:w-auto flex items-end">
+                <div className="flex gap-2 w-full">
                   <button
-                    onClick={() => setModalOpen(false)}
-                    style={{
-                      background: "#0F172A",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 12,
-                      padding: "14px",
-                      fontSize: 15,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      width: '100%',
-                      marginTop: 8,
-                      transition: 'all 0.2s',
-                      ':hover': {
-                        background: '#1E293B'
-                      }
-                    }}
+                    onClick={() => setView("calendar")}
+                    className={`flex-1 sm:flex-none px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                      view === "calendar" 
+                        ? "bg-purple-600 text-white" 
+                        : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
                   >
-                    Close
+                    <CalendarIcon size={18} />
+                    <span className="hidden sm:inline">Calendar</span>
+                  </button>
+                  <button
+                    onClick={() => setView("list")}
+                    className={`flex-1 sm:flex-none px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                      view === "list" 
+                        ? "bg-purple-600 text-white" 
+                        : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <List size={18} />
+                    <span className="hidden sm:inline">List</span>
                   </button>
                 </div>
               </div>
             </div>
-          );
-        })()
+          </div>
+
+          {/* Main Content */}
+          {loading ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16">
+              <div className="flex justify-center items-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
+              </div>
+            </div>
+          ) : consultations.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
+              <div className="w-24 h-24 mx-auto mb-6 text-gray-300">
+                <CalendarIcon size={96} className="mx-auto" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No consultations booked yet</h3>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Your scheduled consultations will appear here once booked. You can schedule a consultation from the reports page.
+              </p>
+            </div>
+          ) : view === "calendar" ? (
+            // Calendar View
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-6">
+                {/* Calendar */}
+                <div className="max-w-full overflow-x-auto">
+                  <Calendar
+                    value={selectedDate}
+                    onChange={setSelectedDate}
+                    tileClassName={tileClassName}
+                    className="custom-calendar"
+                    minDetail="month"
+                    maxDetail="month"
+                    showNeighboringMonth={false}
+                  />
+                </div>
+
+                {/* Selected Date Header */}
+                <div className="mt-8 mb-4 flex items-center justify-between">
+                  <h4 className="text-lg font-semibold text-gray-900">
+                    {selectedDate.toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </h4>
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">
+                    {consultationsForDate.length} session{consultationsForDate.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                {/* Consultations for selected date */}
+                {consultationsForDate.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <Clock className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                    <p className="text-gray-500">No consultations scheduled for this date.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {consultationsForDate.map((c, idx) => (
+                      <div
+                        key={c._id || idx}
+                        className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                        onClick={() => { setSelectedConsultation(c); setModalOpen(true); }}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-purple-100 rounded-lg">
+                                <ModeIcon mode={c.extendedProps?.mode} />
+                              </div>
+                              <span className="font-semibold text-gray-900">
+                                {c.title || "Consultation"}
+                              </span>
+                              <StatusBadge status={c.status || c.extendedProps?.status} />
+                              {c.reportTicketNumber && (
+                                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                  #{c.reportTicketNumber}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-gray-600 text-sm flex items-center gap-2">
+                              <Clock size={14} />
+                              {c.start ? new Date(c.start).toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              }) : 'Time TBA'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-purple-600 font-medium">
+                            <span>View Details</span>
+                            <ChevronRight size={16} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            // List View
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              {filteredConsultations.length === 0 ? (
+                <div className="text-center py-16 px-4">
+                  <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No consultations found</h3>
+                  <p className="text-gray-500 max-w-md mx-auto">
+                    Try adjusting your search or filter criteria.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {filteredConsultations.map((c, idx) => {
+                    const dateStr = c.start ? new Date(c.start).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : "No date";
+
+                    return (
+                      <div
+                        key={c._id || idx}
+                        className="p-6 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                        onClick={() => { setSelectedConsultation(c); setModalOpen(true); }}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <span className="font-semibold text-gray-900 text-lg">
+                                {c.title || "Consultation"}
+                              </span>
+                              <StatusBadge status={c.status || c.extendedProps?.status} />
+                              {c.reportTicketNumber && (
+                                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                  #{c.reportTicketNumber}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-gray-600 text-sm">
+                              <span className="flex items-center gap-1">
+                                <Clock size={14} />
+                                {dateStr}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <ModeIcon mode={c.extendedProps?.mode} />
+                                {c.extendedProps?.mode || 'Not specified'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-purple-600 font-medium">
+                            <span>View Details</span>
+                            <ChevronRight size={16} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Summary Footer */}
+          {!loading && consultations.length > 0 && (
+            <div className="mt-4 text-sm text-gray-600 text-right">
+              Showing {filteredConsultations.length} of {consultations.length} consultations
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal */}
+      {modalOpen && selectedConsultation && (
+        <div className="fixed inset-0 z-[9999] modal-container">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setModalOpen(false)}
+          ></div>
+
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div
+              className="bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="bg-white border-b border-gray-200 px-6 py-5">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h2 className="text-2xl font-bold text-gray-900 truncate">
+                        {selectedConsultation.title || "Consultation Details"}
+                      </h2>
+                      <StatusBadge status={selectedConsultation.status || selectedConsultation.extendedProps?.status} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {selectedConsultation.extendedProps?.mode && (
+                        <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full flex items-center gap-1">
+                          <ModeIcon mode={selectedConsultation.extendedProps?.mode} />
+                          {selectedConsultation.extendedProps?.mode}
+                        </span>
+                      )}
+                      {selectedConsultation.reportTicketNumber && (
+                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                          Report #{selectedConsultation.reportTicketNumber}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                    onClick={() => setModalOpen(false)}
+                    aria-label="Close modal"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-6">
+                  {/* Date & Time Section */}
+                  <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-2 h-8 bg-purple-600 rounded-full"></div>
+                      <h3 className="text-xl font-semibold text-gray-900">Schedule</h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-2">Date & Time</label>
+                        <p className="text-gray-900">
+                          {selectedConsultation.start ? new Date(selectedConsultation.start).toLocaleString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : "No date set"}
+                        </p>
+                      </div>
+                      {selectedConsultation.extendedProps?.duration && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Duration</label>
+                          <p className="text-gray-900">{selectedConsultation.extendedProps?.duration} minutes</p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* Description Section */}
+                  <section className="bg-white border border-gray-200 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-2 h-8 bg-blue-600 rounded-full"></div>
+                      <h3 className="text-xl font-semibold text-gray-900">Description</h3>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-gray-900 whitespace-pre-line">
+                        {selectedConsultation.description || selectedConsultation.extendedProps?.description || "No description provided"}
+                      </p>
+                    </div>
+                  </section>
+
+                  {/* User Information Section */}
+                  {(selectedConsultation.extendedProps?.userName || selectedConsultation.extendedProps?.userEmail) && (
+                    <section className="bg-white border border-gray-200 rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-2 h-8 bg-green-600 rounded-full"></div>
+                        <h3 className="text-xl font-semibold text-gray-900">User Information</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {selectedConsultation.extendedProps?.userName && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 block mb-2">Name</label>
+                            <p className="text-gray-900">{selectedConsultation.extendedProps?.userName}</p>
+                          </div>
+                        )}
+                        {selectedConsultation.extendedProps?.userEmail && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 block mb-2">Email</label>
+                            <p className="text-gray-900">{selectedConsultation.extendedProps?.userEmail}</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-gray-200 bg-gray-50 px-6 py-5">
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Close
+                  </button>
+                  {selectedConsultation.reportTicketNumber && (
+                    <button
+                      onClick={() => {
+                        window.location.href = `/user/reports?open=${encodeURIComponent(selectedConsultation.reportTicketNumber)}`;
+                      }}
+                      className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                    >
+                      View in My Reports
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
-  );
-}
-
-// Helper component for detail rows
-function DetailRow({ icon, label, value }) {
-  return (
-    <div style={{ display: 'flex', gap: 12 }}>
-      <div style={{ minWidth: 24 }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: 13, color: '#64748B', marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 15, color: '#0F172A', fontWeight: 500 }}>{value}</div>
-      </div>
-    </div>
   );
 }

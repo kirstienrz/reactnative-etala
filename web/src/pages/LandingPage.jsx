@@ -384,14 +384,75 @@ const LandingPage = () => {
       {/* Report Section */}
       <section className="py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
         <div className="max-w-7xl mx-auto px-10">
+
+          {/* Top - Case Handling Process */}
+          <div className="grid lg:grid-cols-2 gap-24 items-start mb-24">
+
+            {/* Left - Label */}
+            <div>
+              <p className="text-sm font-bold uppercase tracking-widest text-violet-600 mb-6">
+                Before You Proceed
+              </p>
+              <h3 className="text-5xl lg:text-6xl font-black text-slate-900 mb-10 leading-tight">
+                Case Handling Process
+              </h3>
+              <p className="text-slate-600 text-xl leading-relaxed">
+                By submitting this report/request, you acknowledge that the case will undergo the following standard process:
+              </p>
+            </div>
+
+            {/* Right - Timeline Steps */}
+            <div className="space-y-10">
+              {[
+                {
+                  step: "First Action",
+                  label: "Initial Approach & Appointment",
+                  desc: "The concerned student or faculty member will formally approach the office and set an appointment for initial documentation."
+                },
+                {
+                  step: "Second Action",
+                  label: "Consultation & Assessment",
+                  desc: "A consultation will be conducted to assess the nature of the concern and determine the appropriate personnel to handle the investigation."
+                },
+                {
+                  step: "Third Action",
+                  label: "Committee Formation",
+                  desc: "Based on the assessment, the case will be handled by OSA (student to student) or referred with HR participation (student and faculty). A formal committee will be constituted when necessary."
+                },
+                {
+                  step: "Final Step",
+                  label: "Turnover / Referral",
+                  desc: "The case may be officially endorsed to the appropriate office (e.g., OSA, HR) for formal investigation and resolution."
+                },
+              ].map((item, i, arr) => (
+                <div key={i} className="flex gap-8 items-start">
+                  <div className="flex-shrink-0 flex flex-col items-center">
+                    <div className="w-4 h-4 rounded-full bg-violet-600 mt-1"></div>
+                    {i < arr.length - 1 && (
+                      <div className="w-0.5 bg-violet-200 mt-1" style={{ minHeight: '52px' }}></div>
+                    )}
+                  </div>
+                  <div className="pb-2">
+                    <p className="text-xs font-black uppercase tracking-widest text-violet-400 mb-1">{item.step}</p>
+                    <p className="text-xl font-black text-slate-800 mb-2">{item.label}</p>
+                    <p className="text-slate-600 text-lg leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t-2 border-gray-200 my-24" />
+
+          {/* Bottom - Report an Issue */}
           <div className="text-center max-w-5xl mx-auto">
             <h2 className="text-6xl lg:text-7xl font-black text-slate-900 mb-12 leading-tight">
               Report an Issue
             </h2>
-
             <div className="space-y-8 text-slate-700 text-2xl leading-relaxed mb-16">
               <p>
-                If you've experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and improved.
+                If you've experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and resolved properly.
               </p>
             </div>
             <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-16 py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-2xl inline-flex items-center gap-4">
@@ -399,6 +460,7 @@ const LandingPage = () => {
               <ArrowRight className="w-7 h-7" />
             </button>
           </div>
+
         </div>
       </section>
 
