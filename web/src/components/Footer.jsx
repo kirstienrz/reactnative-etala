@@ -68,7 +68,7 @@ const Footer = () => {
                   </div> */}
                   <div className="flex gap-3 items-center">
                     <Mail size={20} className="text-violet-300 flex-shrink-0" />
-                    <a href="mailto:gad@tup.edu.ph" className="text-sm text-violet-200 hover:text-white transition-colors">gad@tup.edu.ph</a>
+                    <a href="mailto:officialgadtupt@gmail.com" className="text-sm text-violet-200 hover:text-white transition-colors">officialgadtupt@gmail.com</a>
                   </div>
                   <div className="flex gap-3 items-center">
                     <Globe size={20} className="text-violet-300 flex-shrink-0" />

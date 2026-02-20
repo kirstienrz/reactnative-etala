@@ -12,7 +12,7 @@ export default function Footer() {
       <View style={styles.footerContent}>
         <Text style={styles.footerTitle}>Gender and Development Office</Text>
         <Text style={styles.footerText}>Technological University of the Philippines</Text>
-        <Text style={styles.footerText}>Email: gad@tup.edu.ph | Tel: (02) 8301-3001</Text>
+        <Text style={styles.footerText}>Email: officialgadtupt@gmail.com</Text>
         <Text style={styles.footerCopyright}>© 2025 TUP GAD Office. All Rights Reserved.</Text>
       </View>
     </View>
