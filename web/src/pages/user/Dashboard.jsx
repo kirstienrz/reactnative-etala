@@ -128,7 +128,7 @@ export default function Dashboard() {
                                     borderRadius: "50%",
                                     backgroundColor: "#10B981"
                                 }}></span>
-                                {displayRole} • GAD Reporting System
+                                {displayRole} 
                             </div>
                         </div>
                     </div>
