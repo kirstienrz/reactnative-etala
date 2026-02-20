@@ -679,7 +679,7 @@ const sendReportPDF = async (req, res) => {
             <!-- Contact Info -->
             <p style="color: #475569; line-height: 1.6; margin: 20px 0 0 0; font-size: 14px;">
               If you have any questions or concerns, please contact us at 
-              <a href="mailto:gad@tup.edu.ph" style="color: #2563eb; text-decoration: none;">gad@tup.edu.ph</a>
+              <a href="mailto:officialgadtupt@gmail.com" style="color: #2563eb; text-decoration: none;">officialgadtupt@gmail.com</a>
             </p>
           </div>
 

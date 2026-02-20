@@ -172,7 +172,7 @@ const SuperAdminDashboard = () => {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-blue-100">Comprehensive analytics and insights</p>
           </div>
           <div className="flex items-center space-x-4">
@@ -273,39 +273,6 @@ const SuperAdminDashboard = () => {
                   </p>
                 </div>
                 <TrendingUp className="w-10 h-10 text-cyan-500 opacity-20" />
-              </div>
-            </div>
-          </div>
-
-          {/* Severity Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-red-50 border border-red-100 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-red-700 font-medium">Severe Reports</p>
-                  <p className="text-3xl font-bold text-red-700">{severeReports}</p>
-                </div>
-                <AlertTriangle className="w-10 h-10 text-red-500 opacity-30" />
-              </div>
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-yellow-700 font-medium">Moderate Reports</p>
-                  <p className="text-3xl font-bold text-yellow-700">{moderateReports}</p>
-                </div>
-                <AlertCircle className="w-10 h-10 text-yellow-500 opacity-30" />
-              </div>
-            </div>
-
-            <div className="bg-green-50 border border-green-100 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-700 font-medium">Mild Reports</p>
-                  <p className="text-3xl font-bold text-green-700">{mildReports}</p>
-                </div>
-                <Shield className="w-10 h-10 text-green-500 opacity-30" />
               </div>
             </div>
           </div>
