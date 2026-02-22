@@ -201,12 +201,11 @@ const SuperAdminSidebar = () => {
           </SidebarSection>
 
           {/* ADMIN TOOLS */}
-
-          <SidebarSection title="Admin Tools">
-            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" />
-            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" />
-            <SidebarItem icon={<FileSignature size={18} />} label="Documentation Hub" to="/superadmin/documentation" />
-            <SidebarItem icon={<DollarSign size={18} />} label="Finance" to="/superadmin/finance" />
+          <SidebarSection title="Admin Tools" isCollapsed={isCollapsed}>
+            <SidebarItem icon={<CalendarDays size={18} />} label="Calendar" to="/superadmin/events" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<Lightbulb size={18} />} label="Suggestion Box" to="/superadmin/suggestions" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<FileSignature size={18} />} label="Documentation Hub" to="/superadmin/documentation" isCollapsed={isCollapsed} />
+            <SidebarItem icon={<DollarSign size={18} />} label="Finance" to="/superadmin/finance" isCollapsed={isCollapsed} />
           </SidebarSection>
         </nav>
       </div>
