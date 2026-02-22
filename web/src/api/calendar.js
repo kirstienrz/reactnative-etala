@@ -294,31 +294,38 @@ export const deleteEventAttachment = async (eventId, attachmentId) => {
   }
 };
 
-// Get all consultations for a specific user
-export const getUserConsultations = async (userId) => {
-  const params = new URLSearchParams();
-  if (userId) params.append('userId', userId);
-  params.append('type', 'consultation');
-
+// Secure: Get only the authenticated user's consultations
+export const getUserConsultations = async () => {
   try {
-    const res = await API.get(`/calendar/events?${params.toString()}`);
+    const res = await API.get(`/calendar/my-consultations`);
     return {
       success: true,
       data: res.data.data || [],
       count: res.data.count || 0,
-      message: res.data.message || "Consultations fetched successfully"
     };
   } catch (error) {
-    console.error("API Error fetching user consultations:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
+    console.error("API Error fetching user consultations:", error.response?.data);
+    return { success: false, data: [], count: 0 };
+  }
+};
+
+// Get consultations for a specific user and report ticket
+export const getUserConsultationsForReport = async (userId, reportTicketNumber) => {
+  if (!userId || !reportTicketNumber) {
+    console.warn('getUserConsultationsForReport: missing userId or reportTicketNumber');
+    return { success: false, data: [], count: 0, message: 'Missing params' };
+  }
+  try {
+    const res = await API.get('/calendar/user-consultations-for-report', {
+      params: { userId, reportTicketNumber }
     });
     return {
-      success: false,
-      data: [],
-      count: 0,
-      message: error.response?.data?.message || "Failed to fetch consultations"
+      success: true,
+      data: res.data.data || [],
+      count: res.data.count || 0,
     };
+  } catch (error) {
+    console.error('API Error fetching user consultations for report:', error.response?.data);
+    return { success: false, data: [], count: 0 };
   }
 };

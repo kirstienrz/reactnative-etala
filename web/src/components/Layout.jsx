@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import useUnreadMessages from "../hooks/useUnreadMessages";
 
 const Layout = ({ children }) => {
   const { user, role, department } = useSelector((state) => state.auth);
@@ -18,6 +19,9 @@ const Layout = ({ children }) => {
   // Check if current route is user chat details
   const isUserChatRoute = location.pathname === "/user/chat";
 
+  // Call useUnreadMessages only for superadmin routes
+  useUnreadMessages(isSuperAdmin || isSuperAdminRoute);
+
   // ================= SUPER ADMIN LAYOUT =================
   if (isSuperAdmin || isSuperAdminRoute) {
     return (
@@ -29,7 +33,6 @@ const Layout = ({ children }) => {
       </div>
     );
   }
-
 
   // ================= USER CHAT LAYOUT (FULL SCREEN) =================
   if (isUserChatRoute) {

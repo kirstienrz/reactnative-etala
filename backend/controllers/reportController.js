@@ -97,15 +97,22 @@ const createReport = async (req, res) => {
     const Message = require("../models/message");
     const systemMessage = new Message({
       ticketNumber: report.ticketNumber,
-      sender: "admin",
+      sender: "superadmin",
       senderName: "System",
       messageType: "text",
-      content: `Thank you for submitting your report. Your ticket number is ${report.ticketNumber}. Our team will review your case shortly.`,
+      content: `Thank you for submitting your report. Your ticket number is ${report.ticketNumber}. You may reply to this message for initial inquiries or surface-level consultation. If you wish to book a face-to-face or online appointment, please send us a message here so we can assist you with the scheduling process.`,
       isRead: false
     });
-
     await systemMessage.save();
-    console.log(`✅ System message created for ticket: ${report.ticketNumber}`);
+
+    // Update ticket lastMessage and lastMessageAt
+    await Ticket.findOneAndUpdate(
+      { ticketNumber: report.ticketNumber },
+      {
+        lastMessage: systemMessage.content,
+        lastMessageAt: new Date()
+      }
+    );
 
     // 🔥 EMIT SOCKET EVENT FOR NEW MESSAGE (if socket.io is available)
     const io = req.app.get("io");
@@ -652,7 +659,7 @@ const sendReportPDF = async (req, res) => {
             <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 20px;">Report Submitted Successfully</h2>
             
             <p style="color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
-              Thank you for submitting your incident report. Your report has been received and will be reviewed by our team.
+              Thank you for submitting your incident report. Your report has been successfully received. Please proceed to the ETALA Inbox to continue the conversation, request a consultation, or schedule an appointment.
             </p>
 
             <!-- Ticket Info Box -->
@@ -702,7 +709,7 @@ const sendReportPDF = async (req, res) => {
       pdfFilename: pdfFile.originalname || `TUP_GAD_Report_${ticketNumber || Date.now()}.pdf`
     });
 
-    console.log(`✅ Report PDF sent to ${userEmail}`);
+    console.log(`✅ Report PDF sent to email`);
 
     res.json({
       success: true,

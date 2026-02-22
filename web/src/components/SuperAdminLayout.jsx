@@ -1,8 +1,11 @@
 import React from "react";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 import { Outlet } from "react-router-dom";
+import useUnreadMessages from '../hooks/useUnreadMessages';
 
 const SuperAdminLayout = () => {
+    useUnreadMessages(); // ← mount unread count sync
+
     return (
         <div className="flex min-h-screen bg-gray-100">
             {/* Sidebar (fixed width) */}

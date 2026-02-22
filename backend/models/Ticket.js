@@ -40,7 +40,7 @@ const ticketSchema = new mongoose.Schema(
       default: "",
     },
     unreadCount: {
-      admin: {
+      superadmin: {
         type: Number,
         default: 0,
       },
@@ -69,7 +69,7 @@ const ticketSchema = new mongoose.Schema(
 
 // ✅ Virtual property to check if admin has unread messages
 ticketSchema.virtual("hasUnreadMessages").get(function () {
-  return this.unreadCount.admin > 0;
+  return this.unreadCount.superadmin > 0;
 });
 
 // ✅ Virtual property to check if user has unread messages

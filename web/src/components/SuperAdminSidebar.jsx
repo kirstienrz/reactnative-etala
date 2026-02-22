@@ -24,8 +24,9 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/authSlice";
+import SidebarItem from './SidebarItem';
 
 const SuperAdminSidebar = () => {
   const dispatch = useDispatch();
@@ -35,6 +36,8 @@ const SuperAdminSidebar = () => {
   const [expandedMenus, setExpandedMenus] = useState({
     knowledgeHub: false,
   });
+
+  const unreadMessageCount = useSelector(state => state.ui.unreadMessageCount);
 
   const isKnowledgeHubActive = [
     "/superadmin/datasets",
@@ -109,7 +112,13 @@ const SuperAdminSidebar = () => {
           {/* REPORT HANDLING */}
           <SidebarSection title="Report Handling" isCollapsed={isCollapsed}>
             <SidebarItem icon={<FileText size={18} />} label="Report Management" to="/superadmin/reports" isCollapsed={isCollapsed} />
-            <SidebarItem icon={<MessageSquare size={18} />} label="Messaging System" to="/superadmin/messages" isCollapsed={isCollapsed} />
+            <SidebarItem 
+              icon={<MessageSquare size={18} />} 
+              label="Messaging System" 
+              to="/superadmin/messages" 
+              isCollapsed={isCollapsed}
+              badge={unreadMessageCount}
+            />
           </SidebarSection>
 
           {/* CONTENT MANAGEMENT */}
@@ -216,24 +225,6 @@ const SuperAdminSidebar = () => {
     </div>
   );
 };
-
-const SidebarItem = ({ icon, label, to, indent = false, isCollapsed = false }) => (
-  <li>
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
-          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
-          : "text-gray-300 hover:bg-gray-800 hover:text-white"
-        } ${indent ? 'ml-2' : ''} ${isCollapsed ? 'justify-center' : ''}`
-      }
-      title={isCollapsed ? label : ""}
-    >
-      {icon}
-      {!isCollapsed && <span>{label}</span>}
-    </NavLink>
-  </li>
-);
 
 const SidebarSection = ({ title, children, isCollapsed = false }) => (
   <div className="mb-6">

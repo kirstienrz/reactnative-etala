@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Loader2, MessageSquare, MoreVertical } from 'lucide-react';
@@ -16,199 +16,44 @@ const Inbox = () => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
 
-  // ✅ Track read tickets in localStorage (like AdminReports)
-  const [readTickets, setReadTickets] = useState(() => {
-    const stored = localStorage.getItem('userReadTickets');
-    return stored ? JSON.parse(stored) : [];
-  });
+  // ── Unread state — pure in-memory, reconciled from server on load ──────────
+  const [unreadTickets, setUnreadTickets] = useState(new Set());
 
-  // ✅ Save read tickets to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('userReadTickets', JSON.stringify(readTickets));
-  }, [readTickets]);
-
-  // ✅ Helper functions for read/unread status
-  const isTicketRead = (ticketNumber) => {
-    return readTickets.includes(ticketNumber);
-  };
-
-  const markTicketAsReadLocally = (ticketNumber) => {
-    if (!readTickets.includes(ticketNumber)) {
-      setReadTickets([...readTickets, ticketNumber]);
-    }
-  };
-
-  const markTicketAsUnreadLocally = (ticketNumber) => {
-    setReadTickets(readTickets.filter(t => t !== ticketNumber));
-  };
-
-  useEffect(() => {
-    if (currentUserId) {
-      fetchTickets();
-    } else {
-      setLoading(false);
-    }
-  }, [currentUserId]);
-
-  // 🔥 Setup Socket.IO for real-time updates
-  useEffect(() => {
-    if (!currentUserId) {
-      console.log('⚠️ No currentUserId, skipping socket setup');
-      return;
-    }
-
-    console.log('🔌 Setting up socket connection for user inbox');
-    console.log('👤 Current User ID:', currentUserId);
-    
-    socketService.connect();
-    
-    // Wait a bit for connection before joining room
-    setTimeout(() => {
-      console.log('📍 Joining user room:', `user-${currentUserId}`);
-      socketService.joinUserRoom(currentUserId);
-    }, 100);
-
-    // 📩 Listen for new messages
-    socketService.onNewMessage(({ message, ticket }) => {
-      console.log('🔥 New message received in inbox:', message);
-      console.log('📊 Updated ticket from new-message:', ticket);
-      
-      // Update ticket list with latest data and sort by most recent
-      setTickets(prev => {
-        console.log('📊 Current tickets count:', prev.length);
-        
-        // Check if this is a completely new ticket (not in the list yet)
-        const existingTicket = prev.find(t => t.ticketNumber === ticket.ticketNumber);
-        
-        let updatedTickets;
-        if (!existingTicket) {
-          // 🆕 NEW TICKET: Add it to the list and mark as UNREAD
-          console.log('🆕 New ticket detected, adding to inbox as unread');
-          updatedTickets = [ticket, ...prev];
-          
-          // 🔥 Mark new tickets as unread in localStorage
-          markTicketAsUnreadLocally(ticket.ticketNumber);
-        } else {
-          // Existing ticket: update it
-          updatedTickets = prev.map(t => 
-            t.ticketNumber === ticket.ticketNumber ? ticket : t
-          );
-          
-          // 🔥 If message is from admin, mark as unread
-          if (message.sender === 'admin') {
-            console.log('📨 Admin replied, marking as unread');
-            markTicketAsUnreadLocally(ticket.ticketNumber);
-          }
-        }
-        
-        // 🔥 Sort tickets: most recent message first (like Messenger)
-        const sorted = [...updatedTickets].sort((a, b) => {
-          const dateA = new Date(a.lastMessageAt);
-          const dateB = new Date(b.lastMessageAt);
-          return dateB - dateA;
-        });
-        
-        console.log('✅ Updated tickets, new count:', sorted.length);
-        return sorted;
-      });
+  const addUnread = useCallback((ticketNumber) => {
+    setUnreadTickets(prev => {
+      if (prev.has(ticketNumber)) return prev;
+      const next = new Set(prev);
+      next.add(ticketNumber);
+      return next;
     });
-
-    // 📩 Listen for ticket updates (status changes, read receipts, etc.)
-    socketService.onTicketUpdated((updatedTicket) => {
-      console.log('🔥 ✅✅✅ Ticket updated in inbox:', updatedTicket);
-      console.log('📊 Updated ticket details:', {
-        ticketNumber: updatedTicket.ticketNumber,
-        unreadCount: updatedTicket.unreadCount,
-        hasUnreadMessagesForUser: updatedTicket.hasUnreadMessagesForUser
-      });
-      
-      setTickets(prev => {
-        console.log('📊 Updating ticket in list...');
-        
-        // Check if this ticket exists in the list
-        const existingTicket = prev.find(t => t.ticketNumber === updatedTicket.ticketNumber);
-        
-        let newTickets;
-        if (!existingTicket) {
-          // 🆕 NEW TICKET: Add it to the list and mark as UNREAD
-          console.log('🆕 New ticket detected via update event, adding to inbox as unread');
-          newTickets = [updatedTicket, ...prev];
-          markTicketAsUnreadLocally(updatedTicket.ticketNumber);
-        } else {
-          // Update the existing ticket
-          console.log('✅ Found matching ticket, updating');
-          newTickets = prev.map(t => {
-            if (t.ticketNumber === updatedTicket.ticketNumber) {
-              return updatedTicket;
-            }
-            return t;
-          });
-        }
-        
-        // 🔥 Sort tickets: most recent message first
-        const sorted = [...newTickets].sort((a, b) => {
-          const dateA = new Date(a.lastMessageAt);
-          const dateB = new Date(b.lastMessageAt);
-          return dateB - dateA;
-        });
-        
-        console.log('📊 Tickets after update:', sorted.map(t => ({
-          ticketNumber: t.ticketNumber,
-          unreadCount: t.unreadCount,
-          lastMessageAt: t.lastMessageAt
-        })));
-        
-        return sorted;
-      });
-    });
-
-    // 📩 Listen for ticket closed
-    socketService.onTicketClosed(({ ticket }) => {
-      console.log('🔥 Ticket closed in inbox:', ticket);
-      setTickets(prev => prev.map(t => 
-        t.ticketNumber === ticket.ticketNumber ? ticket : t
-      ));
-    });
-
-    // 📩 Listen for ticket reopened
-    socketService.onTicketReopened(({ ticket }) => {
-      console.log('🔥 Ticket reopened in inbox:', ticket);
-      setTickets(prev => prev.map(t => 
-        t.ticketNumber === ticket.ticketNumber ? ticket : t
-      ));
-    });
-
-    return () => {
-      console.log('🧹 Cleaning up inbox socket listeners');
-      socketService.removeAllListeners();
-    };
-  }, [currentUserId]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setOpenMenuId(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchTickets = async () => {
+  const removeUnread = useCallback((ticketNumber) => {
+    setUnreadTickets(prev => {
+      if (!prev.has(ticketNumber)) return prev;
+      const next = new Set(prev);
+      next.delete(ticketNumber);
+      return next;
+    });
+  }, []);
+
+  const isUnread = useCallback((ticketNumber) => unreadTickets.has(ticketNumber), [unreadTickets]);
+
+  // ── Fetch tickets ──────────────────────────────────────────────────────────
+  const fetchTickets = useCallback(async () => {
     try {
-      setLoading(true);
       const data = await getMyTickets();
-      console.log('📥 Loaded user tickets:', data);
-      
-      // Sort by most recent message
-      const sortedTickets = [...(data || [])].sort((a, b) => {
-        const dateA = new Date(a.lastMessageAt);
-        const dateB = new Date(b.lastMessageAt);
-        return dateB - dateA;
+      const sorted = [...(data || [])].sort((a, b) =>
+        new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+      );
+      setTickets(sorted);
+
+      // Reconcile unread from server — source of truth
+      const serverUnread = new Set();
+      sorted.forEach(t => {
+        if (t.unreadCount?.user > 0) serverUnread.add(t.ticketNumber);
       });
-      
-      setTickets(sortedTickets);
+      setUnreadTickets(serverUnread);
     } catch (error) {
       console.error('❌ Error fetching tickets:', error);
       setTickets([]);
@@ -216,72 +61,124 @@ const Inbox = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchTickets();
-  };
+  useEffect(() => {
+    if (currentUserId) fetchTickets();
+    else setLoading(false);
+  }, [currentUserId, fetchTickets]);
 
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now - date) / (1000 * 60 * 60);
+  // ── Socket ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!currentUserId) return;
 
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
+    socketService.connect();
+    setTimeout(() => socketService.joinUserRoom(currentUserId), 100);
+
+    const handleNewMessage = ({ message, ticket }) => {
+      setTickets(prev => {
+        const exists = prev.find(t => t.ticketNumber === ticket.ticketNumber);
+        const updated = exists
+          ? prev.map(t => t.ticketNumber === ticket.ticketNumber ? { ...t, ...ticket } : t)
+          : [ticket, ...prev];
+        return [...updated].sort((a, b) =>
+          new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+        );
       });
-    }
-    if (diffInHours < 168) {
-      return date.toLocaleDateString('en-US', { weekday: 'short' });
-    }
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
 
-  // ✅ Mark ticket as read on server AND locally
+      // Only mark unread if message is from admin
+      if (message.sender === 'superadmin') {
+        addUnread(ticket.ticketNumber);
+      }
+    };
+
+    const handleTicketUpdated = (updatedTicket) => {
+      setTickets(prev => {
+        const exists = prev.find(t => t.ticketNumber === updatedTicket.ticketNumber);
+        const updated = exists
+          ? prev.map(t => t.ticketNumber === updatedTicket.ticketNumber ? updatedTicket : t)
+          : [updatedTicket, ...prev];
+        return [...updated].sort((a, b) =>
+          new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+        );
+      });
+
+      // Sync unread from server data
+      if (updatedTicket.unreadCount?.user > 0) {
+        addUnread(updatedTicket.ticketNumber);
+      } else {
+        removeUnread(updatedTicket.ticketNumber);
+      }
+    };
+
+    const handleTicketClosed = ({ ticket }) => {
+      setTickets(prev => prev.map(t =>
+        t.ticketNumber === ticket.ticketNumber ? ticket : t
+      ));
+    };
+
+    const handleTicketReopened = ({ ticket }) => {
+      setTickets(prev => prev.map(t =>
+        t.ticketNumber === ticket.ticketNumber ? ticket : t
+      ));
+    };
+
+    // Use named functions so we can remove exactly these listeners on cleanup
+    const socket = socketService.socket;
+    socket.on('new-message', handleNewMessage);
+    socket.on('ticket-updated', handleTicketUpdated);
+    socket.on('ticket-closed', handleTicketClosed);
+    socket.on('ticket-reopened', handleTicketReopened);
+
+    return () => {
+      socket.off('new-message', handleNewMessage);
+      socket.off('ticket-updated', handleTicketUpdated);
+      socket.off('ticket-closed', handleTicketClosed);
+      socket.off('ticket-reopened', handleTicketReopened);
+    };
+  }, [currentUserId, addUnread, removeUnread]);
+
+  // ── Click outside menu ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ── Mark as read ───────────────────────────────────────────────────────────
   const markTicketAsRead = async (ticketNumber) => {
+    // Optimistic
+    removeUnread(ticketNumber);
+    setTickets(prev => prev.map(t =>
+      t.ticketNumber === ticketNumber
+        ? { ...t, unreadCount: { ...t.unreadCount, user: 0 } }
+        : t
+    ));
     try {
       await markMessagesAsRead(ticketNumber);
-      console.log('✅ Marked ticket as read:', ticketNumber);
-      
-      // Update localStorage
-      markTicketAsReadLocally(ticketNumber);
-      
-      // Update local state immediately for responsiveness
-      setTickets(prev => prev.map(t => 
-        t.ticketNumber === ticketNumber 
-          ? { ...t, unreadCount: { ...t.unreadCount, user: 0 } } 
-          : t
-      ));
     } catch (error) {
       console.error('❌ Error marking as read:', error);
+      // Revert on failure
+      addUnread(ticketNumber);
     }
   };
 
-  // ❌ Mark ticket as unread (localStorage only since no backend endpoint)
+  // ── Mark as unread (optimistic only, no backend endpoint needed) ───────────
   const markTicketAsUnread = (ticketNumber) => {
-    // Update localStorage
-    markTicketAsUnreadLocally(ticketNumber);
-    
-    // Update local state
-    setTickets(prev => prev.map(t => 
-      t.ticketNumber === ticketNumber 
-        ? { ...t, unreadCount: { ...t.unreadCount, user: 1 } } 
+    addUnread(ticketNumber);
+    setTickets(prev => prev.map(t =>
+      t.ticketNumber === ticketNumber
+        ? { ...t, unreadCount: { ...t.unreadCount, user: 1 } }
         : t
     ));
   };
 
   const handleTicketPress = async (ticket) => {
-    // Mark as read when opening
     await markTicketAsRead(ticket.ticketNumber);
-    
     navigate('/user/chat', {
       state: {
         ticketNumber: ticket.ticketNumber,
@@ -297,6 +194,16 @@ const Inbox = () => {
     setOpenMenuId(openMenuId === ticketNumber ? null : ticketNumber);
   };
 
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    if (diffInHours < 24) return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    if (diffInHours < 168) return date.toLocaleDateString('en-US', { weekday: 'short' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-10 px-4 flex items-center justify-center">
@@ -308,12 +215,11 @@ const Inbox = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-3xl font-bold text-purple-900">Inbox</h1>
-          <button 
-            onClick={handleRefresh} 
-            disabled={refreshing} 
+          <button
+            onClick={() => { setRefreshing(true); fetchTickets(); }}
+            disabled={refreshing}
             className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
           >
             {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -322,7 +228,6 @@ const Inbox = () => {
 
         <p className="text-gray-600 mb-6">Your messages and support tickets.</p>
 
-        {/* Tickets List */}
         <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
           {tickets.length === 0 ? (
             <div className="p-12 text-center">
@@ -335,37 +240,29 @@ const Inbox = () => {
           ) : (
             <div className="divide-y divide-gray-100">
               {tickets.map((ticket) => {
-                const timeStamp = ticket.lastMessageAt ? formatTime(ticket.lastMessageAt) : '';
                 const ticketNumber = ticket.ticketNumber;
-                
-                // ✅ Check localStorage first, then fall back to server unreadCount
-                const hasUnread = !isTicketRead(ticketNumber) || (ticket.unreadCount?.user > 0);
+                const hasUnread = isUnread(ticketNumber);
                 const isMenuOpen = openMenuId === ticketNumber;
 
                 return (
                   <div
                     key={ticket._id}
-                    className={`px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors flex items-center gap-4 relative ${
-                      hasUnread ? 'bg-purple-50' : ''
-                    }`}
+                    className={`px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors flex items-center gap-4 relative ${hasUnread ? 'bg-purple-50' : ''}`}
                     onClick={() => handleTicketPress(ticket)}
                   >
-                    {/* Unread indicator */}
+                    {/* Unread dot */}
                     <div className="w-2 flex-shrink-0">
-                      {hasUnread && (
-                        <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                      )}
+                      {hasUnread && <div className="w-2 h-2 bg-purple-600 rounded-full" />}
                     </div>
 
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <p className={`font-semibold truncate ${hasUnread ? 'text-purple-900' : 'text-gray-700'}`}>
                           Ticket #{ticket.ticketNumber || ticket.reportId?.ticketNumber || 'N/A'}
                         </p>
-                        {timeStamp && (
+                        {ticket.lastMessageAt && (
                           <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
-                            {timeStamp}
+                            {formatTime(ticket.lastMessageAt)}
                           </span>
                         )}
                       </div>
@@ -383,55 +280,13 @@ const Inbox = () => {
                         </div>
                       )}
 
-                      {/* Status Badge */}
                       <div className="mt-1 flex items-center gap-2">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          ticket.status === 'Open'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
+                          ticket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                         }`}>
                           {ticket.status}
                         </span>
                       </div>
-                    </div>
-
-                    {/* Three Dots Menu */}
-                    <div className="relative flex-shrink-0" ref={isMenuOpen ? menuRef : null}>
-                      <button
-                        onClick={(e) => toggleMenu(e, ticketNumber)}
-                        className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-                      >
-                        <MoreVertical className="w-5 h-5 text-gray-600" />
-                      </button>
-
-                      {/* Dropdown Menu */}
-                      {isMenuOpen && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                          {hasUnread ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                markTicketAsRead(ticketNumber);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                            >
-                              Mark as read
-                            </button>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                markTicketAsUnread(ticketNumber);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                            >
-                              Mark as unread
-                            </button>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 );

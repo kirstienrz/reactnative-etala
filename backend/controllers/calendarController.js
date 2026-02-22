@@ -787,11 +787,10 @@ const markBookingAsUsed = async (userId, ticketNumber) => {
 // Get all calendar events
 const getAllCalendarEvents = async (req, res) => {
   try {
-    const { startDate, endDate, type, userId } = req.query;
+    const { startDate, endDate, type } = req.query;
 
     const query = {};
     if (type) query.type = type;
-    if (userId) query.userId = userId;
     if (startDate || endDate) {
       query.start = {};
       if (startDate) query.start.$gte = new Date(startDate);
@@ -850,6 +849,9 @@ const getAllCalendarEvents = async (req, res) => {
         displayStatus = 'completed';
       }
 
+      // 🟣 Ensure attachments are always available in extendedProps
+      const attachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+
       return {
         _id: event._id, // Use _id for frontend compatibility
         title: event.title,
@@ -867,7 +869,8 @@ const getAllCalendarEvents = async (req, res) => {
           userName: userName,
           userEmail: userEmail,
           mode: event.extendedProps?.mode || 'N/A',
-          status: displayStatus || 'upcoming'
+          status: displayStatus || 'upcoming',
+          attachments // <-- Always include attachments here
         }
       };
     });
@@ -1140,6 +1143,124 @@ const deleteCalendarEvent = async (req, res) => {
   }
 };
 
+// Secure: Get only the authenticated user's consultations
+const getMyConsultations = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    // Only fetch consultations for this user
+    const calendarEvents = await CalendarEvent.find({
+      userId,
+      type: 'consultation'
+    }).populate('userId', 'firstName lastName email');
+
+    // Format as in getAllCalendarEvents
+    const formattedCalendarEvents = calendarEvents.map(event => {
+      const user = event.userId;
+      const userName = user 
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+        : event.extendedProps?.userName || 'Unknown User';
+      const userEmail = user?.email || event.extendedProps?.userEmail || 'N/A';
+      let displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
+      const now = new Date();
+      const eventDate = event.end ? new Date(event.end) : new Date(event.start);
+      if ((displayStatus === 'upcoming' || displayStatus === 'scheduled') && eventDate < now) {
+        displayStatus = 'completed';
+      }
+      const attachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+      return {
+        _id: event._id,
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        allDay: event.allDay,
+        color: getEventColor(event.type),
+        userId: event.userId?._id,
+        reportTicketNumber: event.reportTicketNumber,
+        extendedProps: {
+          type: event.type,
+          description: event.description,
+          location: event.location,
+          notes: event.notes,
+          userName,
+          userEmail,
+          mode: event.extendedProps?.mode || 'N/A',
+          status: displayStatus || 'upcoming',
+          attachments
+        }
+      };
+    });
+    res.status(200).json({
+      success: true,
+      count: formattedCalendarEvents.length,
+      data: formattedCalendarEvents
+    });
+  } catch (error) {
+    console.error('❌ Error fetching my consultations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+// Get consultations for a specific user and report ticket
+const getUserConsultationsForReport = async (req, res) => {
+  try {
+    const { userId, reportTicketNumber } = req.query;
+    if (!userId || !reportTicketNumber) {
+      return res.status(400).json({ success: false, message: 'Missing userId or reportTicketNumber' });
+    }
+    const consultations = await CalendarEvent.find({
+      userId,
+      reportTicketNumber,
+      type: 'consultation'
+    }).populate('userId', 'firstName lastName email');
+
+    const formatted = consultations.map(event => {
+      const user = event.userId;
+      const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : event.extendedProps?.userName || 'Unknown User';
+      const userEmail = user?.email || event.extendedProps?.userEmail || 'N/A';
+      let displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
+      const now = new Date();
+      const eventDate = event.end ? new Date(event.end) : new Date(event.start);
+      if ((displayStatus === 'upcoming' || displayStatus === 'scheduled') && eventDate < now) {
+        displayStatus = 'completed';
+      }
+      const attachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+      return {
+        _id: event._id,
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        allDay: event.allDay,
+        color: getEventColor(event.type),
+        userId: event.userId?._id,
+        reportTicketNumber: event.reportTicketNumber,
+        extendedProps: {
+          type: event.type,
+          description: event.description,
+          location: event.location,
+          notes: event.notes,
+          userName,
+          userEmail,
+          mode: event.extendedProps?.mode || 'N/A',
+          status: displayStatus || 'upcoming',
+          attachments
+        }
+      };
+    });
+    res.status(200).json({ success: true, count: formatted.length, data: formatted });
+  } catch (error) {
+    console.error('❌ Error fetching user consultations for report:', error);
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
+// Helper function to get event color
 function getEventColor(type) {
   const colors = {
     holiday: '#ef4444',
@@ -1160,5 +1281,7 @@ module.exports = {
   updateCalendarEvent,
   deleteCalendarEvent,
   sendInterviewBookingLink,
-  verifyBookingAccess
+  verifyBookingAccess,
+  getMyConsultations,
+  getUserConsultationsForReport
 };

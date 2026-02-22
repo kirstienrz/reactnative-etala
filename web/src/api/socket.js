@@ -94,72 +94,42 @@ class SocketService {
     }
   }
 
-  // 🔥 CRITICAL: Make sure these listeners are properly set up
-  onNewMessage(callback) {
-    if (this.socket) {
-      // Remove any existing listener first to prevent duplicates
-      this.socket.off("new-message");
-      this.socket.on("new-message", (data) => {
-        console.log("📨 new-message event received:", data);
-        callback(data);
-      });
-    }
+onNewMessage(callback) {
+  if (this.socket) {
+    // ✅ Don't remove existing listeners, just add
+    this.socket.on("new-message", callback);
   }
+}
 
-  onTicketUpdated(callback) {
-    if (this.socket) {
-      this.socket.off("ticket-updated");
-      this.socket.on("ticket-updated", (data) => {
-        console.log("📨 ✅✅✅ ticket-updated event received:", data);
-        console.log("📊 Ticket details:", {
-          ticketNumber: data.ticketNumber,
-          hasUnreadMessages: data.hasUnreadMessages,
-          unreadCount: data.unreadCount
-        });
-        callback(data);
-      });
-    }
+onTicketUpdated(callback) {
+  if (this.socket) {
+    this.socket.on("ticket-updated", callback);
   }
+}
 
-  onTicketClosed(callback) {
-    if (this.socket) {
-      this.socket.off("ticket-closed");
-      this.socket.on("ticket-closed", (data) => {
-        console.log("📨 ticket-closed event received:", data);
-        callback(data);
-      });
-    }
+onTicketClosed(callback) {
+  if (this.socket) {
+    this.socket.on("ticket-closed", callback);
   }
+}
 
-  onTicketReopened(callback) {
-    if (this.socket) {
-      this.socket.off("ticket-reopened");
-      this.socket.on("ticket-reopened", (data) => {
-        console.log("📨 ticket-reopened event received:", data);
-        callback(data);
-      });
-    }
+onTicketReopened(callback) {
+  if (this.socket) {
+    this.socket.on("ticket-reopened", callback);
   }
+}
 
-  onMessagesRead(callback) {
-    if (this.socket) {
-      this.socket.off("messages-read");
-      this.socket.on("messages-read", (data) => {
-        console.log("📨 messages-read event received:", data);
-        callback(data);
-      });
-    }
+onMessagesRead(callback) {
+  if (this.socket) {
+    this.socket.on("messages-read", callback);
   }
+}
 
-  onUserTyping(callback) {
-    if (this.socket) {
-      this.socket.off("user-typing");
-      this.socket.on("user-typing", (data) => {
-        console.log("📨 user-typing event received:", data);
-        callback(data);
-      });
-    }
+onUserTyping(callback) {
+  if (this.socket) {
+    this.socket.on("user-typing", callback);
   }
+}
 
   removeAllListeners() {
     if (this.socket) {

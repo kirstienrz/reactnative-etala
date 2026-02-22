@@ -21,23 +21,22 @@ const ChatScreen = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  
   const ticketNumberRef = useRef(null);
 
-  const { 
-    ticketNumber, 
-    ticketId, 
-    displayName, 
-    status 
+  const {
+    ticketNumber,
+    ticketId,
+    displayName,
+    status,
   } = location.state || {};
 
   useEffect(() => {
     if (!ticketNumber) {
-      alert('No ticket selected');
-      navigate('/user/inbox');
+      alert("No ticket selected");
+      navigate("/user/inbox");
       return;
     }
-    
+
     ticketNumberRef.current = ticketNumber;
     setTicketStatus(status);
     loadMessages();
@@ -47,111 +46,100 @@ const ChatScreen = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 🔥 FIX: Setup socket listeners ONCE and cleanup properly
+  // Setup socket listeners ONCE and cleanup properly
   useEffect(() => {
     if (!ticketNumber) return;
 
-    console.log('🔌 Setting up socket connection for ticket:', ticketNumber);
     socketService.connect();
     socketService.joinTicket(ticketNumber);
     socketService.joinUserRoom(currentUserId);
 
-    // 📩 Listen for new messages
-    socketService.onNewMessage(({ message, ticket }) => {
-      console.log('🔥 New message received:', message);
-      console.log('🔍 Message ticket:', message.ticketNumber);
-      console.log('🔍 Current ticket:', ticketNumberRef.current);
-      
+    // --- Define handlers so we can remove them later ---
+    const handleNewMessage = ({ message }) => {
       if (message.ticketNumber === ticketNumberRef.current) {
-        console.log('✅ Ticket match! Adding message...');
-        setMessages(prev => {
-          console.log('📊 Current messages:', prev.length);
-          const exists = prev.some(m => m._id === message._id);
-          console.log('🔍 Message exists?', exists);
-          
-          if (exists) {
-            console.log('⚠️ Duplicate message, skipping');
-            return prev;
-          }
-          
-          console.log('✅ Adding new message');
-          return [...prev, message];
+        setMessages((prev) => {
+          // ✅ Remove matching temp message (same sender + content), then add real one
+          const withoutTemp = prev.filter(
+            (m) =>
+              !(
+                m.isTemp &&
+                m.content === message.content &&
+                m.sender === message.sender
+              )
+          );
+          // Avoid duplicate real messages
+          if (withoutTemp.some((m) => m._id === message._id)) return withoutTemp;
+          return [...withoutTemp, message];
         });
-      } else {
-        console.log('⚠️ Ticket mismatch, ignoring message');
       }
-    });
+    };
 
-    // 📩 Listen for ticket closed
-    socketService.onTicketClosed(({ ticket, message }) => {
-      console.log('🔥 Ticket closed:', ticket);
+    const handleTicketClosed = ({ ticket, message }) => {
       if (ticket.ticketNumber === ticketNumberRef.current) {
-        setTicketStatus('Closed');
-        setMessages(prev => {
-          const exists = prev.some(m => m._id === message._id);
-          if (!exists) {
+        setTicketStatus("Closed");
+        setMessages((prev) => {
+          if (!prev.some((m) => m._id === message._id))
             return [...prev, message];
-          }
           return prev;
         });
       }
-    });
+    };
 
-    // 📩 Listen for ticket reopened
-    socketService.onTicketReopened(({ ticket, message }) => {
-      console.log('🔥 Ticket reopened:', ticket);
+    const handleTicketReopened = ({ ticket, message }) => {
       if (ticket.ticketNumber === ticketNumberRef.current) {
-        setTicketStatus('Open');
-        setMessages(prev => {
-          const exists = prev.some(m => m._id === message._id);
-          if (!exists) {
+        setTicketStatus("Open");
+        setMessages((prev) => {
+          if (!prev.some((m) => m._id === message._id))
             return [...prev, message];
-          }
           return prev;
         });
       }
-    });
+    };
 
-    // 📩 Listen for typing
-    socketService.onUserTyping(({ userName, isTyping }) => {
-      console.log('👤 Typing event:', userName, isTyping);
+    const handleUserTyping = ({ userName, isTyping }) => {
       if (isTyping) {
         setTypingUser(userName);
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
-        typingTimeoutRef.current = setTimeout(() => {
-          setTypingUser(null);
-        }, 3000);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => setTypingUser(null), 3000);
       } else {
         setTypingUser(null);
       }
-    });
+    };
 
-    // 📩 Listen for read receipts
-    socketService.onMessagesRead(({ ticketNumber: readTicketNumber, readBy }) => {
-      console.log('📖 Messages read event received for ticket:', readTicketNumber, 'by:', readBy);
-      if (readTicketNumber === ticketNumberRef.current && readBy === 'admin') {
-        // Admin read the user's messages
-        setMessages(prev => prev.map(msg => ({
-          ...msg,
-          isRead: msg.sender === 'user' ? true : msg.isRead
-        })));
+    const handleMessagesRead = ({ ticketNumber: readTicketNumber, readBy }) => {
+      if (
+        readTicketNumber === ticketNumberRef.current &&
+        readBy === "admin"
+      ) {
+        setMessages((prev) =>
+          prev.map((msg) => ({
+            ...msg,
+            isRead: msg.sender === "user" ? true : msg.isRead,
+          }))
+        );
       }
-    });
+    };
 
-    // Cleanup
+    // --- Register handlers (no .off() before .on() — socket.js handles specific removal) ---
+    socketService.onNewMessage(handleNewMessage);
+    socketService.onTicketClosed(handleTicketClosed);
+    socketService.onTicketReopened(handleTicketReopened);
+    socketService.onUserTyping(handleUserTyping);
+    socketService.onMessagesRead(handleMessagesRead);
+
+    // --- Cleanup only these specific handlers ---
     return () => {
-      console.log('🧹 Cleaning up socket listeners for ticket:', ticketNumber);
       if (ticketNumberRef.current) {
         socketService.leaveTicket(ticketNumberRef.current);
       }
-      socketService.removeAllListeners();
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+      socketService.off("new-message", handleNewMessage);
+      socketService.off("ticket-closed", handleTicketClosed);
+      socketService.off("ticket-reopened", handleTicketReopened);
+      socketService.off("user-typing", handleUserTyping);
+      socketService.off("messages-read", handleMessagesRead);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, [ticketNumber, currentUserId]); // Only re-run if ticketNumber or userId changes
+  }, [ticketNumber, currentUserId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -161,7 +149,7 @@ const ChatScreen = () => {
     try {
       setLoading(true);
       const data = await getTicketMessages(ticketNumber, { limit: 100 });
-      console.log('📥 Loaded messages:', data);
+      console.log("📥 Loaded messages:", data);
       setMessages(data || []);
     } catch (error) {
       console.error("❌ Error loading messages:", error);
@@ -175,11 +163,12 @@ const ChatScreen = () => {
     e?.preventDefault();
     if (!inputText.trim() || !ticketNumber) return;
 
+    // ✅ Temp message for optimistic UI
     const tempMessage = {
       _id: `temp-${Date.now()}`,
       content: inputText,
-      sender: 'user',
-      senderName: currentUser?.firstName || currentUser?.name || 'You',
+      sender: "user",
+      senderName: currentUser?.firstName || currentUser?.name || "You",
       createdAt: new Date().toISOString(),
       isTemp: true,
       isRead: false,
@@ -190,31 +179,19 @@ const ChatScreen = () => {
     setInputText("");
     setSending(true);
 
-    socketService.sendTyping(ticketNumber, currentUser?.firstName || 'You', false);
+    socketService.sendTyping(ticketNumber, currentUser?.firstName || "You", false);
 
     try {
-      console.log('📤 Sending message to:', ticketNumber);
-      const savedMessage = await sendTicketMessage(ticketNumber, {
+      await sendTicketMessage(ticketNumber, {
         content: messageText,
-        attachments: []
+        attachments: [],
       });
-      
-      console.log('✅ Message sent successfully:', savedMessage);
-      
-      // Remove temp message and add real message
-      setMessages((prev) => {
-        const filtered = prev.filter((msg) => msg._id !== tempMessage._id);
-        const exists = filtered.some(m => m._id === savedMessage._id);
-        if (!exists) {
-          return [...filtered, savedMessage];
-        }
-        return filtered;
-      });
-      
+      // ✅ Socket will fire new-message which removes the temp and adds the real one
       setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error("❌ Error sending message:", error);
       alert("Failed to send message");
+      // ✅ Remove the temp message on failure
       setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
       setInputText(messageText);
     } finally {
@@ -232,11 +209,11 @@ const ChatScreen = () => {
 
   const handleTyping = (e) => {
     setInputText(e.target.value);
-    
+
     if (e.target.value.trim()) {
-      const userName = currentUser?.firstName || currentUser?.name || 'User';
+      const userName = currentUser?.firstName || currentUser?.name || "User";
       socketService.sendTyping(ticketNumber, userName, true);
-      
+
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
@@ -255,10 +232,9 @@ const ChatScreen = () => {
     });
   };
 
-  // Find the last message sent by the user
   const getLastUserMessageIndex = () => {
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].sender === 'user' && !messages[i].isTemp) {
+      if (messages[i].sender === "user" && !messages[i].isTemp) {
         return i;
       }
     }
@@ -274,7 +250,7 @@ const ChatScreen = () => {
     );
   }
 
-  const isTicketClosed = ticketStatus === 'Closed';
+  const isTicketClosed = ticketStatus === "Closed";
   const lastUserMessageIndex = getLastUserMessageIndex();
 
   return (
@@ -294,12 +270,14 @@ const ChatScreen = () => {
                 <h1 className="text-2xl font-bold text-purple-900">
                   #{ticketNumber}
                 </h1>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                  ticketStatus === 'Open'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {ticketStatus || 'Open'}
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    ticketStatus === "Open"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {ticketStatus || "Open"}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -325,13 +303,16 @@ const ChatScreen = () => {
             ) : (
               <>
                 {messages.map((message, index) => {
-                  const isMe = message.sender === 'user';
-                  const isLastUserMessage = isMe && index === lastUserMessageIndex;
+                  const isMe = message.sender === "user";
+                  const isLastUserMessage =
+                    isMe && index === lastUserMessageIndex;
 
                   return (
                     <div
                       key={message._id || message.id}
-                      className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                      className={`flex ${
+                        isMe ? "justify-end" : "justify-start"
+                      }`}
                     >
                       <div
                         className={`max-w-[70%] rounded-2xl px-4 py-2 ${
@@ -360,18 +341,20 @@ const ChatScreen = () => {
                               Sending...
                             </span>
                           )}
-                          {/* Read indicator for last user message */}
-                          {isMe && !message.isTemp && isLastUserMessage && message.isRead && (
-                            <span className="text-xs text-purple-200">
-                              Read
-                            </span>
-                          )}
+                          {isMe &&
+                            !message.isTemp &&
+                            isLastUserMessage &&
+                            message.isRead && (
+                              <span className="text-xs text-purple-200">
+                                Read
+                              </span>
+                            )}
                         </div>
                       </div>
                     </div>
                   );
                 })}
-                
+
                 {/* Typing Indicator */}
                 {typingUser && (
                   <div className="flex justify-start">
@@ -382,7 +365,7 @@ const ChatScreen = () => {
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </>
             )}

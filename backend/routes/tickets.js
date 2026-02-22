@@ -24,7 +24,7 @@ router.get("/stats/overview", authenticateAdmin, async (req, res) => {
     const openTickets = await Ticket.countDocuments({ status: "Open" });
     const closedTickets = await Ticket.countDocuments({ status: "Closed" });
     const unreadMessages = await Ticket.aggregate([
-      { $group: { _id: null, total: { $sum: "$unreadCount.admin" } } }
+      { $group: { _id: null, total: { $sum: "$unreadCount.superadmin" } } }
     ]);
     res.json({
       totalTickets,
@@ -162,15 +162,23 @@ router.patch("/:ticketNumber/messages/read", authenticateAny, async (req, res) =
         { ticketNumber, sender: "user", isRead: false },
         { isRead: true }
       );
-      await Ticket.findOneAndUpdate(
+      const updateResult = await Ticket.findOneAndUpdate(
         { ticketNumber },
-        { "unreadCount.admin": 0 }
+        { "unreadCount.superadmin": 0 },
+        { new: true }
       );
-      
+
+      // ADD THIS LOG
+      console.log("✅ Mark as read result:", {
+        ticketNumber,
+        unreadCount: updateResult?.unreadCount,
+        matched: !!updateResult
+      });
+
       // 🔥 Emit read status update to user
       io.to(`ticket-${ticketNumber}`).emit("messages-read", {
         ticketNumber,
-        readBy: "admin"
+        readBy: "superadmin"
       });
       
       // 🔥 Emit to admin room to update ticket list
@@ -196,7 +204,7 @@ router.patch("/:ticketNumber/messages/read", authenticateAny, async (req, res) =
       console.log('🔍 Ticket user ID:', ticket.userId);
       
       await Message.updateMany(
-        { ticketNumber, sender: "admin", isRead: false },
+        { ticketNumber, sender: "superadmin", isRead: false },
         { isRead: true }
       );
       await Ticket.findOneAndUpdate(
@@ -258,7 +266,7 @@ router.patch("/:ticketNumber/messages/unread", authenticateAdmin, async (req, re
     // Set unread count to 1 (minimum to show as unread)
     await Ticket.findOneAndUpdate(
       { ticketNumber },
-      { "unreadCount.admin": 1 }
+      { "unreadCount.superadmin": 1 }
     );
     
     // Get updated ticket
@@ -343,7 +351,7 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     
     const message = new Message({
       ticketNumber,
-      sender: isAdmin ? "admin" : "user",
+      sender: isAdmin ? "superadmin" : "user",
       senderId,
       senderName,
       messageType: attachments?.length > 0 ? "file" : "text",
@@ -366,7 +374,7 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
         updateData.adminHasReplied = true;
       }
     } else {
-      updateData.$inc = { "unreadCount.admin": 1 };
+      updateData.$inc = { "unreadCount.superadmin": 1 };
     }
     
     let updatedTicket = await Ticket.findOneAndUpdate(
@@ -401,7 +409,7 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
           `
         });
         
-        console.log(`✉️ First reply email sent to ${userEmail} for ticket ${ticketNumber}`);
+        console.log(`✉️ First reply email sent for ticket ${ticketNumber}`);
       } catch (emailError) {
         console.error("❌ Failed to send first reply email:", emailError);
         // Don't fail the request if email fails
@@ -469,7 +477,7 @@ router.patch("/:ticketNumber/close", authenticateAdmin, async (req, res) => {
     // Optional: Send system message
     const systemMessage = new Message({
       ticketNumber,
-      sender: "admin",
+      sender: "superadmin",
       senderName: "System",
       content: reason || "This ticket has been closed.",
       messageType: "text"
@@ -512,7 +520,7 @@ router.patch("/:ticketNumber/reopen", authenticateAdmin, async (req, res) => {
     // Optional: Send system message
     const systemMessage = new Message({
       ticketNumber,
-      sender: "admin",
+      sender: "superadmin",
       senderName: "System",
       content: "This ticket has been reopened.",
       messageType: "text"

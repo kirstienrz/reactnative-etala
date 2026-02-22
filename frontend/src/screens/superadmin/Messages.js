@@ -399,8 +399,8 @@ const TicketMessagingMobile = () => {
       });
       
       setNewMessage('');
-      socketService.sendTyping(selectedTicket.ticketNumber, 'Admin', false);
-      
+      socketService.sendTyping(selectedTicket.ticketNumber, 'superadmin', false);
+
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -435,7 +435,7 @@ const TicketMessagingMobile = () => {
     
     setModalConfig({
       title: 'Send Appointment Booking Link?',
-      message: `An email will be sent to ${userEmail} with a link to book an appointment.\n\nThe user (${userName}) will be able to:\n• View your available time slots\n• Choose their preferred date and time\n• Book the appointment`,
+      message: `An email will be sent with a link to book an appointment.\n\nThe user will be able to:\n• View your available time slots\n• Choose their preferred date and time\n• Book the appointment`,
       type: 'info',
       confirmText: 'Send Link',
       onConfirm: handleConfirmSendLink
@@ -485,12 +485,12 @@ const TicketMessagingMobile = () => {
       });
 
       if (response.success) {
-        alert(`Booking link sent successfully to ${userEmail}!`);
+        alert(`Booking link sent successfully!`);
         setShowConfirmModal(false);
         
         try {
           await sendTicketMessage(ticket.ticketNumber, {
-            content: `📅 An appointment booking link has been sent to your email (${userEmail}).\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`,
+            content: `📅 An appointment booking link has been sent to your email.\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`,
             metadata: { type: 'appointment_link' }
           });
         } catch (msgError) {
@@ -575,7 +575,7 @@ const TicketMessagingMobile = () => {
   };
 
   const renderMessage = ({ item: msg, index }) => {
-    const isCurrentUser = msg.sender === 'admin';
+    const isCurrentUser = msg.sender === 'superadmin';
     const isAppointmentLink = msg.metadata?.type === 'appointment_link';
     
     return (

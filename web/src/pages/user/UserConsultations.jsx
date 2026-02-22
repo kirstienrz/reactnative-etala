@@ -130,8 +130,8 @@ const ModeIcon = ({ mode }) => {
 };
 
 // Replace dummy API with real API call
-async function fetchUserConsultations(userId) {
-  const res = await getUserConsultations(userId);
+async function fetchUserConsultations() {
+  const res = await getUserConsultations();
   if (res.success) return res.data;
   return [];
 }
@@ -148,9 +148,8 @@ export default function UserConsultations() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    if (!user?._id) return;
     setLoading(true);
-    fetchUserConsultations(user._id).then((data) => {
+    fetchUserConsultations().then((data) => {
       setConsultations(data);
       setLoading(false);
     });
