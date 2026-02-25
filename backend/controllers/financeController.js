@@ -162,3 +162,153 @@ exports.getAllExpenses = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// =======================
+// DELETE EXPENSE
+// =======================
+exports.deleteExpense = async (req, res) => {
+  try {
+    const { id } = req.params; // Get expense ID from URL parameter
+
+    // Find the expense first to make sure it exists and is an expense type
+    const expense = await Finance.findOne({
+      _id: id,
+      type: "expense" // Make sure we're only deleting expense records
+    });
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: "Expense not found or already deleted"
+      });
+    }
+
+    // Delete the expense
+    await Finance.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Expense deleted successfully",
+      data: { id: expense._id, category: expense.category }
+    });
+
+  } catch (err) {
+    res.status(500).json({ 
+      success: false, 
+      message: err.message 
+    });
+  }
+};
+
+// =======================
+// UPDATE EXPENSE
+// =======================
+exports.updateExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, amount, category, notes, date } = req.body;
+
+    // Find the expense first
+    const expense = await Finance.findOne({
+      _id: id,
+      type: "expense"
+    });
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: "Expense not found"
+      });
+    }
+
+    // If category is being changed, check budget for new category
+    if (category && category !== expense.category) {
+      // Get budget for new category
+      const budget = await Finance.findOne({
+        type: "budget",
+        category: category,
+        month: expense.month // Keep same month
+      });
+
+      if (!budget) {
+        return res.status(400).json({
+          success: false,
+          message: `Walang naka-set na budget for category ${category} this month`
+        });
+      }
+
+      // Get all expenses in new category (excluding current expense if it's being moved)
+      const otherExpenses = await Finance.find({
+        type: "expense",
+        category: category,
+        month: expense.month,
+        _id: { $ne: id } // Exclude current expense
+      });
+
+      const totalSpentInNewCategory = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const newAmount = amount || expense.amount;
+      const remainingInNewCategory = budget.amount - totalSpentInNewCategory;
+
+      if (newAmount > remainingInNewCategory) {
+        return res.status(400).json({
+          success: false,
+          message: `Lampas na sa budget for ${category}! Remaining: ${remainingInNewCategory}`
+        });
+      }
+    }
+    // If only amount is changing but category stays same
+    else if (amount && amount !== expense.amount) {
+      // Get budget for current category
+      const budget = await Finance.findOne({
+        type: "budget",
+        category: expense.category,
+        month: expense.month
+      });
+
+      if (budget) {
+        // Get all other expenses in same category
+        const otherExpenses = await Finance.find({
+          type: "expense",
+          category: expense.category,
+          month: expense.month,
+          _id: { $ne: id }
+        });
+
+        const totalSpentOthers = otherExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const remainingInCategory = budget.amount - totalSpentOthers;
+
+        if (amount > remainingInCategory) {
+          return res.status(400).json({
+            success: false,
+            message: `Lampas na sa budget! Remaining: ${remainingInCategory}`
+          });
+        }
+      }
+    }
+
+    // Update the expense
+    const updatedExpense = await Finance.findByIdAndUpdate(
+      id,
+      {
+        title: title || expense.title,
+        amount: amount || expense.amount,
+        category: category || expense.category,
+        notes: notes !== undefined ? notes : expense.notes,
+        date: date || expense.date
+      },
+      { new: true } // Return the updated document
+    );
+
+    res.json({
+      success: true,
+      message: "Expense updated successfully",
+      data: updatedExpense
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};

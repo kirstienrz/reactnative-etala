@@ -21,3 +21,13 @@ export const createExpense = async (data) => {
   const res = await API.post("/finance/expense", data);
   return res.data;
 };
+
+export const deleteExpense = async (expenseId) => {
+  const res = await API.delete(`/finance/expense/${expenseId}`);
+  return res.data;
+}
+
+export const updateExpense = async (expenseId, data) => {
+  const res = await API.put(`/finance/expense/${expenseId}`, data);
+  return res.data;
+}

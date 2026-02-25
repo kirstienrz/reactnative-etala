@@ -3,8 +3,8 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const auth = require("../middleware/auth"); // ✅ import your JWT middleware
-// const sendEmail = require("../utils/sendEmail"); // adjust path
-const sendEmail = require("../utils/sendEmailSendGrid");
+const sendEmail = require("../utils/sendEmail"); // adjust path
+// const sendEmail = require("../utils/sendEmailSendGrid");
 
 
 router.get("/analytics", auth(), async (req, res) => {

@@ -14,4 +14,7 @@ router.get("/summary", financeController.getSummary);
 // Optional: list expenses
 router.get("/expenses", financeController.getAllExpenses);
 
+router.delete("/expense/:id", financeController.deleteExpense);
+
+router.put("/expense/:id", financeController.updateExpense);
 module.exports = router;

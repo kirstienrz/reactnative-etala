@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { 
-    getFinanceSummary, 
-    createBudget, 
-    createExpense
+import {
+    getFinanceSummary,
+    createBudget,
+    createExpense,
+    deleteExpense,
+    updateExpense
 } from "../../api/finance";
-import { 
-    Loader2, 
-    TrendingUp, 
-    TrendingDown, 
-    Wallet, 
+import {
+    Loader2,
+    TrendingUp,
+    TrendingDown,
+    Wallet,
     Target,
     AlertCircle,
     CheckCircle,
@@ -75,6 +77,61 @@ const Finance = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingExpense, setEditingExpense] = useState(null);
+
+    const handleEditExpense = (expense) => {
+    console.log("Editing expense:", expense); // Debug log
+    setEditingExpense(expense);
+    setExpenseCategory(expense.category); // Make sure to set the category
+    setExpenseTitle(expense.title);
+    setExpenseAmount(expense.amount.toString());
+    setShowEditModal(true);
+};
+
+    const handleUpdateExpense = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!expenseTitle || !expenseAmount) {
+        setError("Title and amount are required");
+        return;
+    }
+
+    if (!editingExpense) {
+        setError("No expense selected for editing");
+        return;
+    }
+
+    // Get the ID (handle both _id and id formats)
+    const expenseId = editingExpense._id || editingExpense.id;
+    
+    if (!expenseId) {
+        setError("Expense ID not found");
+        return;
+    }
+
+    try {
+        await updateExpense(expenseId, {
+            title: expenseTitle,
+            amount: Number(expenseAmount),
+            category: expenseCategory,
+            notes: editingExpense.notes || ""
+        });
+
+        setSuccess("Expense updated successfully");
+        setShowEditModal(false);
+        setEditingExpense(null);
+        setExpenseCategory("");
+        setExpenseTitle("");
+        setExpenseAmount("");
+        fetchSummary();
+    } catch (err) {
+        console.error("Update error:", err);
+        setError(err.response?.data?.message || err.message || "Failed to update expense");
+    }
+};
     useEffect(() => {
         fetchSummary();
     }, [month]);
@@ -162,13 +219,13 @@ const Finance = () => {
         let totalBudget = 0;
         let totalSpent = 0;
         let totalExpensesCount = 0;
-        
+
         Object.values(summary).forEach(data => {
             totalBudget += data.budget || 0;
             totalSpent += data.spent || 0;
             totalExpensesCount += (data.expenses || []).length;
         });
-        
+
         return {
             budget: totalBudget,
             spent: totalSpent,
@@ -193,13 +250,22 @@ const Finance = () => {
 
     // Mock expense deletion (you'll need to implement actual API)
     const handleDeleteExpense = async (category, expenseId) => {
+        if (!expenseId) {
+            setError("Cannot delete expense: Missing expense ID");
+            return;
+        }
+
         if (window.confirm('Are you sure you want to delete this expense?')) {
-            // Add your delete expense API call here
-            // await deleteExpense(expenseId);
-            // fetchSummary(); // Refresh data
-            
-            // For now, just show success message
-            setSuccess("Expense deleted successfully");
+            try {
+                setLoading(true);
+                await deleteExpense(expenseId); // Call your API
+                setSuccess("Expense deleted successfully");
+                await fetchSummary(); // Refresh the data
+            } catch (err) {
+                setError(err.response?.data?.message || "Failed to delete expense");
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -213,7 +279,7 @@ const Finance = () => {
                             <h1 className="text-3xl font-bold text-gray-900">Finance Tracker</h1>
                             <p className="text-gray-600 mt-1">Manage budgets and track all expenses</p>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-lg">
                                 <Calendar className="h-4 w-4 text-gray-600" />
@@ -224,7 +290,7 @@ const Finance = () => {
                                     className="bg-transparent border-none focus:outline-none text-gray-700"
                                 />
                             </div>
-                            
+
                         </div>
                     </div>
                 </div>
@@ -302,7 +368,7 @@ const Finance = () => {
                         </div>
                     </div>
                 )}
-                
+
                 {success && (
                     <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
                         <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -324,7 +390,7 @@ const Finance = () => {
                                     <p className="text-gray-600 mt-1">Click on a category to view expenses</p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <select 
+                                    <select
                                         value={selectedCategory}
                                         onChange={(e) => setSelectedCategory(e.target.value)}
                                         className="border rounded-lg px-3 py-2 text-sm"
@@ -334,7 +400,7 @@ const Finance = () => {
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
                                     </select>
-                                    <button 
+                                    <button
                                         onClick={() => setShowBudgetModal(true)}
                                         className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                                     >
@@ -355,7 +421,7 @@ const Finance = () => {
                                     </div>
                                     <h4 className="font-medium text-gray-900">No budgets yet</h4>
                                     <p className="text-gray-600 mt-1">Create your first budget to get started</p>
-                                    <button 
+                                    <button
                                         onClick={() => setShowBudgetModal(true)}
                                         className="mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
                                     >
@@ -371,11 +437,11 @@ const Finance = () => {
                                             const isOverBudget = data.remaining < 0;
                                             const isExpanded = expandedCategories.has(category);
                                             const expenses = data.expenses || [];
-                                            
+
                                             return (
                                                 <div key={category} className="border rounded-xl overflow-hidden hover:shadow-sm transition">
                                                     {/* Category Header */}
-                                                    <div 
+                                                    <div
                                                         className="p-5 cursor-pointer hover:bg-gray-50 transition"
                                                         onClick={() => toggleCategory(category)}
                                                     >
@@ -397,7 +463,7 @@ const Finance = () => {
                                                                     </p>
                                                                 </div>
                                                             </div>
-                                                            
+
                                                             <div className="flex items-center gap-6">
                                                                 <div className="text-right">
                                                                     <p className="text-sm text-gray-600">Budget</p>
@@ -418,7 +484,7 @@ const Finance = () => {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        
+
                                                         {/* Progress Bar */}
                                                         <div className="mt-4">
                                                             <div className="flex justify-between text-sm mb-1">
@@ -430,22 +496,22 @@ const Finance = () => {
                                                                 </span>
                                                             </div>
                                                             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full rounded-full ${percentage > 100 ? 'bg-red-500' : 
+                                                                <div
+                                                                    className={`h-full rounded-full ${percentage > 100 ? 'bg-red-500' :
                                                                         percentage > 80 ? 'bg-yellow-500' : 'bg-green-500'}`}
                                                                     style={{ width: `${Math.min(percentage, 100)}%` }}
                                                                 />
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     {/* Expenses List (Collapsible) */}
                                                     {isExpanded && (
                                                         <div className="border-t bg-gray-50">
                                                             <div className="p-4">
                                                                 <div className="flex items-center justify-between mb-4">
                                                                     <h5 className="font-semibold text-gray-700">Expenses in {category}</h5>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
                                                                             setExpenseCategory(category);
@@ -457,12 +523,12 @@ const Finance = () => {
                                                                         Add Expense
                                                                     </button>
                                                                 </div>
-                                                                
+
                                                                 {expenses.length === 0 ? (
                                                                     <div className="text-center py-8">
                                                                         <Receipt className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                                                                         <p className="text-gray-500">No expenses yet in this category</p>
-                                                                        <button 
+                                                                        <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 setExpenseCategory(category);
@@ -475,46 +541,49 @@ const Finance = () => {
                                                                     </div>
                                                                 ) : (
                                                                     <div className="space-y-3">
-                                                                        {expenses.map((expense, index) => (
-                                                                            <div 
-                                                                                key={expense.id || index} 
-                                                                                className="bg-white border rounded-lg p-4 hover:shadow-sm transition"
-                                                                            >
-                                                                                <div className="flex items-center justify-between">
-                                                                                    <div className="flex items-center gap-3">
-                                                                                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                                                                            <Receipt className="h-5 w-5 text-gray-600" />
-                                                                                        </div>
-                                                                                        <div>
-                                                                                            <h6 className="font-medium">{expense.title}</h6>
-                                                                                            <p className="text-sm text-gray-600">
-                                                                                                {expense.date ? formatDate(expense.date) : 'Today'}
-                                                                                            </p>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    
-                                                                                    <div className="flex items-center gap-4">
-                                                                                        <div className="text-right">
-                                                                                            <p className="font-bold text-lg">₱{expense.amount.toLocaleString()}</p>
-                                                                                        </div>
-                                                                                        <div className="flex gap-2">
-                                                                                            <button className="p-2 hover:bg-gray-100 rounded-lg transition">
-                                                                                                <Edit2 className="h-4 w-4 text-gray-600" />
-                                                                                            </button>
-                                                                                            <button 
-                                                                                                onClick={() => handleDeleteExpense(category, expense.id)}
-                                                                                                className="p-2 hover:bg-red-50 rounded-lg transition"
-                                                                                            >
-                                                                                                <Trash2 className="h-4 w-4 text-red-600" />
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
+                                                                      {expenses.map((expense) => (
+    <div
+        key={expense._id || expense.id || index}
+        className="bg-white border rounded-lg p-4 hover:shadow-sm transition"
+    >
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Receipt className="h-5 w-5 text-gray-600" />
+                </div>
+                <div>
+                    <h6 className="font-medium">{expense.title}</h6>
+                    <p className="text-sm text-gray-600">
+                        {expense.date ? formatDate(expense.date) : 'Today'}
+                    </p>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+                <div className="text-right">
+                    <p className="font-bold text-lg">₱{expense.amount.toLocaleString()}</p>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => handleEditExpense(expense)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                    >
+                        <Edit2 className="h-4 w-4 text-gray-600" />
+                    </button>
+                    <button
+                        onClick={() => handleDeleteExpense(category, expense._id || expense.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg transition"
+                    >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+))}
                                                                     </div>
                                                                 )}
-                                                                
+
                                                                 {/* Expense Summary */}
                                                                 {expenses.length > 0 && (
                                                                     <div className="mt-6 pt-4 border-t">
@@ -542,7 +611,7 @@ const Finance = () => {
 
                     {/* Right Column - Actions & Insights */}
                     <div className="space-y-6">
-                       
+
                         {/* Category Insights */}
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
                             <h4 className="font-bold text-lg mb-4 text-blue-900">Budget Insights</h4>
@@ -560,7 +629,7 @@ const Finance = () => {
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                                        <div 
+                                                        <div
                                                             className={`h-full ${percentage > 100 ? 'bg-red-500' : 'bg-blue-500'}`}
                                                             style={{ width: `${Math.min(percentage, 100)}%` }}
                                                         />
@@ -573,7 +642,7 @@ const Finance = () => {
                                         );
                                     })
                                 }
-                                
+
                                 {Object.entries(summary).some(([_, data]) => data.remaining < 0) && (
                                     <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                                         <div className="flex items-start gap-2">
@@ -619,20 +688,113 @@ const Finance = () => {
                 </div>
             </div>
 
+
+{showEditModal && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">Edit Expense</h3>
+                <button 
+                    onClick={() => {
+                        setShowEditModal(false);
+                        setEditingExpense(null);
+                        setExpenseCategory("");
+                        setExpenseTitle("");
+                        setExpenseAmount("");
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg text-2xl"
+                >
+                    ×
+                </button>
+            </div>
+            
+            <form onSubmit={handleUpdateExpense} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium mb-2">Category</label>
+                    <select
+                        value={expenseCategory}
+                        onChange={(e) => setExpenseCategory(e.target.value)}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                    >
+                        <option value="">Select a category</option>
+                        {categories.map((cat) => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                    </select>
+                </div>
+                
+                <div>
+                    <label className="block text-sm font-medium mb-2">Description</label>
+                    <input
+                        type="text"
+                        placeholder="What was this expense for?"
+                        value={expenseTitle}
+                        onChange={(e) => setExpenseTitle(e.target.value)}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                    />
+                </div>
+                
+                <div>
+                    <label className="block text-sm font-medium mb-2">Amount</label>
+                    <div className="relative">
+                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
+                        <input
+                            type="number"
+                            placeholder="0.00"
+                            value={expenseAmount}
+                            onChange={(e) => setExpenseAmount(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            min="0"
+                            step="0.01"
+                            required
+                        />
+                    </div>
+                </div>
+                
+                <div className="pt-4 border-t">
+                    <div className="flex gap-3">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowEditModal(false);
+                                setEditingExpense(null);
+                                setExpenseCategory("");
+                                setExpenseTitle("");
+                                setExpenseAmount("");
+                            }}
+                            className="flex-1 py-3 border rounded-lg hover:bg-gray-50 transition font-medium"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                        >
+                            Update Expense
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+)}
+
             {/* Budget Modal */}
             {showBudgetModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-2xl max-w-md w-full p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold">Create New Budget</h3>
-                            <button 
+                            <button
                                 onClick={() => setShowBudgetModal(false)}
                                 className="p-2 hover:bg-gray-100 rounded-lg text-2xl"
                             >
                                 ×
                             </button>
                         </div>
-                        
+
                         <form onSubmit={handleCreateBudget} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-2">Category Name</label>
@@ -645,7 +807,7 @@ const Finance = () => {
                                     required
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium mb-2">Monthly Budget</label>
                                 <div className="relative">
@@ -662,7 +824,7 @@ const Finance = () => {
                                     />
                                 </div>
                             </div>
-                            
+
                             <div className="pt-4 border-t">
                                 <div className="flex gap-3">
                                     <button
@@ -691,14 +853,14 @@ const Finance = () => {
                     <div className="bg-white rounded-2xl max-w-md w-full p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold">Add New Expense</h3>
-                            <button 
+                            <button
                                 onClick={() => setShowExpenseModal(false)}
                                 className="p-2 hover:bg-gray-100 rounded-lg text-2xl"
                             >
                                 ×
                             </button>
                         </div>
-                        
+
                         <form onSubmit={handleCreateExpense} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-2">Category</label>
@@ -714,7 +876,7 @@ const Finance = () => {
                                     ))}
                                 </select>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium mb-2">Description</label>
                                 <input
@@ -726,7 +888,7 @@ const Finance = () => {
                                     required
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium mb-2">Amount</label>
                                 <div className="relative">
@@ -743,7 +905,7 @@ const Finance = () => {
                                     />
                                 </div>
                             </div>
-                            
+
                             {categories.length === 0 && (
                                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <div className="flex items-start gap-2">
@@ -754,7 +916,7 @@ const Finance = () => {
                                     </div>
                                 </div>
                             )}
-                            
+
                             <div className="pt-4 border-t">
                                 <div className="flex gap-3">
                                     <button

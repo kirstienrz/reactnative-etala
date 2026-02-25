@@ -1,26 +1,29 @@
-const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
+const sgMail = require("@sendgrid/mail");
 
-const mailerSend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY,
-});
+// Set your SendGrid API Key from env
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+/**
+ * Send an email using SendGrid
+ * @param {Object} param0
+ * @param {string} param0.to - recipient email
+ * @param {string} param0.subject - email subject
+ * @param {string} param0.html - email content in HTML
+ */
 const sendEmail = async ({ to, subject, html }) => {
-  const sentFrom = new Sender(  "noreply@test-r9084zvy0qmgw63d.mlsender.net", "Etala");
-
-  const recipients = [new Recipient(to)];
-
-  const emailParams = new EmailParams()
-    .setFrom(sentFrom)
-    .setTo(recipients)
-    .setSubject(subject)
-    .setHtml(html);
+  const msg = {
+    to,
+    from: process.env.SENDGRID_SENDER_EMAIL || "noreply@etala.com", // verified sender
+    subject,
+    html,
+  };
 
   try {
-    await mailerSend.email.send(emailParams);
-    console.log("✅ Email sent successfully");
+    await sgMail.send(msg);
+    console.log("✅ Email sent successfully via SendGrid");
   } catch (error) {
-    console.error("❌ Email send error:", error);
-    throw new Error("Could not send email");
+    console.error("❌ SendGrid email error:", error.response?.body || error);
+    throw new Error("Could not send email via SendGrid");
   }
 };
 
