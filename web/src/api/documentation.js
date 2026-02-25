@@ -1,4 +1,3 @@
-// api/documentation.js
 import API from "./config"; // axios instance with baseURL & headers
 
 // ========================================
@@ -8,20 +7,26 @@ import API from "./config"; // axios instance with baseURL & headers
 // 📋 GET all active documentation sets
 export const getAllDocs = async () => {
   const res = await API.get("/documentation");
-  return res.data;
+  return res.data.data; // returns active docs only
+};
+
+// 📋 GET all archived documentation sets
+export const getArchivedDocs = async () => {  // <-- ADD THIS FUNCTION
+  const res = await API.get("/documentation/archived");
+  return res.data.data; // returns archived docs only
 };
 
 // 📖 GET single documentation set by ID
 export const getDoc = async (id) => {
   const res = await API.get(`/documentation/${id}`);
-  return res.data;
+  return res.data.data;
 };
 
 // 📤 CREATE new documentation set (title + description)
 export const createDoc = async (data) => {
   // data: { title: string, description?: string }
   const res = await API.post("/documentation", data);
-  return res.data;
+  return res.data.data;
 };
 
 // ✏️ UPLOAD files to a documentation set
@@ -34,7 +39,7 @@ export const uploadFiles = async (docId, files, captions = []) => {
   const res = await API.post(`/documentation/${docId}/files`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
-  return res.data;
+  return res.data.data;
 };
 
 // 🗑️ DELETE a file from a documentation set

@@ -166,9 +166,31 @@ const archiveDoc = async (req, res) => {
   res.json({ success:true, message:"Archived" });
 };
 
+// ✅ GET ARCHIVED DOCS
+const getArchivedDocs = async (req, res) => {
+  try {
+    const docs = await Documentation.find({ isArchived:true }).sort({ createdAt:-1 });
+    res.json({ success:true, data: docs });
+  } catch (err) {
+    res.status(500).json({ success:false, message:"Fetch failed" });
+  }
+};
+
+// ✅ GET ALL (active only) - rename para malinaw
+const getActiveDocs = async (req, res) => {
+  try {
+    const docs = await Documentation.find({ isArchived:false }).sort({ createdAt:-1 });
+    res.json({ success:true, data: docs });
+  } catch (err) {
+    res.status(500).json({ success:false, message:"Fetch failed" });
+  }
+};
+
+// Update exports
 module.exports = {
   createDocumentation,
-  getAllDocs,
+  getActiveDocs,    // renamed from getAllDocs
+  getArchivedDocs,  // new function
   getDoc,
   uploadFiles,
   deleteFile,
