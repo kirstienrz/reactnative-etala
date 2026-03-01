@@ -1,5 +1,4 @@
 import axios from "axios";
-import { getToken } from "./auth";
 import { Capacitor } from "@capacitor/core";
 
 const isMobileApp = Capacitor.isNative; // true if running as mobile app
@@ -10,12 +9,13 @@ const baseURL = isMobileApp
 const API = axios.create({
   baseURL,
   headers: { "Content-Type": "application/json" },
-  withCredentials: true,
+  withCredentials: false, // Set to false since we use Bearer tokens
 });
 
 API.interceptors.request.use(
   (config) => {
-    const token = getToken();
+    // Get token directly from localStorage to avoid circular dependency
+    const token = localStorage.getItem("token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },

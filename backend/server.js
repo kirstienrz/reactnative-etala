@@ -21,8 +21,9 @@ require("./utils/sendAdminReminder"); // <- ADD THIS HERE
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "http://localhost",        // Para sa Capacitor/Mobile local test
-  "capacitor://localhost",    // Origin ng Capacitor sa iOS/Android
+  "http://localhost",
+  "https://localhost",       // Added for Capacitor Android HTTPS origin
+  "capacitor://localhost",
   "https://etala.vercel.app",
   "https://reactnative-etala.onrender.com",
 ];
