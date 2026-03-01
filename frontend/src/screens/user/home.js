@@ -43,7 +43,7 @@ import { getCarouselImages } from "../../api/carousel";
 import io from "socket.io-client";
 import { getAnnouncements } from "../../api/announcement";
 import KnowledgeHubPreview from "./resourcesView";
-import { getNews } from "../../api/news"; 
+import { getNews } from "../../api/news";
 
 export default function Home({ navigation }) {
   const [activeTab, setActiveTab] = useState("Home");
@@ -72,60 +72,60 @@ export default function Home({ navigation }) {
   }, []);
 
   useEffect(() => {
-  // ⚡ Connect to Socket.IO server
-  const newSocket = io("http://192.168.254.162:5000", {
-    transports: ["websocket"],
-  });
+    // ⚡ Connect to Socket.IO server
+    const newSocket = io("https://reactnative-etala.onrender.com", {
+      transports: ["websocket"],
+    });
 
-  setSocket(newSocket);
+    setSocket(newSocket);
 
-  // 🔔 Listen for real-time updates
-  newSocket.on("carouselUpdated", () => {
-    console.log("🟢 Carousel updated in real-time!");
-    fetchFeaturedItems(); // Refresh the carousel images
-  });
+    // 🔔 Listen for real-time updates
+    newSocket.on("carouselUpdated", () => {
+      console.log("🟢 Carousel updated in real-time!");
+      fetchFeaturedItems(); // Refresh the carousel images
+    });
 
-  // Cleanup on component unmount
-  return () => {
-    newSocket.disconnect();
-  };
-}, []);
+    // Cleanup on component unmount
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
-useEffect(() => {
-  const fetchRecentAnnouncements = async () => {
-    try {
-      const data = await getAnnouncements();
-      const tenDaysAgo = new Date();
-      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+  useEffect(() => {
+    const fetchRecentAnnouncements = async () => {
+      try {
+        const data = await getAnnouncements();
+        const tenDaysAgo = new Date();
+        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
 
-      const recent = data
-        .filter(a => new Date(a.date) >= tenDaysAgo)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 3);
+        const recent = data
+          .filter(a => new Date(a.date) >= tenDaysAgo)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .slice(0, 3);
 
-      setAnnouncements(recent);
-    } catch (error) {
-      console.log("Failed to fetch announcements:", error);
-    }
-  };
+        setAnnouncements(recent);
+      } catch (error) {
+        console.log("Failed to fetch announcements:", error);
+      }
+    };
 
-  fetchRecentAnnouncements();
-}, []);
+    fetchRecentAnnouncements();
+  }, []);
 
-useEffect(() => {
-  const fetchNews = async () => {
-    try {
-      const data = await getNews();
-      // Sort by createdAt descending and take top 5
-      const top5 = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
-      setNewsList(top5);
-    } catch (error) {
-      console.log("Failed to fetch news:", error);
-    }
-  };
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const data = await getNews();
+        // Sort by createdAt descending and take top 5
+        const top5 = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+        setNewsList(top5);
+      } catch (error) {
+        console.log("Failed to fetch news:", error);
+      }
+    };
 
-  fetchNews();
-}, []);
+    fetchNews();
+  }, []);
 
 
 
@@ -401,39 +401,39 @@ useEffect(() => {
         </View>
 
         {/* Announcement Section */}
-<View style={styles.section}>
-  <Text style={styles.sectionTitle}>Announcement</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Announcement</Text>
 
-  {/* Intro Card */}
-  <View style={[styles.announcementCard, styles.introCard]}>
-    <Text style={styles.introText}>
-      Welcome to the new GAD Portal! Check out the latest updates and resources.
-    </Text>
-    <TouchableOpacity
-      style={styles.viewOlderButton}
-      onPress={() => navigation.navigate('OlderAnnouncements')}
-    >
-      <Text style={styles.viewOlderText}>View older announcements</Text>
-    </TouchableOpacity>
-  </View>
+          {/* Intro Card */}
+          <View style={[styles.announcementCard, styles.introCard]}>
+            <Text style={styles.introText}>
+              Welcome to the new GAD Portal! Check out the latest updates and resources.
+            </Text>
+            <TouchableOpacity
+              style={styles.viewOlderButton}
+              onPress={() => navigation.navigate('OlderAnnouncements')}
+            >
+              <Text style={styles.viewOlderText}>View older announcements</Text>
+            </TouchableOpacity>
+          </View>
 
-  {/* Recent Announcements */}
-{/* Recent Announcements */}
-{announcements.map(item => (
-  <View key={item._id} style={[styles.announcementCard, styles.recentCard]}>
-    <Text style={styles.announcementDate}>
-      {new Date(item.date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })}
-    </Text>
-    <Text style={styles.announcementTitle}>{item.title}</Text>
-    <Text style={styles.announcementText}>{item.content}</Text>
-  </View>
-))}
+          {/* Recent Announcements */}
+          {/* Recent Announcements */}
+          {announcements.map(item => (
+            <View key={item._id} style={[styles.announcementCard, styles.recentCard]}>
+              <Text style={styles.announcementDate}>
+                {new Date(item.date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Text>
+              <Text style={styles.announcementTitle}>{item.title}</Text>
+              <Text style={styles.announcementText}>{item.content}</Text>
+            </View>
+          ))}
 
-</View>
+        </View>
 
 
         {/* Services Section */}
@@ -459,7 +459,7 @@ useEffect(() => {
           </View>
         </View>
 
-          {/* Replace the entire Featured Carousel section (lines 389-424) with this: */}
+        {/* Replace the entire Featured Carousel section (lines 389-424) with this: */}
 
         {/* Featured Carousel (Dynamic from Backend) */}
         <View style={styles.section}>
@@ -569,29 +569,29 @@ useEffect(() => {
           </View>
 
           <ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  contentContainerStyle={{ paddingRight: 20 }}
->
-  {newsList.map((item) => (
-    <TouchableOpacity
-      key={item._id}
-      style={styles.newsCardHorizontal}
-      onPress={() => console.log(`Opening news ${item.title}`)}
-      activeOpacity={0.8}
-    >
-      <Image
-        source={item.imageUrl ? { uri: item.imageUrl } : require("../../../assets/news/news1.jpg")}
-        style={styles.newsImage}
-        resizeMode="cover"
-      />
-      <View style={styles.newsContent}>
-        <Text style={styles.newsDate}>{item.date}</Text>
-        <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
-      </View>
-    </TouchableOpacity>
-  ))}
-</ScrollView>
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingRight: 20 }}
+          >
+            {newsList.map((item) => (
+              <TouchableOpacity
+                key={item._id}
+                style={styles.newsCardHorizontal}
+                onPress={() => console.log(`Opening news ${item.title}`)}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={item.imageUrl ? { uri: item.imageUrl } : require("../../../assets/news/news1.jpg")}
+                  style={styles.newsImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.newsContent}>
+                  <Text style={styles.newsDate}>{item.date}</Text>
+                  <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
         </View>
 
@@ -870,70 +870,70 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     marginBottom: 14,
   },
-announcementCard: {
-  padding: 10, // less than 16
-  borderRadius: 10,
-  marginBottom: 8, // less than 12
-},
+  announcementCard: {
+    padding: 10, // less than 16
+    borderRadius: 10,
+    marginBottom: 8, // less than 12
+  },
 
-/* Intro Card */
-introCard: {
-  backgroundColor: "#E0E7FF",
-  borderWidth: 1,
-  borderColor: "#C7D2FE",
-},
+  /* Intro Card */
+  introCard: {
+    backgroundColor: "#E0E7FF",
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+  },
 
-introText: {
-  color: "#1F2937",
-  fontSize: 13, // slightly smaller
-  lineHeight: 18, // tighter line spacing
-  marginBottom: 6, // smaller spacing
-  fontWeight: "500",
-},
+  introText: {
+    color: "#1F2937",
+    fontSize: 13, // slightly smaller
+    lineHeight: 18, // tighter line spacing
+    marginBottom: 6, // smaller spacing
+    fontWeight: "500",
+  },
 
-/* Recent Announcements Card */
-recentCard: {
-  backgroundColor: "#FFFFFF",
-  borderWidth: 1,
-  borderColor: "#E5E7EB",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 1.5,
-  elevation: 1,
-  padding: 10, // add padding inside card
-  borderRadius: 10,
-},
+  /* Recent Announcements Card */
+  recentCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1.5,
+    elevation: 1,
+    padding: 10, // add padding inside card
+    borderRadius: 10,
+  },
 
-announcementTitle: {
-  fontSize: 13, // smaller
-  fontWeight: "700",
-  color: "#111827",
-  marginBottom: 4,
-},
+  announcementTitle: {
+    fontSize: 13, // smaller
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+  },
 
-announcementText: {
-  fontSize: 12,
-  color: "#1F2937",
-  lineHeight: 16,
-  marginBottom: 2,
-},
+  announcementText: {
+    fontSize: 12,
+    color: "#1F2937",
+    lineHeight: 16,
+    marginBottom: 2,
+  },
 
-announcementDate: {
-  fontSize: 11,
-  color: "#6B7280",
-  marginBottom: 2,
-},
+  announcementDate: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginBottom: 2,
+  },
 
-viewOlderButton: {
-  marginTop: 4,
-},
+  viewOlderButton: {
+    marginTop: 4,
+  },
 
-viewOlderText: {
-  color: "#2563EB",
-  fontWeight: "600",
-  fontSize: 12,
-},
+  viewOlderText: {
+    color: "#2563EB",
+    fontWeight: "600",
+    fontSize: 12,
+  },
 
   servicesGrid: {
     flexDirection: "row",

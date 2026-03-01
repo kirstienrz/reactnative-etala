@@ -57,9 +57,16 @@ export default function LandingPage({ navigation }) {
 
       <TouchableOpacity
         onPress={() => navigation.navigate("LoginScreen")}
-        style={{ backgroundColor: "#4338CA", borderRadius: 8, paddingVertical: 10, marginHorizontal: 20, marginBottom: 20 }}
+        style={{ backgroundColor: "#4338CA", borderRadius: 8, paddingVertical: 10, marginHorizontal: 20, marginBottom: 12 }}
       >
         <Text style={{ color: "#fff", textAlign: "center", fontSize: 15, fontWeight: "500" }}>Log In</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => navigation.navigate("SignupScreen")}
+        style={{ backgroundColor: "#fff", borderRadius: 8, paddingVertical: 10, marginHorizontal: 20, marginBottom: 20, borderWidth: 1, borderColor: "#4338CA" }}
+      >
+        <Text style={{ color: "#4338CA", textAlign: "center", fontSize: 15, fontWeight: "500" }}>Create Account</Text>
       </TouchableOpacity>
     </View>
   );

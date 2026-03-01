@@ -52,7 +52,7 @@
 //       email: savedEmail, 
 //       pin: pin 
 //     });
-    
+
 //     return res.data;
 //   } catch (error) {
 //     console.error("💥 Error in pinLogin function:", error);
@@ -130,18 +130,18 @@ export const pinLogin = async (pin) => {
 
     console.log("🚀 Sending to backend - Email:", savedEmail, "PIN:", pin);
 
-    const res = await API.post("/auth/verify-pin", { 
-      email: savedEmail, 
-      pin: pin 
+    const res = await API.post("/auth/verify-pin", {
+      email: savedEmail,
+      pin: pin
     });
-    
+
     // ✅ FIX: Save userId from PIN login response
     if (res.data.user && res.data.user._id) {
       await saveItem("userId", res.data.user._id);
     } else if (res.data._id) {
       await saveItem("userId", res.data._id);
     }
-    
+
     // ✅ FIX: Save token if provided
     if (res.data.token) {
       await saveItem("token", res.data.token);
@@ -151,7 +151,7 @@ export const pinLogin = async (pin) => {
     if (res.data.user && res.data.user.role) {
       await saveItem("role", res.data.user.role);
     }
-    
+
     return res.data;
   } catch (error) {
     console.error("💥 Error in pinLogin function:", error);
@@ -166,6 +166,17 @@ export const setPin = async (email, pin) => {
     return res.data;
   } catch (error) {
     console.error("❌ Error in setPin API:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// 📝 Signup
+export const signupUser = async (userData) => {
+  try {
+    const res = await API.post("/auth/signup", userData);
+    return res.data;
+  } catch (error) {
+    console.error("❌ Error in signupUser API:", error.response?.data || error.message);
     throw error;
   }
 };

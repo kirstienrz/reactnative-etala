@@ -47,7 +47,7 @@ export default function LoginScreen({ navigation }) {
         await SecureStore.setItemAsync("token", data.token);
         await SecureStore.setItemAsync("email", email);
         await SecureStore.setItemAsync("hasPin", data.hasPin ? "true" : "false");
-        
+
         // Save userId
         const userId = data.user?._id || data._id;
         if (userId) {
@@ -176,6 +176,12 @@ export default function LoginScreen({ navigation }) {
           ) : (
             <Text style={styles.loginText}>Sign In</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate("SignupScreen")} style={{ marginTop: 24 }}>
+          <Text style={{ textAlign: 'center', color: '#6B7280' }}>
+            Don't have an account? <Text style={{ color: '#4338CA', fontWeight: '700' }}>Sign Up</Text>
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

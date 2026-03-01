@@ -14,6 +14,7 @@ import ProtectedRoute from "./src/components/ProtectedRoute";
 // Screens
 import LandingPage from "./src/screens/LandingPage";
 import LoginScreen from "./src/screens/LoginScreen";
+import SignupScreen from "./src/screens/SignupScreen";
 import ChangePasswordScreen from "./src/screens/ChangePasswordScreen";
 import SetPinScreen from "./src/screens/SetPinScreen";
 import PinLoginScreen from "./src/screens/PinLoginScreen";
@@ -87,6 +88,7 @@ export default function App() {
               {/* Startup & Auth */}
               <Stack.Screen name="StartupScreen" component={StartupScreen} options={{ headerShown: false }} />
               <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="SignupScreen" component={SignupScreen} options={{ headerShown: false }} />
               <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} options={{ headerShown: false }} />
               <Stack.Screen name="SetPinScreen" component={SetPinScreen} options={{ headerShown: false }} />
               <Stack.Screen name="PinLoginScreen" component={PinLoginScreen} options={{ headerShown: false }} />
@@ -139,7 +141,7 @@ export default function App() {
               <Stack.Screen name="Resources" component={Resources} />
 
               {/* Bottom Navigation */}
-              <Stack.Screen name="ReportHistoryScreen"options={{ headerShown: false }}>
+              <Stack.Screen name="ReportHistoryScreen" options={{ headerShown: false }}>
                 {(props) => (
                   <ProtectedRoute {...props} allowedRoles={["user", "admin", "superadmin"]}>
                     <ReportHistoryScreen {...props} />
@@ -176,16 +178,16 @@ export default function App() {
               {/* Dashboards */}
               <Stack.Screen name="SuperadminDashboard" options={{ headerShown: false }}>
                 {(props) => (
-                  <ProtectedRoute 
-                    {...props} 
-                    allowedRoles={["superadmin"]} 
+                  <ProtectedRoute
+                    {...props}
+                    allowedRoles={["superadmin"]}
                     setUser={props.setUser}   // <-- ADD THIS
                   >
                     <SuperAdminSidebar {...props} />
                   </ProtectedRoute>
                 )}
               </Stack.Screen>
-            
+
             </Stack.Navigator>
           </SafeAreaView>
         </NavigationContainer>
