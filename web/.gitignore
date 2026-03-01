@@ -1,3 +1,8 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
 # Logs
 logs
 *.log
@@ -22,3 +27,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Capacitor / Android
+# We track the android folder but ignore local/build files
+android/build/
+android/app/build/
+android/local.properties
+android/.gradle/
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/captures/
+node_modules/
+dist/
+
+# Capacitor specific
+capacitor.config.json.local
+
+

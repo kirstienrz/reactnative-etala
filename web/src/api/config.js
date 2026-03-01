@@ -1,28 +1,22 @@
 import axios from "axios";
 import { getToken } from "./auth";
+import { Capacitor } from "@capacitor/core";
 
-// 🔥 Detect environment automatically
-const isLocal = window.location.hostname === "localhost";
-
-const baseURL = isLocal
-  ? "http://localhost:5000/api"
-  : "https://reactnative-etala.onrender.com/api"; // change to backend domain in prod
+const isMobileApp = Capacitor.isNative; // true if running as mobile app
+const baseURL = isMobileApp
+  ? import.meta.env.VITE_API_URL_MOBILE
+  : import.meta.env.VITE_API_URL;
 
 const API = axios.create({
   baseURL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  withCredentials: true
+  headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
-// 🔐 Automatically attach JWT
 API.interceptors.request.use(
   (config) => {
     const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error)

@@ -20,13 +20,27 @@ require("./utils/sendAdminReminder"); // <- ADD THIS HERE
 // ================= CORS CONFIG =================
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost",        // Para sa Capacitor/Mobile local test
+  "capacitor://localhost",    // Origin ng Capacitor sa iOS/Android
   "https://etala.vercel.app",
-  process.env.FRONTEND_URL,
+  "https://reactnative-etala.onrender.com",
 ];
 
-// Allow all preflight requests FIRST (very important for Vercel)
+// Add FRONTEND_URL if it exists in .env
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
+}
+
+// Global CORS Middleware
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  const origin = req.headers.origin;
+
+  // I-allow lahat kung walang origin (Mobile Apps) o kung nasa allowed list
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin || "*");
+  }
+
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -37,22 +51,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// Express CORS
+// Express CORS options
 app.use(cors({
   origin: function (origin, callback) {
-    // allow Postman, mobile apps, or undefined origin
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
+    // allow Postman, mobile apps, or allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-
-    // IMPORTANT: do not block in production serverless
+    // Block others in production (optional, can be true for debugging)
     return callback(null, true);
   },
   credentials: true,
-  methods: ["GET","POST","PUT","DELETE","OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type","Authorization"]
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 // ================= MIDDLEWARES =================
@@ -64,7 +75,13 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // ================= SOCKET.IO =================
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Set to true to allow debugging, or restrict later
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true
   }

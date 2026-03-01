@@ -1,7 +1,7 @@
 // src/api/socket.js
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "https://reactnative-etala.onrender.com/";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 
 class SocketService {
   constructor() {
@@ -94,42 +94,42 @@ class SocketService {
     }
   }
 
-onNewMessage(callback) {
-  if (this.socket) {
-    // ✅ Don't remove existing listeners, just add
-    this.socket.on("new-message", callback);
+  onNewMessage(callback) {
+    if (this.socket) {
+      // ✅ Don't remove existing listeners, just add
+      this.socket.on("new-message", callback);
+    }
   }
-}
 
-onTicketUpdated(callback) {
-  if (this.socket) {
-    this.socket.on("ticket-updated", callback);
+  onTicketUpdated(callback) {
+    if (this.socket) {
+      this.socket.on("ticket-updated", callback);
+    }
   }
-}
 
-onTicketClosed(callback) {
-  if (this.socket) {
-    this.socket.on("ticket-closed", callback);
+  onTicketClosed(callback) {
+    if (this.socket) {
+      this.socket.on("ticket-closed", callback);
+    }
   }
-}
 
-onTicketReopened(callback) {
-  if (this.socket) {
-    this.socket.on("ticket-reopened", callback);
+  onTicketReopened(callback) {
+    if (this.socket) {
+      this.socket.on("ticket-reopened", callback);
+    }
   }
-}
 
-onMessagesRead(callback) {
-  if (this.socket) {
-    this.socket.on("messages-read", callback);
+  onMessagesRead(callback) {
+    if (this.socket) {
+      this.socket.on("messages-read", callback);
+    }
   }
-}
 
-onUserTyping(callback) {
-  if (this.socket) {
-    this.socket.on("user-typing", callback);
+  onUserTyping(callback) {
+    if (this.socket) {
+      this.socket.on("user-typing", callback);
+    }
   }
-}
 
   removeAllListeners() {
     if (this.socket) {
