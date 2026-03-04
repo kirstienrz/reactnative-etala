@@ -25,18 +25,26 @@ export const uploadInfographics = async (formData) => {
   return res.data;
 };
 
+// ✏️ UPDATE an existing infographic
+export const updateInfographic = async (id, formData) => {
+  const res = await API.put(`/infographics/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};
+
 // 🗃️ ARCHIVE an infographic
 export const archiveInfographic = async (id) => {
-  const res = await API.patch(`/infographics/${id}/status`, { 
-    status: 'archived' 
+  const res = await API.patch(`/infographics/${id}/status`, {
+    status: 'archived'
   });
   return res.data;
 };
 
 // 🔄 RESTORE an archived infographic
 export const restoreInfographic = async (id) => {
-  const res = await API.patch(`/infographics/${id}/status`, { 
-    status: 'active' 
+  const res = await API.patch(`/infographics/${id}/status`, {
+    status: 'active'
   });
   return res.data;
 };

@@ -379,6 +379,48 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* App Download Section */}
+      <section className="py-24 bg-violet-900 text-white overflow-hidden relative">
+        <div className="max-w-7xl mx-auto px-10 relative z-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-16">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-violet-200 mb-6 backdrop-blur-md border border-white/10">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-xs font-black uppercase tracking-widest">Mobile App Available</span>
+              </div>
+              <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight">Stay Connected<br />Everywhere</h2>
+              <p className="text-xl text-violet-100 mb-10 max-w-2xl leading-relaxed">
+                Download the ETALA mobile app to report issues on the go.
+              </p>
+              <div className="flex flex-wrap gap-8 items-center">
+                <div className="flex items-center gap-3">
+                </div>
+              </div>
+            </div>
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-r from-violet-400 to-purple-400 rounded-[2.5rem] opacity-20 blur-2xl group-hover:opacity-40 transition duration-1000"></div>
+              <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center relative border border-white/20">
+                <div className="bg-gray-50 p-4 rounded-2xl mb-6 shadow-inner">
+                  <img
+                    src="/assets/qr.png"
+                    alt="Scan this QR to download our app"
+                    className="w-48 h-48 md:w-56 md:h-56 object-contain"
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-slate-900 font-black text-xl mb-1">
+                    Scan to Download
+                  </p>
+                  <p className="text-slate-500 font-medium">
+                    Available for Android
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
 
       {/* Report Section */}

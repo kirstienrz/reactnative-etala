@@ -645,7 +645,7 @@ const sendReportPDF = async (req, res) => {
     // Send email with PDF attachment using the updated sendEmail format
     await sendEmail({
       to: userEmail,
-      subject: "Your TUP GAD Report Copy",
+      subject: "Your TUPT GAD Report Copy",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
           <!-- Header -->
@@ -700,7 +700,7 @@ const sendReportPDF = async (req, res) => {
             </p>
             <p style="color: #94a3b8; font-size: 11px; margin: 15px 0 0 0;">
               Technological University of the Philippines<br>
-              Ayala Blvd, Ermita, Manila, Metro Manila
+              Taguig City, Philippines
             </p>
           </div>
         </div>
@@ -761,7 +761,7 @@ const getReportAnalytics = async (req, res) => {
 
     // Incident type distribution
     const incidentTypeCounts = {};
-    
+
     // Department distribution
     const departmentCounts = {};
 
@@ -813,7 +813,7 @@ const getReportAnalytics = async (req, res) => {
       const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = month.toLocaleString('default', { month: 'short' });
       months.push(monthName);
-      
+
       // Start and end of month
       const startOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
       const endOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0);
@@ -867,8 +867,8 @@ const getReportAnalytics = async (req, res) => {
 
     // Resolution rate (percentage of closed cases)
     const totalClosed = statusCounts['Case Closed'] || 0;
-    const resolutionRate = reports.length > 0 
-      ? Math.round((totalClosed / reports.length) * 100) 
+    const resolutionRate = reports.length > 0
+      ? Math.round((totalClosed / reports.length) * 100)
       : 0;
 
     res.json({
@@ -882,6 +882,7 @@ const getReportAnalytics = async (req, res) => {
           moderateReports: severityCounts['Moderate'],
           mildReports: severityCounts['Mild'],
           pendingAnalysis: severityCounts['Unanalyzed'],
+          pendingReportsCount: await Report.countDocuments({ status: "Pending", archived: false }),
           avgResponseDays: avgResponseDays,
           resolutionRate: resolutionRate
         },
@@ -922,8 +923,8 @@ const getReportAnalytics = async (req, res) => {
         },
         performanceMetrics: {
           // Average reports per day this month
-          avgDailyReports: monthCounts[monthCounts.length - 1] > 0 
-            ? Math.round(monthCounts[monthCounts.length - 1] / 30) 
+          avgDailyReports: monthCounts[monthCounts.length - 1] > 0
+            ? Math.round(monthCounts[monthCounts.length - 1] / 30)
             : 0,
           // Peak month
           peakMonth: months[monthCounts.indexOf(Math.max(...monthCounts))],

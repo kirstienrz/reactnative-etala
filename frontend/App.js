@@ -24,6 +24,7 @@ import Resources from "./src/screens/user/resourcesView";
 import OlderAnnouncements from "./src/screens/user/older-announcements";
 import ConfirmPinScreen from "./src/screens/ConfirmPinScreen";
 import AuthLoadingScreen from "./src/screens/AuthLoadingScreen";
+import ForgotPasswordScreen from "./src/screens/ForgotPasswordScreen";
 import FloatingChatbot from "./src/components/FloatingChatbot";
 
 // Services
@@ -94,6 +95,7 @@ export default function App() {
               <Stack.Screen name="PinLoginScreen" component={PinLoginScreen} options={{ headerShown: false }} />
               <Stack.Screen name="ConfirmPinScreen" component={ConfirmPinScreen} options={{ headerShown: false }} />
               <Stack.Screen name="AuthLoadingScreen" component={AuthLoadingScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} options={{ headerShown: false }} />
               <Stack.Screen name="LandingPage" component={LandingPage} options={{ headerShown: false }} />
 
               {/* Protected User Screens */}

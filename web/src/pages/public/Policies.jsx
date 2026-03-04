@@ -7,7 +7,8 @@ import {
     X,
     Calendar,
     User,
-    File
+    File,
+    Eye
 } from "lucide-react";
 import { getDocuments } from "../../api/documents";
 
@@ -26,6 +27,7 @@ const UserDocuments = () => {
     const [selectedTypeFilter, setSelectedTypeFilter] = useState("all");
     const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [selectedPdf, setSelectedPdf] = useState(null);
 
     // ========================= FETCH =========================
     useEffect(() => {
@@ -46,19 +48,30 @@ const UserDocuments = () => {
         }
     };
 
+    // Robust PDF Embed URL generator
+    const getEmbedUrl = (url) => {
+        if (!url) return "";
+        // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
+        if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+            return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        }
+        // For 'image' resource type PDFs, standard URL works
+        return `${url}#toolbar=0`;
+    };
+
     // ========================= FILTERING =========================
     useEffect(() => {
         const filtered = documents.filter((doc) => {
             // Search filter
-            const matchesSearch = 
+            const matchesSearch =
                 doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 doc.document_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (doc.issued_by && doc.issued_by.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 (doc.description && doc.description.toLowerCase().includes(searchQuery.toLowerCase()));
-            
+
             // Type filter
             const matchesType = selectedTypeFilter === "all" || doc.document_type === selectedTypeFilter;
-            
+
             return matchesSearch && matchesType;
         });
         setFilteredDocuments(filtered);
@@ -86,10 +99,10 @@ const UserDocuments = () => {
         return found ? found.label : type;
     };
 
-    // Download file
-    const handleDownload = (fileUrl, title) => {
-        if (fileUrl) {
-            window.open(fileUrl, '_blank');
+    // View file
+    const handleView = (doc) => {
+        if (doc.file_url) {
+            setSelectedPdf(doc);
         }
     };
 
@@ -98,7 +111,7 @@ const UserDocuments = () => {
             {/* Hero Section */}
             <section className="relative py-20 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 overflow-hidden">
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2djhoLTh2LThoOHptLTE2IDB2OGgtOHYtOGg4em0xNi0xNnY4aC04di04aDh6bS0xNiAwdjhoLTh2LThoOHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
-                
+
                 <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
                     <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
                         Policies & Issuances
@@ -116,17 +129,17 @@ const UserDocuments = () => {
                     <h2 className="text-3xl font-bold text-slate-900 mb-6">Document Overview</h2>
                     <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed space-y-4">
                         <p>
-                            This portal provides access to all official documents and issuances of TUP Taguig. 
-                            These include policies, circulars, resolutions, memoranda, and office orders that 
+                            This portal provides access to all official documents and issuances of TUP Taguig.
+                            These include policies, circulars, resolutions, memoranda, and office orders that
                             govern the operations and activities of the university community.
                         </p>
                         <p>
-                            All documents are organized by type and can be filtered for easier navigation. 
-                            Each document includes important details such as the issuing authority, date of issuance, 
+                            All documents are organized by type and can be filtered for easier navigation.
+                            Each document includes important details such as the issuing authority, date of issuance,
                             and a brief description to help you understand its purpose and applicability.
                         </p>
                         <p>
-                            For questions or clarifications regarding any document, please contact the 
+                            For questions or clarifications regarding any document, please contact the
                             Office of the President or the relevant department mentioned in the document.
                         </p>
                     </div>
@@ -182,10 +195,10 @@ const UserDocuments = () => {
                                         </span>
                                     )}
                                 </button>
-                                
+
                                 {filterDropdownOpen && (
                                     <>
-                                        <div 
+                                        <div
                                             className="fixed inset-0 z-10"
                                             onClick={() => setFilterDropdownOpen(false)}
                                         />
@@ -216,7 +229,7 @@ const UserDocuments = () => {
                                                         className={`w-full text-left px-3 py-2 rounded ${selectedTypeFilter === type.value
                                                             ? "bg-violet-50 text-violet-700"
                                                             : "hover:bg-slate-50 text-slate-700"
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {type.label}
                                                     </button>
@@ -283,8 +296,8 @@ const UserDocuments = () => {
                             </div>
                             <h3 className="text-xl font-semibold text-slate-900 mb-2">No documents found</h3>
                             <p className="text-slate-600 mb-6">
-                                {searchQuery || selectedTypeFilter !== "all" 
-                                    ? "No documents match your search or filter criteria." 
+                                {searchQuery || selectedTypeFilter !== "all"
+                                    ? "No documents match your search or filter criteria."
                                     : "No documents available at the moment."}
                             </p>
                             {(searchQuery || selectedTypeFilter !== "all") && (
@@ -312,16 +325,15 @@ const UserDocuments = () => {
                                                 {doc.document_type === "memorandum" && <FileText className="w-7 h-7 text-amber-600" />}
                                                 {doc.document_type === "office_order" && <FileText className="w-7 h-7 text-rose-600" />}
                                             </div>
-                                            
+
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                                                        doc.document_type === "policy" ? "bg-violet-100 text-violet-800" :
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${doc.document_type === "policy" ? "bg-violet-100 text-violet-800" :
                                                         doc.document_type === "circular" ? "bg-blue-100 text-blue-800" :
-                                                        doc.document_type === "resolution" ? "bg-emerald-100 text-emerald-800" :
-                                                        doc.document_type === "memorandum" ? "bg-amber-100 text-amber-800" :
-                                                        "bg-rose-100 text-rose-800"
-                                                    }`}>
+                                                            doc.document_type === "resolution" ? "bg-emerald-100 text-emerald-800" :
+                                                                doc.document_type === "memorandum" ? "bg-amber-100 text-amber-800" :
+                                                                    "bg-rose-100 text-rose-800"
+                                                        }`}>
                                                         {getDocumentTypeLabel(doc.document_type)}
                                                     </span>
                                                 </div>
@@ -329,7 +341,7 @@ const UserDocuments = () => {
                                                 <h3 className="text-xl font-bold text-slate-900 mb-3">
                                                     {doc.title}
                                                 </h3>
-                                                
+
                                                 {doc.description && (
                                                     <p className="text-slate-600 leading-relaxed mb-4">
                                                         {doc.description}
@@ -361,11 +373,11 @@ const UserDocuments = () => {
 
                                         {doc.file_url && (
                                             <button
-                                                onClick={() => handleDownload(doc.file_url, doc.title)}
+                                                onClick={() => handleView(doc)}
                                                 className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white px-5 py-3 rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-medium text-sm flex-shrink-0 self-start"
                                             >
-                                                <Download className="w-4 h-4" />
-                                                Download
+                                                <Eye className="w-4 h-4" />
+                                                View Document
                                             </button>
                                         )}
                                     </div>
@@ -380,13 +392,12 @@ const UserDocuments = () => {
                         <div className="flex flex-wrap gap-3">
                             {DOCUMENT_TYPES.map((type) => (
                                 <div key={type.value} className="flex items-center gap-2">
-                                    <div className={`w-3 h-3 rounded ${
-                                        type.value === "policy" ? "bg-violet-500" :
+                                    <div className={`w-3 h-3 rounded ${type.value === "policy" ? "bg-violet-500" :
                                         type.value === "circular" ? "bg-blue-500" :
-                                        type.value === "resolution" ? "bg-emerald-500" :
-                                        type.value === "memorandum" ? "bg-amber-500" :
-                                        "bg-rose-500"
-                                    }`}></div>
+                                            type.value === "resolution" ? "bg-emerald-500" :
+                                                type.value === "memorandum" ? "bg-amber-500" :
+                                                    "bg-rose-500"
+                                        }`}></div>
                                     <span className="text-sm text-slate-600">{type.label}</span>
                                 </div>
                             ))}
@@ -394,6 +405,46 @@ const UserDocuments = () => {
                     </div>
                 </div>
             </section>
+
+            {/* PDF Viewer Modal */}
+            {selectedPdf && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900">
+                            <div>
+                                <h3 className="text-xl font-bold truncate max-w-xl">{selectedPdf.title}</h3>
+                                <p className="text-sm text-slate-500 capitalize">{selectedPdf.document_type} • Resource</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedPdf(null)}
+                                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+                                title="Close"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="flex-1 bg-slate-100 flex items-center justify-center relative">
+                            <iframe
+                                src={getEmbedUrl(selectedPdf.file_url)}
+                                className="w-full h-full border-none"
+                                title={selectedPdf.title}
+                            />
+
+                            <div className="absolute bottom-6 right-6 flex gap-3">
+                                <a
+                                    href={selectedPdf.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-4 py-2 bg-white/90 backdrop-blur-md text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-white transition shadow-lg flex items-center gap-2"
+                                >
+                                    <Download size={16} />
+                                    Download PDF
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 };

@@ -6,7 +6,7 @@ export const generateReportPDF = ({ formData, ticketNumber, isAnonymous }) => {
 
   // ===== HEADER =====
   doc.setFontSize(16);
-  doc.text("TUP GAD INCIDENT REPORT", 105, 20, { align: "center" });
+  doc.text("TUPT GAD INCIDENT REPORT", 105, 20, { align: "center" });
 
   doc.setFontSize(10);
   doc.text("Technological University of the Philippines", 105, 26, { align: "center" });

@@ -4,6 +4,7 @@ import {
     getInfographics,
     getArchivedInfographics,
     uploadInfographics,
+    updateInfographic,
     archiveInfographic,
     restoreInfographic,
     deleteInfographic
@@ -48,7 +49,7 @@ export default function InfographicsAdmin() {
         }
     };
 
-       useEffect(() => {
+    useEffect(() => {
         fetchInfographics();
     }, [viewArchived, refreshTrigger]); // 
 
@@ -161,45 +162,53 @@ export default function InfographicsAdmin() {
         }
     };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-    if (!formData.academicYear) {
-        alert('Please select an academic year!');
-        return;
-    }
+        if (!formData.academicYear) {
+            alert('Please select an academic year!');
+            return;
+        }
 
-    if (previewImages.length === 0) {
-        alert('Please upload at least one image!');
-        return;
-    }
+        // Only require image for new uploads
+        if (!editingItem && previewImages.length === 0) {
+            alert('Please upload at least one image!');
+            return;
+        }
 
-    setIsUploading(true);
+        setIsUploading(true);
 
-    const form = new FormData();
-    form.append('academicYear', formData.academicYear);
-    form.append('title', formData.title || '');
-    formData.imageFiles.forEach(file => form.append('images', file));
+        const form = new FormData();
+        form.append('academicYear', formData.academicYear);
+        form.append('title', formData.title || '');
 
-    try {
-        await uploadInfographics(form);
-        setFormData({ academicYear: '', title: '', imageFiles: [], status: 'active' });
-        setPreviewImages([]);
-        setShowModal(false);
+        if (formData.imageFiles.length > 0) {
+            if (editingItem) {
+                // Backend PUT uses upload.single('image')
+                form.append('image', formData.imageFiles[0]);
+            } else {
+                // Backend POST uses upload.array('images')
+                formData.imageFiles.forEach(file => form.append('images', file));
+            }
+        }
 
-        // Wait a bit for the server to process, then refresh
-        setTimeout(() => {
+        try {
+            if (editingItem) {
+                await updateInfographic(editingItem._id, form);
+            } else {
+                await uploadInfographics(form);
+            }
+
+            closeModal();
             fetchInfographics();
-        }, 500);
-        
-        alert('Infographics uploaded successfully!');
-    } catch (error) {
-        console.error('Upload failed:', error);
-        alert('Upload failed. Please try again.');
-    } finally {
-        setIsUploading(false);
-    }
-};
+            alert(`Infographics ${editingItem ? 'updated' : 'uploaded'} successfully!`);
+        } catch (error) {
+            console.error('Operation failed:', error);
+            alert(`Failed to ${editingItem ? 'update' : 'upload'} infographics. Please try again.`);
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const handleEdit = (item) => {
         setEditingItem(item);
@@ -263,7 +272,7 @@ export default function InfographicsAdmin() {
         if (selectedImages.size === filteredAndSortedImages.length) {
             setSelectedImages(new Set());
         } else {
-            setSelectedImages(new Set(filteredAndSortedImages.map(img => img.id)));
+            setSelectedImages(new Set(filteredAndSortedImages.map(img => img._id)));
         }
     };
 
@@ -305,7 +314,7 @@ export default function InfographicsAdmin() {
                 <div className="max-w-7xl mx-auto px-6 py-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Higher Education Institutions Data</h1>
+                            <h1 className="text-3xl font-bold text-gray-900">Infographics</h1>
                             <p className="text-gray-600 mt-1">
                                 {viewArchived
                                     ? 'View and restore archived infographics'
@@ -427,15 +436,15 @@ export default function InfographicsAdmin() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {groupedInfographics[year].map(item => (
                                     <div
-                                        key={item.id}
-                                        className={`relative bg-white rounded-lg border overflow-hidden hover:shadow-lg transition ${selectedImages.has(item.id) ? 'ring-2 ring-blue-500' : ''
+                                        key={item._id}
+                                        className={`relative bg-white rounded-lg border overflow-hidden hover:shadow-lg transition ${selectedImages.has(item._id) ? 'ring-2 ring-blue-500' : ''
                                             }`}
                                     >
                                         <div className="absolute top-2 left-2 z-10">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedImages.has(item.id)}
-                                                onChange={() => toggleImageSelection(item.id)}
+                                                checked={selectedImages.has(item._id)}
+                                                onChange={() => toggleImageSelection(item._id)}
                                                 className="w-5 h-5 cursor-pointer"
                                             />
                                         </div>
@@ -455,12 +464,22 @@ export default function InfographicsAdmin() {
                                                 </div>
                                                 <div className="flex gap-1">
                                                     {viewArchived ? (
-                                                        <button
-                                                            onClick={() => handleRestore(item.id)}
-                                                            className="bg-green-500 hover:bg-green-600 px-2 py-1 rounded text-xs font-medium transition"
-                                                        >
-                                                            <RefreshCw size={12} className="inline" />
-                                                        </button>
+                                                        <div className="flex gap-1 font-medium">
+                                                            <button
+                                                                onClick={() => handleRestore(item._id)}
+                                                                className="bg-green-500 hover:bg-green-600 px-2 py-1 rounded text-xs transition flex items-center gap-1"
+                                                                title="Restore"
+                                                            >
+                                                                <RefreshCw size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(item._id)}
+                                                                className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-xs transition flex items-center gap-1"
+                                                                title="Delete Permanently"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        </div>
                                                     ) : (
                                                         <>
                                                             <button
@@ -470,7 +489,7 @@ export default function InfographicsAdmin() {
                                                                 <Edit2 size={12} />
                                                             </button>
                                                             <button
-                                                                onClick={() => handleArchive(item.id)}
+                                                                onClick={() => handleArchive(item._id)}
                                                                 className="bg-yellow-500 hover:bg-yellow-600 px-2 py-1 rounded text-xs font-medium transition"
                                                             >
                                                                 <Archive size={12} />

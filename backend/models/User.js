@@ -59,6 +59,9 @@ const userSchema = new mongoose.Schema({
     used: { type: Boolean, default: false }
   },
 
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+
   isArchived: { type: Boolean, default: false },
 }, 
 // ✅ ADD THIS: Automatically adds createdAt and updatedAt fields

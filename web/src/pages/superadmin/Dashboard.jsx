@@ -1,43 +1,52 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getUserAnalytics } from '../../api/user';
 import { getReportAnalytics } from '../../api/report';
-import { 
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
-  AreaChart, Area 
+  AreaChart, Area
 } from 'recharts';
-import { 
-  Users, UserCheck, FileText, AlertTriangle, Shield, 
-  MessageSquare, Activity, TrendingUp, Clock, CheckCircle, 
+import {
+  Users, UserCheck, FileText, AlertTriangle, Shield,
+  MessageSquare, Activity, TrendingUp, Clock, CheckCircle,
   AlertCircle, Bell, PieChart as PieChartIcon, Archive,
-  Target, TrendingDown, BarChart3, Calendar
+  Target, TrendingDown, BarChart3, Calendar, X
 } from 'lucide-react';
 
 const SuperAdminDashboard = () => {
+  const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeChart, setActiveChart] = useState('userDept');
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'reports', 'comparison'
+  const [showNotification, setShowNotification] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const [userRes, reportRes] = await Promise.all([
           getUserAnalytics(),
           getReportAnalytics()
         ]);
-        
-        console.log('🔍 User Data:', userRes);
-        console.log('🔍 Report Data:', reportRes);
-        
+
         setUserData(userRes);
         setReportData(reportRes);
-        
+
+        // Show notification for new reports if they exist and we haven't notified yet this session
+        const pendingCount = reportRes?.data?.overview?.pendingReportsCount || 0;
+        const hasBeenNotified = sessionStorage.getItem('sa_notified');
+
+        if (pendingCount > 0 && !hasBeenNotified) {
+          setShowNotification(true);
+          sessionStorage.setItem('sa_notified', 'true');
+        }
+
       } catch (err) {
         console.error('❌ Error fetching analytics:', err);
         setError('Failed to load dashboard data. Please try again.');
@@ -66,7 +75,7 @@ const SuperAdminDashboard = () => {
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-red-800 text-center mb-2">Failed to Load Data</h3>
           <p className="text-red-600 text-center mb-4">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
@@ -84,10 +93,10 @@ const SuperAdminDashboard = () => {
 
   // User statistics
   const userOverview = userAnalytics?.overview || {};
-  const userTypeData = userAnalytics?.userType 
+  const userTypeData = userAnalytics?.userType
     ? Object.entries(userAnalytics.userType).map(([name, value]) => ({ name, value }))
     : [];
-  const userDeptData = userAnalytics?.department 
+  const userDeptData = userAnalytics?.department
     ? Object.entries(userAnalytics.department).map(([name, value]) => ({ name, value }))
     : [];
   const userTrendData = userAnalytics?.trend?.months?.map((month, i) => ({
@@ -107,31 +116,31 @@ const SuperAdminDashboard = () => {
   const resolutionRate = reportOverview.resolutionRate || 0;
 
   // Status data
-  const statusData = reportAnalytics?.byStatus 
-    ? Object.entries(reportAnalytics.byStatus).map(([name, value]) => ({ 
-        name, 
-        value,
-        color: name === 'Case Closed' ? '#10b981' :
-               name === 'For Interview' ? '#3b82f6' :
-               name === 'For Appointment' ? '#8b5cf6' :
-               name === 'For Referral' ? '#ec4899' :
-               name === 'For Queuing' ? '#f59e0b' :
-               name === 'Internal' ? '#8b5cf6' :
-               name === 'External' ? '#f97316' :
-               '#94a3b8'
-      })).filter(item => item.value > 0)
+  const statusData = reportAnalytics?.byStatus
+    ? Object.entries(reportAnalytics.byStatus).map(([name, value]) => ({
+      name,
+      value,
+      color: name === 'Case Closed' ? '#10b981' :
+        name === 'For Interview' ? '#3b82f6' :
+          name === 'For Appointment' ? '#8b5cf6' :
+            name === 'For Referral' ? '#ec4899' :
+              name === 'For Queuing' ? '#f59e0b' :
+                name === 'Internal' ? '#8b5cf6' :
+                  name === 'External' ? '#f97316' :
+                    '#94a3b8'
+    })).filter(item => item.value > 0)
     : [];
 
   // Severity data
-  const severityData = reportAnalytics?.bySeverity 
-    ? Object.entries(reportAnalytics.bySeverity).map(([name, value]) => ({ 
-        name, 
-        value,
-        color: name === 'Severe' ? '#ef4444' :
-               name === 'Moderate' ? '#f59e0b' :
-               name === 'Mild' ? '#10b981' :
-               '#94a3b8'
-      })).filter(item => item.value > 0)
+  const severityData = reportAnalytics?.bySeverity
+    ? Object.entries(reportAnalytics.bySeverity).map(([name, value]) => ({
+      name,
+      value,
+      color: name === 'Severe' ? '#ef4444' :
+        name === 'Moderate' ? '#f59e0b' :
+          name === 'Mild' ? '#10b981' :
+            '#94a3b8'
+    })).filter(item => item.value > 0)
     : [];
 
   // Monthly trend data
@@ -177,11 +186,11 @@ const SuperAdminDashboard = () => {
           </div>
           <div className="flex items-center space-x-4">
             <Calendar className="w-6 h-6" />
-            <span>{new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            <span>{new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             })}</span>
           </div>
         </div>
@@ -191,24 +200,24 @@ const SuperAdminDashboard = () => {
       <div className="flex space-x-2 border-b">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 font-medium ${activeTab === 'overview' 
-            ? 'border-b-2 border-blue-600 text-blue-600' 
+          className={`px-4 py-2 font-medium ${activeTab === 'overview'
+            ? 'border-b-2 border-blue-600 text-blue-600'
             : 'text-gray-500 hover:text-gray-700'}`}
         >
           Overview
         </button>
         <button
           onClick={() => setActiveTab('reports')}
-          className={`px-4 py-2 font-medium ${activeTab === 'reports' 
-            ? 'border-b-2 border-blue-600 text-blue-600' 
+          className={`px-4 py-2 font-medium ${activeTab === 'reports'
+            ? 'border-b-2 border-blue-600 text-blue-600'
             : 'text-gray-500 hover:text-gray-700'}`}
         >
           Reports Analytics
         </button>
         <button
           onClick={() => setActiveTab('comparison')}
-          className={`px-4 py-2 font-medium ${activeTab === 'comparison' 
-            ? 'border-b-2 border-blue-600 text-blue-600' 
+          className={`px-4 py-2 font-medium ${activeTab === 'comparison'
+            ? 'border-b-2 border-blue-600 text-blue-600'
             : 'text-gray-500 hover:text-gray-700'}`}
         >
           Comparison
@@ -290,19 +299,19 @@ const SuperAdminDashboard = () => {
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip />
-                      <Area 
-                        type="monotone" 
-                        dataKey="reports" 
-                        stroke="#3b82f6" 
-                        fill="#3b82f6" 
+                      <Area
+                        type="monotone"
+                        dataKey="reports"
+                        stroke="#3b82f6"
+                        fill="#3b82f6"
                         fillOpacity={0.2}
                         name="Total Reports"
                       />
-                      <Area 
-                        type="monotone" 
-                        dataKey="archived" 
-                        stroke="#94a3b8" 
-                        fill="#94a3b8" 
+                      <Area
+                        type="monotone"
+                        dataKey="archived"
+                        stroke="#94a3b8"
+                        fill="#94a3b8"
                         fillOpacity={0.2}
                         name="Archived Reports"
                       />
@@ -365,7 +374,7 @@ const SuperAdminDashboard = () => {
                 </span>
               </div>
             </div>
-            
+
             <div className="space-y-3 max-h-80 overflow-y-auto">
               {recentReports.length > 0 ? (
                 recentReports.map((report, index) => (
@@ -373,20 +382,18 @@ const SuperAdminDashboard = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="font-medium text-gray-900">{report.ticketNumber}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          report.caseStatus === 'Case Closed' ? 'bg-green-100 text-green-800' :
+                        <span className={`text-xs px-2 py-1 rounded-full ${report.caseStatus === 'Case Closed' ? 'bg-green-100 text-green-800' :
                           report.caseStatus === 'For Interview' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {report.caseStatus || 'Pending'}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 truncate">{report.incidentDescription}</p>
                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                        <span className={`font-medium ${
-                          report.severity === 'Severe' ? 'text-red-600' :
+                        <span className={`font-medium ${report.severity === 'Severe' ? 'text-red-600' :
                           report.severity === 'Moderate' ? 'text-yellow-600' : 'text-green-600'
-                        }`}>
+                          }`}>
                           Severity: {report.severity || 'Unanalyzed'}
                         </span>
                         <span>Submitted: {new Date(report.submittedAt).toLocaleDateString()}</span>
@@ -419,18 +426,18 @@ const SuperAdminDashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topDeptData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45} 
-                        textAnchor="end" 
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
                         height={60}
                         fontSize={12}
                       />
                       <YAxis />
                       <Tooltip />
-                      <Bar 
-                        dataKey="value" 
-                        fill="#8b5cf6" 
+                      <Bar
+                        dataKey="value"
+                        fill="#8b5cf6"
                         radius={[4, 4, 0, 0]}
                         name="Reports"
                       />
@@ -455,18 +462,18 @@ const SuperAdminDashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topIncidentData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45} 
-                        textAnchor="end" 
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
                         height={60}
                         fontSize={12}
                       />
                       <YAxis />
                       <Tooltip />
-                      <Bar 
-                        dataKey="value" 
-                        fill="#3b82f6" 
+                      <Bar
+                        dataKey="value"
+                        fill="#3b82f6"
                         radius={[4, 4, 0, 0]}
                         name="Incidents"
                       />
@@ -531,10 +538,10 @@ const SuperAdminDashboard = () => {
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="users" 
-                        stroke="#3b82f6" 
+                      <Line
+                        type="monotone"
+                        dataKey="users"
+                        stroke="#3b82f6"
                         strokeWidth={2}
                         dot={{ r: 4 }}
                         activeDot={{ r: 6 }}
@@ -561,9 +568,9 @@ const SuperAdminDashboard = () => {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar 
-                        dataKey="value" 
-                        fill="#3b82f6" 
+                      <Bar
+                        dataKey="value"
+                        fill="#3b82f6"
                         radius={[4, 4, 0, 0]}
                         name="Users"
                       />
@@ -605,8 +612,8 @@ const SuperAdminDashboard = () => {
                 <div>
                   <p className="text-sm text-purple-700 font-medium">Report Growth</p>
                   <p className="text-2xl font-bold text-purple-700">
-                    {monthlyTrendData.length > 1 
-                      ? `${(((monthlyTrendData[monthlyTrendData.length-1]?.reports || 0) - (monthlyTrendData[0]?.reports || 0)) / (monthlyTrendData[0]?.reports || 1) * 100).toFixed(1)}%`
+                    {monthlyTrendData.length > 1
+                      ? `${(((monthlyTrendData[monthlyTrendData.length - 1]?.reports || 0) - (monthlyTrendData[0]?.reports || 0)) / (monthlyTrendData[0]?.reports || 1) * 100).toFixed(1)}%`
                       : '0%'}
                   </p>
                 </div>
@@ -621,6 +628,48 @@ const SuperAdminDashboard = () => {
                   <p className="text-2xl font-bold text-cyan-700">{avgDailyReports}</p>
                 </div>
                 <BarChart3 className="w-8 h-8 text-cyan-500 opacity-30" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Report Notification Modal */}
+      {showNotification && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform animate-in zoom-in-95 duration-300">
+            <div className="bg-gradient-to-r from-red-600 to-orange-600 p-6 text-white text-center relative">
+              <div className="absolute top-4 right-4 text-white/50 hover:text-white cursor-pointer" onClick={() => setShowNotification(false)}>
+                <X className="w-6 h-6" />
+              </div>
+              <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Bell className="w-8 h-8 animate-bounce" />
+              </div>
+              <h2 className="text-2xl font-bold">New Reports!</h2>
+              <p className="text-red-100">There are new reports that require your review.</p>
+            </div>
+
+            <div className="p-8 text-center">
+              <p className="text-gray-600 mb-6">
+                There are <span className="font-bold text-red-600 text-lg">{reportAnalytics?.overview?.pendingReportsCount || 0}</span> pending report{(reportAnalytics?.overview?.pendingReportsCount || 0) > 1 ? 's' : ''} in the system.
+              </p>
+
+              <div className="flex flex-col space-y-3">
+                <button
+                  onClick={() => {
+                    setShowNotification(false);
+                    navigate('/superadmin/reports');
+                  }}
+                  className="w-full py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-100 border-b-4 border-red-800 active:border-b-0 active:translate-y-1"
+                >
+                  Review Now
+                </button>
+                <button
+                  onClick={() => setShowNotification(false)}
+                  className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Maybe Later
+                </button>
               </div>
             </div>
           </div>

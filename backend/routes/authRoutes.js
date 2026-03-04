@@ -248,4 +248,78 @@ router.post("/verify-pin", async (req, res) => {
   }
 });
 
+// -------------------- FORGOT PASSWORD --------------------
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ msg: "User with this email does not exist." });
+    }
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString("hex");
+
+    // Set token and expiry (1 hour)
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
+    await user.save();
+
+    // Reset link
+    const resetLink = `https://etala.vercel.app/reset-password/${token}`;
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Password Reset Request",
+        html: `
+          <p>You requested a password reset. Please click the link below to reset your password:</p>
+          <p><a href="${resetLink}">${resetLink}</a></p>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you did not request this, please ignore this email.</p>
+        `,
+      });
+      res.json({ msg: "Password reset link sent to your email." });
+    } catch (emailErr) {
+      console.error("❌ Failed to send reset email:", emailErr);
+      res.status(500).json({ msg: "Could not send reset email. Please try again later." });
+    }
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+// -------------------- RESET PASSWORD --------------------
+router.post("/reset-password/:token", async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ msg: "Password reset token is invalid or has expired." });
+    }
+
+    // Set new password
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    user.isFirstLogin = false; // Mark that they've changed their password if needed
+
+    await user.save();
+
+    res.json({ msg: "Password has been reset successfully. You can now login with your new password." });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    res.status(500).send("Server error");
+  }
+});
+
 module.exports = router;

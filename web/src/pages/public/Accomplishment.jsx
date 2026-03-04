@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { Download, Eye, X, FileText } from "lucide-react";
 import { getAccomplishments } from "../../api/accomplishments"; // Axios API call
 
 const Accomplishment = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedPdf, setSelectedPdf] = useState(null);
 
   useEffect(() => {
     fetchReports();
@@ -22,6 +23,17 @@ const Accomplishment = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Robust PDF Embed URL generator
+  const getEmbedUrl = (url) => {
+    if (!url) return "";
+    // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
+    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    // For 'image' resource type PDFs, standard URL works
+    return `${url}#toolbar=0`;
   };
 
   return (
@@ -48,32 +60,68 @@ const Accomplishment = () => {
             )}
 
             {reports.map((report) => (
-              <a
+              <div
                 key={report._id}
-                href={report.fileUrl} // Cloudinary PDF URL
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-                className="group flex flex-col md:flex-row items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300"
+                onClick={() => setSelectedPdf(report)}
+                className="group flex flex-col md:flex-row items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300 cursor-pointer"
               >
                 <div className="flex-1">
                   <h3 className="text-2xl font-bold text-slate-900 mb-1">
                     {report.title} ({report.year})
                   </h3>
                   <p className="text-slate-400 text-xs">
-                    Uploaded At: {new Date(report.createdAt).toLocaleDateString()}{" "}
-                    {new Date(report.createdAt).toLocaleTimeString()}
+                    Published: {new Date(report.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 text-violet-600 font-semibold mt-4 md:mt-0 group-hover:gap-4 transition-all">
-                  <span>Download</span>
-                  <Download className="w-5 h-5" />
+                  <span>View Document</span>
+                  <Eye className="w-5 h-5" />
                 </div>
-              </a>
+              </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* PDF Viewer Modal */}
+      {selectedPdf && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900">
+              <div>
+                <h3 className="text-xl font-bold truncate max-w-xl">{selectedPdf.title}</h3>
+                <p className="text-sm text-slate-500">Resource from {selectedPdf.year}</p>
+              </div>
+              <button
+                onClick={() => setSelectedPdf(null)}
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+                title="Close"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-100 flex items-center justify-center relative">
+              <iframe
+                src={getEmbedUrl(selectedPdf.fileUrl)}
+                className="w-full h-full border-none"
+                title={selectedPdf.title}
+              />
+
+              <div className="absolute bottom-6 right-6 flex gap-3">
+                <a
+                  href={selectedPdf.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-white/90 backdrop-blur-md text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-white transition shadow-lg flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Download PDF
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

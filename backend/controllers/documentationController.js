@@ -8,7 +8,7 @@ const createDocumentation = async (req, res) => {
     const { title, description } = req.body;
 
     if (!title) {
-      return res.status(400).json({ success:false, message:"Title is required" });
+      return res.status(400).json({ success: false, message: "Title is required" });
     }
 
     const doc = await Documentation.create({
@@ -17,19 +17,19 @@ const createDocumentation = async (req, res) => {
       files: []
     });
 
-    res.status(201).json({ success:true, data: doc });
+    res.status(201).json({ success: true, data: doc });
   } catch (err) {
-    res.status(500).json({ success:false, message:"Create failed", error: err.message });
+    res.status(500).json({ success: false, message: "Create failed", error: err.message });
   }
 };
 
 // ✅ GET ALL
 const getAllDocs = async (req, res) => {
   try {
-    const docs = await Documentation.find({ isArchived:false }).sort({ createdAt:-1 });
-    res.json({ success:true, data: docs });
+    const docs = await Documentation.find({ isArchived: false }).sort({ createdAt: -1 });
+    res.json({ success: true, data: docs });
   } catch (err) {
-    res.status(500).json({ success:false, message:"Fetch failed" });
+    res.status(500).json({ success: false, message: "Fetch failed" });
   }
 };
 
@@ -37,11 +37,11 @@ const getAllDocs = async (req, res) => {
 const getDoc = async (req, res) => {
   try {
     const doc = await Documentation.findById(req.params.id);
-    if (!doc) return res.status(404).json({ success:false, message:"Not found" });
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
-    res.json({ success:true, data: doc });
+    res.json({ success: true, data: doc });
   } catch (err) {
-    res.status(500).json({ success:false, message:"Fetch failed" });
+    res.status(500).json({ success: false, message: "Fetch failed" });
   }
 };
 
@@ -52,11 +52,11 @@ const uploadFiles = async (req, res) => {
     const { captions = [] } = req.body;
 
     const doc = await Documentation.findById(id);
-    if (!doc) return res.status(404).json({ success:false, message:"Not found" });
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
     const files = req.files;
     if (!files || files.length === 0) {
-      return res.status(400).json({ success:false, message:"No files uploaded" });
+      return res.status(400).json({ success: false, message: "No files uploaded" });
     }
 
     const newFiles = [];
@@ -64,20 +64,20 @@ const uploadFiles = async (req, res) => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const caption = captions[i] || "";
-      
+
       // DETERMINE CORRECT RESOURCE TYPE BASED ON FILE MIMETYPE
       const mimeType = file.mimetype;
       let resourceType = "auto";
-      
+
       if (mimeType === 'application/pdf') {
-        resourceType = "raw"; // PDFs should be 'raw'
+        resourceType = "image"; // PDFs can be treated as 'image' for browser viewing
       } else if (mimeType.includes('image/')) {
         resourceType = "image";
       } else if (mimeType.includes('video/')) {
         resourceType = "video";
-      } else if (mimeType.includes('text/') || 
-                 mimeType.includes('application/msword') ||
-                 mimeType.includes('application/vnd.openxmlformats-officedocument')) {
+      } else if (mimeType.includes('text/') ||
+        mimeType.includes('application/msword') ||
+        mimeType.includes('application/vnd.openxmlformats-officedocument')) {
         resourceType = "raw"; // Documents should be 'raw'
       }
 
@@ -85,7 +85,7 @@ const uploadFiles = async (req, res) => {
 
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          { 
+          {
             folder: `gad-portal/docs/${id}`,
             resource_type: resourceType, // <-- FIXED: Use correct resource type
             public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`
@@ -122,11 +122,11 @@ const uploadFiles = async (req, res) => {
     doc.files.push(...newFiles);
     await doc.save();
 
-    res.status(201).json({ success:true, message:"Files uploaded", data:newFiles });
+    res.status(201).json({ success: true, message: "Files uploaded", data: newFiles });
 
   } catch (err) {
     console.error('Upload error:', err);
-    res.status(500).json({ success:false, message:"Upload failed", error: err.message });
+    res.status(500).json({ success: false, message: "Upload failed", error: err.message });
   }
 };
 
@@ -137,10 +137,10 @@ const deleteFile = async (req, res) => {
     const { docId, fileId } = req.params;
 
     const doc = await Documentation.findById(docId);
-    if (!doc) return res.status(404).json({ success:false, message:"Not found" });
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
     const file = doc.files.id(fileId);
-    if (!file) return res.status(404).json({ success:false, message:"File not found" });
+    if (!file) return res.status(404).json({ success: false, message: "File not found" });
 
     if (file.cloudinaryId) {
       await cloudinary.uploader.destroy(file.cloudinaryId, { resource_type: "auto" });
@@ -149,40 +149,40 @@ const deleteFile = async (req, res) => {
     file.remove();
     await doc.save();
 
-    res.json({ success:true, message:"File deleted" });
+    res.json({ success: true, message: "File deleted" });
   } catch (err) {
-    res.status(500).json({ success:false, message:"Delete failed", error: err.message });
+    res.status(500).json({ success: false, message: "Delete failed", error: err.message });
   }
 };
 
 // ✅ ARCHIVE DOC
 const archiveDoc = async (req, res) => {
   const doc = await Documentation.findById(req.params.id);
-  if (!doc) return res.status(404).json({ success:false, message:"Not found" });
+  if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
   doc.isArchived = true;
   await doc.save();
 
-  res.json({ success:true, message:"Archived" });
+  res.json({ success: true, message: "Archived" });
 };
 
 // ✅ GET ARCHIVED DOCS
 const getArchivedDocs = async (req, res) => {
   try {
-    const docs = await Documentation.find({ isArchived:true }).sort({ createdAt:-1 });
-    res.json({ success:true, data: docs });
+    const docs = await Documentation.find({ isArchived: true }).sort({ createdAt: -1 });
+    res.json({ success: true, data: docs });
   } catch (err) {
-    res.status(500).json({ success:false, message:"Fetch failed" });
+    res.status(500).json({ success: false, message: "Fetch failed" });
   }
 };
 
 // ✅ GET ALL (active only) - rename para malinaw
 const getActiveDocs = async (req, res) => {
   try {
-    const docs = await Documentation.find({ isArchived:false }).sort({ createdAt:-1 });
-    res.json({ success:true, data: docs });
+    const docs = await Documentation.find({ isArchived: false }).sort({ createdAt: -1 });
+    res.json({ success: true, data: docs });
   } catch (err) {
-    res.status(500).json({ success:false, message:"Fetch failed" });
+    res.status(500).json({ success: false, message: "Fetch failed" });
   }
 };
 

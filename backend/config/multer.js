@@ -31,6 +31,7 @@ const reportStorage = new CloudinaryStorage({
     resource_type: (req, file) => {
       if (file.mimetype.startsWith("image/")) return "image";
       if (file.mimetype.startsWith("video/")) return "video";
+      if (file.mimetype === "application/pdf") return "image";
       return "raw";
     }
   },
@@ -62,7 +63,7 @@ const accomplishmentStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "gadportal_accomplishments",
-    resource_type: "raw",
+    resource_type: "image", // Treating PDF as image in Cloudinary allows browser viewing
     allowed_formats: ["pdf"]
   }
 });
@@ -73,7 +74,15 @@ const uploadAccomplishment = multer({ storage: accomplishmentStorage, limits: { 
 // =========================
 const documentStorage = new CloudinaryStorage({
   cloudinary,
-  params: { folder: "gadportal_documents", resource_type: "raw", allowed_formats: ["pdf", "doc", "docx"] }
+  params: {
+    folder: "gadportal_documents",
+    resource_type: (req, file) => {
+      // PDF can be treated as image for viewing, others remain raw/downloadable
+      if (file.mimetype === "application/pdf") return "image";
+      return "raw";
+    },
+    allowed_formats: ["pdf", "doc", "docx"]
+  }
 });
 const uploadDocument = multer({ storage: documentStorage, limits: { fileSize: 15 * 1024 * 1024 } });
 
@@ -84,7 +93,7 @@ const thumbnailStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'research/thumbnails',
-    allowed_formats: ['jpg','jpeg','png','webp','gif'],
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
     transformation: [{ width: 800, height: 600, crop: 'limit' }],
     public_id: (req, file) => `research-thumb-${file.originalname.split('.')[0]}-${Date.now()}`,
     resource_type: 'image'
@@ -107,8 +116,11 @@ const researchFileStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'research/files',
-    allowed_formats: ['pdf','doc','docx'],
-    resource_type: 'raw',
+    allowed_formats: ['pdf', 'doc', 'docx'],
+    resource_type: (req, file) => {
+      if (file.mimetype === "application/pdf") return "image";
+      return "raw";
+    },
     public_id: (req, file) => `research-file-${file.originalname.split('.')[0]}-${Date.now()}`
   }
 });
@@ -150,7 +162,7 @@ const uploadResearchWithFiles = multer({
     else cb(new Error("Invalid field name"));
   },
   limits: {
-    fileSize: (req, file) => (file.fieldname === "thumbnail" ? parseInt(process.env.MAX_FILE_SIZE) || 5*1024*1024 : 10*1024*1024)
+    fileSize: (req, file) => (file.fieldname === "thumbnail" ? parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024 : 10 * 1024 * 1024)
   }
 }).fields([
   { name: "thumbnail", maxCount: 1 },
@@ -164,7 +176,7 @@ const uploadUniversal = multer({
   storage: diskStorage,
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedMimes = ["application/pdf","image/jpeg","image/png","image/jpg"];
+    const allowedMimes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
     allowedMimes.includes(file.mimetype)
       ? cb(null, true)
       : cb(new Error("Invalid file type. Only PDF and images allowed."));
@@ -178,10 +190,11 @@ const calendarEventStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "gadportal_calendar_events",
-    allowed_formats: ["jpg","png","jpeg","pdf","mp4","doc","docx","xlsx","ppt","pptx"],
+    allowed_formats: ["jpg", "png", "jpeg", "pdf", "mp4", "doc", "docx", "xlsx", "ppt", "pptx"],
     resource_type: (req, file) => {
       if (file.mimetype.startsWith("image/")) return "image";
       if (file.mimetype.startsWith("video/")) return "video";
+      if (file.mimetype === "application/pdf") return "image";
       return "raw";
     }
   }

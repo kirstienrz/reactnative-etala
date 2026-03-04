@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Download, Search, Calendar, User, ExternalLink, 
+import {
+  Download, Search, Calendar, User, ExternalLink,
   FileText, BookOpen, Filter, ChevronDown, Eye,
-  Tag, ChevronRight, Sparkles, FileArchive, Globe
+  Tag, ChevronRight, Sparkles, FileArchive, Globe, X
 } from 'lucide-react';
 import { getAllResearch, getResearchStats, getAvailableYears } from '../../api/research';
 
@@ -17,7 +17,7 @@ const LoadingSpinner = () => (
 );
 
 // Research Card Component
-const ResearchCard = ({ research }) => {
+const ResearchCard = ({ research, onView }) => {
   const [expanded, setExpanded] = useState(false);
 
   const formatDate = (dateString) => {
@@ -31,11 +31,19 @@ const ResearchCard = ({ research }) => {
   };
 
   return (
-    <a
-      href={research.link || research.researchFile?.url || '#'}
-      target={research.link || research.researchFile?.url ? "_blank" : "_self"}
-      rel="noopener noreferrer"
-      className="group flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300"
+    <div
+      onClick={() => {
+        if (research.researchFile?.url) {
+          onView({
+            url: research.researchFile.url,
+            title: research.title,
+            year: research.year
+          });
+        } else if (research.link) {
+          window.open(research.link, '_blank');
+        }
+      }}
+      className="group flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300 cursor-pointer"
     >
       <div className="flex-1">
         {/* Year Badge */}
@@ -127,16 +135,16 @@ const ResearchCard = ({ research }) => {
       <div className="flex items-center gap-3 text-violet-600 font-semibold mt-4 md:mt-0 group-hover:gap-4 transition-all">
         <div className="text-right hidden md:block">
           <span className="block">
-            {research.researchFile?.url ? 'Download PDF' : 
-             research.link ? 'View Online' : 'View Details'}
+            {research.researchFile?.url ? 'View Research' :
+              research.link ? 'View Online' : 'View Details'}
           </span>
           <span className="text-xs font-normal text-slate-400">
-            {research.researchFile?.originalName?.split('.').pop().toUpperCase() || 'Research'}
+            {research.researchFile?.url ? 'PDF PREVIEW' : research.link ? 'EXTERNAL LINK' : 'RESEARCH'}
           </span>
         </div>
         <div className="flex items-center gap-2">
           {research.researchFile?.url ? (
-            <Download className="w-5 h-5" />
+            <Eye className="w-5 h-5" />
           ) : research.link ? (
             <ExternalLink className="w-5 h-5" />
           ) : (
@@ -145,7 +153,7 @@ const ResearchCard = ({ research }) => {
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
-    </a>
+    </div>
   );
 };
 
@@ -189,11 +197,10 @@ const YearFilter = ({ years, selectedYear, onSelectYear }) => (
         <button
           key={year}
           onClick={() => onSelectYear(year)}
-          className={`px-4 py-2 rounded-full font-medium transition-all ${
-            selectedYear === year
-              ? 'bg-violet-600 text-white shadow-md'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-          }`}
+          className={`px-4 py-2 rounded-full font-medium transition-all ${selectedYear === year
+            ? 'bg-violet-600 text-white shadow-md'
+            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
         >
           {year}
         </button>
@@ -231,6 +238,18 @@ export default function ResearchPublications() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [availableYears, setAvailableYears] = useState(['All Years']);
+  const [selectedPdf, setSelectedPdf] = useState(null);
+
+  // Robust PDF Embed URL generator
+  const getEmbedUrl = (url) => {
+    if (!url) return "";
+    // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
+    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    // For 'image' resource type PDFs, standard URL works
+    return `${url}#toolbar=0`;
+  };
 
   // Fetch data on component mount
   useEffect(() => {
@@ -261,18 +280,18 @@ export default function ResearchPublications() {
         const statsResponse = await getResearchStats();
         if (statsResponse.success) {
           const statsData = statsResponse.data;
-          
+
           // Get available years
           const yearsResponse = await getAvailableYears();
           const yearOptions = yearsResponse || ['All Years', '2024', '2023', '2022'];
-          
+
           setStats({
             total: statsData.total || response.data.length,
             availableYears: statsData.byYear?.length || 0,
             withLinks: statsData.withLinks || response.data.filter(r => r.link).length,
             withFiles: response.data.filter(r => r.researchFile?.url).length
           });
-          
+
           setAvailableYears(yearOptions);
         }
       }
@@ -290,7 +309,7 @@ export default function ResearchPublications() {
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(query) ||
         item.authors.toLowerCase().includes(query) ||
         item.abstract.toLowerCase().includes(query) ||
@@ -346,7 +365,7 @@ export default function ResearchPublications() {
             <div className="w-20 h-1 bg-violet-400 mx-auto"></div>
           </div>
         </section>
-        
+
         <section className="py-20 bg-white">
           <div className="max-w-4xl mx-auto px-8">
             <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
@@ -378,12 +397,12 @@ export default function ResearchPublications() {
             Explore our collection of academic research, studies, and publications from various fields
           </p>
           <div className="w-20 h-1 bg-violet-400 mx-auto mb-12"></div>
-          
+
           {/* Search Bar */}
           <div className="mb-8">
             <SearchBar searchQuery={searchQuery} onSearch={handleSearch} />
           </div>
-          
+
           {/* Quick Stats */}
           <div className="flex flex-wrap justify-center gap-6 text-white">
             <div className="text-center">
@@ -410,8 +429,8 @@ export default function ResearchPublications() {
 
           {/* Filters */}
           <div className="mb-8">
-            <YearFilter 
-              years={availableYears} 
+            <YearFilter
+              years={availableYears}
               selectedYear={selectedYear}
               onSelectYear={handleYearSelect}
             />
@@ -441,7 +460,7 @@ export default function ResearchPublications() {
                   {searchQuery ? 'No Research Found' : 'No Publications Available'}
                 </h3>
                 <p className="text-slate-500 max-w-md mx-auto mb-6">
-                  {searchQuery 
+                  {searchQuery
                     ? `No research matching "${searchQuery}" found. Try different keywords.`
                     : 'There are no research publications available at the moment.'
                   }
@@ -461,7 +480,11 @@ export default function ResearchPublications() {
             ) : (
               <>
                 {filteredResearch.map(research => (
-                  <ResearchCard key={research._id} research={research} />
+                  <ResearchCard
+                    key={research._id}
+                    research={research}
+                    onView={(pdf) => setSelectedPdf(pdf)}
+                  />
                 ))}
 
                 {/* Footer Note */}
@@ -478,6 +501,46 @@ export default function ResearchPublications() {
           </div>
         </div>
       </section>
+
+      {/* PDF Viewer Modal */}
+      {selectedPdf && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900">
+              <div>
+                <h3 className="text-xl font-bold truncate max-w-xl">{selectedPdf.title}</h3>
+                <p className="text-sm text-slate-500">Research Publication • {selectedPdf.year}</p>
+              </div>
+              <button
+                onClick={() => setSelectedPdf(null)}
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+                title="Close"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-100 flex items-center justify-center relative">
+              <iframe
+                src={getEmbedUrl(selectedPdf.url)}
+                className="w-full h-full border-none"
+                title={selectedPdf.title}
+              />
+
+              <div className="absolute bottom-6 right-6 flex gap-3">
+                <a
+                  href={selectedPdf.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-white/90 backdrop-blur-md text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-white transition shadow-lg flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Download Research PDF
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

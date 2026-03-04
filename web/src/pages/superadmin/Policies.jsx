@@ -11,7 +11,8 @@ import {
     Archive,
     Paperclip,
     Upload,
-    Filter
+    Filter,
+    Eye
 } from "lucide-react";
 import {
     getDocuments,
@@ -41,6 +42,7 @@ const AdminDocuments = () => {
     const [editingItem, setEditingItem] = useState(null);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
+    const [selectedPdf, setSelectedPdf] = useState(null);
 
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
@@ -211,6 +213,17 @@ const AdminDocuments = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Robust PDF Embed URL generator
+    const getEmbedUrl = (url) => {
+        if (!url) return "";
+        // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
+        if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+            return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        }
+        // For 'image' resource type PDFs, standard URL works
+        return `${url}#toolbar=0`;
     };
 
     // ========================= UI =========================
@@ -418,14 +431,13 @@ const AdminDocuments = () => {
                                             </td>
                                             <td className="p-3 text-center">
                                                 {d.file_url && (
-                                                    <a
-                                                        href={d.file_url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-blue-600 hover:underline flex justify-center"
+                                                    <button
+                                                        onClick={() => setSelectedPdf(d)}
+                                                        className="text-blue-600 hover:text-blue-800 flex justify-center w-full"
+                                                        title="View Document"
                                                     >
-                                                        <File size={16} />
-                                                    </a>
+                                                        <Eye size={18} />
+                                                    </button>
                                                 )}
                                             </td>
                                             <td className="p-3">
@@ -685,6 +697,73 @@ const AdminDocuments = () => {
                     </>
                 )}
             </div>
+
+            {/* PDF Viewer Modal */}
+            {selectedPdf && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">{selectedPdf.title}</h3>
+                                <div className="flex gap-2 mt-1">
+                                    <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full capitalize font-semibold">
+                                        {selectedPdf.document_type}
+                                    </span>
+                                    {selectedPdf.date_issued && (
+                                        <span className="text-xs text-gray-500">
+                                            Issued: {new Date(selectedPdf.date_issued).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedPdf(null)}
+                                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                                title="Close"
+                            >
+                                <X size={24} className="text-gray-500" />
+                            </button>
+                        </div>
+
+                        {/* Modal Content - Iframe Viewer */}
+                        <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
+                            {selectedPdf.file_url.toLowerCase().includes('.pdf') || selectedPdf.file_url.includes('/image/upload/') ? (
+                                <iframe
+                                    src={getEmbedUrl(selectedPdf.file_url)}
+                                    className="w-full h-full border-none"
+                                    title={selectedPdf.title}
+                                />
+                            ) : (
+                                <div className="text-center p-8 bg-white rounded-xl shadow-sm max-w-sm">
+                                    <File size={48} className="mx-auto text-gray-300 mb-4" />
+                                    <p className="text-gray-600 mb-4">This document type cannot be previewed directly in the browser.</p>
+                                    <a
+                                        href={selectedPdf.file_url}
+                                        className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                        download
+                                    >
+                                        Download File
+                                    </a>
+                                </div>
+                            )}
+
+                            {/* Actions Overlay */}
+                            <div className="absolute bottom-6 right-6 flex gap-3">
+                                <a
+                                    href={selectedPdf.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-4 py-2 bg-white/90 backdrop-blur-md text-gray-700 border border-gray-200 rounded-lg text-sm font-semibold hover:bg-white transition shadow-lg flex items-center gap-2"
+                                >
+                                    <File size={16} />
+                                    Open Original
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

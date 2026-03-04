@@ -64,6 +64,22 @@ export const setPin = async (email, pin, token) => {
 };
 
 /**
+ * Request password reset link
+ */
+export const forgotPassword = async (email) => {
+  const response = await API.post("/auth/forgot-password", { email });
+  return response.data;
+};
+
+/**
+ * Reset password using token
+ */
+export const resetPassword = async (token, password) => {
+  const response = await API.post(`/auth/reset-password/${token}`, { password });
+  return response.data;
+};
+
+/**
  * Helper to get stored token from localStorage
  */
 export const getToken = () => localStorage.getItem("token");

@@ -8,6 +8,8 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ActivatePage from "./pages/ActivatePage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 import FloatingChatbot from "./components/FloatingChatbot";
 
@@ -101,6 +103,8 @@ const App = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/activate/:token" element={<ActivatePage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
             <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>
               <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
@@ -146,8 +150,8 @@ const App = () => {
 >
   <Route index element={<InterviewBooking />} />
 </Route> */}
-<Route path="/user/interview" element={<InterviewBooking />} />
-<Route path="/user/consultations" element={<UserConsultations />} />
+              <Route path="/user/interview" element={<InterviewBooking />} />
+              <Route path="/user/consultations" element={<UserConsultations />} />
 
             </Route>
           </Routes>

@@ -19,34 +19,34 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleTupIdChange = (e) => {
-  let value = e.target.value.toUpperCase();
+    let value = e.target.value.toUpperCase();
 
-  // alisin lahat ng hindi letter/number
-  value = value.replace(/[^A-Z0-9]/g, "");
+    // alisin lahat ng hindi letter/number
+    value = value.replace(/[^A-Z0-9]/g, "");
 
-  // siguraduhin na nagsisimula sa TUPT
-  if (!value.startsWith("TUPT")) {
-    value = "TUPT" + value.replace(/^TUPT/, "");
-  }
+    // siguraduhin na nagsisimula sa TUPT
+    if (!value.startsWith("TUPT")) {
+      value = "TUPT" + value.replace(/^TUPT/, "");
+    }
 
-  // tanggalin muna ang TUPT para ma-format yung numbers
-  let rest = value.replace("TUPT", "");
+    // tanggalin muna ang TUPT para ma-format yung numbers
+    let rest = value.replace("TUPT", "");
 
-  // limit sa 6 characters (XX + XXXX)
-  rest = rest.slice(0, 6);
+    // limit sa 6 characters (XX + XXXX)
+    rest = rest.slice(0, 6);
 
-  let formatted = "TUPT";
+    let formatted = "TUPT";
 
-  if (rest.length >= 1) {
-    formatted += "-" + rest.slice(0, 2);
-  }
+    if (rest.length >= 1) {
+      formatted += "-" + rest.slice(0, 2);
+    }
 
-  if (rest.length >= 3) {
-    formatted += "-" + rest.slice(2, 6);
-  }
+    if (rest.length >= 3) {
+      formatted += "-" + rest.slice(2, 6);
+    }
 
-  setTupId(formatted);
-};
+    setTupId(formatted);
+  };
 
 
   const handlePinChange = (e) => {
@@ -63,65 +63,65 @@ const LoginPage = () => {
     setPin(numbers);
   };
   const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  try {
-    // 🔹 BASIC FIELD VALIDATION (client-side trapping)
-    if (!email || (!usePin && (!password || !tupId)) || (usePin && !pin)) {
-      toast.warning("Please fill in all required fields.");
-      setLoading(false);
-      return; // stop the process
-    }
-
-    let data;
-
-    if (usePin) {
-      if (pin.length !== 6) {
-        throw new Error("PIN must be exactly 6 digits");
+    try {
+      // 🔹 BASIC FIELD VALIDATION (client-side trapping)
+      if (!email || (!usePin && (!password || !tupId)) || (usePin && !pin)) {
+        toast.warning("Please fill in all required fields.");
+        setLoading(false);
+        return; // stop the process
       }
-      data = await verifyPin(email, pin);
-    } else {
-      if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
-        throw new Error("TUPT ID must be in format: TUPT-XX-XXXX");
-      }
-      data = await login(email, password, tupId);
-    }
 
-    console.log("📥 Backend Response:", data); // ✅ Debug log
+      let data;
 
-    // ✅ Dispatch the ENTIRE backend response - authSlice will handle restructuring
-    dispatch(loginSuccess(data));
-
-    toast.success("Login successful!");
-
-    if (data.role === "superadmin") navigate("/superadmin/dashboard");
-    else navigate("/user/dashboard");
-
-  } catch (err) {
-    // ✅ Custom error handling
-    if (err.response) {
-      const { status, data } = err.response;
-
-      if (status === 403 && data?.msg?.toLowerCase().includes("deactivated")) {
-        toast.error("Your account has been deactivated. Please contact the administrator.");
-      } else if (status === 403 && data?.msg?.toLowerCase().includes("archived")) {
-        toast.error("Your account is archived. Please contact support.");
-      } else if (status === 400) {
-        toast.error(data?.msg || "Invalid credentials. Please try again.");
+      if (usePin) {
+        if (pin.length !== 6) {
+          throw new Error("PIN must be exactly 6 digits");
+        }
+        data = await verifyPin(email, pin);
       } else {
-        toast.error(data?.msg || "Login failed. Please try again later.");
+        if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
+          throw new Error("TUPT ID must be in format: TUPT-XX-XXXX");
+        }
+        data = await login(email, password, tupId);
       }
-    } else {
-      toast.error("Invalid. Please try again");
-    }
 
-    setError(err.message || "Invalid credentials");
-  } finally {
-    setLoading(false);
-  }
-};
+      console.log("📥 Backend Response:", data); // ✅ Debug log
+
+      // ✅ Dispatch the ENTIRE backend response - authSlice will handle restructuring
+      dispatch(loginSuccess(data));
+
+      toast.success("Login successful!");
+
+      if (data.role === "superadmin") navigate("/superadmin/dashboard");
+      else navigate("/user/dashboard");
+
+    } catch (err) {
+      // ✅ Custom error handling
+      if (err.response) {
+        const { status, data } = err.response;
+
+        if (status === 403 && data?.msg?.toLowerCase().includes("deactivated")) {
+          toast.error("Your account has been deactivated. Please contact the administrator.");
+        } else if (status === 403 && data?.msg?.toLowerCase().includes("archived")) {
+          toast.error("Your account is archived. Please contact support.");
+        } else if (status === 400) {
+          toast.error(data?.msg || "Invalid credentials. Please try again.");
+        } else {
+          toast.error(data?.msg || "Login failed. Please try again later.");
+        }
+      } else {
+        toast.error("Invalid. Please try again");
+      }
+
+      setError(err.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background elements */}
@@ -252,6 +252,14 @@ const LoginPage = () => {
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
+                  </div>
+                  <div className="flex justify-end mt-2">
+                    <span
+                      onClick={() => navigate("/forgot-password")}
+                      className="text-sm text-violet-600 hover:text-violet-700 cursor-pointer font-medium"
+                    >
+                      Forgot Password?
+                    </span>
                   </div>
                 </div>
               </>

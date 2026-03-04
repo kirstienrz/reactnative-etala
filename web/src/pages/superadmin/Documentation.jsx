@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Upload, Edit2, Trash2, Plus, X, Archive, RefreshCw, FileText, 
+    Upload, Edit2, Trash2, Plus, X, Archive, RefreshCw, FileText,
     File, FileVideo, Eye, Download, Maximize2, ChevronDown, ChevronUp,
     Image as ImageIcon, Folder, FolderOpen, Search, Filter, MoreVertical
 } from 'lucide-react';
@@ -59,66 +59,66 @@ export default function DocumentationAdmin() {
     const getActualFileType = (file) => {
         const fileName = file.originalName || file.name || '';
         const storedFileType = file.fileType || file.type || '';
-        
+
         if (fileName.toLowerCase().endsWith('.pdf')) {
             return 'pdf';
         }
-        
+
         const fileUrl = file.fileUrl || file.url || '';
         if (fileUrl.toLowerCase().includes('.pdf')) {
             return 'pdf';
         }
-        
+
         return storedFileType;
     };
-// Fetch documents based on viewArchived state
-const fetchDocs = async () => {
-    setIsLoading(true);
-    try {
-        let docsArray = [];
-        
-        if (viewArchived) {
-            // Kunin ang archived documents
-            docsArray = await getArchivedDocs();
-            console.log('Archived docs:', docsArray);
-        } else {
-            // Kunin ang active documents
-            docsArray = await getAllDocs();
-            console.log('Active docs:', docsArray);
-        }
-        
-        setDocs(docsArray || []);
-        
-        // Auto-expand documents with few files
-        const autoExpanded = {};
-        (docsArray || []).forEach(doc => {
-            if ((doc.files?.length || 0) <= 3) {
-                autoExpanded[doc._id || doc.id] = true;
-            }
-        });
-        setExpandedDocs(autoExpanded);
-        
-    } catch (err) {
-        console.error('Failed to fetch docs:', err);
-        alert('Failed to load documents');
-        setDocs([]);
-    } finally {
-        setIsLoading(false);
-    }
-};
+    // Fetch documents based on viewArchived state
+    const fetchDocs = async () => {
+        setIsLoading(true);
+        try {
+            let docsArray = [];
 
-// Update useEffect dependency
-useEffect(() => {
-    fetchDocs();
-}, [viewArchived]); // Magre-refetch every time mag-switch ng tab
+            if (viewArchived) {
+                // Kunin ang archived documents
+                docsArray = await getArchivedDocs();
+                console.log('Archived docs:', docsArray);
+            } else {
+                // Kunin ang active documents
+                docsArray = await getAllDocs();
+                console.log('Active docs:', docsArray);
+            }
+
+            setDocs(docsArray || []);
+
+            // Auto-expand documents with few files
+            const autoExpanded = {};
+            (docsArray || []).forEach(doc => {
+                if ((doc.files?.length || 0) <= 3) {
+                    autoExpanded[doc._id || doc.id] = true;
+                }
+            });
+            setExpandedDocs(autoExpanded);
+
+        } catch (err) {
+            console.error('Failed to fetch docs:', err);
+            alert('Failed to load documents');
+            setDocs([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Update useEffect dependency
+    useEffect(() => {
+        fetchDocs();
+    }, [viewArchived]); // Magre-refetch every time mag-switch ng tab
 
     // File selection for upload
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
-        
+
         setFileUploads(files);
-        
+
         const newCaptions = files.map(() => '');
         setCaptions(newCaptions);
     };
@@ -133,9 +133,9 @@ useEffect(() => {
     // Upload files to a doc
     const handleUpload = async () => {
         if (!currentDoc || fileUploads.length === 0) return;
-        
+
         setIsUploading(true);
-        
+
         try {
             await uploadFiles(currentDoc._id, fileUploads, captions);
             alert('Files uploaded successfully!');
@@ -151,21 +151,21 @@ useEffect(() => {
         }
     };
 
-const handleArchive = async (docId) => {
-    if (!window.confirm('Archive this document?')) return;
-    
-    try {
-        await archiveDoc(docId);
-        
-        // I-refetch para ma-update ang list
-        await fetchDocs();
-        
-        alert('Document archived successfully!');
-    } catch (err) {
-        console.error('Archive error:', err);
-        alert(`Failed to archive: ${err.message}`);
-    }
-};
+    const handleArchive = async (docId) => {
+        if (!window.confirm('Archive this document?')) return;
+
+        try {
+            await archiveDoc(docId);
+
+            // I-refetch para ma-update ang list
+            await fetchDocs();
+
+            alert('Document archived successfully!');
+        } catch (err) {
+            console.error('Archive error:', err);
+            alert(`Failed to archive: ${err.message}`);
+        }
+    };
 
     const handleDeleteFile = async (docId, fileId) => {
         if (!window.confirm('Are you sure you want to delete this file?')) return;
@@ -205,16 +205,16 @@ const handleArchive = async (docId) => {
     const getFileExtension = (file) => {
         const fileName = file.originalName || file.name || '';
         const fileUrl = file.fileUrl || file.url || '';
-        
+
         if (fileName.includes('.')) {
             return fileName.toLowerCase().split('.').pop();
         }
-        
+
         if (fileUrl.includes('.')) {
             const urlParts = fileUrl.split('.');
             return urlParts[urlParts.length - 1].split('?')[0].toLowerCase();
         }
-        
+
         return '';
     };
 
@@ -223,40 +223,43 @@ const handleArchive = async (docId) => {
         const extension = getFileExtension(file);
         const fileName = (file.originalName || file.name || '').toLowerCase();
         const fileUrl = (file.fileUrl || file.url || '').toLowerCase();
-        
+
         if (extension === 'pdf') return true;
         if (fileName.endsWith('.pdf')) return true;
         if (fileUrl.includes('.pdf')) return true;
         if ((file.fileType || file.type || '').includes('pdf')) return true;
-        
+
         return false;
     };
 
     // Check if file is image
     const isImageFile = (file) => {
         if (isPdfFile(file)) return false;
-        
+
         const extension = getFileExtension(file);
         const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
         return imageExtensions.includes(extension);
     };
 
+    // Robust PDF Embed URL generator
+    const getEmbedUrl = (url) => {
+        if (!url) return "";
+        // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
+        if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+            return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        }
+        // For 'image' resource type PDFs, standard URL works
+        return `${url}#toolbar=0`;
+    };
+
     // Handle file viewing
     const handleFileAction = (file) => {
-        const fileName = file.originalName || file.name || 'file';
         const fileUrl = file.fileUrl || file.url;
-        
-        if (isImageFile(file)) {
+
+        if (isImageFile(file) || isPdfFile(file)) {
             setSelectedFile(file);
-            setSelectedDoc({ title: 'Image Viewer' });
+            setSelectedDoc({ title: file.originalName || file.name || 'File Viewer' });
             setShowViewer(true);
-        } else if (isPdfFile(file)) {
-            if (fileUrl.includes('cloudinary.com')) {
-                const cleanUrl = fileUrl.split('?')[0];
-                window.open(cleanUrl, '_blank', 'noopener,noreferrer');
-            } else {
-                window.open(fileUrl, '_blank');
-            }
         } else {
             window.open(fileUrl, '_blank');
         }
@@ -291,7 +294,7 @@ const handleArchive = async (docId) => {
     const getFileTypeLabel = (file) => {
         if (isPdfFile(file)) return 'PDF';
         if (isImageFile(file)) return 'IMG';
-        
+
         const extension = getFileExtension(file);
         return extension.toUpperCase();
     };
@@ -320,7 +323,7 @@ const handleArchive = async (docId) => {
                             {viewArchived ? ' Archived' : ' Active'} • {filteredDocs.length} docs • {docs.reduce((sum, doc) => sum + (doc.files?.length || 0), 0)} files
                         </p>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-2">
                         <div className="relative flex-1 min-w-[200px]">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -332,7 +335,7 @@ const handleArchive = async (docId) => {
                                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
-                        
+
                         <button
                             onClick={fetchDocs}
                             disabled={isLoading}
@@ -341,7 +344,7 @@ const handleArchive = async (docId) => {
                         >
                             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
                         </button>
-                        
+
                         <button
                             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                             className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
@@ -353,7 +356,7 @@ const handleArchive = async (docId) => {
                                 <div className="text-xs font-medium">Grid</div>
                             )}
                         </button>
-                        
+
                         <button
                             onClick={() => setViewArchived(!viewArchived)}
                             className="px-3 py-2 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition flex items-center gap-2"
@@ -361,7 +364,7 @@ const handleArchive = async (docId) => {
                             <Archive size={14} />
                             <span>{viewArchived ? 'Active' : 'Archived'}</span>
                         </button>
-                        
+
                         {!viewArchived && (
                             <button
                                 onClick={() => setShowCreateModal(true)}
@@ -417,7 +420,7 @@ const handleArchive = async (docId) => {
                             filteredDocs.map(doc => {
                                 const isExpanded = expandedDocs[doc._id || doc.id];
                                 const fileCount = doc.files?.length || 0;
-                                
+
                                 return (
                                     <div key={doc._id || doc.id} className="hover:bg-gray-50 transition-colors">
                                         {/* Document Header */}
@@ -428,7 +431,7 @@ const handleArchive = async (docId) => {
                                                 ) : (
                                                     <Folder size={18} className="text-gray-500" />
                                                 )}
-                                                
+
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2">
                                                         <h3 className="font-medium text-gray-900 truncate">
@@ -443,16 +446,16 @@ const handleArchive = async (docId) => {
                                                     </p>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs text-gray-500">
                                                     {doc.createdAt && new Date(doc.createdAt).toLocaleDateString()}
                                                 </span>
-                                                
+
                                                 <button className="p-1 hover:bg-gray-200 rounded">
                                                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                 </button>
-                                                
+
                                                 <div className="flex gap-1">
                                                     {!viewArchived && (
                                                         <>
@@ -495,13 +498,13 @@ const handleArchive = async (docId) => {
                                                             const isPdf = isPdfFile(file);
                                                             const fileTypeLabel = getFileTypeLabel(file);
                                                             const fileName = file.originalName || file.name || 'file';
-                                                            const shortName = fileName.length > 20 
-                                                                ? fileName.substring(0, 17) + '...' 
+                                                            const shortName = fileName.length > 20
+                                                                ? fileName.substring(0, 17) + '...'
                                                                 : fileName;
-                                                            
+
                                                             return (
-                                                                <div 
-                                                                    key={file._id || file.id} 
+                                                                <div
+                                                                    key={file._id || file.id}
                                                                     className="group relative bg-gray-50 border rounded p-2 hover:bg-white hover:shadow-sm transition-all cursor-pointer"
                                                                     onClick={() => handleFileAction(file)}
                                                                 >
@@ -509,7 +512,7 @@ const handleArchive = async (docId) => {
                                                                     <div className="flex flex-col items-center justify-center h-20">
                                                                         {isImage ? (
                                                                             <div className="relative w-full h-full">
-                                                                                <img 
+                                                                                <img
                                                                                     src={file.fileUrl || file.url}
                                                                                     alt={shortName}
                                                                                     className="h-full w-full object-cover rounded"
@@ -541,7 +544,7 @@ const handleArchive = async (docId) => {
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                    
+
                                                                     {/* File Info */}
                                                                     <div className="mt-2">
                                                                         <div className="text-xs font-medium text-gray-900 truncate" title={fileName}>
@@ -619,14 +622,14 @@ const handleArchive = async (docId) => {
                     <div className="bg-white rounded-lg max-w-md w-full p-4">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="font-bold text-gray-800">New Document</h2>
-                            <button 
+                            <button
                                 onClick={() => setShowCreateModal(false)}
                                 className="text-gray-500 hover:text-gray-700"
                             >
                                 <X size={20} />
                             </button>
                         </div>
-                        
+
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -640,7 +643,7 @@ const handleArchive = async (docId) => {
                                     placeholder="Document title"
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
                                     Description
@@ -654,7 +657,7 @@ const handleArchive = async (docId) => {
                                 />
                             </div>
                         </div>
-                        
+
                         <div className="flex gap-2 mt-6 justify-end">
                             <button
                                 onClick={() => setShowCreateModal(false)}
@@ -684,7 +687,7 @@ const handleArchive = async (docId) => {
                                     To: <span className="font-medium">{currentDoc.title}</span>
                                 </p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => {
                                     setShowModal(false);
                                     setFileUploads([]);
@@ -705,7 +708,7 @@ const handleArchive = async (docId) => {
                                 id="docFileUpload"
                                 accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
                             />
-                            
+
                             <label
                                 htmlFor="docFileUpload"
                                 className="cursor-pointer block"
@@ -718,7 +721,7 @@ const handleArchive = async (docId) => {
                                     </p>
                                 </div>
                             </label>
-                            
+
                             {fileUploads.length > 0 && (
                                 <div className="mt-4">
                                     <h3 className="text-sm font-medium text-gray-700 mb-3">
@@ -805,7 +808,7 @@ const handleArchive = async (docId) => {
                                     {selectedFile.originalName || selectedFile.name}
                                 </h2>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setShowViewer(false)}
                                 className="p-1 hover:bg-white hover:bg-opacity-20 rounded"
                             >
@@ -813,12 +816,20 @@ const handleArchive = async (docId) => {
                             </button>
                         </div>
 
-                        <div className="flex-1 flex items-center justify-center p-2 overflow-hidden">
-                            <img 
-                                src={selectedFile.fileUrl || selectedFile.url} 
-                                alt={selectedFile.originalName || selectedFile.name}
-                                className="max-w-full max-h-full object-contain"
-                            />
+                        <div className="flex-1 flex items-center justify-center p-2 overflow-hidden bg-gray-900">
+                            {isPdfFile(selectedFile) ? (
+                                <iframe
+                                    src={getEmbedUrl(selectedFile.fileUrl || selectedFile.url)}
+                                    className="w-full h-full border-none bg-white"
+                                    title={selectedFile.originalName || selectedFile.name}
+                                />
+                            ) : (
+                                <img
+                                    src={selectedFile.fileUrl || selectedFile.url}
+                                    alt={selectedFile.originalName || selectedFile.name}
+                                    className="max-w-full max-h-full object-contain shadow-2xl"
+                                />
+                            )}
                         </div>
                     </div>
                 </div>

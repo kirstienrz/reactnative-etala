@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Upload, Edit2, Trash2, Plus, X, Search, Calendar, 
-  Image, BookOpen, User, Eye, Archive, ArchiveRestore, 
-  Link, ExternalLink, RefreshCw, FileText 
+import {
+  Upload, Edit2, Trash2, Plus, X, Search, Calendar,
+  Image, BookOpen, User, Eye, Archive, ArchiveRestore,
+  Link, ExternalLink, RefreshCw, FileText
 } from 'lucide-react';
 
 // Import API functions
@@ -64,7 +64,7 @@ export default function ResearchAdmin() {
     archived: 0,
     withLinks: 0
   });
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingResearch, setEditingResearch] = useState(null);
@@ -84,6 +84,7 @@ export default function ResearchAdmin() {
     total: 0,
     pages: 1
   });
+  const [selectedPdf, setSelectedPdf] = useState(null);
 
   // Form state with link field
   const [formData, setFormData] = useState({
@@ -101,7 +102,7 @@ export default function ResearchAdmin() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const filters = {
         status: viewArchived ? 'archived' : 'active',
         year: selectedYear !== 'All Years' ? selectedYear : '',
@@ -112,7 +113,7 @@ export default function ResearchAdmin() {
       };
 
       const response = await getAllResearch(filters);
-      
+
       if (response.success) {
         setResearchData(response.data);
         setStats(response.stats);
@@ -171,7 +172,7 @@ export default function ResearchAdmin() {
     const file = e.target.files[0];
     if (file) {
       setThumbnailFile(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -212,11 +213,11 @@ export default function ResearchAdmin() {
         // Refresh data
         await fetchResearchData();
         await fetchStats();
-        
+
         // Reset form and close modal
         resetForm();
         setShowModal(false);
-        
+
         // Show success message
         alert(response.message);
       }
@@ -249,7 +250,7 @@ export default function ResearchAdmin() {
   // Handle delete
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this research?')) return;
-    
+
     try {
       const response = await deleteResearch(id);
       if (response.success) {
@@ -266,7 +267,7 @@ export default function ResearchAdmin() {
   // Handle archive
   const handleArchive = async (id) => {
     if (!window.confirm('Are you sure you want to archive this research?')) return;
-    
+
     try {
       const response = await archiveResearch(id);
       if (response.success) {
@@ -283,7 +284,7 @@ export default function ResearchAdmin() {
   // Handle restore
   const handleRestore = async (id) => {
     if (!window.confirm('Are you sure you want to restore this research?')) return;
-    
+
     try {
       const response = await restoreResearch(id);
       if (response.success) {
@@ -338,9 +339,9 @@ export default function ResearchAdmin() {
   const handleBulkAction = async (action) => {
     if (selectedItems.size === 0) return;
 
-    const actionText = action === 'archive' ? 'archive' : 
-                      action === 'restore' ? 'restore' : 'delete';
-    
+    const actionText = action === 'archive' ? 'archive' :
+      action === 'restore' ? 'restore' : 'delete';
+
     if (!window.confirm(`Are you sure you want to ${actionText} ${selectedItems.size} item(s)?`)) return;
 
     try {
@@ -393,6 +394,17 @@ export default function ResearchAdmin() {
     });
   };
 
+  // Robust PDF Embed URL generator
+  const getEmbedUrl = (url) => {
+    if (!url) return "";
+    // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
+    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    // For 'image' resource type PDFs, standard URL works
+    return `${url}#toolbar=0`;
+  };
+
   // Render loading state
   if (loading && researchData.length === 0) {
     return (
@@ -420,8 +432,8 @@ export default function ResearchAdmin() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Research Publications</h1>
               <p className="text-gray-600 mt-1">
-                {viewArchived 
-                  ? 'Viewing archived research' 
+                {viewArchived
+                  ? 'Viewing archived research'
                   : 'Manage active research publications'
                 }
               </p>
@@ -524,7 +536,7 @@ export default function ResearchAdmin() {
                   onClick={toggleSelectAll}
                   className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  {selectedItems.size === researchData.length && researchData.length > 0 ? 
+                  {selectedItems.size === researchData.length && researchData.length > 0 ?
                     'Deselect All' : 'Select All'
                   }
                 </button>
@@ -628,15 +640,17 @@ export default function ResearchAdmin() {
                           </a>
                         )}
                         {research.researchFile?.url && (
-                          <a
-                            href={research.researchFile.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => setSelectedPdf({
+                              url: research.researchFile.url,
+                              title: research.title,
+                              year: research.year
+                            })}
                             className="p-1 text-gray-500 hover:text-blue-600"
-                            title="Download File"
+                            title="View Research File"
                           >
                             <FileText size={16} />
-                          </a>
+                          </button>
                         )}
                         <button
                           onClick={() => setPreviewResearch(research)}
@@ -947,11 +961,11 @@ export default function ResearchAdmin() {
                         <div className="text-center py-4">
                           <FileText className="mx-auto text-gray-400 mb-2" size={24} />
                           <p className="text-gray-600">
-                            {researchFile 
+                            {researchFile
                               ? `Selected: ${researchFile.name}`
                               : editingResearch?.researchFile?.originalName
-                              ? `Current: ${editingResearch.researchFile.originalName}`
-                              : 'Click to upload research file'
+                                ? `Current: ${editingResearch.researchFile.originalName}`
+                                : 'Click to upload research file'
                             }
                           </p>
                           <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX up to 10MB</p>
@@ -1062,7 +1076,7 @@ export default function ResearchAdmin() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {previewResearch.link && (
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h3 className="font-medium text-blue-700 mb-2 flex items-center gap-2">
@@ -1086,14 +1100,16 @@ export default function ResearchAdmin() {
                         <FileText size={16} />
                         Research File
                       </h3>
-                      <a
-                        href={previewResearch.researchFile.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-green-600 hover:text-green-800 text-sm"
+                      <button
+                        onClick={() => setSelectedPdf({
+                          url: previewResearch.researchFile.url,
+                          title: previewResearch.title,
+                          year: previewResearch.year
+                        })}
+                        className="text-green-600 hover:text-green-800 text-sm font-medium hover:underline"
                       >
-                        {previewResearch.researchFile.originalName || 'Download File'}
-                      </a>
+                        View {previewResearch.researchFile.originalName || 'File'}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1171,6 +1187,41 @@ export default function ResearchAdmin() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Viewer Modal */}
+      {selectedPdf && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 truncate max-w-xl">{selectedPdf.title}</h3>
+                <p className="text-sm text-gray-500">Year: {selectedPdf.year}</p>
+              </div>
+              <button
+                onClick={() => setSelectedPdf(null)}
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X size={24} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
+              {selectedPdf.url.toLowerCase().includes('.pdf') || selectedPdf.url.includes('/image/upload/') ? (
+                <iframe
+                  src={getEmbedUrl(selectedPdf.url)}
+                  className="w-full h-full border-none"
+                  title={selectedPdf.title}
+                />
+              ) : (
+                <div className="text-center p-8 bg-white rounded-xl shadow-sm">
+                  <FileText size={48} className="mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-600">Preview not available for this file type.</p>
+                  <a href={selectedPdf.url} className="mt-4 inline-block text-blue-600 underline">Download instead</a>
+                </div>
+              )}
             </div>
           </div>
         </div>
