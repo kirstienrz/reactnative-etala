@@ -56,18 +56,23 @@ router.get("/", auth(), async (req, res) => {
   }
 });
 
+const { censorProfanity } = require("../utils/profanityFilter");
+
 // -----------------------------
 // Send a message inside a ticket
 // -----------------------------
 router.post("/message", auth(), async (req, res) => {
   try {
-    const { ticketId, content, type, action } = req.body;
+    let { ticketId, content, type, action } = req.body;
     const currentUserId = req.user.id;
 
     if (!ticketId || !content) return res.status(400).json({ message: "Missing required fields" });
 
     const chat = await Chat.findById(ticketId);
     if (!chat) return res.status(404).json({ message: "Ticket not found" });
+
+    // 🛡️ Censor profanity (English & Tagalog)
+    content = censorProfanity(content);
 
     // Optional: prevent duplicate actions like "PROCEED_TO_INTERVIEW"
     if (action === "PROCEED_TO_INTERVIEW") {

@@ -294,11 +294,13 @@ router.patch("/:ticketNumber/messages/unread", authenticateAdmin, async (req, re
   }
 });
 
+const { censorProfanity } = require("../utils/profanityFilter");
+
 // ✉️ Send message (BOTH USER & ADMIN)
 router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
   try {
     const { ticketNumber } = req.params;
-    const { content, attachments } = req.body;
+    let { content, attachments } = req.body;
     const senderId = req.user.id;
     const userRole = req.user.role;
 
@@ -306,6 +308,9 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     if (!content || content.trim() === "") {
       return res.status(400).json({ message: "Message content is required" });
     }
+
+    // 🛡️ Censor profanity (English & Tagalog)
+    content = censorProfanity(content);
 
     // Check if ticket exists
     const ticket = await Ticket.findOne({ ticketNumber })
