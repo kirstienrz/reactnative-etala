@@ -1509,18 +1509,42 @@ const AdminReports = () => {
                   <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         // Analyze all unanalyzed reports
                         const unanalyzed = reports.filter(r => !sentimentResults[r._id]);
                         if (unanalyzed.length > 0) {
-                          showToast(`Analyzing ${unanalyzed.length} reports...`, "success");
-                          unanalyzed.slice(0, 5).forEach(report => {
-                            analyzeSentiment(report._id, {
-                              incidentDescription: report.incidentDescription,
-                              incidentTypes: report.incidentTypes,
-                              timestamp: report.submittedAt
-                            });
-                          });
+                          setAnalyzing(true);
+                          showToast(`Analyzing ${unanalyzed.length} reports...`, "info");
+
+                          let successCount = 0;
+                          for (const report of unanalyzed) {
+                            try {
+                              const res = await analyzeReportSeverity({
+                                incidentDescription: report.incidentDescription,
+                                incidentTypes: report.incidentTypes,
+                                reportId: report._id,
+                                additionalContext: {
+                                  timestamp: report.submittedAt,
+                                  location: report.placeOfIncident || 'Not specified',
+                                }
+                              });
+
+                              if (res.success) {
+                                successCount++;
+                                setSentimentResults(prev => ({
+                                  ...prev,
+                                  [report._id]: {
+                                    ...res.data,
+                                    analyzedAt: new Date().toISOString()
+                                  }
+                                }));
+                              }
+                            } catch (err) {
+                              console.error(`Failed to analyze report ${report._id}:`, err);
+                            }
+                          }
+                          setAnalyzing(false);
+                          showToast(`Batch analysis complete: ${successCount}/${unanalyzed.length} successfully analyzed.`, "success");
                         } else {
                           showToast("All reports have been analyzed", "success");
                         }
