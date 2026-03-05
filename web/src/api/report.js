@@ -11,6 +11,14 @@ export const sendReferralPDFToUser = async (formData) => {
   return res.data;
 };
 
+// 📤 UPLOAD Referral PDF (no chat message, just returns URL)
+export const uploadReferralPDF = async (formData) => {
+  const res = await API.post("/reports/upload-pdf", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};
+
 // 🟣 Disclose identity (user only) WITH password
 // PATCH /reports/user/disclose/:id
 export const discloseIdentity = async (reportId, password) => {

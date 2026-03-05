@@ -691,7 +691,9 @@ const sendReportPDF = async (req, res) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: "chat_referrals",
-            resource_type: "image", // Treating PDF as image for native viewing
+            resource_type: "auto",
+            access_mode: "public",
+            format: "pdf",
             public_id: `referral_${ticketNumber || Date.now()}`
           },
           (error, result) => {
@@ -725,7 +727,7 @@ const sendReportPDF = async (req, res) => {
       senderId: userId,
       senderName,
       messageType: "file",
-      content: "Official Referral Report PDF",
+      content: req.body.content || "Official Referral Report PDF",
       attachments: [{
         uri: cloudinaryResult.secure_url,
         type: "application/pdf",
@@ -770,6 +772,58 @@ const sendReportPDF = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to send PDF to chat",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Upload PDF to Cloudinary only (no chat message created)
+ * @route POST /api/reports/upload-pdf
+ * @access Admin, Superadmin
+ */
+const uploadPDFOnly = async (req, res) => {
+  try {
+    const pdfFile = req.file;
+    const { ticketNumber } = req.body;
+
+    if (!pdfFile) {
+      return res.status(400).json({ success: false, message: "PDF file is required" });
+    }
+
+    // Upload PDF to Cloudinary
+    const uploadToCloudinary = () => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "chat_referrals",
+            resource_type: "auto",
+            access_mode: "public",
+            format: "pdf",
+            public_id: `referral_${ticketNumber || Date.now()}_${Date.now()}`
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        Readable.from(pdfFile.buffer).pipe(uploadStream);
+      });
+    };
+
+    const cloudinaryResult = await uploadToCloudinary();
+    console.log(`✅ PDF uploaded to Cloudinary for ticket ${ticketNumber}`);
+
+    res.json({
+      success: true,
+      message: "PDF uploaded successfully",
+      fileUrl: cloudinaryResult.secure_url
+    });
+  } catch (error) {
+    console.error("❌ UploadPDFOnly Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to upload PDF",
       error: error.message
     });
   }
@@ -1005,6 +1059,7 @@ module.exports = {
   discloseReport,
   updateReportByUser,
   sendReportPDF,
+  uploadPDFOnly,
   generateTicketNumber,
   getReportAnalytics
 };

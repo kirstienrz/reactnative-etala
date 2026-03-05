@@ -18,6 +18,7 @@ import {
 
 // Add this API function for sentiment analysis
 import { analyzeReportSeverity } from "../../api/ai";
+import { sendTicketMessage } from "../../api/tickets";
 
 const AdminReports = () => {
   const navigate = useNavigate();
@@ -445,7 +446,7 @@ const AdminReports = () => {
           // Refresh UI
           fetchReports();
 
-          // ✅ AUTOMATICALLY SEND PDF TO USER VIA CHAT
+          // ✅ Send PDF + notification as ONE message
           try {
             const reportDoc = generateReferralPDFDoc(selectedReport, payload);
             const pdfBlob = reportDoc.output('blob');
@@ -454,11 +455,13 @@ const AdminReports = () => {
             const chatFormData = new FormData();
             chatFormData.append('pdf', pdfFile);
             chatFormData.append('ticketNumber', selectedReport.ticketNumber);
+            chatFormData.append('content', `📢 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay opisyal nang ni-refer sa Barangay ${payload.barangayName}.\n\n📋 Referral Type: External\n🏘️ Barangay: ${payload.barangayName}\n👤 Receiving Officer: ${payload.receivingOfficer || 'N/A'}\n\n📄 Naka-attach ang Referral Report PDF sa ibaba.`);
 
             await sendReferralPDFToUser(chatFormData);
-            console.log("✅ Automated external referral PDF sent to user via Chat");
+            console.log("✅ Referral notification + PDF sent to user");
           } catch (pdfError) {
-            console.error("❌ Failed to auto-send PDF:", pdfError);
+            console.error("❌ Failed to send referral notification:", pdfError);
+            showToast("Failed to send referral notification: " + (pdfError.response?.data?.message || pdfError.message), "error");
           }
         }
         // Reset form state
@@ -532,6 +535,25 @@ const AdminReports = () => {
         setNewCaseStatus("");
         setNewReferralType("");
         fetchReports();
+
+        // ✅ SEND CHAT NOTIFICATION FOR CASE STATUS UPDATE
+        try {
+          const statusMessages = {
+            "For Queuing": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay nasa status na: For Queuing.\n\nMalapit na itong ma-review ng aming team.`,
+            "For Interview": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay nasa status na: For Interview.\n\nMaaring ka naming i-contact para sa isang interview o consultation. Abangan ang aming mensahe.`,
+            "Internal": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay ni-refer sa isang internal department para sa karagdagang aksyon.\n\nReferral Type: Internal`,
+            "Case Closed": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay opisyal nang isinara (Case Closed).\n\nKung may mga katanungan ka pa, huwag mag-atubiling mag-mensahe.`
+          };
+          const msgContent = statusMessages[finalStatus] || `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay na-update na sa: ${finalStatus}.`;
+          await sendTicketMessage(selectedReport.ticketNumber, {
+            content: msgContent,
+            attachments: []
+          });
+          console.log(`✅ Chat notification sent for status update: ${finalStatus}`);
+        } catch (msgError) {
+          console.error("❌ Failed to send chat notification for status update:", msgError);
+          showToast("Chat notification failed: " + (msgError.response?.data?.message || msgError.message), "error");
+        }
       } else {
         showToast(res.message || "Failed to update case status", "error");
       }
@@ -588,7 +610,7 @@ const AdminReports = () => {
         setReferralNote("");
         fetchReports();
 
-        // ✅ AUTOMATICALLY SEND PDF TO USER VIA CHAT
+        // ✅ Send PDF + notification as ONE message
         try {
           const payload = {
             department: referralDept,
@@ -603,11 +625,13 @@ const AdminReports = () => {
           const chatFormData = new FormData();
           chatFormData.append('pdf', pdfFile);
           chatFormData.append('ticketNumber', selectedReport.ticketNumber);
+          chatFormData.append('content', `📢 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay ni-refer sa ${referralDept}.\n\n📋 Referral Type: Internal\n🏢 Department: ${referralDept}\n\n📄 Naka-attach ang Referral Report PDF sa ibaba.`);
 
           await sendReferralPDFToUser(chatFormData);
-          console.log("✅ Automated internal referral PDF sent to user via Chat");
+          console.log("✅ Internal referral notification + PDF sent to user");
         } catch (pdfError) {
-          console.error("❌ Failed to auto-send PDF:", pdfError);
+          console.error("❌ Failed to send referral notification:", pdfError);
+          showToast("Failed to send referral notification: " + (pdfError.response?.data?.message || pdfError.message), "error");
         }
       } else {
         showToast(res.message || "Failed to add referral", "error");

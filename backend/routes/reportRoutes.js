@@ -20,6 +20,7 @@ const {
   discloseReport,
   updateReportByUser,
   sendReportPDF,
+  uploadPDFOnly,
   getReportAnalytics,
   addReferral
 } = require("../controllers/reportController");
@@ -57,6 +58,14 @@ router.post(
   auth(["user", "admin", "superadmin"]),
   pdfUpload.single('pdf'),
   sendReportPDF
+);
+
+// ✅ Upload PDF only (no chat message) - returns Cloudinary URL
+router.post(
+  "/upload-pdf",
+  auth(["admin", "superadmin"]),
+  pdfUpload.single('pdf'),
+  uploadPDFOnly
 );
 
 
