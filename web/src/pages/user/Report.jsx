@@ -582,6 +582,7 @@ const ReportForm = () => {
   const [dropdownOptions, setDropdownOptions] = useState([]);
   const [aiValidationResult, setAiValidationResult] = useState(null);
   const [showAIValidation, setShowAIValidation] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const [formData, setFormData] = useState({
     // Reporter/Victim Information (all optional now)
@@ -688,26 +689,55 @@ const ReportForm = () => {
     alert(`${title}\n\n${message}`);
   };
 
+  const processFiles = (files) => {
+    const validImages = files.filter(file => file.type.startsWith('image/'));
+
+    if (validImages.length === 0 && files.length > 0) {
+      showAlert('Invalid Files', 'Please upload images only (JPG, PNG, WEBP, etc.)');
+      return;
+    }
+
+    const newAttachments = validImages.map(file => ({
+      file,
+      name: file.name,
+      type: 'image',
+      size: file.size,
+      url: URL.createObjectURL(file)
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      attachments: [...prev.attachments, ...newAttachments]
+    }));
+  };
+
   const pickFiles = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
-    input.accept = 'image/*,video/*,.pdf,.doc,.docx,.txt';
+    input.accept = 'image/*';
     input.onchange = (e) => {
       const files = Array.from(e.target.files);
-      const newAttachments = files.map(file => ({
-        file,
-        name: file.name,
-        type: getFileType(file),
-        size: file.size,
-        url: URL.createObjectURL(file)
-      }));
-      setFormData(prev => ({
-        ...prev,
-        attachments: [...prev.attachments, ...newAttachments]
-      }));
+      processFiles(files);
     };
     input.click();
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
   };
 
   const getFileType = (file) => {
@@ -1009,7 +1039,7 @@ const ReportForm = () => {
       const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
 
       // Generate PDF
-      const pdfBlob = generateReportPDF({
+      const pdfBlob = await generateReportPDF({
         formData,
         ticketNumber,
         isAnonymous,
@@ -2104,13 +2134,62 @@ const ReportForm = () => {
                   ))}
                 </div>
               )}
-              <button
-                style={styles.addAttachmentButton}
+              <div
+                style={{
+                  ...styles.addAttachmentButton,
+                  borderColor: isDragging ? styles.colors.primary : styles.colors.border,
+                  backgroundColor: isDragging ? '#eff6ff' : styles.colors.white,
+                  borderStyle: 'dashed',
+                  borderWidth: '2px',
+                  flexDirection: 'column',
+                  padding: '32px',
+                  minHeight: '180px',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
+                }}
                 onClick={pickFiles}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                <Upload size={18} style={{ marginRight: '8px' }} />
-                Add Attachments
-              </button>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '24px',
+                  backgroundColor: isDragging ? styles.colors.primary : '#f1f5f9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <Upload size={24} color={isDragging ? 'white' : styles.colors.primary} />
+                </div>
+
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: styles.colors.textPrimary }}>
+                  {isDragging ? 'Drop your images here' : 'Drop & Drag images here'}
+                </h4>
+
+                <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: styles.colors.textSecondary }}>
+                  or click to browse from your device
+                </p>
+
+                <div style={{
+                  marginTop: '12px',
+                  padding: '4px 12px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <ImageIcon size={14} color="#64748b" />
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
+                    IMAGES ONLY • MAX 1GB TOTAL
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
