@@ -685,27 +685,11 @@ const sendReportPDF = async (req, res) => {
       });
     }
 
-    // 1. Upload PDF to Cloudinary
-    const uploadToCloudinary = () => {
-      return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: "chat_referrals",
-            resource_type: "auto",
-            access_mode: "public",
-            format: "pdf",
-            public_id: `referral_${ticketNumber || Date.now()}`
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
-        Readable.from(pdfFile.buffer).pipe(uploadStream);
-      });
-    };
-
-    const cloudinaryResult = await uploadToCloudinary();
+    // 1. Convert PDF Buffer to Base64 (Skip Cloudinary to avoid corruption)
+    if (!pdfFile || !pdfFile.buffer) {
+      return res.status(400).json({ success: false, message: "No PDF file buffer found" });
+    }
+    const pdfBase64 = `data:application/pdf;base64,${pdfFile.buffer.toString('base64')}`;
 
     // 2. Find the Ticket
     const ticket = await Ticket.findOne({ ticketNumber });
@@ -729,7 +713,7 @@ const sendReportPDF = async (req, res) => {
       messageType: "file",
       content: req.body.content || "Official Referral Report PDF",
       attachments: [{
-        uri: cloudinaryResult.secure_url,
+        uri: pdfBase64,
         type: "application/pdf",
         fileName: pdfFile.originalname || `Referral_${ticketNumber}.pdf`
       }]
@@ -741,8 +725,8 @@ const sendReportPDF = async (req, res) => {
     await Ticket.findOneAndUpdate(
       { ticketNumber },
       {
+        lastMessage: "📄 Referral Report PDF",
         lastMessageAt: new Date(),
-        lastMessage: "📎 Sent Referral PDF Report",
         $inc: { "unreadCount.user": 1 },
         adminHasReplied: true
       }
@@ -798,8 +782,6 @@ const uploadPDFOnly = async (req, res) => {
           {
             folder: "chat_referrals",
             resource_type: "auto",
-            access_mode: "public",
-            format: "pdf",
             public_id: `referral_${ticketNumber || Date.now()}_${Date.now()}`
           },
           (error, result) => {
@@ -817,7 +799,7 @@ const uploadPDFOnly = async (req, res) => {
     res.json({
       success: true,
       message: "PDF uploaded successfully",
-      fileUrl: cloudinaryResult.secure_url
+      fileUrl: cloudinaryResult.secure_url.replace('/upload/', '/upload/fl_attachment/')
     });
   } catch (error) {
     console.error("❌ UploadPDFOnly Error:", error);

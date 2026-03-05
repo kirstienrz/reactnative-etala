@@ -821,10 +821,10 @@ const TicketMessagingSystem = () => {
                   return (
                     <button key={ticket._id} onClick={() => handleSelectTicket(ticket)}
                       className={`w-full p-4 text-left transition-all duration-150 ${isSelected
-                          ? 'bg-blue-50 border-l-4 border-blue-500'
-                          : ticketUnread
-                            ? 'bg-red-50/40 hover:bg-red-50/70 border-l-4 border-red-400'
-                            : 'hover:bg-gray-50 border-l-4 border-transparent'
+                        ? 'bg-blue-50 border-l-4 border-blue-500'
+                        : ticketUnread
+                          ? 'bg-red-50/40 hover:bg-red-50/70 border-l-4 border-red-400'
+                          : 'hover:bg-gray-50 border-l-4 border-transparent'
                         }`}>
                       <div className="flex items-start gap-3">
                         {/* ── Avatar: UnreadDot REMOVED, color change lang ang indicator ── */}
@@ -921,33 +921,62 @@ const TicketMessagingSystem = () => {
                             {/* Attachments Section */}
                             {msg.attachments?.length > 0 && (
                               <div className="mt-3 space-y-2 border-t border-white/20 pt-2">
-                                {msg.attachments.map((file, fIdx) => (
-                                  <a
-                                    key={fIdx}
-                                    href={file.uri}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isAdmin
+                                {msg.attachments.map((file, fIdx) => {
+                                  const isPdf = file.type === 'application/pdf' || file.fileName?.endsWith('.pdf');
+                                  const handleDownload = async (e) => {
+                                    if (!isPdf) return;
+                                    e.preventDefault();
+                                    try {
+                                      let url;
+                                      if (file.uri.startsWith('data:')) {
+                                        // Handle Base64 Data URI directly
+                                        const response = await fetch(file.uri);
+                                        const blob = await response.blob();
+                                        url = window.URL.createObjectURL(blob);
+                                      } else {
+                                        // Handle remote URL (Cloudinary, etc)
+                                        const response = await fetch(file.uri);
+                                        const blob = await response.blob();
+                                        url = window.URL.createObjectURL(blob);
+                                      }
+
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = file.fileName || `Referral_Report.pdf`;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      window.URL.revokeObjectURL(url);
+                                    } catch (err) {
+                                      console.error('Download failed:', err);
+                                      window.open(file.uri, '_blank');
+                                    }
+                                  };
+                                  return (
+                                    <a
+                                      key={fIdx}
+                                      href={file.uri}
+                                      onClick={handleDownload}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer ${isAdmin
                                         ? "bg-white/10 hover:bg-white/20 text-white"
                                         : "bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200"
-                                      }`}
-                                  >
-                                    <div className={`p-1.5 rounded ${isAdmin ? "bg-white/20" : "bg-blue-100"}`}>
-                                      {file.type === "application/pdf" ? (
+                                        }`}
+                                    >
+                                      <div className={`p-1.5 rounded ${isAdmin ? "bg-white/20" : "bg-blue-100"}`}>
                                         <Paperclip className="w-3.5 h-3.5" />
-                                      ) : (
-                                        <Paperclip className="w-3.5 h-3.5" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-[11px] font-semibold truncate">{file.fileName || "File Attachment"}</p>
-                                      <p className={`text-[9px] ${isAdmin ? "text-blue-100" : "text-gray-500"}`}>
-                                        {file.type?.split('/')[1]?.toUpperCase() || "FILE"}
-                                      </p>
-                                    </div>
-                                    <ChevronRight className={`w-3 h-3 ${isAdmin ? "text-white/60" : "text-gray-400"}`} />
-                                  </a>
-                                ))}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-semibold truncate">{file.fileName || "File Attachment"}</p>
+                                        <p className={`text-[9px] ${isAdmin ? "text-blue-100" : "text-gray-500"}`}>
+                                          {isPdf ? '📄 Click to Download PDF' : (file.type?.split('/')[1]?.toUpperCase() || "FILE")}
+                                        </p>
+                                      </div>
+                                      <ChevronRight className={`w-3 h-3 ${isAdmin ? "text-white/60" : "text-gray-400"}`} />
+                                    </a>
+                                  );
+                                })}
                               </div>
                             )}
                             <div className="flex items-center justify-between gap-2 mt-1">
