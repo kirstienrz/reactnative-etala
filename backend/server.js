@@ -26,6 +26,20 @@ app.use(helmet({
 // Limit request data size to prevent large payload attacks
 app.use(express.json({ limit: '10kb' }));
 
+// Fix for Express 5 compatibility with express-mongo-sanitize
+app.use((req, res, next) => {
+  if (req.query) {
+    const query = req.query;
+    Object.defineProperty(req, "query", {
+      value: query,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+  next();
+});
+
 // Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
