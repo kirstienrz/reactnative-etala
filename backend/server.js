@@ -16,14 +16,68 @@ const xss = require("xss-clean");
 dotenv.config();
 connectDB();
 
+// ================= CORS CONFIG =================
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost",
+  "https://localhost",       // Added for Capacitor Android HTTPS origin
+  "capacitor://localhost",
+  "https://etala.vercel.app",
+  "https://reactnative-etala.onrender.com",
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
+}
+
 const app = express();
 
 // Set security HTTP headers
 app.use(helmet({
-  crossOriginResourcePolicy: false, // Allow cross-origin images for Cloudinary/Uploads
+  crossOriginResourcePolicy: false,
 }));
 
-// Limit request data size to prevent large payload attacks
+// Global CORS Middleware (Applied BEFORE Rate Limiters)
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    if (process.env.NODE_ENV === 'production') {
+      return callback(new Error('Not allowed by CORS'));
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// Correct IP detection behind proxies (Must be before rate limiters)
+app.set("trust proxy", 1);
+
+// Global Rate Limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again in 15 minutes",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", globalLimiter);
+
+// Auth Rate Limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: "Too many auth attempts, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/auth", authLimiter);
+
+// Body parser
 app.use(express.json({ limit: '10kb' }));
 
 // Fix for Express 5 compatibility with express-mongo-sanitize
@@ -40,90 +94,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Data sanitization against NoSQL query injection
+// Data sanitization
 app.use(mongoSanitize());
-
-// Data sanitization against XSS
 app.use(xss());
 
-// Correct IP detection behind proxies (Render, Vercel, Heroku, etc.)
-app.set("trust proxy", 1);
-
-// Global Rate Limiting - Prevent DoS attacks
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again in 15 minutes",
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
-app.use("/api", globalLimiter);
-
-// Stricter Rate Limiting for Auth - Prevent brute force
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // Limit each IP to 15 login/signup requests per window
-  message: "Too many auth attempts, please try again later.",
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use("/api/auth", authLimiter);
 const server = http.createServer(app);
-
-require("./utils/sendAdminReminder"); // <- ADD THIS HERE
-
-// ================= CORS CONFIG =================
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://localhost",
-  "https://localhost",       // Added for Capacitor Android HTTPS origin
-  "capacitor://localhost",
-  "https://etala.vercel.app",
-  "https://reactnative-etala.onrender.com",
-];
-
-// Add FRONTEND_URL if it exists in .env
-if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
-}
-
-// Global CORS Middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  // I-allow lahat kung walang origin (Mobile Apps) o kung nasa allowed list
-  if (!origin || allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin || "*");
-  }
-
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
-// CORS configuration
-app.use(cors({
-  origin: function (origin, callback) {
-    // allow Postman/Mobile apps (no origin) or allowed origins list
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    // Block unauthorized origins in production
-    if (process.env.NODE_ENV === 'production') {
-      return callback(new Error('Not allowed by CORS'));
-    }
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+require("./utils/sendAdminReminder");
 
 // ================= MIDDLEWARES =================
 // express.json is already applied above with limit
