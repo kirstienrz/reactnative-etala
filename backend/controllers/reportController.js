@@ -748,7 +748,7 @@ const sendReportPDF = async (req, res) => {
     res.json({
       success: true,
       message: "Referral PDF has been sent to the chat system",
-      fileUrl: cloudinaryResult.secure_url
+      fileUrl: pdfBase64.substring(0, 100) + "..." // Return a snippet or just omit
     });
 
   } catch (error) {

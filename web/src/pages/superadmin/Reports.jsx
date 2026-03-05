@@ -158,13 +158,14 @@ const AdminReports = () => {
   };
 
   // Helper to generate a consistent, beautiful PDF Document for referrals
-  const generateReferralPDFDoc = (report, referral) => {
+  const generateReferralPDFDoc = async (report, referral) => {
     const doc = new jsPDF();
     const title = `${referral.referralType || "Internal"} Referral Report`;
+    const purpleTheme = [126, 34, 206]; // Purple 700
 
     // Header
     doc.setFontSize(22);
-    doc.setTextColor(referral.referralType === "External" ? "#059669" : "#4f46e5");
+    doc.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
     doc.text(title, 14, 22);
 
     doc.setFontSize(10);
@@ -173,7 +174,8 @@ const AdminReports = () => {
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 35);
 
     // Horizontal Line
-    doc.setDrawColor(200);
+    doc.setDrawColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
+    doc.setLineWidth(0.5);
     doc.line(14, 40, 196, 40);
 
     let yPos = 50;
@@ -203,7 +205,7 @@ const AdminReports = () => {
       head: [overviewData[0]],
       body: overviewData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+      headStyles: { fillColor: [245, 243, 255], textColor: [126, 34, 206], fontStyle: 'bold' },
       styles: { fontSize: 9, cellPadding: 3 }
     });
 
@@ -226,7 +228,6 @@ const AdminReports = () => {
       referralTableData.push(["School Name", referral.schoolName || "N/A"]);
     } else {
       referralTableData.push(["Target Department", referral.department || "N/A"]);
-      // Handle potentially long notes
       const noteLabel = "Internal Note / Remarks";
       const noteContent = referral.note || "No notes provided";
       referralTableData.push([noteLabel, noteContent]);
@@ -239,7 +240,7 @@ const AdminReports = () => {
       head: [["Referral Property", "Details"]],
       body: referralTableData,
       theme: 'striped',
-      headStyles: { fillColor: referral.referralType === "External" ? [5, 150, 105] : [79, 70, 229] },
+      headStyles: { fillColor: purpleTheme },
       styles: { fontSize: 9, cellPadding: 3 }
     });
 
@@ -255,7 +256,81 @@ const AdminReports = () => {
       doc.setFontSize(10);
       const splitReason = doc.splitTextToSize(referral.reason, 180);
       doc.text(splitReason, 14, yPos);
-      yPos += (splitReason.length * 6) + 10;
+      yPos += (splitReason.length * 6) + 15;
+    }
+
+    // ✅ ADD IMAGES (Evidence)
+    // Priority: Images uploaded in the referral form, fallback to original report attachments
+    const referralImages = referral.attachments?.filter(att => {
+      // Robust check for File object (newly uploaded)
+      const isFile = att instanceof File || (att && typeof att === 'object' && att.name && att.size && att.type);
+      if (isFile) {
+        return att.type.startsWith('image/') || att.name.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+      }
+      // If it's a URI object (from database)
+      return att.uri && (att.uri.startsWith('data:image') || att.uri.includes('image') || att.fileName?.match(/\.(jpg|jpeg|png|webp|gif)$/i));
+    }) || [];
+
+    const reportImages = report.attachments?.filter(att =>
+      att.uri && (att.uri.includes('image') || att.fileName?.match(/\.(jpg|jpeg|png|webp|gif)$/i))
+    ) || [];
+
+    // Prioritize referral images OVER report images. If referral has images, use ONLY those.
+    const imageAttachments = referralImages.length > 0 ? referralImages : reportImages;
+
+    if (imageAttachments.length > 0) {
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
+      doc.text("Attached Evidence / Media", 14, yPos);
+      yPos += 10;
+
+      const getBase64 = async (fileOrUrl) => {
+        const isFile = fileOrUrl instanceof File || (fileOrUrl && typeof fileOrUrl === 'object' && fileOrUrl.name && fileOrUrl.size && fileOrUrl.type);
+        if (isFile) {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(fileOrUrl);
+          });
+        }
+        try {
+          const response = await fetch(fileOrUrl);
+          const blob = await response.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (e) { return null; }
+      };
+
+      for (const att of imageAttachments) {
+        if (yPos > 220) {
+          doc.addPage();
+          yPos = 20;
+        }
+        const isFile = att instanceof File || (att && typeof att === 'object' && att.name && att.size && att.type);
+        const input = isFile ? att : att.uri;
+        const base64 = await getBase64(input);
+        if (base64) {
+          try {
+            doc.addImage(base64, 'JPEG', 14, yPos, 180, 100, undefined, 'FAST');
+            yPos += 110;
+          } catch (err) {
+            console.error("Image embed error:", err);
+            const label = att instanceof File ? att.name : (att.fileName || 'Unnamed');
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`[Image attachment: ${label}]`, 14, yPos);
+            yPos += 10;
+          }
+        }
+      }
     }
 
     // Footer
@@ -448,7 +523,7 @@ const AdminReports = () => {
 
           // ✅ Send PDF + notification as ONE message
           try {
-            const reportDoc = generateReferralPDFDoc(selectedReport, payload);
+            const reportDoc = await generateReferralPDFDoc(selectedReport, payload);
             const pdfBlob = reportDoc.output('blob');
             const pdfFile = new File([pdfBlob], `Referral_Report_${selectedReport.ticketNumber}.pdf`, { type: 'application/pdf' });
 
@@ -499,7 +574,7 @@ const AdminReports = () => {
     setIsDownloadingPDF(true);
 
     try {
-      const doc = generateReferralPDFDoc(selectedReport, selectedReferral);
+      const doc = await generateReferralPDFDoc(selectedReport, selectedReferral);
       doc.save(`${selectedReferral.referralType || "Internal"}_Referral_${selectedReport.ticketNumber}.pdf`);
       showToast("Referral report downloaded successfully", "success");
     } catch (error) {
@@ -618,7 +693,7 @@ const AdminReports = () => {
             referralType: "Internal",
             referralTimestamp: new Date().toISOString()
           };
-          const reportDoc = generateReferralPDFDoc(selectedReport, payload);
+          const reportDoc = await generateReferralPDFDoc(selectedReport, payload);
           const pdfBlob = reportDoc.output('blob');
           const pdfFile = new File([pdfBlob], `Internal_Referral_${selectedReport.ticketNumber}.pdf`, { type: 'application/pdf' });
 
