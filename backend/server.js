@@ -8,11 +8,52 @@ const http = require("http");
 const { Server } = require("socket.io");
 const setupSocketIO = require("./config/socket");
 const path = require("path");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const mongoSanitize = require("express-mongo-sanitize");
+const xss = require("xss-clean");
 
 dotenv.config();
 connectDB();
 
 const app = express();
+
+// Set security HTTP headers
+app.use(helmet({
+  crossOriginResourcePolicy: false, // Allow cross-origin images for Cloudinary/Uploads
+}));
+
+// Limit request data size to prevent large payload attacks
+app.use(express.json({ limit: '10kb' }));
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Data sanitization against XSS
+app.use(xss());
+
+// Correct IP detection behind proxies (Render, Vercel, Heroku, etc.)
+app.set("trust proxy", 1);
+
+// Global Rate Limiting - Prevent DoS attacks
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again in 15 minutes",
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use("/api", globalLimiter);
+
+// Stricter Rate Limiting for Auth - Prevent brute force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Limit each IP to 15 login/signup requests per window
+  message: "Too many auth attempts, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/auth", authLimiter);
 const server = http.createServer(app);
 
 require("./utils/sendAdminReminder"); // <- ADD THIS HERE
@@ -52,14 +93,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Express CORS options
+// CORS configuration
 app.use(cors({
   origin: function (origin, callback) {
-    // allow Postman, mobile apps, or allowed origins
+    // allow Postman/Mobile apps (no origin) or allowed origins list
     if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    // Block others in production (optional, can be true for debugging)
+    // Block unauthorized origins in production
+    if (process.env.NODE_ENV === 'production') {
+      return callback(new Error('Not allowed by CORS'));
+    }
     return callback(null, true);
   },
   credentials: true,
@@ -68,7 +112,7 @@ app.use(cors({
 }));
 
 // ================= MIDDLEWARES =================
-app.use(express.json());
+// express.json is already applied above with limit
 
 // Static uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

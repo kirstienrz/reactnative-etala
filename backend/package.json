@@ -21,6 +21,9 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mailersend": "^2.6.0",
     "mongoose": "^8.18.2",
@@ -33,7 +36,8 @@
     "pdf-poppler": "^0.2.3",
     "react-native-markdown-display": "^7.0.2",
     "socket.io": "^4.8.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xss-clean": "^0.1.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

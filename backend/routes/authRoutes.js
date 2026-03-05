@@ -24,6 +24,30 @@ router.post("/signup", async (req, res) => {
   } = req.body;
 
   try {
+    // Email domain validation (Strictly TUP emails)
+    if (!email?.endsWith("@tup.edu.ph")) {
+      return res.status(400).json({ msg: "Please use your official @tup.edu.ph email address." });
+    }
+
+    // TUPT ID Format & Year Validation
+    const tupIdMatch = tupId?.match(/^TUPT-(\d{2})-\d{4}$/);
+    if (!tupIdMatch) {
+      return res.status(400).json({ msg: "Invalid TUPT ID format. Use TUPT-XX-XXXX" });
+    }
+
+    // TUPT ID Year Validation (Strictly for Students)
+    if (userType === "Student") {
+      const idYear = parseInt(tupIdMatch[1]);
+      const currentYearShort = new Date().getFullYear() % 100;
+      const minYearShort = currentYearShort - 5;
+
+      if (idYear < minYearShort || idYear > currentYearShort) {
+        return res.status(400).json({
+          msg: `Invalid TUPT ID year.`
+        });
+      }
+    }
+
     // Check if user exists
     const existingUser = await User.findOne({ $or: [{ email }, { tupId }] });
     if (existingUser) {

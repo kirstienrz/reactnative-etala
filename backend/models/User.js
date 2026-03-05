@@ -5,18 +5,18 @@ const userSchema = new mongoose.Schema({
   firstName: { type: String },
   lastName: { type: String },
 
-  tupId: { 
-    type: String, 
-    required: true, 
-    unique: true, 
-    match: /^TUPT-\d{2}-\d{4}$/ 
+  tupId: {
+    type: String,
+    required: true,
+    unique: true,
+    match: /^TUPT-\d{2}-\d{4}$/
   },
 
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
 
-  role: { 
-    type: String, 
+  role: {
+    type: String,
     enum: ["superadmin", "user"],
     default: "user"
   },
@@ -26,15 +26,16 @@ const userSchema = new mongoose.Schema({
     // enum: ["BASD", "CAAD", "EEAD", "MAAD"],
   },
 
-  // userType: {
-  //   type: String,
-  //   enum: ["Student", "Faculty", "Non-Faculty"],
-  // },
+  userType: {
+    type: String,
+    enum: ["Student", "Faculty", "Staff"],
+    default: "Student"
+  },
 
   birthday: { type: Date },
   // age: { type: Number },
 
-  gender: { 
+  gender: {
     type: String,
     enum: ["Male", "Female", "Other"],
   },
@@ -63,10 +64,10 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: Date,
 
   isArchived: { type: Boolean, default: false },
-}, 
-// ✅ ADD THIS: Automatically adds createdAt and updatedAt fields
-{ 
-  timestamps: true 
-});
+},
+  // ✅ ADD THIS: Automatically adds createdAt and updatedAt fields
+  {
+    timestamps: true
+  });
 
 module.exports = mongoose.model("User", userSchema);

@@ -25,7 +25,7 @@ const SignupPage = () => {
   const [birthday, setBirthday] = useState(""); // ✅ new
   const [loading, setLoading] = useState(false);
 
-  const showDepartment = userType === "Student" || userType === "Faculty";
+  const showDepartment = userType === "Student" || userType === "Faculty" || userType === "Staff";
 
   const handleTupIdChange = (e) => {
     let value = e.target.value.toUpperCase();
@@ -66,10 +66,25 @@ const SignupPage = () => {
         return;
       }
 
-      if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
+      const tupIdMatch = tupId.match(/^TUPT-(\d{2})-\d{4}$/);
+      if (!tupIdMatch) {
         toast.warning("TUPT ID must be in format: TUPT-XX-XXXX");
         setLoading(false);
         return;
+      }
+
+      // Year validation ONLY for Students
+      if (userType === "Student") {
+        const idYear = parseInt(tupIdMatch[1]);
+        const currentYearFull = new Date().getFullYear();
+        const currentYearYY = currentYearFull % 100;
+        const minYearYY = currentYearYY - 5;
+
+        if (idYear < minYearYY || idYear > currentYearYY) {
+          toast.warning(`Invalid TUPT ID. Only student IDs from 20${minYearYY} to 20${currentYearYY} are accepted.`);
+          setLoading(false);
+          return;
+        }
       }
 
       if (password.length < 6) {
@@ -262,7 +277,7 @@ const SignupPage = () => {
               >
                 <option value="Student">Student</option>
                 <option value="Faculty">Faculty</option>
-                <option value="Non-Faculty">Non-Faculty</option>
+                <option value="Staff">Staff</option>
               </select>
             </div>
 

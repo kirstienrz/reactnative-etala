@@ -39,11 +39,11 @@ router.get("/analytics", auth(), async (req, res) => {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       months.push(d.toLocaleDateString('en-US', { month: 'short' }));
-      
+
       const count = users.filter(u => {
         if (!u.createdAt) return false;
         const diff = (new Date().getFullYear() - u.createdAt.getFullYear()) * 12 +
-                     (new Date().getMonth() - u.createdAt.getMonth());
+          (new Date().getMonth() - u.createdAt.getMonth());
         return diff === i;
       }).length;
       counts.push(count);
@@ -177,12 +177,12 @@ router.put("/:id", auth(), async (req, res) => {
     // 🧠 Update allowed fields only
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
-    
+
     // ✅ FIX: Properly handle birthday - allow null/undefined to clear it
     if (birthday !== undefined) {
       user.birthday = birthday ? new Date(birthday) : null;
     }
-    
+
     if (age !== undefined) user.age = age;
     if (gender !== undefined) user.gender = gender;
 
@@ -228,7 +228,7 @@ router.get("/manage/users", auth(), async (req, res) => {
     const users = await User.find()
       .select("-password -pin")
       .sort({ createdAt: -1 });
-    
+
     res.json(users);
   } catch (err) {
     console.error("❌ Error fetching all users:", err);
@@ -243,16 +243,29 @@ router.post("/manage/users", auth(), async (req, res) => {
       return res.status(403).json({ message: "Access denied. Superadmin only." });
     }
 
-    const { firstName, lastName, tupId, email, password, role, department, birthday, age, gender } = req.body;
+    const { firstName, lastName, tupId, email, password, role, department, birthday, age, gender, userType } = req.body;
 
     if (!tupId || !email || !password) {
       return res.status(400).json({ message: "TUP ID, email, and password are required" });
     }
 
+    // TUPT ID Year Validation (ONLY for Students)
+    const tupIdMatch = tupId?.match(/^TUPT-(\d{2})-\d{4}$/);
+    if (tupIdMatch && userType === "Student") {
+      const idYear = parseInt(tupIdMatch[1]);
+      const currentYearShort = new Date().getFullYear() % 100;
+      const minYearShort = currentYearShort - 5;
+      if (idYear < minYearShort || idYear > currentYearShort) {
+        return res.status(400).json({
+          message: `Invalid TUPT ID year. Only student IDs from 20${minYearShort} to 20${currentYearShort} are allowed.`
+        });
+      }
+    }
+
     const existingUser = await User.findOne({ $or: [{ email }, { tupId }] });
     if (existingUser) {
-      return res.status(400).json({ 
-        message: existingUser.email === email ? "Email already exists" : "TUP ID already exists" 
+      return res.status(400).json({
+        message: existingUser.email === email ? "Email already exists" : "TUP ID already exists"
       });
     }
 
@@ -271,6 +284,7 @@ router.post("/manage/users", auth(), async (req, res) => {
       birthday,
       age,
       gender,
+      userType: userType || "Student",
       isFirstLogin: true,
       hasPin: false
     });
@@ -316,16 +330,17 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
       return res.status(403).json({ message: "Access denied. Superadmin only." });
     }
 
-    const { 
-      firstName, 
-      lastName, 
-      tupId, 
-      email, 
-      role, 
-      department, 
-      birthday, 
-      age, 
+    const {
+      firstName,
+      lastName,
+      tupId,
+      email,
+      role,
+      department,
+      birthday,
+      age,
       gender,
+      userType,
       newPassword // optional: reset password
     } = req.body;
 
@@ -339,6 +354,28 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
       return res.status(400).json({ message: "Cannot change your own role" });
     }
 
+    // TUPT ID Year Validation (if being updated and user is a Student)
+    if (tupId) {
+      const tupIdMatch = tupId.match(/^TUPT-(\d{2})-\d{4}$/);
+      if (tupIdMatch) {
+        // Only check year limit if the user is a Student
+        // Check both the existing userType or the one being updated
+        const targetUserType = userType || user.userType;
+        if (targetUserType === "Student") {
+          const idYear = parseInt(tupIdMatch[1]);
+          const currentYearShort = new Date().getFullYear() % 100;
+          const minYearShort = currentYearShort - 5;
+          if (idYear < minYearShort || idYear > currentYearShort) {
+            return res.status(400).json({
+              message: `Invalid TUPT ID year. Only student IDs from 20${minYearShort} to 20${currentYearShort} are allowed.`
+            });
+          }
+        }
+      } else {
+        return res.status(400).json({ message: "Invalid TUPT ID format. Use TUPT-XX-XXXX" });
+      }
+    }
+
     // Check for duplicate tupId or email (excluding current user)
     if (tupId || email) {
       const duplicate = await User.findOne({
@@ -350,8 +387,8 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
       });
 
       if (duplicate) {
-        return res.status(400).json({ 
-          message: duplicate.email === email ? "Email already exists" : "TUP ID already exists" 
+        return res.status(400).json({
+          message: duplicate.email === email ? "Email already exists" : "TUP ID already exists"
         });
       }
     }
@@ -366,6 +403,7 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
     if (birthday) user.birthday = birthday;
     if (age !== undefined) user.age = age;
     if (gender) user.gender = gender;
+    if (userType) user.userType = userType;
 
     // Reset password if provided
     if (newPassword) {
@@ -526,13 +564,13 @@ router.get("/analytics", auth(), async (req, res) => {
     // 📅 Monthly registration trend (last 12 months)
     const monthlyRegistrations = Array(12).fill(0);
     const currentDate = new Date();
-    
+
     users.forEach(user => {
       if (user.createdAt) {
-        const monthDiff = 
+        const monthDiff =
           (currentDate.getFullYear() - user.createdAt.getFullYear()) * 12 +
           (currentDate.getMonth() - user.createdAt.getMonth());
-        
+
         if (monthDiff >= 0 && monthDiff < 12) {
           monthlyRegistrations[11 - monthDiff]++;
         }
