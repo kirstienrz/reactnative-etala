@@ -1,8 +1,11 @@
 const Report = require("../models/report");
 const Ticket = require("../models/Ticket");
 const User = require("../models/User");
+const Message = require("../models/message");
+const cloudinary = require("../config/cloudinary");
 const sendEmail = require("../utils/sendEmail");
 const mongoose = require("mongoose");
+const { Readable } = require("stream"); // Use native stream
 
 // ✅ Utility: Generate unique ticket number
 const generateTicketNumber = (isAnonymous) => {
@@ -328,34 +331,88 @@ const updateReportStatus = async (req, res) => {
 };
 
 /**
- * Add referral entry to a report
+ * Add referral entry to a report (Internal or External)
  * @route POST /api/reports/admin/:id/referral
  * @access Admin, Superadmin
  */
 const addReferral = async (req, res) => {
   try {
     const { id } = req.params;
-    const { department, note } = req.body;
+    const body = req.body;
 
-    if (!department) {
-      return res.status(400).json({
-        success: false,
-        message: "Department is required"
-      });
-    }
+    console.log("📨 Received referral request for report:", id);
+    console.log("📦 Body type:", body.referralType);
 
-    const referral = {
-      department,
-      note,
-      referredBy: req.user.id,
-      date: new Date()
+    // 1. Prepare base referral data
+    let referralData = {
+      referralType: body.referralType || "Internal",
+      adminId: req.user.id,
+      date: new Date(),
     };
 
+    // 2. Handle attachments if any
+    const attachments = req.files ? req.files.map(file => ({
+      uri: file.path,
+      type: file.mimetype,
+      fileName: file.originalname,
+    })) : [];
+
+    // 3. Populate data based on type
+    if (body.referralType === "External") {
+      referralData = {
+        ...referralData,
+        referredBy: body.referredBy,
+        position: body.position,
+        schoolName: body.schoolName,
+        referralDate: body.referralDate || new Date(),
+        reason: body.reason,
+        caseSummary: body.caseSummary,
+        barangayName: body.barangayName,
+        barangayAddress: body.barangayAddress,
+        receivingOfficer: body.receivingOfficer,
+        endorsementMode: body.endorsementMode,
+        attachments: attachments,
+      };
+
+      // Handle actionsTaken (might be stringified if sent via FormData)
+      if (body.actionsTaken) {
+        if (typeof body.actionsTaken === "string") {
+          try {
+            referralData.actionsTaken = JSON.parse(body.actionsTaken);
+          } catch (e) {
+            referralData.actionsTaken = [body.actionsTaken];
+          }
+        } else {
+          referralData.actionsTaken = body.actionsTaken;
+        }
+      }
+    } else {
+      // Internal Referral
+      referralData.department = body.department;
+      referralData.note = body.note;
+    }
+
+    // 4. Create timeline entry
+    const timelineEntry = {
+      action: body.referralType === "External"
+        ? `External Referral to ${body.barangayName || "Barangay"}`
+        : `Internal Referral to ${body.department || "Department"}`,
+      performedBy: req.user.id,
+      timestamp: new Date(),
+      remarks: body.referralType === "External" ? body.reason : body.note
+    };
+
+    // 5. Update Report
     const report = await Report.findByIdAndUpdate(
       id,
       {
-        $push: { referrals: referral },
-        $set: { lastUpdated: new Date() }
+        $push: {
+          referrals: referralData,
+          timeline: timelineEntry
+        },
+        $set: {
+          lastUpdated: new Date()
+        }
       },
       { new: true }
     ).populate("createdBy", "firstName lastName email");
@@ -367,16 +424,18 @@ const addReferral = async (req, res) => {
       });
     }
 
+    console.log(`✅ Referral (${referralData.referralType}) added to report ${id}`);
+
     res.json({
       success: true,
       data: report,
-      message: "Referral added successfully"
+      message: `Successfully added ${body.referralType.toLowerCase()} referral`
     });
   } catch (error) {
-    console.error("Error adding referral:", error);
+    console.error("❌ Error adding referral:", error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || "Failed to add referral"
     });
   }
 };
@@ -626,102 +685,91 @@ const sendReportPDF = async (req, res) => {
       });
     }
 
-    // Get user's email
-    const user = await User.findById(userId);
-    if (!user || !user.email) {
+    // 1. Upload PDF to Cloudinary
+    const uploadToCloudinary = () => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "chat_referrals",
+            resource_type: "image", // Treating PDF as image for native viewing
+            public_id: `referral_${ticketNumber || Date.now()}`
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        Readable.from(pdfFile.buffer).pipe(uploadStream);
+      });
+    };
+
+    const cloudinaryResult = await uploadToCloudinary();
+
+    // 2. Find the Ticket
+    const ticket = await Ticket.findOne({ ticketNumber });
+    if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: "User email not found"
+        message: "Ticket not found for this report"
       });
     }
 
-    const userEmail = user.email;
-    const currentDate = new Date().toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
+    // 3. Get sender info (Admin)
+    const sender = await User.findById(userId);
+    const senderName = sender ? `${sender.firstName} ${sender.lastName}` : "GAD Admin";
+
+    // 4. Create Message in Chat
+    const message = new Message({
+      ticketNumber,
+      sender: "superadmin",
+      senderId: userId,
+      senderName,
+      messageType: "file",
+      content: "Official Referral Report PDF",
+      attachments: [{
+        uri: cloudinaryResult.secure_url,
+        type: "application/pdf",
+        fileName: pdfFile.originalname || `Referral_${ticketNumber}.pdf`
+      }]
     });
 
-    // Send email with PDF attachment using the updated sendEmail format
-    await sendEmail({
-      to: userEmail,
-      subject: "Your TUPT GAD Report Copy",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); padding: 40px 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">TUP GAD Office</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">Gender and Development Office</p>
-          </div>
+    await message.save();
 
-          <!-- Main Content -->
-          <div style="background: white; padding: 40px 30px;">
-            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 20px;">Report Submitted Successfully</h2>
-            
-            <p style="color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
-              Thank you for submitting your incident report. Your report has been successfully received. Please proceed to the ETALA Inbox to continue the conversation, request a consultation, or schedule an appointment.
-            </p>
+    // 5. Update Ticket last message & unread count
+    await Ticket.findOneAndUpdate(
+      { ticketNumber },
+      {
+        lastMessageAt: new Date(),
+        lastMessage: "📎 Sent Referral PDF Report",
+        $inc: { "unreadCount.user": 1 },
+        adminHasReplied: true
+      }
+    );
 
-            <!-- Ticket Info Box -->
-            <div style="background: #f1f5f9; border-left: 4px solid #2563eb; padding: 20px; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0 0 10px 0; color: #64748b; font-size: 13px; font-weight: 600;">Ticket Number:</p>
-              <p style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 700;">${ticketNumber || 'N/A'}</p>
-              <p style="margin: 10px 0 0 0; color: #64748b; font-size: 13px;">Date Submitted: ${currentDate}</p>
-            </div>
+    // 6. Emit Socket.io event
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`ticket-${ticketNumber}`).emit("new-message", {
+        message,
+        ticket: ticket
+      });
+      // Also notify user room to update their inbox
+      io.to(`user-${ticket.userId}`).emit("ticket-updated", { ticket: ticket });
+    }
 
-            <p style="color: #475569; line-height: 1.6; margin: 20px 0;">
-              Please find attached a PDF copy of your submitted report. Keep this for your records.
-            </p>
-
-            <!-- What's Next Section -->
-            <div style="margin: 30px 0;">
-              <h3 style="color: #1e293b; font-size: 16px; margin: 0 0 15px 0;">What happens next?</h3>
-              <ul style="color: #475569; line-height: 1.8; padding-left: 20px; margin: 0;">
-                <li>Your report will be reviewed by our team within 24-48 hours</li>
-                <li>You can track your report status using your ticket number</li>
-                <li>We will contact you if we need additional information</li>
-              </ul>
-            </div>
-
-            <!-- Contact Info -->
-            <p style="color: #475569; line-height: 1.6; margin: 20px 0 0 0; font-size: 14px;">
-              If you have any questions or concerns, please contact us at 
-              <a href="mailto:officialgadtupt@gmail.com" style="color: #2563eb; text-decoration: none;">officialgadtupt@gmail.com</a>
-            </p>
-          </div>
-
-          <!-- Footer -->
-          <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-            <p style="color: #64748b; font-size: 12px; margin: 0 0 5px 0;">
-              This is an automated message from TUP GAD Office.
-            </p>
-            <p style="color: #64748b; font-size: 12px; margin: 0;">
-              Please do not reply to this email.
-            </p>
-            <p style="color: #94a3b8; font-size: 11px; margin: 15px 0 0 0;">
-              Technological University of the Philippines<br>
-              Taguig City, Philippines
-            </p>
-          </div>
-        </div>
-      `,
-      pdfBuffer: pdfFile.buffer,
-      pdfFilename: pdfFile.originalname || `TUP_GAD_Report_${ticketNumber || Date.now()}.pdf`
-    });
-
-    console.log(`✅ Report PDF sent to email`);
+    console.log(`✅ Referral PDF sent to Chat for ticket ${ticketNumber}`);
 
     res.json({
       success: true,
-      message: "Report sent to your email successfully",
-      emailSentTo: userEmail
+      message: "Referral PDF has been sent to the chat system",
+      fileUrl: cloudinaryResult.secure_url
     });
 
   } catch (error) {
-    console.error("❌ Failed to send report PDF:", error);
+    console.error("❌ SendReportPDF Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to send report email",
+      message: "Failed to send PDF to chat",
       error: error.message
     });
   }

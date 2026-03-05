@@ -3,6 +3,14 @@ import API from "./config"; // axios instance with baseURL & headers
 // 🧍 USER ENDPOINTS
 // =========================================================
 
+// 📨 SEND Referral PDF to user email
+export const sendReferralPDFToUser = async (formData) => {
+  const res = await API.post("/reports/send-pdf", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};
+
 // 🟣 Disclose identity (user only) WITH password
 // PATCH /reports/user/disclose/:id
 export const discloseIdentity = async (reportId, password) => {
@@ -25,7 +33,7 @@ export const createReport = async (formData) => {
     // Backend route: /api/reports/user/create
     // Since baseURL already has /api, we only need /reports/user/create
     const res = await API.post("/reports/user/create", formData, {
-      headers: { 
+      headers: {
         "Content-Type": "multipart/form-data",
       },
     });
@@ -113,6 +121,29 @@ export const updateReportStatus = async (id, status, remarks = "", caseStatus = 
 
 // 📨 ADD referral entry to a report
 export const addReferral = async (id, payload) => {
+  const isMultipart = payload.attachments && payload.attachments.length > 0;
+
+  if (isMultipart) {
+    const formData = new FormData();
+    Object.keys(payload).forEach((key) => {
+      if (key === "attachments") {
+        payload.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      } else if (Array.isArray(payload[key])) {
+        // Mongoose might expect stringified array or multiple entries for same key
+        formData.append(key, JSON.stringify(payload[key]));
+      } else {
+        formData.append(key, payload[key]);
+      }
+    });
+
+    const res = await API.post(`/reports/admin/${id}/referral`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
+  }
+
   const res = await API.post(`/reports/admin/${id}/referral`, payload);
   return res.data;
 };

@@ -18,9 +18,10 @@ const {
   getArchivedReports,
   restoreReport,
   discloseReport,
-  updateReportByUser, 
+  updateReportByUser,
   sendReportPDF,
-  getReportAnalytics
+  getReportAnalytics,
+  addReferral
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -52,9 +53,9 @@ router.post("/:id/reveal", auth(["user"]), discloseReport);
 
 // ✅ Send PDF via email (user or admin)
 router.post(
-  "/send-pdf", 
-  auth(["user", "admin", "superadmin"]), 
-  pdfUpload.single('pdf'), 
+  "/send-pdf",
+  auth(["user", "admin", "superadmin"]),
+  pdfUpload.single('pdf'),
   sendReportPDF
 );
 
@@ -74,6 +75,14 @@ router.get("/admin/:id", auth(["admin", "superadmin"]), getReportById);
 
 // 📌 Update status
 router.put("/admin/:id/status", auth(["admin", "superadmin"]), updateReportStatus);
+
+// 📌 Add referral (supports attachments)
+router.post(
+  "/admin/:id/referral",
+  auth(["admin", "superadmin"]),
+  uploadReport.array("attachments", 10),
+  addReferral
+);
 
 // 📌 Archive report
 router.put("/admin/:id/archive", auth(["admin", "superadmin"]), archiveReport);

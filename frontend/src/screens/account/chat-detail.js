@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   Keyboard,
   Alert,
+  Linking,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSelector } from "react-redux";
@@ -288,6 +289,54 @@ const ChatScreen = () => {
           >
             {item.content || item.text}
           </Text>
+
+          {/* Attachments Section */}
+          {item.attachments && item.attachments.length > 0 && (
+            <View style={[styles.attachmentsContainer, isMe ? styles.attachmentsContainerUser : styles.attachmentsContainerAdmin]}>
+              {item.attachments.map((file, fIdx) => (
+                <TouchableOpacity
+                  key={fIdx}
+                  onPress={() => {
+                    if (file.uri) {
+                      Linking.openURL(file.uri).catch(err => {
+                        console.error("Failed to open URL:", err);
+                        Alert.alert("Error", "Could not open attachment link");
+                      });
+                    }
+                  }}
+                  style={[
+                    styles.attachmentItem,
+                    isMe ? styles.attachmentItemUser : styles.attachmentItemAdmin
+                  ]}
+                >
+                  <View style={[styles.attachmentIconContainer, isMe ? styles.attachmentIconContainerUser : styles.attachmentIconContainerAdmin]}>
+                    <Ionicons
+                      name={file.type === "application/pdf" ? "document-text" : "attach"}
+                      size={20}
+                      color={isMe ? "#FFFFFF" : "#9333EA"}
+                    />
+                  </View>
+                  <View style={styles.attachmentInfo}>
+                    <Text
+                      style={[styles.attachmentName, isMe ? styles.attachmentNameUser : styles.attachmentNameAdmin]}
+                      numberOfLines={1}
+                    >
+                      {file.fileName || "File Attachment"}
+                    </Text>
+                    <Text style={[styles.attachmentType, isMe ? styles.attachmentTypeUser : styles.attachmentTypeAdmin]}>
+                      {file.type?.split('/')[1]?.toUpperCase() || "FILE"}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="download-outline"
+                    size={16}
+                    color={isMe ? "rgba(255,255,255,0.6)" : "#9CA3AF"}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           <View style={styles.messageFooter}>
             <Text
               style={[
@@ -662,6 +711,69 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  // Attachments
+  attachmentsContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  attachmentsContainerUser: {
+    borderTopColor: "rgba(255,255,255,0.2)",
+  },
+  attachmentsContainerAdmin: {
+    borderTopColor: "#E5E7EB",
+  },
+  attachmentItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  attachmentItemUser: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  attachmentItemAdmin: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  attachmentIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  attachmentIconContainerUser: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  attachmentIconContainerAdmin: {
+    backgroundColor: "#F3E8FF",
+  },
+  attachmentInfo: {
+    flex: 1,
+  },
+  attachmentName: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  attachmentNameUser: {
+    color: "#FFFFFF",
+  },
+  attachmentNameAdmin: {
+    color: "#1F2937",
+  },
+  attachmentType: {
+    fontSize: 10,
+  },
+  attachmentTypeUser: {
+    color: "#E9D5FF",
+  },
+  attachmentTypeAdmin: {
+    color: "#9CA3AF",
   },
 });
 

@@ -418,7 +418,7 @@ const TicketMessagingSystem = () => {
   const [showIdentityModal, setShowIdentityModal] = useState(false);
   const [showCalendarReminder, setShowCalendarReminder] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-  const [modalConfig, setModalConfig] = useState({ title: '', message: '', type: 'info', onConfirm: () => {} });
+  const [modalConfig, setModalConfig] = useState({ title: '', message: '', type: 'info', onConfirm: () => { } });
 
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -474,7 +474,7 @@ const TicketMessagingSystem = () => {
           return [...prev, message];
         });
         if (message.sender === 'user') {
-          markMessagesAsRead(message.ticketNumber).catch(() => {});
+          markMessagesAsRead(message.ticketNumber).catch(() => { });
           removeUnreadRef.current(message.ticketNumber);
           manuallyUnreadRef.current.delete(message.ticketNumber);
         }
@@ -630,7 +630,7 @@ const TicketMessagingSystem = () => {
         : t
     ));
 
-    markMessagesAsRead(ticket.ticketNumber).catch(() => {});
+    markMessagesAsRead(ticket.ticketNumber).catch(() => { });
 
     setTimeout(() => {
       openingTicketRef.current.delete(ticket.ticketNumber);
@@ -682,8 +682,8 @@ const TicketMessagingSystem = () => {
     // Check kung anonymous at hindi pa nag-disclose
     const isAnonymous = report?.isAnonymous === true;
     const hasDisclosed = report?.personalInfo?.firstName &&
-                         report?.personalInfo?.lastName &&
-                         report?.personalInfo?.email;
+      report?.personalInfo?.lastName &&
+      report?.personalInfo?.email;
     if (isAnonymous && !hasDisclosed) {
       setShowIdentityModal(true);
       return;
@@ -711,7 +711,7 @@ const TicketMessagingSystem = () => {
       const userEmail = ticket.userId?.email || ticket.reportId?.email || ticket.email;
       const userName = ticket.displayName && ticket.displayName !== "Anonymous User" ? ticket.displayName
         : ticket.userId?.firstName ? `${ticket.userId.firstName} ${ticket.userId.lastName}`
-        : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}` : "User";
+          : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}` : "User";
       const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
       if (!userId || !userEmail || !ticketNumber) { alert("❌ Missing required info."); return; }
       const response = await sendBookingLinkEmail({ userId, userEmail, userName, ticketNumber });
@@ -756,9 +756,9 @@ const TicketMessagingSystem = () => {
     const matchSearch = !q || ticket.displayName?.toLowerCase().includes(q) || ticket.ticketNumber?.toLowerCase().includes(q) || ticket.reportId?.ticketNumber?.toLowerCase().includes(q);
     const matchFilter = filterStatus === 'all' ? true
       : filterStatus === 'open' ? ticket.status === 'Open'
-      : filterStatus === 'closed' ? ticket.status === 'Closed'
-      : filterStatus === 'unread' ? isUnread(ticket.ticketNumber)
-      : true;
+        : filterStatus === 'closed' ? ticket.status === 'Closed'
+          : filterStatus === 'unread' ? isUnread(ticket.ticketNumber)
+            : true;
     return matchSearch && matchFilter;
   });
 
@@ -820,13 +820,12 @@ const TicketMessagingSystem = () => {
 
                   return (
                     <button key={ticket._id} onClick={() => handleSelectTicket(ticket)}
-                      className={`w-full p-4 text-left transition-all duration-150 ${
-                        isSelected
+                      className={`w-full p-4 text-left transition-all duration-150 ${isSelected
                           ? 'bg-blue-50 border-l-4 border-blue-500'
                           : ticketUnread
-                          ? 'bg-red-50/40 hover:bg-red-50/70 border-l-4 border-red-400'
-                          : 'hover:bg-gray-50 border-l-4 border-transparent'
-                      }`}>
+                            ? 'bg-red-50/40 hover:bg-red-50/70 border-l-4 border-red-400'
+                            : 'hover:bg-gray-50 border-l-4 border-transparent'
+                        }`}>
                       <div className="flex items-start gap-3">
                         {/* ── Avatar: UnreadDot REMOVED, color change lang ang indicator ── */}
                         <div className="relative flex-shrink-0">
@@ -918,7 +917,39 @@ const TicketMessagingSystem = () => {
                           <div className={`max-w-md rounded-2xl p-3 ${isAppt ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg' : isAdmin ? 'bg-blue-500' : 'bg-white shadow-sm'}`}>
                             {isAppt && <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30"><Calendar className="w-4 h-4 text-white" /><span className="text-xs font-semibold text-white">Appointment Booking</span></div>}
                             <p className={`text-sm whitespace-pre-line ${isAppt || isAdmin ? 'text-white' : 'text-gray-900'}`}>{msg.content}</p>
-                            {msg.attachments?.length > 0 && <div className="mt-2 flex items-center gap-1 text-xs opacity-80 text-white"><Paperclip className="w-3 h-3" />{msg.attachments.length} attachment(s)</div>}
+
+                            {/* Attachments Section */}
+                            {msg.attachments?.length > 0 && (
+                              <div className="mt-3 space-y-2 border-t border-white/20 pt-2">
+                                {msg.attachments.map((file, fIdx) => (
+                                  <a
+                                    key={fIdx}
+                                    href={file.uri}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isAdmin
+                                        ? "bg-white/10 hover:bg-white/20 text-white"
+                                        : "bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200"
+                                      }`}
+                                  >
+                                    <div className={`p-1.5 rounded ${isAdmin ? "bg-white/20" : "bg-blue-100"}`}>
+                                      {file.type === "application/pdf" ? (
+                                        <Paperclip className="w-3.5 h-3.5" />
+                                      ) : (
+                                        <Paperclip className="w-3.5 h-3.5" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[11px] font-semibold truncate">{file.fileName || "File Attachment"}</p>
+                                      <p className={`text-[9px] ${isAdmin ? "text-blue-100" : "text-gray-500"}`}>
+                                        {file.type?.split('/')[1]?.toUpperCase() || "FILE"}
+                                      </p>
+                                    </div>
+                                    <ChevronRight className={`w-3 h-3 ${isAdmin ? "text-white/60" : "text-gray-400"}`} />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                             <div className="flex items-center justify-between gap-2 mt-1">
                               <span className={`text-xs ${isAppt || isAdmin ? 'text-white/70' : 'text-gray-400'}`}>{formatTime(msg.createdAt)}</span>
                               {isAdmin && isLast && msg.isRead && <span className="text-xs text-blue-200">✓ Read</span>}

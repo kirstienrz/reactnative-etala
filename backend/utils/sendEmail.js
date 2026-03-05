@@ -10,12 +10,13 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
  * @param {string} param0.subject - email subject
  * @param {string} param0.html - email content in HTML
  */
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, attachments }) => {
   const msg = {
     to,
     from: process.env.SENDGRID_SENDER_EMAIL || "noreply@etala.com", // verified sender
     subject,
     html,
+    attachments: attachments || [],
   };
 
   try {
@@ -23,6 +24,10 @@ const sendEmail = async ({ to, subject, html }) => {
     console.log("✅ Email sent successfully via SendGrid");
   } catch (error) {
     console.error("❌ SendGrid email error:", error.response?.body || error);
+    // Log details of the error if available
+    if (error.response?.body?.errors) {
+      console.error("Errors:", JSON.stringify(error.response.body.errors, null, 2));
+    }
     throw new Error("Could not send email via SendGrid");
   }
 };

@@ -1,3 +1,4 @@
+// DEBUG: Triggering HMR
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -5,12 +6,14 @@ import {
   Search, Filter, Calendar, FileText, AlertCircle, CheckCircle,
   Clock, XCircle, ChevronDown, Download, Users, UserCheck, ClipboardList, Edit,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown, Mail, MoreVertical,
-  Brain, Activity, AlertTriangle, Shield, BarChart
+  Brain, Activity, AlertTriangle, Shield, BarChart, ExternalLink, FileDown
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import {
   getAllReports, getArchivedReports, getReportById,
-  updateReportStatus, archiveReport, restoreReport, addReferral
+  updateReportStatus, archiveReport, restoreReport, addReferral, sendReferralPDFToUser
 } from "../../api/report";
 
 // Add this API function for sentiment analysis
@@ -57,6 +60,34 @@ const AdminReports = () => {
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
   const [newReferralType, setNewReferralType] = useState("");
+  // New state for external referral workflow
+  const [externalReferralData, setExternalReferralData] = useState({
+    referredBy: "",
+    position: "",
+    schoolName: "",
+    referralDate: "",
+    reason: "",
+    actionsTaken: [],
+    caseSummary: "",
+    barangayName: "",
+    barangayAddress: "",
+    receivingOfficer: "",
+    endorsementMode: "",
+    attachments: []
+  });
+  const [showExternalReferralForm, setShowExternalReferralForm] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showViewReferralModal, setShowViewReferralModal] = useState(false);
+  const [selectedReferral, setSelectedReferral] = useState(null);
+  const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  useEffect(() => {
+    if (newCaseStatus === "For Referral" && newReferralType === "External") {
+      setShowExternalReferralForm(true);
+    } else {
+      setShowExternalReferralForm(false);
+    }
+  }, [newCaseStatus, newReferralType]);
 
   const dropdownRefs = useRef({});
 
@@ -123,6 +154,120 @@ const AdminReports = () => {
 
   const isReportRead = (reportId) => {
     return readReports.includes(reportId);
+  };
+
+  // Helper to generate a consistent, beautiful PDF Document for referrals
+  const generateReferralPDFDoc = (report, referral) => {
+    const doc = new jsPDF();
+    const title = `${referral.referralType || "Internal"} Referral Report`;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(referral.referralType === "External" ? "#059669" : "#4f46e5");
+    doc.text(title, 14, 22);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Reference Ticket: ${report.ticketNumber}`, 14, 30);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 35);
+
+    // Horizontal Line
+    doc.setDrawColor(200);
+    doc.line(14, 40, 196, 40);
+
+    let yPos = 50;
+
+    // Report Info
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "bold");
+    doc.text("Incident Overview", 14, yPos);
+    yPos += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const incidentTypes = Array.isArray(report.incidentTypes) ? report.incidentTypes.join(", ") : (report.incidentTypes || "N/A");
+    const submittedAtDate = report.submittedAt ? new Date(report.submittedAt).toLocaleDateString() : "N/A";
+
+    const overviewData = [
+      ["Field", "Content"],
+      ["Incident Category", report.category || "N/A"],
+      ["Incident Types", incidentTypes],
+      ["Date Reported", submittedAtDate],
+      ["Current Case Status", report.caseStatus || "N/A"]
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [overviewData[0]],
+      body: overviewData.slice(1),
+      theme: 'grid',
+      headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+
+    yPos = (doc.lastAutoTable?.finalY || (yPos + 40)) + 15;
+
+    // Referral Specifics
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Referral Information", 14, yPos);
+    yPos += 10;
+
+    const referralTableData = [];
+    if (referral.referralType === "External") {
+      referralTableData.push(["Target Barangay", referral.barangayName || "N/A"]);
+      referralTableData.push(["Barangay Address", referral.barangayAddress || "N/A"]);
+      referralTableData.push(["Receiving Officer", referral.receivingOfficer || "N/A"]);
+      referralTableData.push(["Endorsement Mode", referral.endorsementMode || "N/A"]);
+      referralTableData.push(["Referred By", referral.referredBy || "N/A"]);
+      referralTableData.push(["Position", referral.position || "N/A"]);
+      referralTableData.push(["School Name", referral.schoolName || "N/A"]);
+    } else {
+      referralTableData.push(["Target Department", referral.department || "N/A"]);
+      // Handle potentially long notes
+      const noteLabel = "Internal Note / Remarks";
+      const noteContent = referral.note || "No notes provided";
+      referralTableData.push([noteLabel, noteContent]);
+    }
+    const referralDateStr = referral.date || referral.referralTimestamp ? new Date(referral.date || referral.referralTimestamp).toLocaleString() : new Date().toLocaleString();
+    referralTableData.push(["Date of Referral", referralDateStr]);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Referral Property", "Details"]],
+      body: referralTableData,
+      theme: 'striped',
+      headStyles: { fillColor: referral.referralType === "External" ? [5, 150, 105] : [79, 70, 229] },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+
+    yPos = (doc.lastAutoTable?.finalY || (yPos + 40)) + 15;
+
+    // Reason (Multi-line)
+    if (referral.referralType === "External" && referral.reason) {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Reason for Referral", 14, yPos);
+      yPos += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const splitReason = doc.splitTextToSize(referral.reason, 180);
+      doc.text(splitReason, 14, yPos);
+      yPos += (splitReason.length * 6) + 10;
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`INSPIRE ERS - Official Referral Report | Page ${i} of ${pageCount}`, 14, 285);
+      doc.text(`Ticket #${report.ticketNumber}`, 170, 285);
+    }
+
+    return doc;
   };
 
   // Sentiment Analysis Function
@@ -225,6 +370,28 @@ const AdminReports = () => {
     }
   };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      setExternalReferralData(prev => ({
+        ...prev,
+        attachments: [...(prev.attachments || []), ...files]
+      }));
+    }
+  };
+
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
@@ -245,28 +412,125 @@ const AdminReports = () => {
     }
   };
 
+  const handleExternalReferral = async () => {
+    setIsSubmittingReferral(true);
+    // Prepare payload
+    const payload = {
+      ...externalReferralData,
+      referralType: "External",
+      referralTimestamp: new Date().toISOString(),
+      reportId: selectedReport._id
+    };
+    try {
+      // Placeholder API call - replace with actual endpoint when available
+      const res = await addReferral(selectedReport._id, payload);
+      if (res.success) {
+        showToast("External referral submitted successfully");
+        // Update case status to "Referred to Barangay"
+        const statusRes = await updateReportStatus(
+          selectedReport._id,
+          selectedReport.status,
+          "",
+          "Referred to Barangay"
+        );
+        if (statusRes.success) {
+          // Add timeline entry locally (could be via API as well)
+          const updatedReport = { ...selectedReport };
+          updatedReport.timeline = updatedReport.timeline || [];
+          updatedReport.timeline.push({
+            action: "Case referred externally to Barangay",
+            timestamp: new Date().toISOString()
+          });
+          // Refresh UI
+          // Refresh UI
+          fetchReports();
+
+          // ✅ AUTOMATICALLY SEND PDF TO USER VIA CHAT
+          try {
+            const reportDoc = generateReferralPDFDoc(selectedReport, payload);
+            const pdfBlob = reportDoc.output('blob');
+            const pdfFile = new File([pdfBlob], `Referral_Report_${selectedReport.ticketNumber}.pdf`, { type: 'application/pdf' });
+
+            const chatFormData = new FormData();
+            chatFormData.append('pdf', pdfFile);
+            chatFormData.append('ticketNumber', selectedReport.ticketNumber);
+
+            await sendReferralPDFToUser(chatFormData);
+            console.log("✅ Automated external referral PDF sent to user via Chat");
+          } catch (pdfError) {
+            console.error("❌ Failed to auto-send PDF:", pdfError);
+          }
+        }
+        // Reset form state
+        setExternalReferralData({
+          referredBy: "",
+          position: "",
+          schoolName: "",
+          referralDate: "",
+          reason: "",
+          actionsTaken: [],
+          caseSummary: "",
+          barangayName: "",
+          barangayAddress: "",
+          receivingOfficer: "",
+          endorsementMode: "",
+          attachments: []
+        });
+        setShowExternalReferralForm(false);
+        setShowCaseStatusModal(false);
+        setNewCaseStatus("");
+        setNewReferralType("");
+      } else {
+        showToast(res.message || "Failed to submit external referral", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || "Error submitting external referral", "error");
+    } finally {
+      setIsSubmittingReferral(false);
+    }
+  };
+
+  const handleDownloadReferralPDF = async () => {
+    if (!selectedReferral || !selectedReport) return;
+    setIsDownloadingPDF(true);
+
+    try {
+      const doc = generateReferralPDFDoc(selectedReport, selectedReferral);
+      doc.save(`${selectedReferral.referralType || "Internal"}_Referral_${selectedReport.ticketNumber}.pdf`);
+      showToast("Referral report downloaded successfully", "success");
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      showToast("Failed to generate PDF report", "error");
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
+
   const handleUpdateCaseStatus = async () => {
     if (!newCaseStatus) return;
-
-    // Determine final status
+    // If external referral selected, expand form instead of immediate update
+    if (newCaseStatus === "For Referral" && newReferralType === "External") {
+      setShowExternalReferralForm(true);
+      return;
+    }
+    // Determine final status for internal or other cases
     let finalStatus = newCaseStatus;
     if (newCaseStatus === "For Referral") {
-      finalStatus = newReferralType || "For Referral"; // Internal/External or fallback
+      finalStatus = newReferralType || "For Referral"; // Internal fallback
     }
-
     try {
       const res = await updateReportStatus(
         selectedReport._id,
-        selectedReport.status, // assuming this is current status
-        "", // if you need some other param, keep it
-        finalStatus // send the updated status
+        selectedReport.status,
+        "",
+        finalStatus
       );
-
       if (res.success) {
         showToast("Case status updated successfully");
         setShowCaseStatusModal(false);
         setNewCaseStatus("");
-        setNewReferralType(""); // reset referral type
+        setNewReferralType("");
         fetchReports();
       } else {
         showToast(res.message || "Failed to update case status", "error");
@@ -323,6 +587,28 @@ const AdminReports = () => {
         setReferralDept("");
         setReferralNote("");
         fetchReports();
+
+        // ✅ AUTOMATICALLY SEND PDF TO USER VIA CHAT
+        try {
+          const payload = {
+            department: referralDept,
+            note: referralNote,
+            referralType: "Internal",
+            referralTimestamp: new Date().toISOString()
+          };
+          const reportDoc = generateReferralPDFDoc(selectedReport, payload);
+          const pdfBlob = reportDoc.output('blob');
+          const pdfFile = new File([pdfBlob], `Internal_Referral_${selectedReport.ticketNumber}.pdf`, { type: 'application/pdf' });
+
+          const chatFormData = new FormData();
+          chatFormData.append('pdf', pdfFile);
+          chatFormData.append('ticketNumber', selectedReport.ticketNumber);
+
+          await sendReferralPDFToUser(chatFormData);
+          console.log("✅ Automated internal referral PDF sent to user via Chat");
+        } catch (pdfError) {
+          console.error("❌ Failed to auto-send PDF:", pdfError);
+        }
       } else {
         showToast(res.message || "Failed to add referral", "error");
       }
@@ -445,7 +731,7 @@ const AdminReports = () => {
   const severityStats = getSeverityStats();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div id="admin-reports-main-v2" className="min-h-screen bg-gray-50 p-6">
       {/* Toast Notification */}
       {toast.show && (
         <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
@@ -731,219 +1017,219 @@ const AdminReports = () => {
         </div>
 
         {/* Reports Table */}
-<div className="p-6">
-  {loading ? (
-    <div className="flex items-center justify-center py-12">
-      <RefreshCw className="animate-spin text-blue-600" size={32} />
-    </div>
-  ) : filteredReports.length === 0 ? (
-    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-      <FileText size={48} className="mb-3 text-gray-300" />
-      <p className="text-lg font-medium mb-1">No reports found</p>
-      <p className="text-sm">Adjust your search criteria or filters</p>
-    </div>
-  ) : (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ticket
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Severity
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Case Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedReports.map((report) => {
-              const sentiment = sentimentResults[report._id];
-              return (
-                <tr
-                  key={report._id}
-                  className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {!isReportRead(report._id) && (
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
-                      {report.ticketNumber}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {sentiment ? (
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
-                          {getSeverityIcon(sentiment.severity)}
-                          {sentiment.severity}
-                          <span className="text-xs opacity-75">({Math.round(sentiment.confidence * 100)}%)</span>
-                        </span>
-                        {sentiment.keywords && sentiment.keywords.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {sentiment.keywords.slice(0, 2).map((keyword, idx) => (
-                              <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                                {keyword}
-                              </span>
-                            ))}
-                            {sentiment.keywords.length > 2 && (
-                              <span className="text-xs text-gray-400">+{sentiment.keywords.length - 2}</span>
+        <div className="p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="animate-spin text-blue-600" size={32} />
+            </div>
+          ) : filteredReports.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+              <FileText size={48} className="mb-3 text-gray-300" />
+              <p className="text-lg font-medium mb-1">No reports found</p>
+              <p className="text-sm">Adjust your search criteria or filters</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ticket
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Severity
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Case Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {paginatedReports.map((report) => {
+                      const sentiment = sentimentResults[report._id];
+                      return (
+                        <tr
+                          key={report._id}
+                          className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {!isReportRead(report._id) && (
+                              <div className="flex items-center">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                              </div>
                             )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setSelectedReportForAnalysis(report);
-                          analyzeSentiment(report._id, {
-                            incidentDescription: report.incidentDescription,
-                            incidentTypes: report.incidentTypes,
-                            timestamp: report.submittedAt
-                          });
-                        }}
-                        disabled={analyzing}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Brain size={12} />
-                        {analyzing && selectedReportForAnalysis?._id === report._id ? "Analyzing..." : "Analyze"}
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {report.caseStatus ? (
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
-                        {getCaseStatusIcon(report.caseStatus)}
-                        {report.caseStatus}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-xs">Not Set</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(report.submittedAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {/* INLINE ACTIONS - Lahat ng actions ay DIRECT NA MAKIKITA */}
-                    <div className="flex items-center gap-1">
-                      {/* View Details Button */}
-                      <button
-                        onClick={() => handleViewDetails(report._id)}
-                        className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
-                        title="View Details"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      
-                      {/* Message Button */}
-                      <button
-                        onClick={() => handleMessageUser(report)}
-                        className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
-                        title="Message User"
-                      >
-                        <MessageSquare size={16} />
-                      </button>
-                      
-                      {/* Mark as Read/Unread Button */}
-                      {isReportRead(report._id) ? (
-                        <button
-                          onClick={() => markAsUnread(report._id)}
-                          className="p-1.5 hover:bg-gray-100 text-gray-600 rounded transition-colors"
-                          title="Mark as Unread"
-                        >
-                          <Mail size={16} />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => markAsRead(report._id)}
-                          className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
-                          title="Mark as Read"
-                        >
-                          <CheckCircle size={16} />
-                        </button>
-                      )}
-                      
-                      {/* Edit Case Status Button */}
-                      <button
-                        onClick={() => {
-                          setSelectedReport(report);
-                          setNewCaseStatus(report.caseStatus || "");
-                          setShowCaseStatusModal(true);
-                        }}
-                        className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors"
-                        title="Edit Case Status"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      
-                      {/* Archive/Restore Button */}
-                      {activeTab === "active" ? (
-                        <button
-                          onClick={() => {
-                            setSelectedReport(report);
-                            setShowArchiveModal(true);
-                          }}
-                          className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
-                          title="Archive Report"
-                        >
-                          <Archive size={16} />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedReport(report);
-                            setShowRestoreModal(true);
-                          }}
-                          className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
-                          title="Restore Report"
-                        >
-                          <RefreshCw size={16} />
-                        </button>
-                      )}
-                      
-                      {/* Sentiment Analysis Button (if not analyzed) */}
-                      {!sentimentResults[report._id] && (
-                        <button
-                          onClick={() => {
-                            setSelectedReportForAnalysis(report);
-                            analyzeSentiment(report._id, {
-                              incidentDescription: report.incidentDescription,
-                              incidentTypes: report.incidentTypes,
-                              timestamp: report.submittedAt
-                            });
-                          }}
-                          disabled={analyzing}
-                          className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Analyze Severity"
-                        >
-                          <Brain size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                              {report.ticketNumber}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {sentiment ? (
+                              <div className="flex flex-col gap-1">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
+                                  {getSeverityIcon(sentiment.severity)}
+                                  {sentiment.severity}
+                                  <span className="text-xs opacity-75">({Math.round(sentiment.confidence * 100)}%)</span>
+                                </span>
+                                {sentiment.keywords && sentiment.keywords.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {sentiment.keywords.slice(0, 2).map((keyword, idx) => (
+                                      <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                        {keyword}
+                                      </span>
+                                    ))}
+                                    {sentiment.keywords.length > 2 && (
+                                      <span className="text-xs text-gray-400">+{sentiment.keywords.length - 2}</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setSelectedReportForAnalysis(report);
+                                  analyzeSentiment(report._id, {
+                                    incidentDescription: report.incidentDescription,
+                                    incidentTypes: report.incidentTypes,
+                                    timestamp: report.submittedAt
+                                  });
+                                }}
+                                disabled={analyzing}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Brain size={12} />
+                                {analyzing && selectedReportForAnalysis?._id === report._id ? "Analyzing..." : "Analyze"}
+                              </button>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {report.caseStatus ? (
+                              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
+                                {getCaseStatusIcon(report.caseStatus)}
+                                {report.caseStatus}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">Not Set</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(report.submittedAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {/* INLINE ACTIONS - Lahat ng actions ay DIRECT NA MAKIKITA */}
+                            <div className="flex items-center gap-1">
+                              {/* View Details Button */}
+                              <button
+                                onClick={() => handleViewDetails(report._id)}
+                                className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
+                                title="View Details"
+                              >
+                                <Eye size={16} />
+                              </button>
+
+                              {/* Message Button */}
+                              <button
+                                onClick={() => handleMessageUser(report)}
+                                className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
+                                title="Message User"
+                              >
+                                <MessageSquare size={16} />
+                              </button>
+
+                              {/* Mark as Read/Unread Button */}
+                              {isReportRead(report._id) ? (
+                                <button
+                                  onClick={() => markAsUnread(report._id)}
+                                  className="p-1.5 hover:bg-gray-100 text-gray-600 rounded transition-colors"
+                                  title="Mark as Unread"
+                                >
+                                  <Mail size={16} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => markAsRead(report._id)}
+                                  className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
+                                  title="Mark as Read"
+                                >
+                                  <CheckCircle size={16} />
+                                </button>
+                              )}
+
+                              {/* Edit Case Status Button */}
+                              <button
+                                onClick={() => {
+                                  setSelectedReport(report);
+                                  setNewCaseStatus(report.caseStatus || "");
+                                  setShowCaseStatusModal(true);
+                                }}
+                                className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors"
+                                title="Edit Case Status"
+                              >
+                                <Edit size={16} />
+                              </button>
+
+                              {/* Archive/Restore Button */}
+                              {activeTab === "active" ? (
+                                <button
+                                  onClick={() => {
+                                    setSelectedReport(report);
+                                    setShowArchiveModal(true);
+                                  }}
+                                  className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
+                                  title="Archive Report"
+                                >
+                                  <Archive size={16} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setSelectedReport(report);
+                                    setShowRestoreModal(true);
+                                  }}
+                                  className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
+                                  title="Restore Report"
+                                >
+                                  <RefreshCw size={16} />
+                                </button>
+                              )}
+
+                              {/* Sentiment Analysis Button (if not analyzed) */}
+                              {!sentimentResults[report._id] && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedReportForAnalysis(report);
+                                    analyzeSentiment(report._id, {
+                                      incidentDescription: report.incidentDescription,
+                                      incidentTypes: report.incidentTypes,
+                                      timestamp: report.submittedAt
+                                    });
+                                  }}
+                                  disabled={analyzing}
+                                  className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Analyze Severity"
+                                >
+                                  <Brain size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
@@ -1641,210 +1927,725 @@ const AdminReports = () => {
                     </div>
                   </div>
 
-                  {/* Attachments */}
-                  {selectedReport.attachments?.length > 0 && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Attachments</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {selectedReport.attachments.map((att, i) => (
-                          <a
-                            key={i}
-                            href={att.uri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                </div>
+
+                {/* Referral Tracking */}
+                {selectedReport.referrals?.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b flex items-center gap-2">
+                      <Share2 size={16} className="text-gray-400" />
+                      Referral Tracking
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedReport.referrals.map((ref, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${ref.referralType === "External" ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"}`}>
+                              {ref.referralType === "External" ? <Shield size={16} /> : <Users size={16} />}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-900 leading-tight">
+                                {ref.referralType === "External" ? `${ref.barangayName} (External)` : `${ref.department} (Internal)`}
+                              </p>
+                              <p className="text-[10px] text-gray-500">
+                                {new Date(ref.date).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedReferral(ref);
+                              setShowViewReferralModal(true);
+                            }}
+                            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95"
                           >
-                            <FileText size={16} className="text-gray-400" />
-                            <span className="text-sm text-gray-900 flex-1 truncate">{att.fileName}</span>
-                            <Download size={16} className="text-gray-400" />
-                          </a>
-                        ))}
-                      </div>
+                            View Details
+                          </button>
+                        </div>
+                      ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Attachments */}
+                {selectedReport.attachments?.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Attachments</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {selectedReport.attachments.map((att, i) => (
+                        <a
+                          key={i}
+                          href={att.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                        >
+                          <FileText size={16} className="text-gray-400" />
+                          <span className="text-sm text-gray-900 flex-1 truncate">{att.fileName}</span>
+                          <Download size={16} className="text-gray-400" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Actions for Details Modal */}
+              <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {!sentimentResults[selectedReport._id] && (
+                    <button
+                      onClick={() => analyzeSentiment(selectedReport._id, {
+                        incidentDescription: selectedReport.incidentDescription,
+                        incidentTypes: selectedReport.incidentTypes,
+                        timestamp: selectedReport.submittedAt
+                      })}
+                      disabled={analyzing}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <Brain size={18} />
+                      {analyzing ? "Analyzing..." : "AI Analyze Severity"}
+                    </button>
+                  )}
+
+                  {selectedReport.caseStatus === "For Interview" && (
+                    <button
+                      onClick={() => setShowReferralModal(true)}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Share2 size={18} />
+                      Refer
+                    </button>
+                  )}
+
+                  {!selectedReport.archived ? (
+                    <button
+                      onClick={() => setShowArchiveModal(true)}
+                      className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Archive size={18} />
+                      Archive Report
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowRestoreModal(true)}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw size={18} />
+                      Restore Report
+                    </button>
                   )}
                 </div>
               </div>
             </div>
-
-
-            {/* Footer Actions */}
-            <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
-              <div className="flex flex-col sm:flex-row gap-3">
-                {!sentimentResults[selectedReport._id] && (
-                  <button
-                    onClick={() => analyzeSentiment(selectedReport._id, {
-                      incidentDescription: selectedReport.incidentDescription,
-                      incidentTypes: selectedReport.incidentTypes,
-                      timestamp: selectedReport.submittedAt
-                    })}
-                    disabled={analyzing}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <Brain size={18} />
-                    {analyzing ? "Analyzing..." : "AI Analyze Severity"}
-                  </button>
-                )}
-
-                {selectedReport.caseStatus === "For Interview" && (
-                  <button
-                    onClick={() => setShowReferralModal(true)}
-                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Share2 size={18} />
-                    Refer
-                  </button>
-                )}
-
-                {!selectedReport.archived ? (
-                  <button
-                    onClick={() => setShowArchiveModal(true)}
-                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Archive size={18} />
-                    Archive Report
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowRestoreModal(true)}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw size={18} />
-                    Restore Report
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       )}
 
-      {/* All other modals remain unchanged */}
-      {/* Enhanced Case Status Modal */}
-      {showCaseStatusModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Update Case Status</h2>
+      {/* Internal Referral Modal */}
+      {showReferralModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col shadow-2xl overflow-hidden border border-gray-100">
+            <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Internal Referral</h3>
+                  <p className="text-indigo-100 text-sm">Case #{selectedReport.ticketNumber}</p>
+                </div>
+              </div>
               <button
-                onClick={() => setShowCaseStatusModal(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setShowReferralModal(false)}
+                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
               >
-                <X size={20} className="text-gray-500" />
+                <X size={24} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Case Status</label>
-                <select
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={newCaseStatus}
-                  onChange={(e) => setNewCaseStatus(e.target.value)}
-                >
-                  <option value="">Choose a case status</option>
-                  <option>For Queuing</option>
-                  <option>For Interview</option>
-                  <option>For Referral</option>
-                  <option>Case Closed</option>
-                </select>
-                {/* Secondary dropdown for Internal/External if For Referral */}
-                {newCaseStatus === "For Referral" && (
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Referral Type</label>
-                    <select
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={newReferralType}
-                      onChange={(e) => setNewReferralType(e.target.value)}
-                    >
-                      <option value="">Select type</option>
-                      <option>Internal</option>
-                      <option>External</option>
-                    </select>
-                  </div>
-                )}
+
+            <div className="p-8 space-y-6">
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
+                  <AlertCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-sm text-blue-800 font-medium">Important</p>
+                  <p className="text-xs text-blue-600 leading-relaxed">
+                    Internal referrals are for coordination between departments. A PDF report will be automatically generated and sent to the reporter via chat.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Users size={16} className="text-indigo-500" />
+                    Target Department
+                  </label>
+                  <select
+                    value={referralDept}
+                    onChange={(e) => setReferralDept(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+                  >
+                    <option value="">Select a department</option>
+                    <option value="Legal Clinic">Legal Clinic</option>
+                    <option value="Guidance and Counseling">Guidance and Counseling</option>
+                    <option value="Medical Health Services">Medical Health Services</option>
+                    <option value="Director's Office">Director's Office</option>
+                    <option value="Human Resources">Human Resources (for Employees)</option>
+                    <option value="Student Affairs">Student Affairs</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <FileText size={16} className="text-indigo-500" />
+                    Referral Note
+                  </label>
+                  <textarea
+                    placeholder="Provide specific details or instructions for this referral..."
+                    value={referralNote}
+                    onChange={(e) => setReferralNote(e.target.value)}
+                    className="w-full h-32 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none resize-none"
+                  ></textarea>
+                </div>
               </div>
             </div>
-            <div className="flex gap-3 p-6 border-t border-gray-200">
+
+            <div className="px-8 py-6 bg-gray-50 border-t border-gray-100 flex gap-4">
               <button
-                onClick={() => setShowCaseStatusModal(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-lg font-medium transition-colors"
+                onClick={() => setShowReferralModal(false)}
+                className="flex-1 px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-all"
               >
                 Cancel
               </button>
               <button
-                onClick={handleUpdateCaseStatus}
-                disabled={!newCaseStatus || (newCaseStatus === "For Referral" && !newReferralType)}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition-colors"
+                onClick={handleAddReferral}
+                disabled={!referralDept}
+                className="flex-1 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2"
               >
-                Update Case Status
+                <Send size={18} />
+                Submit Referral
               </button>
             </div>
           </div>
         </div>
       )}
 
-
-      {/* Enhanced Archive Modal */}
-      {showArchiveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md text-center">
-            <div className="p-6">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Archive className="text-red-600" size={24} />
+      {/* View Referral Modal */}
+      {showViewReferralModal && selectedReferral && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col max-h-[90vh] shadow-2xl overflow-hidden border border-gray-100">
+            {/* Header */}
+            <div className={`px-8 py-6 flex items-center justify-between text-white ${selectedReferral.referralType === "External" ? "bg-gradient-to-r from-emerald-600 to-teal-600" : "bg-gradient-to-r from-indigo-600 to-blue-600"}`}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                  {selectedReferral.referralType === "External" ? <Shield size={24} /> : <Users size={24} />}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Referral Details</h2>
+                  <p className="text-white/80 text-xs font-medium uppercase tracking-wider">
+                    {selectedReferral.referralType} Referral Tracking
+                  </p>
+                </div>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Archive Report</h2>
-              <p className="text-gray-600 mb-2">
-                Are you sure you want to archive this report?
-              </p>
-              <p className="text-sm text-gray-500">
-                It will be moved to the archived section and can be restored later.
-              </p>
+              <button
+                onClick={() => setShowViewReferralModal(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <div className="flex gap-3 p-6 border-t border-gray-200">
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar text-left text-gray-800">
+              {selectedReferral.referralType === "External" ? (
+                <>
+                  <section className="space-y-4 text-left">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Barangay Information</h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Target Barangay</span>
+                        <p className="text-sm font-medium text-gray-900">{selectedReferral.barangayName}</p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Address</span>
+                        <p className="text-sm font-medium text-gray-900">{selectedReferral.barangayAddress || "N/A"}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Receiving Officer</span>
+                          <p className="text-sm font-medium text-gray-900">{selectedReferral.receivingOfficer || "N/A"}</p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Endorsement Mode</span>
+                          <p className="text-sm font-medium text-gray-900">{selectedReferral.endorsementMode || "N/A"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-4 text-left">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-4 bg-teal-500 rounded-full" />
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Referral Reason & Actions</h3>
+                    </div>
+                    <div className="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                      <div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase leading-none">Reason</span>
+                        <p className="text-sm text-gray-800 leading-relaxed mt-2">{selectedReferral.reason}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 block leading-none">Actions Taken</span>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedReferral.actionsTaken?.map((action, i) => (
+                            <span key={i} className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-[10px] font-bold rounded-lg shadow-sm">
+                              {action}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {selectedReferral.attachments?.length > 0 && (
+                    <section className="space-y-4 text-left">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1.5 h-4 bg-indigo-500 rounded-full" />
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Attachments ({selectedReferral.attachments.length})</h3>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2">
+                        {selectedReferral.attachments.map((file, i) => (
+                          <a
+                            key={i}
+                            href={file.uri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl hover:border-indigo-400 hover:shadow-md transition-all group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                <FileText size={18} />
+                              </div>
+                              <div className="text-left">
+                                <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{file.fileName}</p>
+                                <p className="text-[10px] text-gray-400 font-medium">Click to view file</p>
+                              </div>
+                            </div>
+                            <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center text-gray-400 transition-colors group-hover:bg-gray-50">
+                              <ExternalLink size={14} />
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-6 text-left">
+                  <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div>
+                        <span className="text-[10px] font-bold text-indigo-700 uppercase leading-none">Target Department</span>
+                        <p className="text-lg font-bold text-gray-900 mt-2">{selectedReferral.department}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-indigo-700 uppercase leading-none">Internal Note / Remarks</span>
+                        <p className="text-sm text-gray-800 leading-relaxed mt-2 bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
+                          {selectedReferral.note || "No notes provided"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row items-center gap-4 justify-between">
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Submission Date</span>
+                <span className="text-sm font-bold text-gray-900">{new Date(selectedReferral.date).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  onClick={handleDownloadReferralPDF}
+                  disabled={isDownloadingPDF}
+                  className="flex-1 sm:flex-none px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isDownloadingPDF ? (
+                    <RefreshCw size={16} className="animate-spin" />
+                  ) : (
+                    <FileDown size={18} className="text-gray-400" />
+                  )}
+                  Report PDF
+                </button>
+                <button
+                  onClick={() => setShowViewReferralModal(false)}
+                  className="flex-1 sm:flex-none px-8 py-3 bg-gray-900 text-white rounded-2xl text-sm font-bold hover:bg-gray-800 transition-colors shadow-lg active:scale-95"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Case Status Modal */}
+      {showCaseStatusModal && selectedReport && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <Edit size={15} className="text-indigo-600" />
+                </div>
+                <div className="text-left">
+                  <h2 className="text-sm font-bold text-gray-900">Update Case Status</h2>
+                  <p className="text-xs text-gray-400">Select a status to apply to this case</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowCaseStatusModal(false); setShowExternalReferralForm(false); }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5 text-left">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Case Status</label>
+                <select
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white transition"
+                  value={newCaseStatus}
+                  onChange={(e) => { setNewCaseStatus(e.target.value); setShowExternalReferralForm(false); }}
+                >
+                  <option value="">Choose a case status</option>
+                  <option disabled={
+                    selectedReport?.caseStatus === "For Interview" ||
+                    selectedReport?.caseStatus === "For Referral" ||
+                    selectedReport?.caseStatus === "Internal" ||
+                    selectedReport?.caseStatus === "Referred to Barangay" ||
+                    selectedReport?.caseStatus === "Case Closed"
+                  }>For Queuing</option>
+                  <option disabled={
+                    selectedReport?.caseStatus === "For Referral" ||
+                    selectedReport?.caseStatus === "Internal" ||
+                    selectedReport?.caseStatus === "Referred to Barangay" ||
+                    selectedReport?.caseStatus === "Case Closed"
+                  }>For Interview</option>
+                  <option disabled={
+                    selectedReport?.caseStatus === "Internal" ||
+                    selectedReport?.caseStatus === "Referred to Barangay" ||
+                    selectedReport?.caseStatus === "Case Closed"
+                  }>For Referral</option>
+                  <option disabled={selectedReport?.caseStatus === "Case Closed"}>Case Closed</option>
+                </select>
+              </div>
+
+              {newCaseStatus === "For Referral" && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Referral Type</label>
+                  <select
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white"
+                    value={newReferralType}
+                    onChange={(e) => setNewReferralType(e.target.value)}
+                  >
+                    <option value="">Select type</option>
+                    <option>Internal</option>
+                    <option>External</option>
+                  </select>
+                </div>
+              )}
+
+              {showExternalReferralForm && (
+                <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+                  {/* Section 1 - School Referral Info */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">School Info</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">REFERRED BY</label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 transition"
+                          value={externalReferralData.referredBy}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, referredBy: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">POSITION</label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 transition"
+                          value={externalReferralData.position}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, position: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">SCHOOL NAME</label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 transition"
+                          value={externalReferralData.schoolName}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, schoolName: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">DATE OF REFERRAL</label>
+                        <input
+                          type="datetime-local"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                          value={externalReferralData.referralDate}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, referralDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1">REASON FOR REFERRAL <span className="text-red-500">*</span></label>
+                        <textarea
+                          rows={3}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 resize-none"
+                          value={externalReferralData.reason}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, reason: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase">ACTIONS TAKEN BY SCHOOL</label>
+                        <div className="flex flex-wrap gap-2">
+                          {["Counseling", "Parent Conference", "Mediation", "Incident Report Filed"].map((action) => (
+                            <button
+                              key={action}
+                              type="button"
+                              onClick={() => {
+                                const current = externalReferralData.actionsTaken;
+                                const updated = current.includes(action) ? current.filter(a => a !== action) : [...current, action];
+                                setExternalReferralData({ ...externalReferralData, actionsTaken: updated });
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${externalReferralData.actionsTaken.includes(action) ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-gray-300 text-gray-500"}`}
+                            >
+                              {action}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2 - Case Summary */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Case Context</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <textarea
+                      rows={3}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 resize-none"
+                      placeholder="Brief case summary..."
+                      value={externalReferralData.caseSummary}
+                      onChange={(e) => setExternalReferralData({ ...externalReferralData, caseSummary: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Section 3 - Barangay Info */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Barangay Details</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">TARGET BARANGAY <span className="text-red-500">*</span></label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                          value={externalReferralData.barangayName}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, barangayName: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">BARANGAY ADDRESS</label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                          value={externalReferralData.barangayAddress}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, barangayAddress: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">RECEIVING OFFICER</label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 transition"
+                          value={externalReferralData.receivingOfficer}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, receivingOfficer: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">MODE</label>
+                        <select
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 bg-white"
+                          value={externalReferralData.endorsementMode}
+                          onChange={(e) => setExternalReferralData({ ...externalReferralData, endorsementMode: e.target.value })}
+                        >
+                          <option value="">Select mode</option>
+                          <option>Official Letter</option>
+                          <option>Email</option>
+                          <option>Walk-in</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4 - Multi-upload Drag & Drop Attachments */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Attachments</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <label
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-6 cursor-pointer transition-all ${isDragging ? "border-indigo-500 bg-indigo-50 scale-[1.01]" : "border-gray-200 hover:border-indigo-400 hover:bg-indigo-50"}`}
+                    >
+                      <div className="flex flex-col items-center">
+                        <FileText className={`w-8 h-8 mb-2 transition-colors ${isDragging ? "text-indigo-600" : "text-gray-300"}`} />
+                        <p className={`text-xs font-bold ${isDragging ? "text-indigo-700" : "text-gray-500"}`}>
+                          {isDragging ? "Drop files now" : "Click or drag to upload"}
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files);
+                          setExternalReferralData(prev => ({ ...prev, attachments: [...(prev.attachments || []), ...files] }));
+                        }}
+                      />
+                    </label>
+
+                    {externalReferralData.attachments?.length > 0 && (
+                      <div className="grid grid-cols-1 gap-2 mt-3">
+                        {externalReferralData.attachments.map((f, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-2 truncate">
+                              <FileText size={14} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-[11px] font-medium text-gray-700 truncate">{f.name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setExternalReferralData(prev => ({ ...prev, attachments: prev.attachments.filter((_, idx) => idx !== i) }))}
+                              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => { setShowCaseStatusModal(false); setShowExternalReferralForm(false); }}
+                className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              {showExternalReferralForm ? (
+                <button
+                  onClick={handleExternalReferral}
+                  disabled={!externalReferralData.reason || !externalReferralData.barangayName || isSubmittingReferral}
+                  className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                  {isSubmittingReferral ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Referral"
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleUpdateCaseStatus}
+                  disabled={!newCaseStatus || (newCaseStatus === "For Referral" && !newReferralType)}
+                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all"
+                >
+                  Update Status
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Modal */}
+      {showArchiveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans">
+          <div className="bg-white rounded-2xl w-full max-w-sm text-center overflow-hidden shadow-2xl">
+            <div className="p-8">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Archive className="text-red-600" size={32} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Archive Report</h2>
+              <p className="text-sm text-gray-500">This will move the report to the archived section.</p>
+            </div>
+            <div className="flex p-4 border-t border-gray-100 gap-3">
               <button
                 onClick={() => setShowArchiveModal(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-lg font-medium transition-colors"
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleArchive}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-colors"
+                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-red-700 transition-colors"
               >
-                Archive Report
+                Archive
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Enhanced Restore Modal */}
+      {/* Restore Modal */}
       {showRestoreModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md text-center">
-            <div className="p-6">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <RefreshCw className="text-green-600" size={24} />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans">
+          <div className="bg-white rounded-2xl w-full max-w-sm text-center overflow-hidden shadow-2xl">
+            <div className="p-8">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <RefreshCw className="text-green-600" size={32} />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Restore Report</h2>
-              <p className="text-gray-600 mb-2">
-                Are you sure you want to restore this report?
-              </p>
-              <p className="text-sm text-gray-500">
-                It will be moved back to active reports.
-              </p>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Restore Report</h2>
+              <p className="text-sm text-gray-500">This will move the report back to active status.</p>
             </div>
-            <div className="flex gap-3 p-6 border-t border-gray-200">
+            <div className="flex p-4 border-t border-gray-100 gap-3">
               <button
                 onClick={() => setShowRestoreModal(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-lg font-medium transition-colors"
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRestore}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors"
+                className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-green-700 transition-colors"
               >
-                Restore Report
+                Restore
               </button>
             </div>
           </div>

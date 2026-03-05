@@ -7,11 +7,30 @@ const attachmentSchema = new mongoose.Schema({
   fileName: { type: String, required: true },
 }, { _id: false });
 
-// ✅ Referral schema (tracks referral history)
+// ✅ Referral schema (tracks referral history - both internal and external)
 const referralSchema = new mongoose.Schema({
-  department: { type: String, required: true },
+  referralType: { type: String, enum: ["Internal", "External"], default: "Internal" },
+
+  // Internal Referral Fields
+  department: String,
   note: String,
-  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // admin or staff
+
+  // External Referral Fields
+  referredBy: String,
+  position: String,
+  schoolName: String,
+  referralDate: Date,
+  reason: String,
+  actionsTaken: [String],
+  caseSummary: String,
+  barangayName: String,
+  barangayAddress: String,
+  receivingOfficer: String,
+  endorsementMode: String,
+  attachments: [attachmentSchema],
+
+  // Metadata
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   date: { type: Date, default: Date.now },
 }, { _id: false });
 
@@ -26,10 +45,10 @@ const timelineSchema = new mongoose.Schema({
 // ✅ Main Report schema
 const reportSchema = new mongoose.Schema({
   // 🔗 Reference to the user who created this report
-  createdBy: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "User", 
-    required: true 
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
   },
 
   ticketNumber: { type: String, required: true, unique: true },
@@ -167,10 +186,10 @@ const reportSchema = new mongoose.Schema({
   confirmConfidentiality: { type: Boolean, default: false },
 
   // Metadata
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     enum: ["Pending", "Reviewed", "In Progress", "Resolved", "Closed"],
-    default: "Pending" 
+    default: "Pending"
   },
   caseStatus: {
     type: String,
