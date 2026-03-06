@@ -208,7 +208,7 @@ const LandingPage = () => {
         ))}
 
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center px-6 max-w-5xl relative z-10">
+          <div className="text-center px-4 md:px-6 max-w-5xl relative z-10">
             {heroSlides.map((slide, idx) => (
               <div
                 key={idx}
@@ -222,16 +222,17 @@ const LandingPage = () => {
         {/* Carousel Controls */}
         <button
           onClick={prevSlide}
-          className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
+          className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 md:p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
         >
-          <ChevronLeft className="w-6 h-6 text-violet-700 group-hover:scale-110 transition-transform" />
+          <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-violet-700 group-hover:scale-110 transition-transform" />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
+          className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 md:p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
         >
-          <ChevronRight className="w-6 h-6 text-violet-700 group-hover:scale-110 transition-transform" />
+          <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-violet-700 group-hover:scale-110 transition-transform" />
         </button>
+
 
         {/* Carousel Indicators */}
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-3">
@@ -247,9 +248,9 @@ const LandingPage = () => {
 
 
       {/* GAD Agenda Section */}
-      <section className="py-32 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
-        <div className="max-w-7xl mx-auto px-10">
-          <div className="grid lg:grid-cols-2 gap-24 items-center">
+      <section className="py-16 md:py-32 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center text-center lg:text-left">
 
             {/* Left side - Logo */}
             <div className="flex justify-center lg:justify-start">
@@ -257,18 +258,18 @@ const LandingPage = () => {
                 <img
                   src="/assets/about/logo.png"
                   alt="GAD Office Logo"
-                  className="w-full max-w-xl h-auto object-contain drop-shadow-2xl"
+                  className="w-full max-w-sm md:max-w-xl h-auto object-contain drop-shadow-2xl"
                 />
               </div>
             </div>
 
             {/* Right side - Content */}
             <div>
-              <h2 className="text-6xl lg:text-7xl font-black text-slate-900 mb-10 leading-tight">
+              <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-6 lg:mb-10 leading-tight">
                 GAD Agenda
               </h2>
 
-              <div className="space-y-8 text-slate-700 text-xl leading-relaxed mb-12">
+              <div className="space-y-6 lg:space-y-8 text-slate-700 text-lg md:text-xl leading-relaxed mb-8 lg:mb-12">
                 <p>
                   The GAD Office promotes gender equality and women's empowerment,
                   a unified approach to developing human capital, and initiatives aligned
@@ -283,6 +284,7 @@ const LandingPage = () => {
         </div>
       </section>
 
+
       {/* Highlights Section - Added after Hero */}
       <HighlightsSection />
 
@@ -290,16 +292,16 @@ const LandingPage = () => {
       <section className="py-40 bg-slate-50">
         <div className="max-w-7xl mx-auto px-10">
           {/* Section Header */}
-          <div className="flex items-end justify-between mb-24 border-b-4 border-violet-600 pb-8">
-            <h2 className="text-6xl font-black text-slate-800">Press Releases</h2>
+          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-12 md:mb-24 border-b-4 border-violet-600 pb-8 gap-4">
+            <h2 className="text-4xl md:text-6xl font-black text-slate-800 text-center sm:text-left">Press Releases</h2>
             <button
               onClick={() => navigate("/news")}
-              className="bg-white text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors flex items-center gap-3 border border-violet-200 px-6 py-2 rounded-lg shadow dark:bg-white dark:text-violet-700 dark:hover:text-violet-600"
+              className="bg-white text-violet-700 font-bold text-lg md:text-xl hover:text-violet-600 transition-colors flex items-center gap-3 border border-violet-200 px-6 py-2 rounded-lg shadow dark:bg-white dark:text-violet-700 dark:hover:text-violet-600"
             >
-              View All <ArrowRight className="w-7 h-7" />
+              View All <ArrowRight className="w-6 h-6 md:w-7 md:h-7" />
             </button>
-
           </div>
+
 
           {/* Press Releases Grid */}
           {loading ? (
@@ -424,27 +426,27 @@ const LandingPage = () => {
 
 
       {/* Report Section */}
-      <section className="py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
-        <div className="max-w-7xl mx-auto px-10">
+      <section className="py-20 md:py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
 
           {/* Top - Case Handling Process */}
-          <div className="grid lg:grid-cols-2 gap-24 items-start mb-24">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start mb-12 lg:mb-24">
 
             {/* Left - Label */}
             <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-violet-600 mb-6">
+              <p className="text-sm font-bold uppercase tracking-widest text-violet-600 mb-4 md:mb-6">
                 Before You Proceed
               </p>
-              <h3 className="text-5xl lg:text-6xl font-black text-slate-900 mb-10 leading-tight">
+              <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-6 md:mb-10 leading-tight">
                 Case Handling Process
               </h3>
-              <p className="text-slate-600 text-xl leading-relaxed">
+              <p className="text-slate-600 text-lg md:text-xl leading-relaxed">
                 By submitting this report/request, you acknowledge that the case will undergo the following standard process:
               </p>
             </div>
 
             {/* Right - Timeline Steps */}
-            <div className="space-y-10">
+            <div className="space-y-8 md:space-y-10">
               {[
                 {
                   step: "First Action",
@@ -467,17 +469,17 @@ const LandingPage = () => {
                   desc: "The case may be officially endorsed to the appropriate office (e.g., OSA, HR) for formal investigation and resolution."
                 },
               ].map((item, i, arr) => (
-                <div key={i} className="flex gap-8 items-start">
+                <div key={i} className="flex gap-4 md:gap-8 items-start">
                   <div className="flex-shrink-0 flex flex-col items-center">
-                    <div className="w-4 h-4 rounded-full bg-violet-600 mt-1"></div>
+                    <div className="w-3 md:w-4 h-3 md:h-4 rounded-full bg-violet-600 mt-2"></div>
                     {i < arr.length - 1 && (
                       <div className="w-0.5 bg-violet-200 mt-1" style={{ minHeight: '52px' }}></div>
                     )}
                   </div>
                   <div className="pb-2">
-                    <p className="text-xs font-black uppercase tracking-widest text-violet-400 mb-1">{item.step}</p>
-                    <p className="text-xl font-black text-slate-800 mb-2">{item.label}</p>
-                    <p className="text-slate-600 text-lg leading-relaxed">{item.desc}</p>
+                    <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-violet-400 mb-1">{item.step}</p>
+                    <p className="text-lg md:text-xl font-black text-slate-800 mb-1">{item.label}</p>
+                    <p className="text-slate-600 text-base md:text-lg leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -485,26 +487,27 @@ const LandingPage = () => {
           </div>
 
           {/* Divider */}
-          <div className="border-t-2 border-gray-200 my-24" />
+          <div className="border-t-2 border-gray-200 my-12 lg:my-24" />
 
           {/* Bottom - Report an Issue */}
           <div className="text-center max-w-5xl mx-auto">
-            <h2 className="text-6xl lg:text-7xl font-black text-slate-900 mb-12 leading-tight">
+            <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-8 lg:mb-12 leading-tight">
               Report an Issue
             </h2>
-            <div className="space-y-8 text-slate-700 text-2xl leading-relaxed mb-16">
+            <div className="space-y-6 lg:space-y-8 text-slate-700 text-lg md:text-2xl leading-relaxed mb-10 lg:mb-16">
               <p>
                 If you've experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and resolved properly.
               </p>
             </div>
-            <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-16 py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-2xl inline-flex items-center gap-4">
+            <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 md:px-16 py-4 md:py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-lg md:text-2xl inline-flex items-center gap-4">
               Report Now
-              <ArrowRight className="w-7 h-7" />
+              <ArrowRight className="w-6 h-6 md:w-7 md:h-7" />
             </button>
           </div>
 
         </div>
       </section>
+
 
       {/* Infographic Modal */}
       {fullscreenImage && (

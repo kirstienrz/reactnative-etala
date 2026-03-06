@@ -342,7 +342,7 @@ export default function ResearchPublications() {
       <main className="bg-white min-h-screen">
         <section className="relative py-24 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
           <div className="max-w-4xl mx-auto px-8 text-center">
-            <h1 className="text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
               Research Publications
             </h1>
             <div className="w-20 h-1 bg-violet-400 mx-auto"></div>
@@ -359,7 +359,7 @@ export default function ResearchPublications() {
       <main className="bg-white min-h-screen">
         <section className="relative py-24 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
           <div className="max-w-4xl mx-auto px-8 text-center">
-            <h1 className="text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
               Research Publications
             </h1>
             <div className="w-20 h-1 bg-violet-400 mx-auto"></div>
@@ -390,7 +390,7 @@ export default function ResearchPublications() {
       {/* Hero Section */}
       <section className="relative py-24 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
         <div className="max-w-4xl mx-auto px-8 text-center">
-          <h1 className="text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
             Research Publications
           </h1>
           <p className="text-xl text-violet-200 mb-8 max-w-2xl mx-auto">

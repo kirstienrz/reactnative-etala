@@ -141,7 +141,7 @@ const SignupPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* First & Last Name */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   First Name <span className="text-red-500">*</span>
@@ -204,7 +204,7 @@ const SignupPage = () => {
             </div>
 
             {/* Gender & Birthday */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Gender <span className="text-red-500">*</span>

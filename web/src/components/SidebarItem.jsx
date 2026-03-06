@@ -1,10 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-const SidebarItem = ({ icon, label, to, indent = false, isCollapsed = false, badge = 0 }) => (
+const SidebarItem = ({ icon, label, to, indent = false, isCollapsed = false, badge = 0, onClick }) => (
   <li>
     <NavLink
       to={to}
+      onClick={onClick}
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
           ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
@@ -13,6 +14,7 @@ const SidebarItem = ({ icon, label, to, indent = false, isCollapsed = false, bad
       }
       title={isCollapsed ? label : ""}
     >
+
       {/* Icon with dot when collapsed */}
       <div className="relative flex-shrink-0">
         {icon}

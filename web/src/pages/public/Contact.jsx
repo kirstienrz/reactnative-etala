@@ -173,18 +173,18 @@ const Contact = () => {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    
+
     // Validate file size (max 10MB each)
     const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
-    
+
     if (validFiles.length !== files.length) {
       alert('Some files exceed 10MB limit and were not added');
     }
-    
+
     setAttachments(prev => [...prev, ...validFiles]);
-    
+
     // Create preview URLs for images
-    const newPreviews = validFiles.filter(file => file.type.startsWith('image/')).map(file => 
+    const newPreviews = validFiles.filter(file => file.type.startsWith('image/')).map(file =>
       URL.createObjectURL(file)
     );
     setPreviewFiles(prev => [...prev, ...newPreviews]);
@@ -192,7 +192,7 @@ const Contact = () => {
 
   const removeFile = (index) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
-    
+
     // Revoke object URL for preview
     if (previewFiles[index]) {
       URL.revokeObjectURL(previewFiles[index]);
@@ -202,21 +202,21 @@ const Contact = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate form
     const validation = validateContactForm(formData);
     if (!validation.isValid) {
       setValidationErrors(validation.errors);
       return;
     }
-    
+
     setStatus("loading");
     setValidationErrors([]);
 
     try {
       // Prepare form data
       const formDataToSend = prepareContactFormData(formData, attachments);
-      
+
       // Send to API
       const result = await sendContactMessage(formDataToSend);
 
@@ -225,11 +225,11 @@ const Contact = () => {
         setFormData({ name: "", email: "", subject: "", message: "" });
         setAttachments([]);
         setPreviewFiles([]);
-        
+
         // Clear file input
         const fileInput = document.querySelector('input[type="file"]');
         if (fileInput) fileInput.value = '';
-        
+
         // Auto-hide success message after 5 seconds
         setTimeout(() => {
           setStatus("");
@@ -241,7 +241,7 @@ const Contact = () => {
     } catch (err) {
       console.error("Contact form error:", err);
       setStatus("error");
-      
+
       // Handle different types of errors
       if (err.response) {
         // Server responded with error status
@@ -269,7 +269,7 @@ const Contact = () => {
       {/* Hero Section */}
       <section className="relative py-24 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
         <div className="max-w-4xl mx-auto px-8 text-center">
-          <h1 className="text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
             Contact Us
           </h1>
           <div className="w-20 h-1 bg-violet-400 mx-auto"></div>
@@ -371,7 +371,7 @@ const Contact = () => {
                     cursor-pointer"
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                 />
-                
+
                 {/* File Previews */}
                 {attachments.length > 0 && (
                   <div className="space-y-2">
@@ -380,15 +380,15 @@ const Contact = () => {
                     </p>
                     <div className="space-y-2">
                       {attachments.map((file, index) => (
-                        <div 
+                        <div
                           key={index}
                           className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
                         >
                           <div className="flex items-center gap-3">
                             {file.type.startsWith('image/') && previewFiles[index] ? (
-                              <img 
-                                src={previewFiles[index]} 
-                                alt="Preview" 
+                              <img
+                                src={previewFiles[index]}
+                                alt="Preview"
                                 className="w-10 h-10 object-cover rounded"
                               />
                             ) : (
@@ -456,8 +456,8 @@ const Contact = () => {
                   <span className="text-violet-600 text-xl">📧</span>
                 </div>
                 <h4 className="font-bold text-slate-900 mb-2">Email</h4>
-                <a 
-                  href="mailto:officialgadtupt@gmail.com" 
+                <a
+                  href="mailto:officialgadtupt@gmail.com"
                   className="text-slate-600 hover:text-violet-600 transition-colors"
                 >
                   officialgadtupt@gmail.com
