@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight, X } from "lucide-react";
 import { getNews } from "../../api/newsAnnouncement";
 
 const AllNews = () => {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedNews, setSelectedNews] = useState(null);
 
   useEffect(() => {
     fetchNews();
@@ -83,20 +84,68 @@ const AllNews = () => {
                   {item.content}
                 </p>
 
-                <a
-                  href={item.link || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setSelectedNews(item)}
                   className="inline-flex items-center gap-2 text-violet-700 font-semibold hover:gap-3 transition-all"
                 >
                   Read more
                   <ArrowRight size={18} />
-                </a>
+                </button>
               </div>
             </article>
           ))}
         </div>
       </section>
+
+      {/* Modal View for Full News Content */}
+      {selectedNews && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedNews(null)}>
+          <div
+            className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 right-0 z-10 flex justify-end p-4 pointer-events-none">
+              <button
+                onClick={() => setSelectedNews(null)}
+                className="pointer-events-auto bg-gray-100/80 backdrop-blur-md hover:bg-gray-200 text-gray-700 p-2 rounded-full transition shadow-sm"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-8 pb-8 -mt-12">
+              {selectedNews.imageUrl && (
+                <img
+                  src={selectedNews.imageUrl}
+                  alt={selectedNews.title}
+                  className="w-full h-64 md:h-80 object-cover rounded-xl mt-12 mb-6 shadow-md"
+                />
+              )}
+              <h2 className={`text-2xl md:text-3xl font-black text-slate-900 mb-4 ${!selectedNews.imageUrl ? "mt-12" : ""}`}>
+                {selectedNews.title}
+              </h2>
+              <p className="flex items-center gap-2 text-sm text-slate-500 mb-6 font-medium">
+                <Calendar size={16} />
+                {selectedNews.date ? new Date(selectedNews.date).toLocaleDateString() : "—"}
+              </p>
+              <div className="text-slate-700 leading-relaxed whitespace-pre-wrap text-[15px] md:text-base">
+                {selectedNews.content}
+              </div>
+
+              {selectedNews.link && (
+                <a
+                  href={selectedNews.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex mt-8 items-center gap-2 px-6 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition shadow-lg"
+                >
+                  Visit External Link <ArrowRight size={18} />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
