@@ -1109,6 +1109,16 @@ const ReportForm = () => {
         return false;
       }
     }
+    if (currentStep === 2) {
+      if (!formData.latestIncidentDate || !formData.incidentDescription || !formData.placeOfIncident || !formData.incidentBarangay) {
+        showAlert('Required', 'Please fill in all incident details.');
+        return false;
+      }
+      if (formData.incidentDescription.trim().length < 10) {
+        showAlert('Invalid Description', 'Description of Incident must be at least 10 characters long.');
+        return false;
+      }
+    }
     return true;
   };
 
@@ -1871,7 +1881,10 @@ const ReportForm = () => {
             </div>
 
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Description of Incident</label>
+              <label style={styles.inputLabel}>
+                Description of Incident
+                <span style={styles.requiredStar}> *</span>
+              </label>
               <textarea
                 style={{ ...styles.input, minHeight: '200px', resize: 'vertical' }}
                 placeholder="Provide a detailed description of what happened, including dates, times, locations, and any other relevant information..."
@@ -1887,7 +1900,10 @@ const ReportForm = () => {
               <p style={styles.sectionDescription}>Where the incident occurred</p>
             </div>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Place of Incident</label>
+              <label style={styles.inputLabel}>
+                Place of Incident
+                <span style={styles.requiredStar}> *</span>
+              </label>
               <div style={styles.dropdownInput} onClick={() => showDropdown('placeOfIncident', places)}>
                 <span style={{ color: !formData.placeOfIncident ? styles.colors.textSecondary : styles.colors.textPrimary }}>
                   {formData.placeOfIncident || 'Select place'}
@@ -1896,7 +1912,10 @@ const ReportForm = () => {
               </div>
             </div>
             <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Address Details</label>
+              <label style={styles.inputLabel}>
+                Address Details
+                <span style={styles.requiredStar}> *</span>
+              </label>
               <input
                 style={styles.input}
                 placeholder="Specific location details..."

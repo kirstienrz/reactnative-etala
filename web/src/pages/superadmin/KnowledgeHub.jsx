@@ -78,8 +78,8 @@ const AdminKnowledgeHub = () => {
   const handleSubmit = async () => {
     try {
       // Validation
-      if (!formData.title || !formData.speaker || !formData.organization || 
-          !formData.date || !formData.videoUrl || !formData.description) {
+      if (!formData.title || !formData.speaker || !formData.organization ||
+        !formData.date || !formData.videoUrl || !formData.description) {
         alert("Please fill in all required fields");
         return;
       }
@@ -110,14 +110,13 @@ const AdminKnowledgeHub = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this webinar?")) {
-      try {
-        await deleteWebinar(id);
-        await fetchWebinars();
-      } catch (error) {
-        console.error("Error deleting webinar:", error);
-        alert("Failed to delete webinar.");
-      }
+    if (!window.confirm("Are you sure you want to permanently delete this webinar? This action cannot be undone.")) return;
+    try {
+      await deleteWebinar(id);
+      await fetchWebinars();
+    } catch (error) {
+      console.error("Error deleting webinar:", error);
+      alert("Failed to delete webinar.");
     }
   };
 
@@ -227,6 +226,18 @@ const AdminKnowledgeHub = () => {
                               <Video className="w-6 h-6 text-red-600" />
                             </div>
                           </div>
+
+                          {/* Individual Delete Button - top-right */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item._id || item.id);
+                            }}
+                            className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-full shadow-lg backdrop-blur-sm transition-all z-20"
+                            title="Delete Permanently"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </>
                       ) : (
                         <div className="flex flex-col items-center justify-center w-full h-full text-gray-400">
@@ -255,15 +266,9 @@ const AdminKnowledgeHub = () => {
                       <div className="flex gap-2 pt-3 border-t">
                         <button
                           onClick={() => openModal(item)}
-                          className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200 transition"
+                          className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200 transition font-medium"
                         >
                           <Edit2 size={16} /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item._id || item.id)}
-                          className="flex-1 flex items-center justify-center gap-2 bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 transition"
-                        >
-                          <Trash2 size={16} /> Delete
                         </button>
                       </div>
                     </div>

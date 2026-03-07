@@ -1,28 +1,43 @@
 const BudgetProgram = require("../models/BudgetProgram");
 const cloudinary = require("../config/cloudinary");
+const fs = require("fs");
+const path = require("path");
 
 // Helper function to upload file to Cloudinary
-const uploadToCloudinary = (fileBuffer, options) => {
+const uploadToCloudinary = (fileData, options) => {
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      options,
-      (error, result) => {
+    if (Buffer.isBuffer(fileData)) {
+      // Memory storage (buffer)
+      const uploadStream = cloudinary.uploader.upload_stream(
+        options,
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary upload error:", error);
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+      uploadStream.end(fileData);
+    } else {
+      // Disk storage (file path)
+      cloudinary.uploader.upload(fileData, options, (error, result) => {
         if (error) {
           console.error("Cloudinary upload error:", error);
           reject(error);
         } else {
           resolve(result);
         }
-      }
-    );
-    uploadStream.end(fileBuffer);
+      });
+    }
   });
 };
 
 exports.uploadBudgetProgram = async (req, res, next) => {
   try {
     const { title, description, year, dateApproved, status } = req.body;
-    
+
     // Validation
     if (!title) return res.status(400).json({ message: "Title is required" });
     if (!year) return res.status(400).json({ message: "Year is required" });
@@ -32,10 +47,11 @@ exports.uploadBudgetProgram = async (req, res, next) => {
     const fileName = req.file.originalname.replace(/\.[^/.]+$/, "");
     const timestamp = Date.now();
 
-    console.log("📁 Starting upload:", { 
-      fileName, 
+    console.log("📁 Starting upload:", {
+      fileName,
       format,
-      bufferSize: req.file.buffer?.length 
+      storageType: req.file.buffer ? "memory" : "disk",
+      size: req.file.size
     });
 
     // Check if file type is allowed
@@ -43,18 +59,22 @@ exports.uploadBudgetProgram = async (req, res, next) => {
     const isImage = format.startsWith("image/");
 
     if (!isPDF && !isImage) {
-      return res.status(400).json({ 
-        message: "Only PDF and image files are allowed" 
+      // Clean up temp file if it exists
+      if (req.file.path) fs.unlinkSync(req.file.path);
+
+      return res.status(400).json({
+        message: "Only PDF and image files are allowed"
       });
     }
 
     let uploadResult;
+    const uploadData = req.file.buffer || req.file.path;
 
     if (isPDF) {
       // PDF FILES: Upload as image type for automatic preview conversion
       console.log("📄 Uploading PDF...");
-      
-      uploadResult = await uploadToCloudinary(req.file.buffer, {
+
+      uploadResult = await uploadToCloudinary(uploadData, {
         folder: "budgets",
         public_id: `${timestamp}_${fileName}`,
         resource_type: "image",
@@ -62,18 +82,26 @@ exports.uploadBudgetProgram = async (req, res, next) => {
       });
 
       console.log("✅ PDF uploaded:", uploadResult.public_id);
-      
+
     } else {
       // IMAGE FILES: Standard upload
       console.log("🖼️ Uploading image...");
-      
-      uploadResult = await uploadToCloudinary(req.file.buffer, {
+
+      uploadResult = await uploadToCloudinary(uploadData, {
         folder: "budgets",
         public_id: `${timestamp}_${fileName}`,
         resource_type: "image",
       });
 
       console.log("✅ Image uploaded:", uploadResult.public_id);
+    }
+
+    // Clean up temp file if disk storage was used
+    if (req.file.path) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Failed to delete temp file:", err);
+        else console.log("🗑️ Temp file deleted from disk");
+      });
     }
 
     // Generate preview URLs
@@ -93,12 +121,12 @@ exports.uploadBudgetProgram = async (req, res, next) => {
           resource_type: "image",
           pages: true
         });
-        
+
         const actualPages = assetInfo.pages || 1;
         pageCount = actualPages;
-        
+
         console.log(`📄 PDF has ${actualPages} pages`);
-        
+
         // Generate URLs for actual number of pages
         for (let page = 1; page <= actualPages; page++) {
           const url = cloudinary.url(publicId, {
@@ -112,7 +140,7 @@ exports.uploadBudgetProgram = async (req, res, next) => {
           });
           imageUrls.push(url);
         }
-        
+
         console.log("✅ Generated preview URLs for PDF");
         console.log(`   Pages: ${actualPages}`);
         console.log("   First page:", imageUrls[0]);
@@ -162,7 +190,7 @@ exports.uploadBudgetProgram = async (req, res, next) => {
     });
   } catch (err) {
     console.error("❌ Upload error:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: err.message || "Upload failed",
       error: err.toString()
@@ -192,7 +220,7 @@ exports.getBudgetById = async (req, res) => {
 exports.updateBudget = async (req, res) => {
   try {
     const { title, description, year, dateApproved, status } = req.body;
-    
+
     const updateData = {};
     if (title) updateData.title = title;
     if (description !== undefined) updateData.description = description;
@@ -208,10 +236,10 @@ exports.updateBudget = async (req, res) => {
 
     if (!budget) return res.status(404).json({ message: "Budget not found" });
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       budget,
-      message: "Budget updated successfully" 
+      message: "Budget updated successfully"
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -223,7 +251,7 @@ exports.archiveBudget = async (req, res) => {
   try {
     const budget = await BudgetProgram.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         isArchived: true,
         archivedAt: new Date()
       },
@@ -232,10 +260,10 @@ exports.archiveBudget = async (req, res) => {
 
     if (!budget) return res.status(404).json({ message: "Budget not found" });
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       budget,
-      message: "Budget archived successfully" 
+      message: "Budget archived successfully"
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -247,7 +275,7 @@ exports.unarchiveBudget = async (req, res) => {
   try {
     const budget = await BudgetProgram.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         isArchived: false,
         archivedAt: null
       },
@@ -256,10 +284,10 @@ exports.unarchiveBudget = async (req, res) => {
 
     if (!budget) return res.status(404).json({ message: "Budget not found" });
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       budget,
-      message: "Budget unarchived successfully" 
+      message: "Budget unarchived successfully"
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -293,9 +321,9 @@ exports.deleteBudget = async (req, res) => {
 
     // Delete file from Cloudinary
     try {
-      await cloudinary.uploader.destroy(budget.file.public_id, { 
+      await cloudinary.uploader.destroy(budget.file.public_id, {
         resource_type: "image",
-        invalidate: true 
+        invalidate: true
       });
       console.log("✅ Deleted file from Cloudinary:", budget.file.public_id);
     } catch (e) {

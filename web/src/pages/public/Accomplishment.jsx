@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { Download, Eye, X, FileText } from "lucide-react";
+import { Download, FileText, X, Maximize2 } from "lucide-react";
 import { getAccomplishments } from "../../api/accomplishments"; // Axios API call
 
 const Accomplishment = () => {
@@ -7,6 +6,9 @@ const Accomplishment = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedPdf, setSelectedPdf] = useState(null);
+  const [selectedPdfName, setSelectedPdfName] = useState("");
+  const [selectedPdfType, setSelectedPdfType] = useState("pdf");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     fetchReports();
@@ -62,7 +64,11 @@ const Accomplishment = () => {
             {reports.map((report) => (
               <div
                 key={report._id}
-                onClick={() => setSelectedPdf(report)}
+                onClick={() => {
+                  setSelectedPdf(report.fileUrl);
+                  setSelectedPdfName(report.title);
+                  setSelectedPdfType(report.type || "pdf");
+                }}
                 className="group flex flex-col md:flex-row items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300 cursor-pointer"
               >
                 <div className="flex-1">
@@ -74,8 +80,8 @@ const Accomplishment = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3 text-violet-600 font-semibold mt-4 md:mt-0 group-hover:gap-4 transition-all">
-                  <span>View Document</span>
-                  <Eye className="w-5 h-5" />
+                  <span>View Report</span>
+                  <FileText className="w-5 h-5" />
                 </div>
               </div>
             ))}
@@ -83,42 +89,82 @@ const Accomplishment = () => {
         </div>
       </section>
 
-      {/* PDF Viewer Modal */}
+      {/* PDF Viewer Modal - Events Style */}
       {selectedPdf && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900">
-              <div>
-                <h3 className="text-xl font-bold truncate max-w-xl">{selectedPdf.title}</h3>
-                <p className="text-sm text-slate-500">Resource from {selectedPdf.year}</p>
-              </div>
-              <button
-                onClick={() => setSelectedPdf(null)}
-                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-                title="Close"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            <div className="flex-1 bg-slate-100 flex items-center justify-center relative">
-              <iframe
-                src={getEmbedUrl(selectedPdf.fileUrl)}
-                className="w-full h-full border-none"
-                title={selectedPdf.title}
-              />
+        <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} p-4 backdrop-blur-sm transition-all shadow-2xl`}>
+          <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh]'} flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300`}>
 
-              <div className="absolute bottom-6 right-6 flex gap-3">
-                <a
-                  href={selectedPdf.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-white/90 backdrop-blur-md text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-white transition shadow-lg flex items-center gap-2"
+            {/* Info bar / Header */}
+            <div className="p-4 border-b flex justify-between items-center bg-gray-900 text-white">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <FileText className="text-violet-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="font-bold truncate">{selectedPdfName || "Report Preview"}</h3>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Accomplishment Report</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white"
+                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
-                  <Download size={16} />
-                  Download PDF
-                </a>
+                  {isFullscreen ? <X className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedPdf(null);
+                    setIsFullscreen(false);
+                  }}
+                  className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white"
+                >
+                  <X className="h-6 w-6" />
+                </button>
               </div>
             </div>
+
+            <div className="flex-1 bg-white flex items-center justify-center">
+              {selectedPdfType === "video" ? (
+                <video
+                  src={selectedPdf}
+                  controls
+                  autoPlay
+                  className="w-full max-h-full rounded-lg bg-black"
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+              ) : selectedPdfType === "image" ? (
+                <img
+                  src={selectedPdf}
+                  alt={selectedPdfName}
+                  className="w-full max-h-full object-contain rounded-lg"
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+              ) : (
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedPdf)}&embedded=true`}
+                  className="w-full h-full border-none"
+                  title="PDF Viewer"
+                  onContextMenu={(e) => e.preventDefault()}
+                ></iframe>
+              )}
+            </div>
+
+            {!isFullscreen && (
+              <div className="p-4 border-t bg-gray-50 flex justify-between items-center text-slate-900">
+                <p className="text-sm font-medium text-slate-500 italic">Previewing official document...</p>
+                <button
+                  onClick={() => {
+                    setSelectedPdf(null);
+                    setIsFullscreen(false);
+                  }}
+                  className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-black transition-colors font-medium shadow-md shadow-slate-200"
+                >
+                  Close Preview
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

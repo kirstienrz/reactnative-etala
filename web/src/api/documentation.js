@@ -53,3 +53,9 @@ export const archiveDoc = async (docId) => {
   const res = await API.patch(`/documentation/${docId}/archive`);
   return res.data;
 };
+
+// 🗑️ DELETE whole documentation set
+export const deleteDoc = async (docId) => {
+  const res = await API.delete(`/documentation/${docId}`);
+  return res.data;
+};

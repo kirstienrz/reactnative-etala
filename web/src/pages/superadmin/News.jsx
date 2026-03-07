@@ -160,6 +160,17 @@ const AdminNewsAnnouncements = () => {
     }
   };
 
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+  };
+
+  const isVideo = (url) => {
+    return url && (url.toLowerCase().endsWith(".mp4") || url.toLowerCase().includes("video/upload"));
+  };
+
   const filteredNews = news.filter(
     (item) =>
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,8 +199,8 @@ const AdminNewsAnnouncements = () => {
           <button
             onClick={() => setActiveTab("news")}
             className={`pb-3 px-4 font-medium transition ${activeTab === "news"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-900"
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-600 hover:text-gray-900"
               }`}
           >
             <div className="flex items-center gap-2">
@@ -200,8 +211,8 @@ const AdminNewsAnnouncements = () => {
           <button
             onClick={() => setActiveTab("announcements")}
             className={`pb-3 px-4 font-medium transition ${activeTab === "announcements"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-900"
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-600 hover:text-gray-900"
               }`}
           >
             {/* <div className="flex items-center gap-2">
@@ -238,16 +249,37 @@ const AdminNewsAnnouncements = () => {
             {filteredNews.map((item) => (
               <div
                 key={item._id || item.id}
-                className="bg-white border rounded-lg shadow-sm hover:shadow-md transition"
+                className="bg-white border rounded-lg shadow-sm hover:shadow-md transition flex flex-col overflow-hidden"
               >
-                {item.imageUrl && (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                )}
-                <div className="p-4">
+                {/* Media Section: YouTube Link > Uploaded Video > Uploaded Image */}
+                {getYouTubeEmbedUrl(item.link) ? (
+                  <div className="w-full h-48 bg-black">
+                    <iframe
+                      className="w-full h-full"
+                      src={getYouTubeEmbedUrl(item.link)}
+                      title={item.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                ) : item.imageUrl ? (
+                  isVideo(item.imageUrl) ? (
+                    <video
+                      controls
+                      src={item.imageUrl}
+                      className="w-full h-48 object-cover bg-black"
+                    />
+                  ) : (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )
+                ) : null}
+
+                <div className="p-4 flex flex-col flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
                     {item.title}
                   </h3>
@@ -257,7 +289,8 @@ const AdminNewsAnnouncements = () => {
                   <p className="text-sm text-gray-700 mb-3 line-clamp-3">
                     {item.content}
                   </p>
-                  {item.link && (
+                  {/* Read More Link (if link exists AND isn't youtube) */}
+                  {item.link && !getYouTubeEmbedUrl(item.link) && (
                     <a
                       href={item.link}
                       target="_blank"
@@ -379,11 +412,11 @@ const AdminNewsAnnouncements = () => {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Image
+                        Media (Image or Video)
                       </label>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/mp4,video/*"
                         onChange={(e) =>
                           setFormData({ ...formData, file: e.target.files[0] })
                         }

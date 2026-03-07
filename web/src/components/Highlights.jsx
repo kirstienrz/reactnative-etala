@@ -87,22 +87,31 @@ const HighlightsSection = () => {
       {highlights.map((slide, idx) => (
         <div
           key={slide._id || slide.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            idx === currentSlide ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
         >
-          {slide.imageUrl ? (
-            <img 
-              src={slide.imageUrl} 
+          {/* Render Media */}
+          {slide.imageUrl && (slide.type === 'video' || slide.imageUrl.endsWith('.mp4') || slide.imageUrl.endsWith('.webm')) ? (
+            <video
+              src={slide.imageUrl}
+              className="w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          ) : slide.imageUrl ? (
+            <img
+              src={slide.imageUrl}
               alt={slide.title || `Highlight ${idx + 1}`}
-              className="w-full h-full object-cover" 
+              className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full bg-slate-300 flex items-center justify-center">
-              <span className="text-slate-500 text-2xl font-bold">Highlight Image {idx + 1}</span>
+              <span className="text-slate-500 text-2xl font-bold">Highlight Media {idx + 1}</span>
             </div>
           )}
-          
+
           {/* Optional: Display title and description overlay */}
           {(slide.title || slide.description) && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-8">
@@ -139,9 +148,8 @@ const HighlightsSection = () => {
           <button
             key={idx}
             onClick={() => setCurrentSlide(idx)}
-            className={`h-3 transition-all duration-500 ${
-              idx === currentSlide ? 'bg-white w-16' : 'bg-white/40 w-8 hover:bg-white/60'
-            }`}
+            className={`h-3 transition-all duration-500 ${idx === currentSlide ? 'bg-white w-16' : 'bg-white/40 w-8 hover:bg-white/60'
+              }`}
             aria-label={`Go to slide ${idx + 1}`}
           />
         ))}

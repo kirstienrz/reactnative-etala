@@ -12,7 +12,8 @@ import {
     Paperclip,
     Upload,
     Filter,
-    Eye
+    Eye,
+    Trash2
 } from "lucide-react";
 import {
     getDocuments,
@@ -20,6 +21,7 @@ import {
     uploadDocument,
     archiveDocument,
     restoreDocument,
+    deleteDocument,
 } from "../../api/documents";
 
 const DOCUMENT_TYPES = [
@@ -160,6 +162,18 @@ const AdminDocuments = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (window.confirm("Are you sure you want to permanently delete this document? This action cannot be undone.")) {
+            try {
+                await deleteDocument(id);
+                await fetchAll();
+            } catch (err) {
+                console.error("Delete error:", err);
+                alert("Failed to delete document.");
+            }
+        }
+    };
+
     // ========================= SUBMIT =========================
     const handleSubmit = async () => {
         // Validation
@@ -222,7 +236,10 @@ const AdminDocuments = () => {
         if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
             return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
         }
-        // For 'image' resource type PDFs, standard URL works
+        // General Google Docs Viewer fallback for general documents
+        if (!url.toLowerCase().endsWith('.pdf')) {
+            return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        }
         return `${url}#toolbar=0`;
     };
 
@@ -468,6 +485,13 @@ const AdminDocuments = () => {
                                                             Restore
                                                         </button>
                                                     )}
+                                                    <button
+                                                        onClick={() => handleDelete(d._id)}
+                                                        className="p-1.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                                                        title="Delete Permanently"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -728,7 +752,13 @@ const AdminDocuments = () => {
 
                         {/* Modal Content - Iframe Viewer */}
                         <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
-                            {selectedPdf.file_url.toLowerCase().includes('.pdf') || selectedPdf.file_url.includes('/image/upload/') ? (
+                            {selectedPdf.file_url.toLowerCase().includes('.pdf') && selectedPdf.file_url.includes('localhost') ? (
+                                <embed
+                                    src={selectedPdf.file_url}
+                                    type="application/pdf"
+                                    className="w-full h-full"
+                                />
+                            ) : selectedPdf.file_url.toLowerCase().includes('.pdf') || selectedPdf.file_url.includes('/image/upload/') || selectedPdf.file_url.includes('/raw/upload/') ? (
                                 <iframe
                                     src={getEmbedUrl(selectedPdf.file_url)}
                                     className="w-full h-full border-none"

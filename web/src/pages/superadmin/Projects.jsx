@@ -1,5 +1,5 @@
 // import React, { useState, useEffect, useMemo } from 'react';
-// import { ChevronDown, ChevronRight, Calendar, Users, Target, Plus, Edit2, Archive, X, Save, CheckCircle, Clock, Play, Search, BarChart3, Filter, Menu, Kanban, List } from 'lucide-react';
+// import { ChevronDown, ChevronRight, Calendar, Users, Target, Plus, Edit2, Archive, X, Save, CheckCircle, Clock, Play, Search, BarChart3, Filter, Menu, Kanban, List, Trash2, Loader2 } from 'lucide-react';
 // import {
 //   getAllPrograms,
 //   createProgram,
@@ -61,7 +61,7 @@
 //   const handleSave = async () => {
 //     try {
 //       let savedProgramId = selectedProgram?._id;
-      
+
 //       if (modalType === 'program') {
 //         if (formData._id) {
 //           await updateProgram(formData._id, formData);
@@ -86,19 +86,19 @@
 //           await addEvent(selectedProgram._id, projectId, formData);
 //         }
 //       }
-      
+
 //       // ✅ Refresh WITHOUT applying filters so we don't lose the updated program
 //       const response = await getAllPrograms({});
 //       if (response.success) {
 //         setPrograms(response.data);
-        
+
 //         // Find and set the updated program as selected
 //         const updatedProgram = response.data.find(p => p._id === savedProgramId);
 //         if (updatedProgram) {
 //           setSelectedProgram(updatedProgram);
 //         }
 //       }
-      
+
 //       setShowModal(false);
 //       setFormData({});
 //     } catch (err) {
@@ -666,7 +666,7 @@
 
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Calendar, Users, Target, Plus, Edit2, Archive, X, Save, CheckCircle, Clock, Play, Search, BarChart3, Filter, Menu, Kanban, List } from 'lucide-react';
+import { ChevronDown, ChevronRight, Calendar, Users, Target, Plus, Edit2, Archive, X, Save, CheckCircle, Clock, Play, Search, BarChart3, Filter, Menu, Kanban, List, Trash2, Loader2 } from 'lucide-react';
 import {
   getAllPrograms,
   createProgram,
@@ -695,6 +695,7 @@ const GADProgramsHybrid = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
   const [formData, setFormData] = useState({});
+  const [deleting, setDeleting] = useState({});
 
   // Fetch on mount
   useEffect(() => {
@@ -728,7 +729,7 @@ const GADProgramsHybrid = () => {
   const handleSave = async () => {
     try {
       let savedProgramId = selectedProgram?._id;
-      
+
       if (modalType === 'program') {
         if (formData._id) {
           await updateProgram(formData._id, formData);
@@ -747,44 +748,105 @@ const GADProgramsHybrid = () => {
         }
       } else if (modalType === 'event') {
         const projectId = formData.projectId;
-        
+
         // Get the project to get its year
         const project = selectedProgram.projects.find(p => p._id === projectId);
         const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
-        
+
         // Combine year, month, day into date format
         const eventData = {
           ...formData,
           date: `${eventYear}-${formData.month}-${formData.day.toString().padStart(2, '0')}`
         };
-        
+
         // Remove month and day fields as they're now in date
         delete eventData.month;
         delete eventData.day;
-        
+
         if (formData._id) {
           await updateEvent(selectedProgram._id, projectId, formData._id, eventData);
         } else {
           await addEvent(selectedProgram._id, projectId, eventData);
         }
       }
-      
+
       // ✅ Refresh WITHOUT applying filters so we don't lose the updated program
       const response = await getAllPrograms({});
       if (response.success) {
         setPrograms(response.data);
-        
+
         // Find and set the updated program as selected
         const updatedProgram = response.data.find(p => p._id === savedProgramId);
         if (updatedProgram) {
           setSelectedProgram(updatedProgram);
         }
       }
-      
+
       setShowModal(false);
       setFormData({});
     } catch (err) {
       console.error('Error saving:', err);
+    }
+  };
+
+  const handleDeleteProgram = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this program? This action cannot be undone.")) return;
+    try {
+      setDeleting(prev => ({ ...prev, [id]: true }));
+      await deleteProgram(id);
+      const response = await getAllPrograms({});
+      if (response.success) {
+        setPrograms(response.data);
+        if (selectedProgram?._id === id) {
+          setSelectedProgram(response.data.length > 0 ? response.data[0] : null);
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting program:', err);
+    } finally {
+      setDeleting(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this project? This action cannot be undone.")) return;
+    try {
+      setDeleting(prev => ({ ...prev, [projectId]: true }));
+      await deleteProject(selectedProgram._id, projectId);
+
+      const response = await getAllPrograms({});
+      if (response.success) {
+        setPrograms(response.data);
+        const updatedProgram = response.data.find(p => p._id === selectedProgram._id);
+        if (updatedProgram) {
+          setSelectedProgram(updatedProgram);
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting project:', err);
+    } finally {
+      setDeleting(prev => ({ ...prev, [projectId]: false }));
+    }
+  };
+
+  const handleDeleteEvent = async (projectId, eventId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this event? This action cannot be undone.")) return;
+    try {
+      setDeleting(prev => ({ ...prev, [eventId]: true }));
+      await deleteEvent(selectedProgram._id, projectId, eventId);
+
+      const response = await getAllPrograms({});
+      if (response.success) {
+        setPrograms(response.data);
+        const updatedProgram = response.data.find(p => p._id === selectedProgram._id);
+        if (updatedProgram) {
+          setSelectedProgram(updatedProgram);
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting event:', err);
+    } finally {
+      setDeleting(prev => ({ ...prev, [eventId]: false }));
     }
   };
 
@@ -994,6 +1056,21 @@ const GADProgramsHybrid = () => {
                     >
                       <div className="flex items-start justify-between mb-1">
                         <h3 className="font-medium text-gray-900 text-sm">{program.name}</h3>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProgram(program._id);
+                          }}
+                          disabled={deleting[program._id]}
+                          className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded transition-colors"
+                          title="Delete Program"
+                        >
+                          {deleting[program._id] ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
                       <p className="text-xs text-gray-500 mb-2 line-clamp-2">{program.description}</p>
                       <div className="flex items-center space-x-3 text-xs text-gray-600">
@@ -1153,17 +1230,34 @@ const GADProgramsHybrid = () => {
                                 </div>
                               </div>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowModal(true);
-                                setModalType('project');
-                                setFormData({ ...project });
-                              }}
-                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4 text-gray-600" />
-                            </button>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowModal(true);
+                                  setModalType('project');
+                                  setFormData({ ...project });
+                                }}
+                                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                              >
+                                <Edit2 className="w-4 h-4 text-gray-600" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProject(project._id);
+                                }}
+                                disabled={deleting[project._id]}
+                                className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                title="Delete Project"
+                              >
+                                {deleting[project._id] ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -1209,27 +1303,44 @@ const GADProgramsHybrid = () => {
                                         <p className="text-gray-600">📍 {event.venue}</p>
                                       </div>
                                     </div>
-                                    <button
-                                      onClick={() => {
-                                        setShowModal(true);
-                                        setModalType('event');
-                                        
-                                        // Parse existing date (YYYY-MM-DD) into month and day
-                                        let eventData = { ...event, projectId: project._id };
-                                        if (event.date) {
-                                          const dateParts = event.date.split('-');
-                                          if (dateParts.length === 3) {
-                                            eventData.month = dateParts[1];
-                                            eventData.day = dateParts[2];
+                                    <div className="flex items-center space-x-1">
+                                      <button
+                                        onClick={() => {
+                                          setShowModal(true);
+                                          setModalType('event');
+
+                                          // Parse existing date (YYYY-MM-DD) into month and day
+                                          let eventData = { ...event, projectId: project._id };
+                                          if (event.date) {
+                                            const dateParts = event.date.split('-');
+                                            if (dateParts.length === 3) {
+                                              eventData.month = dateParts[1];
+                                              eventData.day = dateParts[2];
+                                            }
                                           }
-                                        }
-                                        
-                                        setFormData(eventData);
-                                      }}
-                                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                    >
-                                      <Edit2 className="w-4 h-4 text-gray-600" />
-                                    </button>
+
+                                          setFormData(eventData);
+                                        }}
+                                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                      >
+                                        <Edit2 className="w-4 h-4 text-gray-600" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteEvent(project._id, event._id);
+                                        }}
+                                        disabled={deleting[event._id]}
+                                        className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                        title="Delete Event"
+                                      >
+                                        {deleting[event._id] ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-4 h-4" />
+                                        )}
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>

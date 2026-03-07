@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import {
   getCarouselImages,
@@ -7,20 +5,21 @@ import {
   uploadCarouselImage,
   archiveCarouselImage,
   restoreCarouselImage,
+  deleteCarouselImage,
 } from "../../api/carousel";
+import { Trash2, Archive, RefreshCcw, Eye, Search, Plus, Filter, CheckCircle, Info } from "lucide-react";
 
 export default function CarouselManagement() {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
   const [viewArchived, setViewArchived] = useState(false);
-  const [modalImage, setModalImage] = useState(null);
+  const [modalMedia, setModalMedia] = useState(null); // { url, type }
   const [selectedImages, setSelectedImages] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [imageMetadata, setImageMetadata] = useState(null);
   const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
@@ -43,27 +42,22 @@ export default function CarouselManagement() {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setSelectedFile(file);
-    
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-      
-      // Get image metadata
-      const img = new Image();
-      img.onload = () => {
-        setImageMetadata({
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
+
+    if (files.length > 0) {
+      const generatedPreviews = files.map(file => {
+        return {
+          url: URL.createObjectURL(file),
+          name: file.name,
           size: (file.size / 1024).toFixed(2),
-          dimensions: `${img.width} x ${img.height}`,
-          type: file.type,
-          name: file.name
-        });
-      };
-      img.src = url;
+          type: file.type.startsWith("video/") ? "video" : "image",
+          mimeType: file.type
+        };
+      });
+      setPreviews(generatedPreviews);
     } else {
-      setPreviewUrl(null);
-      setImageMetadata(null);
+      setPreviews([]);
     }
   };
 
@@ -72,35 +66,39 @@ export default function CarouselManagement() {
     setError("");
     setSuccess("");
 
-    if (!selectedFile) {
-      setError("Please select an image first");
+    if (selectedFiles.length === 0) {
+      setError("Please select at least one file first");
       return;
     }
 
     // Validation
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (selectedFile.size > maxSize) {
-      setError("Image size must be less than 5MB");
-      return;
-    }
+    const maxSize = 50 * 1024 * 1024; // 50MB for video/multiple
+    for (const file of selectedFiles) {
+      if (file.size > maxSize) {
+        setError(`File ${file.name} must be less than 50MB`);
+        return;
+      }
 
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!validTypes.includes(selectedFile.type)) {
-      setError("Only JPG, PNG, and WebP images are allowed");
-      return;
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "video/mp4", "video/webm"];
+      if (!validTypes.includes(file.type)) {
+        setError(`File ${file.name} has invalid type. Supported formats: JPG, PNG, WebP, MP4, WebM`);
+        return;
+      }
     }
 
     try {
       const formData = new FormData();
-      formData.append("image", selectedFile);
+      selectedFiles.forEach((file) => {
+        formData.append("media", file);
+      });
+
       await uploadCarouselImage(formData);
-      setSuccess("Image uploaded successfully!");
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      setImageMetadata(null);
+      setSuccess("Media uploaded successfully!");
+      setSelectedFiles([]);
+      setPreviews([]);
       fetchImages();
     } catch (err) {
-      setError("Failed to upload image");
+      setError("Failed to upload media");
     }
   };
 
@@ -125,6 +123,18 @@ export default function CarouselManagement() {
       fetchImages();
     } catch (err) {
       setError("Failed to restore image");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this media? This action cannot be undone.")) return;
+
+    try {
+      await deleteCarouselImage(id);
+      setSuccess("Media permanently deleted!");
+      fetchImages();
+    } catch (err) {
+      setError("Failed to delete image");
     }
   };
 
@@ -153,18 +163,22 @@ export default function CarouselManagement() {
       return;
     }
 
-    const confirmMsg = action === "archive" 
-      ? `Archive ${selectedImages.size} image(s)?`
-      : `Restore ${selectedImages.size} image(s)?`;
-    
+    let confirmMsg = "";
+    if (action === "archive") confirmMsg = `Archive ${selectedImages.size} image(s)?`;
+    else if (action === "restore") confirmMsg = `Restore ${selectedImages.size} image(s)?`;
+    else if (action === "delete") confirmMsg = `Are you sure you want to permanently delete ${selectedImages.size} selected media? This action cannot be undone.`;
+
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      const promises = Array.from(selectedImages).map(id =>
-        action === "archive" ? archiveCarouselImage(id) : restoreCarouselImage(id)
-      );
+      const promises = Array.from(selectedImages).map(id => {
+        if (action === "archive") return archiveCarouselImage(id);
+        if (action === "restore") return restoreCarouselImage(id);
+        if (action === "delete") return deleteCarouselImage(id);
+        return Promise.resolve();
+      });
       await Promise.all(promises);
-      setSuccess(`Successfully ${action}d ${selectedImages.size} image(s)`);
+      setSuccess(`Successfully ${action === "delete" ? "deleted" : action + "d"} ${selectedImages.size} image(s)`);
       fetchImages();
     } catch (err) {
       setError(`Failed to ${action} some images`);
@@ -263,12 +277,13 @@ export default function CarouselManagement() {
       {/* Upload Section */}
       {!viewArchived && (
         <div className="mb-6 bg-white border rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload New Image</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload New Media (Multiple Supported)</h2>
           <form onSubmit={handleUpload} className="space-y-4">
             <div className="flex items-center gap-3">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
+                multiple
                 onChange={handleFileChange}
                 className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md 
                   file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 
@@ -276,51 +291,43 @@ export default function CarouselManagement() {
               />
               <button
                 type="submit"
-                disabled={!selectedFile}
+                disabled={selectedFiles.length === 0}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                Upload
+                Upload ({selectedFiles.length})
               </button>
             </div>
             <div className="text-xs text-gray-500">
-              Maximum file size: 5MB • Supported formats: JPG, PNG, WebP
+              Maximum file size: 50MB per file • Recommended dimensions: <b>1080x1080 (1:1 ratio, Square for FB Post)</b> • Supported formats: JPG, PNG, WebP, MP4, WebM
             </div>
           </form>
-          
-          {/* Image Preview with Metadata */}
-          {previewUrl && (
-            <div className="mt-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
-              <div className="flex items-start gap-4">
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  onClick={() => setModalImage(previewUrl)}
-                  className="w-48 h-48 object-cover rounded-lg shadow-md cursor-pointer hover:opacity-90 transition"
-                />
-                {imageMetadata && (
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">Image Details:</p>
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span className="font-medium">File Name:</span>
-                        <span className="text-right truncate ml-2 max-w-xs">{imageMetadata.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Size:</span>
-                        <span>{imageMetadata.size} KB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Dimensions:</span>
-                        <span>{imageMetadata.dimensions} px</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Format:</span>
-                        <span>{imageMetadata.type.split('/')[1].toUpperCase()}</span>
-                      </div>
-                    </div>
+
+          {/* Media Previews with Metadata */}
+          {previews.length > 0 && (
+            <div className="mt-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {previews.map((preview, idx) => (
+                <div key={idx} className="bg-white p-3 rounded shadow-sm flex flex-col items-center">
+                  {preview.type === "video" ? (
+                    <video
+                      src={preview.url}
+                      className="w-full h-32 object-cover rounded shadow-sm mb-3 cursor-pointer"
+                      controls
+                    />
+                  ) : (
+                    <img
+                      src={preview.url}
+                      alt="Preview"
+                      className="w-full h-32 object-cover rounded shadow-sm mb-3 cursor-pointer hover:opacity-90 transition"
+                      onClick={() => setModalMedia({ url: preview.url, type: 'image' })}
+                    />
+                  )}
+                  <div className="w-full text-xs text-gray-600 space-y-1">
+                    <p className="truncate font-semibold text-gray-700" title={preview.name}>{preview.name}</p>
+                    <p>Format: {preview.mimeType.split('/')[1]?.toUpperCase() || "N/A"}</p>
+                    <p>Size: {preview.size} KB</p>
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -338,7 +345,7 @@ export default function CarouselManagement() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
+
           <div className="flex gap-2 flex-wrap w-full md:w-auto">
             <select
               value={sortBy}
@@ -357,18 +364,27 @@ export default function CarouselManagement() {
                 >
                   {selectedImages.size === filteredAndSortedImages.length ? "Deselect All" : "Select All"}
                 </button>
-                
+
                 {selectedImages.size > 0 && (
-                  <button
-                    onClick={() => handleBulkAction(viewArchived ? "restore" : "archive")}
-                    className={`px-4 py-2 text-white rounded-lg transition ${
-                      viewArchived 
-                        ? "bg-green-500 hover:bg-green-600" 
-                        : "bg-yellow-500 hover:bg-yellow-600"
-                    }`}
-                  >
-                    {viewArchived ? "Restore" : "Archive"} Selected ({selectedImages.size})
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleBulkAction(viewArchived ? "restore" : "archive")}
+                      className={`px-4 py-2 text-white rounded-lg transition flex items-center gap-2 ${viewArchived
+                        ? "bg-emerald-500 hover:bg-emerald-600"
+                        : "bg-amber-500 hover:bg-amber-600"
+                        }`}
+                    >
+                      {viewArchived ? <RefreshCcw size={16} /> : <Archive size={16} />}
+                      {viewArchived ? "Restore" : "Archive"} Selected ({selectedImages.size})
+                    </button>
+                    <button
+                      onClick={() => handleBulkAction("delete")}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+                    >
+                      <Trash2 size={16} />
+                      Delete Selected ({selectedImages.size})
+                    </button>
+                  </div>
                 )}
               </>
             )}
@@ -384,10 +400,10 @@ export default function CarouselManagement() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <p className="text-gray-500 mt-4">
-              {searchQuery 
-                ? "No images found matching your search" 
-                : viewArchived 
-                  ? "No archived images found" 
+              {searchQuery
+                ? "No images found matching your search"
+                : viewArchived
+                  ? "No archived images found"
                   : "No images found"}
             </p>
           </div>
@@ -395,9 +411,8 @@ export default function CarouselManagement() {
           filteredAndSortedImages.map((img) => (
             <div
               key={img._id}
-              className={`relative border rounded-lg overflow-hidden shadow hover:shadow-lg transition ${
-                selectedImages.has(img._id) ? "ring-2 ring-blue-500" : ""
-              }`}
+              className={`relative border rounded-lg overflow-hidden shadow hover:shadow-lg transition ${selectedImages.has(img._id) ? "ring-2 ring-blue-500" : ""
+                }`}
             >
               {/* Selection Checkbox */}
               <div className="absolute top-2 left-2 z-10">
@@ -409,13 +424,31 @@ export default function CarouselManagement() {
                 />
               </div>
 
-              <img
-                src={img.imageUrl}
-                alt="Carousel"
-                onClick={() => setModalImage(img.imageUrl)}
-                className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition"
-              />
-              
+              {/* Individual Delete Button - top-right */}
+              <button
+                onClick={() => handleDelete(img._id)}
+                className="absolute top-2 right-2 z-10 bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-full transition-all shadow-md backdrop-blur-sm"
+                title="Delete Permanently"
+              >
+                <Trash2 size={16} />
+              </button>
+
+              {/* Media Render */}
+              {img.type === "video" || img.imageUrl.endsWith(".mp4") || img.imageUrl.endsWith(".webm") ? (
+                <video
+                  src={img.imageUrl}
+                  onClick={() => setModalMedia({ url: img.imageUrl, type: 'video' })}
+                  className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition"
+                />
+              ) : (
+                <img
+                  src={img.imageUrl}
+                  alt="Carousel Media"
+                  onClick={() => setModalMedia({ url: img.imageUrl, type: 'image' })}
+                  className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition"
+                />
+              )}
+
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent text-white p-3">
                 <div className="flex justify-between items-end">
                   <div className="text-xs">
@@ -423,19 +456,23 @@ export default function CarouselManagement() {
                     <div className="text-gray-300">{new Date(img.createdAt).toLocaleTimeString()}</div>
                   </div>
                   {viewArchived ? (
-                    <button
-                      onClick={() => handleRestore(img._id)}
-                      className="bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-xs font-medium transition"
-                    >
-                      Restore
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleRestore(img._id)}
+                        className="bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-1"
+                      >
+                        <RefreshCcw size={12} /> Restore
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      onClick={() => handleArchive(img._id)}
-                      className="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded text-xs font-medium transition"
-                    >
-                      Archive
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleArchive(img._id)}
+                        className="bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-1"
+                      >
+                        <Archive size={12} /> Archive
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -444,25 +481,35 @@ export default function CarouselManagement() {
         )}
       </div>
 
-      {/* Modal for Enlarged Image */}
-      {modalImage && (
+      {/* Modal for Enlarged Media */}
+      {modalMedia && (
         <div
-          onClick={() => setModalImage(null)}
+          onClick={() => setModalMedia(null)}
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4 cursor-pointer"
         >
           <div className="relative max-w-7xl max-h-full">
             <button
-              onClick={() => setModalImage(null)}
+              onClick={() => setModalMedia(null)}
               className="absolute -top-12 right-0 text-white text-4xl font-bold hover:text-gray-300 transition"
             >
               ×
             </button>
-            <img
-              src={modalImage}
-              alt="Enlarged view"
-              className="max-w-full max-h-screen object-contain rounded-lg shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
+            {modalMedia.type === 'video' ? (
+              <video
+                src={modalMedia.url}
+                controls
+                autoPlay
+                className="max-w-full max-h-screen rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <img
+                src={modalMedia.url}
+                alt="Enlarged view"
+                className="max-w-full max-h-screen object-contain rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
           </div>
         </div>
       )}

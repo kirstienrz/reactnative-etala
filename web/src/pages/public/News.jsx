@@ -22,6 +22,17 @@ const AllNews = () => {
     }
   };
 
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+  };
+
+  const isVideo = (url) => {
+    return url && (url.toLowerCase().endsWith(".mp4") || url.toLowerCase().includes("video/upload"));
+  };
+
   return (
     <main className="bg-white min-h-screen">
       {/* HEADER */}
@@ -52,14 +63,31 @@ const AllNews = () => {
               key={item._id}
               className="flex flex-col sm:flex-row gap-6 p-6 border border-slate-200 rounded-xl hover:border-violet-600 hover:shadow-lg transition"
             >
-              {/* IMAGE */}
+              {/* IMAGE / VIDEO */}
               <div className="w-full sm:w-40 flex-shrink-0">
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-40 object-cover rounded-lg"
+                {getYouTubeEmbedUrl(item.link) ? (
+                  <iframe
+                    className="w-full h-40 object-cover rounded-lg bg-black"
+                    src={getYouTubeEmbedUrl(item.link)}
+                    title={item.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
                   />
+                ) : item.imageUrl ? (
+                  isVideo(item.imageUrl) ? (
+                    <video
+                      controls
+                      src={item.imageUrl}
+                      className="w-full h-40 object-cover rounded-lg bg-black"
+                    />
+                  ) : (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-40 object-cover rounded-lg"
+                    />
+                  )
                 ) : (
                   <div className="w-full h-40 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 font-bold">
                     NEWS
@@ -114,14 +142,34 @@ const AllNews = () => {
             </div>
 
             <div className="overflow-y-auto px-8 pb-8 -mt-12">
-              {selectedNews.imageUrl && (
-                <img
-                  src={selectedNews.imageUrl}
-                  alt={selectedNews.title}
-                  className="w-full h-64 md:h-80 object-cover rounded-xl mt-12 mb-6 shadow-md"
-                />
-              )}
-              <h2 className={`text-2xl md:text-3xl font-black text-slate-900 mb-4 ${!selectedNews.imageUrl ? "mt-12" : ""}`}>
+              <div className="w-full mt-12 mb-6">
+                {getYouTubeEmbedUrl(selectedNews.link) ? (
+                  <iframe
+                    className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md bg-black"
+                    src={getYouTubeEmbedUrl(selectedNews.link)}
+                    title={selectedNews.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : selectedNews.imageUrl ? (
+                  isVideo(selectedNews.imageUrl) ? (
+                    <video
+                      controls
+                      autoPlay
+                      src={selectedNews.imageUrl}
+                      className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md bg-black"
+                    />
+                  ) : (
+                    <img
+                      src={selectedNews.imageUrl}
+                      alt={selectedNews.title}
+                      className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md"
+                    />
+                  )
+                ) : null}
+              </div>
+              <h2 className={`text-2xl md:text-3xl font-black text-slate-900 mb-4 ${!selectedNews.imageUrl && !getYouTubeEmbedUrl(selectedNews.link) ? "mt-12" : ""}`}>
                 {selectedNews.title}
               </h2>
               <p className="flex items-center gap-2 text-sm text-slate-500 mb-6 font-medium">
@@ -132,7 +180,7 @@ const AllNews = () => {
                 {selectedNews.content}
               </div>
 
-              {selectedNews.link && (
+              {selectedNews.link && !getYouTubeEmbedUrl(selectedNews.link) && (
                 <a
                   href={selectedNews.link}
                   target="_blank"

@@ -35,3 +35,9 @@ export const restoreCarouselImage = async (id) => {
   const res = await API.put(`/carousel/restore/${id}`);
   return res.data;
 };
+
+// 🗑️ DELETE a carousel image permanently
+export const deleteCarouselImage = async (id) => {
+  const res = await API.delete(`/carousel/delete/${id}`);
+  return res.data;
+};

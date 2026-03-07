@@ -1,6 +1,6 @@
 // components/AlbumGalleryManagement.jsx
 import React, { useState, useEffect } from "react";
-import { 
+import {
   Calendar,
   Folder,
   Image as ImageIcon,
@@ -50,7 +50,7 @@ export default function AlbumGalleryManagement() {
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  
+
   // Form states
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [selectedAlbums, setSelectedAlbums] = useState(new Set());
@@ -60,12 +60,12 @@ export default function AlbumGalleryManagement() {
   const [albumToDelete, setAlbumToDelete] = useState(null);
   const [imageToDelete, setImageToDelete] = useState({ albumId: null, imageIndex: null });
   const [showImageDeleteModal, setShowImageDeleteModal] = useState(false);
-  
+
   // Filter and view states
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("date-desc");
-  
+
   // Form data
   const [newAlbum, setNewAlbum] = useState({
     title: "",
@@ -74,7 +74,7 @@ export default function AlbumGalleryManagement() {
   });
   const [albumCover, setAlbumCover] = useState(null);
   const [albumCoverPreview, setAlbumCoverPreview] = useState(null);
-  
+
   const [uploadData, setUploadData] = useState({
     albumId: "",
     files: [],
@@ -91,7 +91,7 @@ export default function AlbumGalleryManagement() {
   const fetchAlbums = async () => {
     setLoading(true);
     setError("");
-    
+
     try {
       if (viewArchived) {
         const response = await getArchivedAlbums();
@@ -111,7 +111,7 @@ export default function AlbumGalleryManagement() {
   // Fetch single album with images
   const fetchAlbum = async (id) => {
     setProcessing(prev => ({ ...prev, [id]: true }));
-    
+
     try {
       const response = await getAlbum(id);
       setSelectedAlbum(response.data);
@@ -150,10 +150,10 @@ export default function AlbumGalleryManagement() {
       formData.append("coverImage", albumCover);
 
       const response = await createAlbum(formData);
-      
+
       setSuccess("Album created successfully!");
       setShowCreateModal(false);
-      
+
       // Reset form
       setNewAlbum({
         title: "",
@@ -162,7 +162,7 @@ export default function AlbumGalleryManagement() {
       });
       setAlbumCover(null);
       setAlbumCoverPreview(null);
-      
+
       // Refresh album list
       fetchAlbums();
     } catch (err) {
@@ -194,22 +194,22 @@ export default function AlbumGalleryManagement() {
 
     try {
       const formData = new FormData();
-      
+
       // Add files
       uploadData.files.forEach(file => {
         formData.append("images", file);
       });
-      
+
       // Add captions
       if (uploadData.captions.length > 0) {
         formData.append("captions", JSON.stringify(uploadData.captions));
       }
 
       const response = await uploadImages(uploadData.albumId, formData);
-      
+
       setSuccess(`${uploadData.files.length} image(s) uploaded successfully!`);
       setShowUploadModal(false);
-      
+
       // Reset upload data
       setUploadData({
         albumId: "",
@@ -217,12 +217,12 @@ export default function AlbumGalleryManagement() {
         captions: [],
         previews: []
       });
-      
+
       // Refresh current album if viewing
       if (selectedAlbum && selectedAlbum._id === uploadData.albumId) {
         fetchAlbum(uploadData.albumId);
       }
-      
+
       // Refresh album list
       fetchAlbums();
     } catch (err) {
@@ -238,18 +238,18 @@ export default function AlbumGalleryManagement() {
     setProcessing(prev => ({ ...prev, [id]: true }));
     setError("");
     setSuccess("");
-    
+
     try {
       await archiveAlbum(id);
       setSuccess("Album archived successfully!");
-      
+
       // Update UI
       if (viewArchived) {
         setArchivedAlbums(prev => prev.filter(album => album._id !== id));
       } else {
         setAlbums(prev => prev.filter(album => album._id !== id));
       }
-      
+
       // Close modal if viewing this album
       if (selectedAlbum && selectedAlbum._id === id) {
         setSelectedAlbum(null);
@@ -267,16 +267,16 @@ export default function AlbumGalleryManagement() {
     setProcessing(prev => ({ ...prev, [id]: true }));
     setError("");
     setSuccess("");
-    
+
     try {
       await restoreAlbum(id);
       setSuccess("Album restored successfully!");
-      
+
       // Update UI
       if (viewArchived) {
         setArchivedAlbums(prev => prev.filter(album => album._id !== id));
       }
-      
+
       // Refresh active albums list
       fetchAlbums();
     } catch (err) {
@@ -290,24 +290,24 @@ export default function AlbumGalleryManagement() {
   // Handle delete album
   const handleDeleteAlbum = async () => {
     if (!albumToDelete) return;
-    
+
     setProcessing(prev => ({ ...prev, [albumToDelete]: true }));
     setError("");
     setSuccess("");
-    
+
     try {
       await deleteAlbum(albumToDelete);
       setSuccess("Album deleted permanently!");
       setShowDeleteModal(false);
       setAlbumToDelete(null);
-      
+
       // Update UI
       if (viewArchived) {
         setArchivedAlbums(prev => prev.filter(album => album._id !== albumToDelete));
       } else {
         setAlbums(prev => prev.filter(album => album._id !== albumToDelete));
       }
-      
+
       // Close modal if viewing this album
       if (selectedAlbum && selectedAlbum._id === albumToDelete) {
         setSelectedAlbum(null);
@@ -324,22 +324,22 @@ export default function AlbumGalleryManagement() {
   const handleDeleteImage = async () => {
     const { albumId, imageIndex } = imageToDelete;
     if (!albumId || imageIndex === null) return;
-    
+
     setProcessing(prev => ({ ...prev, [`image-${albumId}-${imageIndex}`]: true }));
     setError("");
     setSuccess("");
-    
+
     try {
       await deleteImage(albumId, imageIndex);
-      setSuccess("Image deleted successfully!");
+      setSuccess("Image deleted permanently!");
       setShowImageDeleteModal(false);
       setImageToDelete({ albumId: null, imageIndex: null });
-      
+
       // Refresh current album
       if (selectedAlbum && selectedAlbum._id === albumId) {
         fetchAlbum(albumId);
       }
-      
+
       // Refresh album list to update photo count
       fetchAlbums();
     } catch (err) {
@@ -356,24 +356,24 @@ export default function AlbumGalleryManagement() {
       setError("Select at least one album");
       return;
     }
-    
+
     setBulkProcessing(true);
     setError("");
     setSuccess("");
-    
+
     try {
       const albumIds = Array.from(selectedAlbums);
       await bulkArchiveAlbums(albumIds);
-      
+
       setSuccess(`${albumIds.length} album(s) archived successfully!`);
-      
+
       // Update UI
       if (viewArchived) {
         setArchivedAlbums(prev => prev.filter(album => !albumIds.includes(album._id)));
       } else {
         setAlbums(prev => prev.filter(album => !albumIds.includes(album._id)));
       }
-      
+
       // Clear selection
       setSelectedAlbums(new Set());
     } catch (err) {
@@ -390,25 +390,25 @@ export default function AlbumGalleryManagement() {
       setError("Select at least one album");
       return;
     }
-    
+
     setBulkProcessing(true);
     setError("");
     setSuccess("");
-    
+
     try {
       const albumIds = Array.from(selectedAlbums);
       await bulkRestoreAlbums(albumIds);
-      
+
       setSuccess(`${albumIds.length} album(s) restored successfully!`);
-      
+
       // Update UI
       if (viewArchived) {
         setArchivedAlbums(prev => prev.filter(album => !albumIds.includes(album._id)));
       }
-      
+
       // Refresh active albums
       fetchAlbums();
-      
+
       // Clear selection
       setSelectedAlbums(new Set());
     } catch (err) {
@@ -489,7 +489,7 @@ export default function AlbumGalleryManagement() {
   const filteredAlbums = (viewArchived ? archivedAlbums : albums)
     .filter(album => {
       if (!searchTerm.trim()) return true;
-      
+
       const searchLower = searchTerm.toLowerCase();
       return (
         album.title.toLowerCase().includes(searchLower) ||
@@ -538,7 +538,7 @@ export default function AlbumGalleryManagement() {
                 Manage photo albums for university activities
               </p>
             </div>
-            
+
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => {
@@ -559,7 +559,7 @@ export default function AlbumGalleryManagement() {
                   </>
                 )}
               </button>
-              
+
               {!viewArchived && (
                 <button
                   onClick={() => setShowCreateModal(true)}
@@ -571,7 +571,7 @@ export default function AlbumGalleryManagement() {
               )}
             </div>
           </div>
-          
+
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4">
@@ -583,7 +583,7 @@ export default function AlbumGalleryManagement() {
                 <Folder className="w-5 h-5 text-blue-500" />
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -593,7 +593,7 @@ export default function AlbumGalleryManagement() {
                 <ImageIcon className="w-5 h-5 text-green-500" />
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -603,7 +603,7 @@ export default function AlbumGalleryManagement() {
                 <EyeOff className="w-5 h-5 text-amber-500" />
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -659,7 +659,7 @@ export default function AlbumGalleryManagement() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
+
             {/* Sort and View Options */}
             <div className="flex items-center gap-4">
               <select
@@ -673,7 +673,7 @@ export default function AlbumGalleryManagement() {
                 <option value="title-desc">Title Z-A</option>
                 <option value="photos-desc">Most Photos</option>
               </select>
-              
+
               <div className="flex bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -709,19 +709,18 @@ export default function AlbumGalleryManagement() {
                 No albums found
               </h3>
               <p className="text-gray-500 max-w-md mx-auto">
-                {viewArchived 
+                {viewArchived
                   ? 'No archived albums. Archive albums to see them here.'
                   : searchTerm
-                  ? 'No albums match your search'
-                  : 'Create your first album to get started.'}
+                    ? 'No albums match your search'
+                    : 'Create your first album to get started.'}
               </p>
             </div>
           ) : (
-            <div className={`grid gap-6 ${
-              viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" :
+            <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" :
               viewMode === "list" ? "grid-cols-1" :
-              "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-            }`}>
+                "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+              }`}>
               {filteredAlbums.map(album => (
                 <div
                   key={album._id}
@@ -735,23 +734,35 @@ export default function AlbumGalleryManagement() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    
+
                     {/* Album Status */}
-                    <div className={`absolute top-3 right-3 text-xs font-medium px-2 py-1 rounded-full ${
-                      album.isArchived
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}>
+                    <div className={`absolute top-3 left-3 text-xs font-medium px-2 py-1 rounded-full ${album.isArchived
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-emerald-100 text-emerald-800'
+                      }`}>
                       {album.isArchived ? 'Archived' : 'Active'}
                     </div>
-                    
+
+                    {/* Individual Delete Button - top-right */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAlbumToDelete(album._id);
+                        setShowDeleteModal(true);
+                      }}
+                      className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-full shadow-lg backdrop-blur-sm transition-all z-20"
+                      title="Delete Permanently"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+
                     {/* Photo Count */}
                     <div className="absolute bottom-3 left-3 bg-black/70 text-white text-sm px-3 py-1.5 rounded-full flex items-center gap-2">
                       <ImageIcon className="w-4 h-4" />
                       <span>{album.totalPhotos || 0} photos</span>
                     </div>
                   </div>
-                  
+
                   {/* Album Details */}
                   <div className="p-5">
                     <div className="mb-3">
@@ -762,7 +773,7 @@ export default function AlbumGalleryManagement() {
                         {album.description || "No description"}
                       </p>
                     </div>
-                    
+
                     {/* Album Info */}
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -770,7 +781,7 @@ export default function AlbumGalleryManagement() {
                         <span>{formatDate(album.date)}</span>
                       </div>
                     </div>
-                    
+
                     {/* Action Buttons */}
                     <div className="flex gap-2 pt-4 border-t border-gray-200">
                       <button
@@ -790,7 +801,7 @@ export default function AlbumGalleryManagement() {
                           </>
                         )}
                       </button>
-                      
+
                       {!viewArchived && (
                         <button
                           onClick={() => {
@@ -826,7 +837,7 @@ export default function AlbumGalleryManagement() {
                   <p className="text-sm text-gray-600">Perform bulk actions</p>
                 </div>
               </div>
-              
+
               <div className="flex gap-3">
                 {viewArchived ? (
                   <button
@@ -865,7 +876,7 @@ export default function AlbumGalleryManagement() {
                     )}
                   </button>
                 )}
-                
+
                 <button
                   onClick={() => setSelectedAlbums(new Set())}
                   className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all"
@@ -907,7 +918,7 @@ export default function AlbumGalleryManagement() {
                 </button>
               </div>
             </div>
-            
+
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {(!selectedAlbum.images || selectedAlbum.images.length === 0) ? (
@@ -973,7 +984,7 @@ export default function AlbumGalleryManagement() {
                 </div>
               )}
             </div>
-            
+
             {/* Modal Footer */}
             <div className="p-6 border-t border-gray-200 bg-gray-50">
               <div className="flex justify-between items-center">
@@ -990,15 +1001,14 @@ export default function AlbumGalleryManagement() {
                       }
                       setSelectedAlbum(null);
                     }}
-                    className={`px-4 py-2.5 rounded-xl transition-all ${
-                      selectedAlbum.isArchived
-                        ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700'
-                        : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700'
-                    }`}
+                    className={`px-4 py-2.5 rounded-xl transition-all ${selectedAlbum.isArchived
+                      ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700'
+                      : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700'
+                      }`}
                   >
                     {selectedAlbum.isArchived ? 'Restore Album' : 'Archive Album'}
                   </button>
-                  
+
                   <button
                     onClick={() => {
                       setAlbumToDelete(selectedAlbum._id);
@@ -1030,7 +1040,7 @@ export default function AlbumGalleryManagement() {
                 </button>
               </div>
             </div>
-            
+
             <form onSubmit={handleCreateAlbum} className="p-6">
               <div className="space-y-4">
                 <div>
@@ -1046,7 +1056,7 @@ export default function AlbumGalleryManagement() {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description
@@ -1059,7 +1069,7 @@ export default function AlbumGalleryManagement() {
                     placeholder="Brief description of the album"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Date *
@@ -1072,7 +1082,7 @@ export default function AlbumGalleryManagement() {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Cover Image *
@@ -1096,7 +1106,7 @@ export default function AlbumGalleryManagement() {
                   )}
                 </div>
               </div>
-              
+
               <div className="flex gap-3 pt-6 mt-6 border-t border-gray-200">
                 <button
                   type="button"
@@ -1140,7 +1150,7 @@ export default function AlbumGalleryManagement() {
                 </button>
               </div>
             </div>
-            
+
             <form onSubmit={handleUploadImages} className="p-6 overflow-y-auto max-h-[70vh]">
               <div className="space-y-6">
                 <div>
@@ -1155,7 +1165,7 @@ export default function AlbumGalleryManagement() {
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-50 file:to-blue-100 file:text-blue-700 hover:file:from-blue-100 hover:file:to-blue-200"
                   />
                 </div>
-                
+
                 {uploadData.previews.length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -1195,7 +1205,7 @@ export default function AlbumGalleryManagement() {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex gap-3 pt-6 mt-6 border-t border-gray-200">
                 <button
                   type="button"
@@ -1228,39 +1238,40 @@ export default function AlbumGalleryManagement() {
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-r from-red-100 to-red-50 rounded-full flex items-center justify-center mb-4">
-                <Trash2 className="w-8 h-8 text-red-500" />
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 size={40} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Album</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Delete Album?</h3>
+              <p className="text-gray-600 mb-8">
                 Are you sure you want to permanently delete this album? This action cannot be undone.
               </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setAlbumToDelete(null);
-                }}
-                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteAlbum}
-                disabled={processing[albumToDelete]}
-                className="flex-1 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all font-medium flex items-center justify-center gap-2"
-              >
-                {processing[albumToDelete] ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Permanently'
-                )}
-              </button>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-semibold"
+                >
+                  No, Keep it
+                </button>
+                <button
+                  onClick={handleDeleteAlbum}
+                  disabled={processing[albumToDelete]}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all font-semibold shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                >
+                  {processing[albumToDelete] ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Yes, Delete
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1270,39 +1281,30 @@ export default function AlbumGalleryManagement() {
       {showImageDeleteModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-r from-red-100 to-red-50 rounded-full flex items-center justify-center mb-4">
-                <Trash2 className="w-8 h-8 text-red-500" />
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ImageIcon size={40} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Image</h3>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete this image? This action cannot be undone.
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Delete Photo?</h3>
+              <p className="text-gray-600 mb-8">
+                Are you sure you want to permanently delete this photo? This action cannot be undone.
               </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowImageDeleteModal(false);
-                  setImageToDelete({ albumId: null, imageIndex: null });
-                }}
-                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteImage}
-                disabled={processing[`image-${imageToDelete.albumId}-${imageToDelete.imageIndex}`]}
-                className="flex-1 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all font-medium flex items-center justify-center gap-2"
-              >
-                {processing[`image-${imageToDelete.albumId}-${imageToDelete.imageIndex}`] ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Image'
-                )}
-              </button>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowImageDeleteModal(false)}
+                  className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-semibold"
+                >
+                  No, Keep it
+                </button>
+                <button
+                  onClick={handleDeleteImage}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all font-semibold shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Yes, Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

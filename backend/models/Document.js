@@ -12,6 +12,7 @@ const documentSchema = new mongoose.Schema(
     issued_by: { type: String },
     date_issued: { type: Date },
     file_url: { type: String, required: true },
+    public_id: { type: String },
     status: {
       type: String,
       enum: ["draft", "published", "archived"],

@@ -31,7 +31,7 @@ const reportStorage = new CloudinaryStorage({
     resource_type: (req, file) => {
       if (file.mimetype.startsWith("image/")) return "image";
       if (file.mimetype.startsWith("video/")) return "video";
-      if (file.mimetype === "application/pdf") return "image";
+      if (file.mimetype === "application/pdf") return "raw";
       return "raw";
     }
   },
@@ -39,13 +39,20 @@ const reportStorage = new CloudinaryStorage({
 const uploadReport = multer({ storage: reportStorage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 // =========================
-// Carousel (images only)
+// Carousel (images and videos)
 // =========================
 const carouselStorage = new CloudinaryStorage({
   cloudinary,
-  params: { folder: "gadportal_carousel", allowed_formats: ["jpg", "png", "jpeg"] }
+  params: {
+    folder: "gadportal_carousel",
+    allowed_formats: ["jpg", "png", "jpeg", "mp4"],
+    resource_type: (req, file) => {
+      if (file.mimetype && file.mimetype.startsWith("video/")) return "video";
+      return "image";
+    }
+  }
 });
-const uploadCarousel = multer({ storage: carouselStorage });
+const uploadCarousel = multer({ storage: carouselStorage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 // =========================
 // Projects (images only)
@@ -57,17 +64,21 @@ const projectStorage = new CloudinaryStorage({
 const uploadProject = multer({ storage: projectStorage });
 
 // =========================
-// Accomplishments (PDF only, raw)
+// Accomplishments (PDF, Video, Image)
 // =========================
 const accomplishmentStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "gadportal_accomplishments",
-    resource_type: "image", // Treating PDF as image in Cloudinary allows browser viewing
-    allowed_formats: ["pdf"]
+    allowed_formats: ["pdf", "mp4", "webm", "png", "jpg", "jpeg"],
+    resource_type: (req, file) => {
+      if (file.mimetype && file.mimetype.startsWith("video/")) return "video";
+      if (file.mimetype && file.mimetype.startsWith("image/")) return "image";
+      return "raw";
+    }
   }
 });
-const uploadAccomplishment = multer({ storage: accomplishmentStorage, limits: { fileSize: 10 * 1024 * 1024 } });
+const uploadAccomplishment = multer({ storage: accomplishmentStorage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 // =========================
 // Documents (PDF / DOC / DOCX, raw)
@@ -77,8 +88,8 @@ const documentStorage = new CloudinaryStorage({
   params: {
     folder: "gadportal_documents",
     resource_type: (req, file) => {
-      // PDF can be treated as image for viewing, others remain raw/downloadable
-      if (file.mimetype === "application/pdf") return "image";
+      // PDFs should be stored as raw files to keep them unmodified
+      if (file.mimetype === "application/pdf") return "raw";
       return "raw";
     },
     allowed_formats: ["pdf", "doc", "docx"]
@@ -117,10 +128,7 @@ const researchFileStorage = new CloudinaryStorage({
   params: {
     folder: 'research/files',
     allowed_formats: ['pdf', 'doc', 'docx'],
-    resource_type: (req, file) => {
-      if (file.mimetype === "application/pdf") return "image";
-      return "raw";
-    },
+    resource_type: 'raw',
     public_id: (req, file) => `research-file-${file.originalname.split('.')[0]}-${Date.now()}`
   }
 });
@@ -194,7 +202,7 @@ const calendarEventStorage = new CloudinaryStorage({
     resource_type: (req, file) => {
       if (file.mimetype.startsWith("image/")) return "image";
       if (file.mimetype.startsWith("video/")) return "video";
-      if (file.mimetype === "application/pdf") return "image";
+      if (file.mimetype === "application/pdf") return "raw";
       return "raw";
     }
   }

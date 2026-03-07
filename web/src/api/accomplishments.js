@@ -35,3 +35,9 @@ export const restoreAccomplishment = async (id) => {
   const res = await API.put(`/accomplishments/${id}/restore`);
   return res.data;
 };
+
+// ❌ DELETE an accomplishment report (permanently)
+export const deleteAccomplishment = async (id) => {
+  const res = await API.delete(`/accomplishments/${id}`);
+  return res.data;
+};

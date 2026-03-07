@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { FileText, Upload, DollarSign, X, Eye, ChevronLeft, ChevronRight, AlertCircle, Archive, ArchiveRestore, Edit2, Calendar, Search, Check } from "lucide-react";
-import { getAllBudgets, uploadBudget, updateBudget, archiveBudget, unarchiveBudget, getActiveBudgets, getArchivedBudgets } from "../../api/budget";
+import { FileText, Upload, DollarSign, X, Eye, ChevronLeft, ChevronRight, AlertCircle, Archive, ArchiveRestore, Edit2, Calendar, Search, Check, Trash2 } from "lucide-react";
+import { getAllBudgets, uploadBudget, updateBudget, archiveBudget, unarchiveBudget, getActiveBudgets, getArchivedBudgets, deleteBudget } from "../../api/budget";
 
 const BudgetProgramsDashboard = () => {
   const [activeTab, setActiveTab] = useState("reports");
@@ -31,8 +31,8 @@ const BudgetProgramsDashboard = () => {
   // FETCH BUDGETS
   const fetchBudgets = async () => {
     try {
-      const data = activeTab === "archived" 
-        ? await getArchivedBudgets() 
+      const data = activeTab === "archived"
+        ? await getArchivedBudgets()
         : await getActiveBudgets();
       setBudgets(data);
       setSelectedItems([]);
@@ -66,7 +66,7 @@ const BudgetProgramsDashboard = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
@@ -98,7 +98,7 @@ const BudgetProgramsDashboard = () => {
 
   // UPLOAD
   const handleUpload = async () => {
-    if (!title || !year || !file) { 
+    if (!title || !year || !file) {
       setAlertModal({ type: 'error', message: 'Title, year, and file are required' });
       return;
     }
@@ -142,7 +142,7 @@ const BudgetProgramsDashboard = () => {
 
   // UPDATE
   const handleUpdate = async () => {
-    if (!title || !year) { 
+    if (!title || !year) {
       setAlertModal({ type: 'error', message: 'Title and year are required' });
       return;
     }
@@ -185,9 +185,9 @@ const BudgetProgramsDashboard = () => {
       setAlertModal({ type: 'error', message: 'Please select items to archive' });
       return;
     }
-    
+
     if (!window.confirm(`Archive ${selectedItems.length} selected item(s)?`)) return;
-    
+
     try {
       setLoading(true);
       await Promise.all(selectedItems.map(id => archiveBudget(id)));
@@ -216,10 +216,26 @@ const BudgetProgramsDashboard = () => {
     }
   };
 
+  // DELETE
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this budget? This action cannot be undone.")) return;
+    try {
+      setLoading(true);
+      await deleteBudget(id);
+      fetchBudgets();
+      setAlertModal({ type: 'success', message: 'Budget deleted permanently!' });
+    } catch (err) {
+      console.error("❌ Delete Error:", err.response?.data || err.message);
+      setAlertModal({ type: 'error', message: 'Delete failed: ' + (err.response?.data?.message || err.message) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // SELECTION HANDLERS
   const toggleSelection = (id) => {
-    setSelectedItems(prev => 
-      prev.includes(id) 
+    setSelectedItems(prev =>
+      prev.includes(id)
         ? prev.filter(item => item !== id)
         : [...prev, id]
     );
@@ -233,19 +249,6 @@ const BudgetProgramsDashboard = () => {
     }
   };
 
-  // DELETE (COMMENTED OUT)
-  // const handleDelete = async (id) => {
-  //   if (!window.confirm("Are you sure you want to delete this budget?")) return;
-  //   try {
-  //     await deleteBudget(id);
-  //     fetchBudgets();
-  //     setAlertModal({ type: 'success', message: 'Budget deleted successfully!' });
-  //   } catch (err) {
-  //     console.error(err);
-  //     setAlertModal({ type: 'error', message: 'Delete failed: ' + (err.response?.data?.message || err.message) });
-  //   }
-  // };
-
   // File type badge
   const getFileTypeBadge = (format) => {
     if (!format) return "File";
@@ -256,7 +259,7 @@ const BudgetProgramsDashboard = () => {
 
   // Status badge color
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'Approved': return 'bg-green-100 text-green-700';
       case 'Pending': return 'bg-yellow-100 text-yellow-700';
       case 'Draft': return 'bg-gray-100 text-gray-700';
@@ -272,14 +275,14 @@ const BudgetProgramsDashboard = () => {
     setImageError(false);
     setZoomLevel(1);
   };
-  
+
   const closePreview = () => {
     setPreviewFile(null);
     setCurrentPage(0);
     setImageError(false);
     setZoomLevel(1);
   };
-  
+
   const nextPage = () => {
     if (previewFile && currentPage < previewFile.file.page_count - 1) {
       setCurrentPage(currentPage + 1);
@@ -287,7 +290,7 @@ const BudgetProgramsDashboard = () => {
       setZoomLevel(1);
     }
   };
-  
+
   const prevPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
@@ -311,10 +314,10 @@ const BudgetProgramsDashboard = () => {
   // Filter and search budgets
   const filteredBudgets = budgets.filter(budget => {
     const matchesSearch = budget.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (budget.description && budget.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      (budget.description && budget.description.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesYear = !filterYear || budget.year === filterYear;
     const matchesStatus = !filterStatus || budget.status === filterStatus;
-    
+
     return matchesSearch && matchesYear && matchesStatus;
   });
 
@@ -354,11 +357,10 @@ const BudgetProgramsDashboard = () => {
         <div className="flex gap-2 mb-5">
           {["reports", "archived", "budgetUpload"].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === tab 
-                  ? "bg-blue-600 text-white shadow-md" 
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === tab
+                  ? "bg-blue-600 text-white shadow-md"
                   : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-              }`}
+                }`}
             >
               {tab === "budgetUpload" ? "Upload New" : tab === "archived" ? "Archived" : "Active Documents"}
             </button>
@@ -371,7 +373,7 @@ const BudgetProgramsDashboard = () => {
             <div className="bg-blue-600 px-5 py-3">
               <h3 className="text-base font-semibold text-white">Upload New Document</h3>
             </div>
-            
+
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -435,28 +437,26 @@ const BudgetProgramsDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Upload File <span className="text-red-500">*</span>
                   </label>
-                  <div 
+                  <div
                     onDragEnter={handleDragEnter}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
-                      isDragging 
-                        ? 'border-blue-500 bg-blue-50' 
+                    className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isDragging
+                        ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
-                    <input 
-                      type="file" 
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                    <input
+                      type="file"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       onChange={handleFileSelect}
                       accept=".pdf,.jpg,.jpeg,.png"
                     />
-                    
+
                     <div className="pointer-events-none">
-                      <div className={`inline-flex p-3 rounded-full mb-3 ${
-                        isDragging ? 'bg-blue-200' : 'bg-gray-100'
-                      }`}>
+                      <div className={`inline-flex p-3 rounded-full mb-3 ${isDragging ? 'bg-blue-200' : 'bg-gray-100'
+                        }`}>
                         <Upload className={`w-6 h-6 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
                       </div>
                       <p className="text-blue-600 font-medium mb-1">
@@ -465,14 +465,14 @@ const BudgetProgramsDashboard = () => {
                       <p className="text-xs text-gray-500">PDF and Images (JPG, PNG) • Max 25MB</p>
                     </div>
                   </div>
-                  
+
                   {file && (
                     <div className="mt-3 p-3 bg-blue-50 rounded-lg flex items-center gap-2 border border-blue-200">
                       <div className="p-1.5 bg-blue-600 rounded">
                         <FileText className="w-4 h-4 text-white" />
                       </div>
                       <span className="text-sm text-gray-800 font-medium flex-1">{file.name}</span>
-                      <button onClick={() => setFile(null)} 
+                      <button onClick={() => setFile(null)}
                         className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 rounded transition-colors">
                         <X size={16} />
                       </button>
@@ -482,8 +482,8 @@ const BudgetProgramsDashboard = () => {
               )}
 
               <div className="flex gap-2 pt-2">
-                <button 
-                  onClick={handleUpload} 
+                <button
+                  onClick={handleUpload}
                   disabled={loading || !title || !year || !file}
                   className="flex-1 bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm shadow-md">
                   {loading ? "Uploading..." : "Upload Document"}
@@ -503,13 +503,13 @@ const BudgetProgramsDashboard = () => {
             <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full overflow-hidden">
               <div className="bg-blue-600 px-5 py-3 flex items-center justify-between">
                 <h3 className="text-base font-semibold text-white">Edit Document</h3>
-                <button 
-                  onClick={closeEditModal} 
+                <button
+                  onClick={closeEditModal}
                   className="text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors">
                   <X size={20} />
                 </button>
               </div>
-              
+
               <div className="p-5 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -574,8 +574,8 @@ const BudgetProgramsDashboard = () => {
               </div>
 
               <div className="p-5 bg-gray-50 border-t border-gray-200 flex gap-2">
-                <button 
-                  onClick={handleUpdate} 
+                <button
+                  onClick={handleUpdate}
                   disabled={loading || !title || !year}
                   className="flex-1 bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm shadow-md">
                   {loading ? "Updating..." : "Update Document"}
@@ -692,7 +692,7 @@ const BudgetProgramsDashboard = () => {
                   {totalPages > 1 && ` • Page ${currentPageList} of ${totalPages}`}
                 </p>
               </div>
-              
+
               {/* Selection Mode Controls */}
               {activeTab === "reports" && filteredBudgets.length > 0 && (
                 <div className="flex items-center gap-2">
@@ -742,8 +742,8 @@ const BudgetProgramsDashboard = () => {
                   {activeTab === "archived" ? "No archived documents" : "No documents uploaded yet"}
                 </p>
                 <p className="text-gray-400 text-sm mt-1">
-                  {activeTab === "archived" 
-                    ? "Archived documents will appear here" 
+                  {activeTab === "archived"
+                    ? "Archived documents will appear here"
                     : "Upload your first budget document to get started"}
                 </p>
               </div>
@@ -770,11 +770,22 @@ const BudgetProgramsDashboard = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                   {currentBudgets.map(item => (
-                    <div key={item._id} className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden ${
-                      isSelectionMode && selectedItems.includes(item._id) 
-                        ? 'border-2 border-orange-500 ring-2 ring-orange-200' 
+                    <div key={item._id} className={`group bg-white rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden relative ${isSelectionMode && selectedItems.includes(item._id)
+                        ? 'border-2 border-orange-500 ring-2 ring-orange-200'
                         : 'border-2 border-gray-200 hover:border-blue-300'
-                    }`}>
+                      }`}>
+                      {/* Delete Button - Top Right */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item._id);
+                        }}
+                        className="absolute top-4 right-4 p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all duration-300 backdrop-blur-md opacity-0 group-hover:opacity-100 z-10 shadow-lg shadow-red-500/20"
+                        title="Delete Permanently"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+
                       {/* Selection Checkbox */}
                       {isSelectionMode && (
                         <div className="bg-orange-50 border-b border-orange-200 px-3 py-2">
@@ -819,8 +830,8 @@ const BudgetProgramsDashboard = () => {
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3 text-blue-500" />
                               <span className="text-xs">
-                                {new Date(item.dateApproved).toLocaleDateString("en-US", { 
-                                  month:"short", day:"numeric", year:"numeric"
+                                {new Date(item.dateApproved).toLocaleDateString("en-US", {
+                                  month: "short", day: "numeric", year: "numeric"
                                 })}
                               </span>
                             </div>
@@ -840,21 +851,21 @@ const BudgetProgramsDashboard = () => {
 
                       {/* Actions */}
                       <div className="p-4 bg-gray-50 border-t-2 border-gray-100 flex gap-2">
-                        <button 
+                        <button
                           onClick={() => openPreview(item)}
                           className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all bg-blue-600 text-white hover:bg-blue-700">
                           <Eye size={12} /> Preview
                         </button>
-                        
+
                         {activeTab === "reports" ? (
                           <>
-                            <button 
+                            <button
                               onClick={() => handleEdit(item)}
                               className="flex items-center justify-center bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
                               title="Edit">
                               <Edit2 size={12} />
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleArchiveSingle(item._id)}
                               className="flex items-center justify-center bg-orange-50 text-orange-600 px-2 py-1.5 rounded-lg hover:bg-orange-100 transition-colors border border-orange-200"
                               title="Archive">
@@ -862,7 +873,7 @@ const BudgetProgramsDashboard = () => {
                             </button>
                           </>
                         ) : (
-                          <button 
+                          <button
                             onClick={() => handleUnarchive(item._id)}
                             className="flex items-center justify-center gap-1 bg-green-50 text-green-600 px-2 py-1.5 rounded-lg hover:bg-green-100 transition-colors border border-green-200 text-xs font-medium"
                             title="Restore">
@@ -897,11 +908,10 @@ const BudgetProgramsDashboard = () => {
                             <button
                               key={page}
                               onClick={() => goToPage(page)}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                                currentPageList === page
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${currentPageList === page
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                              }`}
+                                }`}
                             >
                               {page}
                             </button>
@@ -938,7 +948,7 @@ const BudgetProgramsDashboard = () => {
         {previewFile && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-white w-full max-w-6xl h-[90vh] rounded-lg shadow-2xl flex flex-col overflow-hidden">
-              
+
               {/* Header */}
               <div className="bg-blue-600 px-5 py-3 flex items-center justify-between flex-shrink-0">
                 <div className="flex-1">
@@ -950,19 +960,18 @@ const BudgetProgramsDashboard = () => {
                     <span className="px-2 py-0.5 bg-white/20 rounded-full font-medium">
                       {previewFile.year}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full font-medium ${
-                      previewFile.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                      previewFile.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                      previewFile.status === 'Draft' ? 'bg-gray-100 text-gray-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full font-medium ${previewFile.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                        previewFile.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                          previewFile.status === 'Draft' ? 'bg-gray-100 text-gray-700' :
+                            'bg-red-100 text-red-700'
+                      }`}>
                       {previewFile.status}
                     </span>
                     {previewFile.dateApproved && (
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(previewFile.dateApproved).toLocaleDateString("en-US", { 
-                          month:"short", day:"numeric", year:"numeric"
+                        {new Date(previewFile.dateApproved).toLocaleDateString("en-US", {
+                          month: "short", day: "numeric", year: "numeric"
                         })}
                       </span>
                     )}
@@ -973,8 +982,8 @@ const BudgetProgramsDashboard = () => {
                     </p>
                   )}
                 </div>
-                <button 
-                  onClick={closePreview} 
+                <button
+                  onClick={closePreview}
                   className="text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors">
                   <X size={20} />
                 </button>
@@ -990,17 +999,17 @@ const BudgetProgramsDashboard = () => {
                       </div>
                       <p className="text-gray-800 font-semibold mb-1">Unable to load preview</p>
                       <p className="text-sm text-gray-500 mb-3">This page may not be available yet</p>
-                      <button 
-                        onClick={() => setImageError(false)} 
+                      <button
+                        onClick={() => setImageError(false)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors">
                         Try Again
                       </button>
                     </div>
                   ) : (
-                    <img 
-                      src={previewFile.file.image_urls[currentPage]} 
-                      className="rounded-lg shadow-lg transition-transform duration-200 block" 
-                      style={{ 
+                    <img
+                      src={previewFile.file.image_urls[currentPage]}
+                      className="rounded-lg shadow-lg transition-transform duration-200 block"
+                      style={{
                         transform: `scale(${zoomLevel})`,
                         transformOrigin: 'center center',
                         width: 'auto',
@@ -1017,19 +1026,19 @@ const BudgetProgramsDashboard = () => {
               {/* Navigation Footer */}
               {previewFile.file.page_count > 1 && !imageError && (
                 <div className="bg-white border-t border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0">
-                  <button 
-                    onClick={prevPage} 
+                  <button
+                    onClick={prevPage}
                     disabled={currentPage === 0}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200">
                     <ChevronLeft size={16} /> Previous
                   </button>
-                  
+
                   <span className="px-2.5 py-1 bg-blue-50 text-blue-700 font-semibold rounded text-xs">
                     {currentPage + 1} / {previewFile.file.page_count}
                   </span>
-                  
-                  <button 
-                    onClick={nextPage} 
+
+                  <button
+                    onClick={nextPage}
                     disabled={currentPage === previewFile.file.page_count - 1}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200">
                     Next <ChevronRight size={16} />
@@ -1064,13 +1073,12 @@ const BudgetProgramsDashboard = () => {
                 </div>
               </div>
               <div className="p-4 flex justify-end">
-                <button 
+                <button
                   onClick={() => setAlertModal(null)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    alertModal.type === 'success' 
-                      ? 'bg-green-600 text-white hover:bg-green-700' 
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${alertModal.type === 'success'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
                       : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}>
+                    }`}>
                   OK
                 </button>
               </div>

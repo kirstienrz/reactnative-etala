@@ -35,3 +35,9 @@ export const restoreOrgChartImage = async (id) => {
   const res = await API.put(`/org-chart/restore/${id}`);
   return res.data;
 };
+
+// ❌ DELETE an org chart image (permanently)
+export const deleteOrgChartImage = async (id) => {
+  const res = await API.delete(`/org-chart/delete/${id}`);
+  return res.data;
+};

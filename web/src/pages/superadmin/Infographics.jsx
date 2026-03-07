@@ -247,7 +247,7 @@ export default function InfographicsAdmin() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this infographic?')) return;
+        if (!window.confirm("Are you sure you want to permanently delete this infographic? This action cannot be undone.")) return;
         try {
             await deleteInfographic(id);
             // Auto-refresh after deleting
@@ -456,6 +456,18 @@ export default function InfographicsAdmin() {
                                             className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition"
                                         />
 
+                                        {/* Individual Delete Button - top-right */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(item._id);
+                                            }}
+                                            className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-full shadow-lg backdrop-blur-sm transition-all z-20"
+                                            title="Delete Permanently"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+
                                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent text-white p-3">
                                             <div className="flex justify-between items-end">
                                                 <div className="text-xs">
@@ -471,13 +483,6 @@ export default function InfographicsAdmin() {
                                                                 title="Restore"
                                                             >
                                                                 <RefreshCw size={12} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(item._id)}
-                                                                className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-xs transition flex items-center gap-1"
-                                                                title="Delete Permanently"
-                                                            >
-                                                                <Trash2 size={12} />
                                                             </button>
                                                         </div>
                                                     ) : (

@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const { 
+const {
   createAccomplishment,
   getAccomplishments,
   getArchivedAccomplishments,
   archiveAccomplishment,
-  restoreAccomplishment 
+  restoreAccomplishment,
+  deleteAccomplishment
 } = require("../controllers/accomplishmentController");
 
 const { uploadAccomplishment } = require("../config/multer");
@@ -15,5 +16,6 @@ router.get("/archived", getArchivedAccomplishments);
 router.post("/", uploadAccomplishment.single("file"), createAccomplishment);
 router.put("/:id/archive", archiveAccomplishment);
 router.put("/:id/restore", restoreAccomplishment);
+router.delete("/:id", deleteAccomplishment);
 
 module.exports = router;

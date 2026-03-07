@@ -277,7 +277,7 @@
 //         setProcessing(prev => ({ ...prev, [id]: true }));
 //         setError("");
 //         setSuccess("");
-        
+
 //         try {
 //             if (action === "archive") {
 //                 await archiveOrgChartImage(id);
@@ -296,15 +296,15 @@
 
 //     const handleBulkAction = async (action) => {
 //         if (selectedCharts.size === 0) return setError("Select at least one chart");
-        
+
 //         setBulkProcessing(true);
 //         setError("");
 //         setSuccess("");
-        
+
 //         const promises = Array.from(selectedCharts).map((id) =>
 //             action === "archive" ? archiveOrgChartImage(id) : restoreOrgChartImage(id)
 //         );
-        
+
 //         try {
 //             await Promise.all(promises);
 //             setSuccess(`${action}d ${selectedCharts.size} chart(s)`);
@@ -412,7 +412,7 @@
 //                                 onChange={() => toggleSelection(chart._id)}
 //                                 disabled={processing[chart._id]}
 //                             />
-                            
+
 //                             <div className="relative">
 //                                 {processing[chart._id] && (
 //                                     <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded">
@@ -425,7 +425,7 @@
 //                                     className="w-full h-56 object-contain rounded"
 //                                 />
 //                             </div>
-                            
+
 //                             <div className="flex justify-between mt-4">
 //                                 {viewArchived ? (
 //                                     <button
@@ -596,7 +596,7 @@
 //         setProcessing(prev => ({ ...prev, [id]: true }));
 //         setError("");
 //         setSuccess("");
-        
+
 //         try {
 //             if (action === "archive") {
 //                 await archiveOrgChartImage(id);
@@ -615,15 +615,15 @@
 
 //     const handleBulkAction = async (action) => {
 //         if (selectedCharts.size === 0) return setError("Select at least one chart");
-        
+
 //         setBulkProcessing(true);
 //         setError("");
 //         setSuccess("");
-        
+
 //         const promises = Array.from(selectedCharts).map((id) =>
 //             action === "archive" ? archiveOrgChartImage(id) : restoreOrgChartImage(id)
 //         );
-        
+
 //         try {
 //             await Promise.all(promises);
 //             setSuccess(`${action === 'archive' ? 'Archived' : 'Restored'} ${selectedCharts.size} chart(s) successfully!`);
@@ -659,7 +659,7 @@
 //                                 Manage and organize your organizational structure charts
 //                             </p>
 //                         </div>
-                        
+
 //                         <button
 //                             onClick={() => setViewArchived(!viewArchived)}
 //                             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl hover:from-gray-900 hover:to-black transition-all duration-300 shadow-lg hover:shadow-xl"
@@ -715,7 +715,7 @@
 //                             <Upload className="w-7 h-7 text-blue-500" />
 //                             Upload New Chart
 //                         </h2>
-                        
+
 //                         <form onSubmit={handleUpload} className="space-y-6">
 //                             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
 //                                 <div className="flex-1">
@@ -732,7 +732,7 @@
 //                                         />
 //                                     </div>
 //                                 </div>
-                                
+
 //                                 <button
 //                                     type="submit"
 //                                     disabled={uploading || !selectedFile}
@@ -791,7 +791,7 @@
 //                                 {charts.length} charts
 //                             </span>
 //                         </h2>
-                        
+
 //                         {selectedCharts.size > 0 && (
 //                             <div className="flex items-center gap-4">
 //                                 <span className="text-gray-600">
@@ -887,7 +887,7 @@
 //                                                 className="w-full h-56 object-contain rounded-lg"
 //                                             />
 //                                         </div>
-                                        
+
 //                                         {/* Action Button */}
 //                                         <button
 //                                             onClick={() => handleIndividualAction(viewArchived ? "restore" : "archive", chart._id)}
@@ -937,12 +937,12 @@
 
 
 import React, { useState, useEffect } from "react";
-import { 
-    Archive, 
-    RefreshCw, 
-    Upload, 
-    Eye, 
-    EyeOff, 
+import {
+    Archive,
+    RefreshCw,
+    Upload,
+    Eye,
+    EyeOff,
     Trash2,
     Check,
     Image as ImageIcon,
@@ -956,6 +956,7 @@ import {
     archiveOrgChartImage,
     getArchivedOrgChartImages,
     restoreOrgChartImage,
+    deleteOrgChartImage,
 } from "../../api/organizational";
 
 export default function OrgChartManagement() {
@@ -982,19 +983,19 @@ export default function OrgChartManagement() {
             const data = viewArchived
                 ? await getArchivedOrgChartImages()
                 : await getOrgChartImages();
-            
+
             setCharts(data);
-            
+
             // Find the latest upload (most recent createdAt)
             if (data.length > 0 && !viewArchived) {
-                const sorted = [...data].sort((a, b) => 
+                const sorted = [...data].sort((a, b) =>
                     new Date(b.createdAt) - new Date(a.createdAt)
                 );
                 setLatestUpload(sorted[0]);
             } else {
                 setLatestUpload(null);
             }
-            
+
             setSelectedCharts(new Set());
         } catch (err) {
             setError("Failed to load organizational charts");
@@ -1030,12 +1031,12 @@ export default function OrgChartManagement() {
             setSuccess("Organizational chart uploaded successfully!");
             setSelectedFile(null);
             setPreviewUrl(null);
-            
+
             // Set the newly uploaded chart as latest
             if (result.data) {
                 setLatestUpload(result.data);
             }
-            
+
             fetchCharts();
         } catch (err) {
             setError("Upload failed. Please try again.");
@@ -1055,7 +1056,7 @@ export default function OrgChartManagement() {
         setProcessing(prev => ({ ...prev, [id]: true }));
         setError("");
         setSuccess("");
-        
+
         try {
             if (action === "archive") {
                 await archiveOrgChartImage(id);
@@ -1072,17 +1073,41 @@ export default function OrgChartManagement() {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to permanently delete this chart? This action cannot be undone.")) return;
+
+        setProcessing(prev => ({ ...prev, [id]: true }));
+        setError("");
+        setSuccess("");
+
+        try {
+            await deleteOrgChartImage(id);
+            setSuccess("Chart deleted permanently!");
+
+            // Clear latest upload if we're deleting it
+            if (latestUpload?._id === id) {
+                setLatestUpload(null);
+            }
+
+            fetchCharts();
+        } catch (err) {
+            setError("Delete failed. Please try again.");
+        } finally {
+            setProcessing(prev => ({ ...prev, [id]: false }));
+        }
+    };
+
     const handleBulkAction = async (action) => {
         if (selectedCharts.size === 0) return setError("Select at least one chart");
-        
+
         setBulkProcessing(true);
         setError("");
         setSuccess("");
-        
+
         const promises = Array.from(selectedCharts).map((id) =>
             action === "archive" ? archiveOrgChartImage(id) : restoreOrgChartImage(id)
         );
-        
+
         try {
             await Promise.all(promises);
             setSuccess(`${action === 'archive' ? 'Archived' : 'Restored'} ${selectedCharts.size} chart(s) successfully!`);
@@ -1118,7 +1143,7 @@ export default function OrgChartManagement() {
                                 Manage and organize your organizational structure charts
                             </p>
                         </div>
-                        
+
                         <button
                             onClick={() => setViewArchived(!viewArchived)}
                             className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl hover:from-gray-900 hover:to-black transition-all duration-300 shadow-lg hover:shadow-xl"
@@ -1156,7 +1181,7 @@ export default function OrgChartManagement() {
                                 <span>Uploaded {formatTimeAgo(latestUpload.createdAt)}</span>
                             </div>
                         </div>
-                        
+
                         <div className="grid md:grid-cols-3 gap-6">
                             {/* Latest Upload Preview */}
                             <div className="md:col-span-2 bg-white rounded-xl p-4 shadow-md border">
@@ -1177,7 +1202,7 @@ export default function OrgChartManagement() {
                                     />
                                 </div>
                             </div>
-                            
+
                             {/* Upload Stats */}
                             <div className="space-y-4">
                                 <div className="bg-white rounded-xl p-4 shadow-md border">
@@ -1217,7 +1242,7 @@ export default function OrgChartManagement() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
                                     <p className="text-sm text-gray-700">
                                         <span className="font-semibold text-green-700">Note:</span> This is the chart currently displayed to all users on the public website.
@@ -1264,7 +1289,7 @@ export default function OrgChartManagement() {
                             <Upload className="w-7 h-7 text-blue-500" />
                             Upload New Chart
                         </h2>
-                        
+
                         <form onSubmit={handleUpload} className="space-y-6">
                             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                                 <div className="flex-1">
@@ -1284,7 +1309,7 @@ export default function OrgChartManagement() {
                                         The uploaded chart will become the new "Latest Upload" displayed to users
                                     </p>
                                 </div>
-                                
+
                                 <button
                                     type="submit"
                                     disabled={uploading || !selectedFile}
@@ -1343,7 +1368,7 @@ export default function OrgChartManagement() {
                                 {charts.length} {charts.length === 1 ? 'chart' : 'charts'}
                             </span>
                         </h2>
-                        
+
                         {selectedCharts.size > 0 && (
                             <div className="flex items-center gap-4">
                                 <span className="text-gray-600">
@@ -1384,7 +1409,7 @@ export default function OrgChartManagement() {
                                 No {viewArchived ? 'archived' : 'active'} charts found
                             </h3>
                             <p className="text-gray-500 max-w-md mx-auto">
-                                {viewArchived 
+                                {viewArchived
                                     ? 'All charts are currently active. Archive charts to see them here.'
                                     : 'Upload your first organizational chart to get started.'}
                             </p>
@@ -1392,57 +1417,72 @@ export default function OrgChartManagement() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {charts.map((chart) => (
-                                <div 
-                                    key={chart._id} 
-                                    className={`group relative bg-gradient-to-br from-white to-gray-50 rounded-2xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
-                                        selectedCharts.has(chart._id) 
-                                            ? 'border-blue-500 ring-4 ring-blue-100' 
-                                            : chart._id === latestUpload?._id && !viewArchived
+                                <div
+                                    key={chart._id}
+                                    className={`group relative bg-gradient-to-br from-white to-gray-50 rounded-2xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${selectedCharts.has(chart._id)
+                                        ? 'border-blue-500 ring-4 ring-blue-100'
+                                        : chart._id === latestUpload?._id && !viewArchived
                                             ? 'border-green-500 ring-4 ring-green-100'
                                             : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
-                                    {/* Latest Badge */}
-                                    {chart._id === latestUpload?._id && !viewArchived && (
-                                        <div className="absolute top-4 right-4 z-10">
-                                            <div className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                                    {/* Action Icons Wrapper - Top Right */}
+                                    <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
+                                        {/* Latest Badge (Shifted left if hovered) */}
+                                        {chart._id === latestUpload?._id && !viewArchived && (
+                                            <div className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[10px] font-bold rounded-full shadow-lg flex items-center gap-1">
                                                 <TrendingUp className="w-3 h-3" />
                                                 LATEST
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Selection Checkbox */}
-                                    <div className="absolute top-4 left-4 z-10">
-                                        <div 
-                                            onClick={() => toggleSelection(chart._id)}
-                                            className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all ${
-                                                selectedCharts.has(chart._id)
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-white/80 backdrop-blur-sm text-gray-400 hover:bg-gray-100'
-                                            }`}
+                                        {/* Selection Checkbox */}
+                                        <div
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleSelection(chart._id);
+                                            }}
+                                            className={`w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-300 backdrop-blur-md border ${selectedCharts.has(chart._id)
+                                                    ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/30 opacity-100'
+                                                    : 'bg-white/40 text-gray-500 border-white/60 hover:bg-white/80 opacity-0 group-hover:opacity-100'
+                                                }`}
                                         >
                                             {selectedCharts.has(chart._id) ? (
                                                 <Check className="w-4 h-4" />
                                             ) : (
-                                                <div className="w-3 h-3 rounded-full border-2 border-gray-300"></div>
+                                                <div className="w-3.5 h-3.5 rounded-md border-2 border-gray-400"></div>
                                             )}
                                         </div>
+
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(chart._id);
+                                            }}
+                                            disabled={processing[chart._id]}
+                                            className="w-8 h-8 bg-red-500/20 hover:bg-red-500 text-red-600 hover:text-white rounded-xl transition-all duration-300 backdrop-blur-md opacity-0 group-hover:opacity-100 shadow-lg shadow-red-500/20 flex items-center justify-center border border-red-500/30"
+                                            title="Delete Permanently"
+                                        >
+                                            {processing[chart._id] ? (
+                                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="w-4 h-4" />
+                                            )}
+                                        </button>
                                     </div>
 
-                                    {/* Processing Overlay */}
+                                    {/* Loading Overlay for the whole card */}
                                     {processing[chart._id] && (
-                                        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-2xl flex items-center justify-center z-20">
-                                            <div className="text-center">
-                                                <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                                                <p className="text-gray-700 font-medium">
-                                                    {viewArchived ? 'Restoring...' : 'Archiving...'}
-                                                </p>
+                                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-30 rounded-2xl">
+                                            <div className="flex flex-col items-center">
+                                                <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full shadow-lg"></div>
+                                                <span className="mt-3 text-sm font-semibold text-blue-600 animate-pulse">Processing...</span>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Chart Image */}
+                                    {/* Image Wrapper */}
                                     <div className="p-5">
                                         <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-4 mb-4">
                                             <img
@@ -1451,18 +1491,17 @@ export default function OrgChartManagement() {
                                                 className="w-full h-56 object-contain rounded-lg"
                                             />
                                         </div>
-                                        
+
                                         {/* Action Button */}
                                         <button
                                             onClick={() => handleIndividualAction(viewArchived ? "restore" : "archive", chart._id)}
                                             disabled={processing[chart._id]}
-                                            className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${
-                                                viewArchived
-                                                    ? 'bg-gradient-to-r from-emerald-50 to-green-100 text-emerald-700 hover:from-emerald-100 hover:to-green-200 hover:text-emerald-800'
-                                                    : chart._id === latestUpload?._id
+                                            className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${viewArchived
+                                                ? 'bg-gradient-to-r from-emerald-50 to-green-100 text-emerald-700 hover:from-emerald-100 hover:to-green-200 hover:text-emerald-800'
+                                                : chart._id === latestUpload?._id
                                                     ? 'bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 hover:from-green-100 hover:to-emerald-200 hover:text-green-800'
                                                     : 'bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-700 hover:from-amber-100 hover:to-yellow-200 hover:text-amber-800'
-                                            }`}
+                                                }`}
                                         >
                                             {processing[chart._id] ? (
                                                 <>
@@ -1519,7 +1558,7 @@ function formatTimeAgo(dateString) {
     if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-    
+
     return new Date(dateString).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric'

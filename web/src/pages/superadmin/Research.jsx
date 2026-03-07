@@ -249,7 +249,7 @@ export default function ResearchAdmin() {
 
   // Handle delete
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this research?')) return;
+    if (!window.confirm("Are you sure you want to permanently delete this research? This action cannot be undone.")) return;
 
     try {
       const response = await deleteResearch(id);
@@ -683,21 +683,28 @@ export default function ResearchAdmin() {
                             <Archive size={16} />
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDelete(research._id)}
-                          className="p-1 text-gray-500 hover:text-red-600"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
                       </div>
                     </div>
 
-                    <img
-                      src={research.thumbnail?.url || 'https://via.placeholder.com/400x300'}
-                      alt={research.title}
-                      className="w-full h-48 object-cover rounded-lg mb-4"
-                    />
+                    <div className="relative">
+                      <img
+                        src={research.thumbnail?.url || 'https://via.placeholder.com/400x300'}
+                        alt={research.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                      />
+
+                      {/* Individual Delete Button - top-right of image */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(research._id);
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-full shadow-lg backdrop-blur-sm transition-all z-10"
+                        title="Delete Permanently"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
 
                     <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
                       {research.title}

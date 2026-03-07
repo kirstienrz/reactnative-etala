@@ -8,7 +8,7 @@
 // const sendInterviewBookingLink = async (req, res) => {
 //   try {
 //     const { userEmail, userName, ticketNumber, userId } = req.body;
-    
+
 //     if (!userId) {
 //       return res.status(400).json({
 //         success: false,
@@ -40,7 +40,7 @@
 
 //     // Create booking link with token
 //     const bookingLink = `${process.env.FRONTEND_URL}/user/interview?token=${bookingToken}&uid=${userId}`;
-    
+
 //     const html = `
 //       <!DOCTYPE html>
 //       <html>
@@ -67,18 +67,18 @@
 //           <div class="header">
 //             <h1>📅 Book Your Consultation</h1>
 //           </div>
-          
+
 //           <div class="content">
 //             <h2>Hello ${userName}!</h2>
-            
+
 //             <p>You can now book your consultation appointment. Click the button below to access the booking calendar:</p>
-            
+
 //             <div style="text-align: center;">
 //               <a href="${bookingLink}" class="button">
 //                 Book Your Appointment Now
 //               </a>
 //             </div>
-            
+
 //             <div class="info-box">
 //               <p><strong>Ticket Number:</strong> ${ticketNumber}</p>
 //               <p><strong>What to expect:</strong></p>
@@ -89,7 +89,7 @@
 //                 <li>Receive instant confirmation</li>
 //               </ul>
 //             </div>
-            
+
 //             <div class="warning">
 //               <p><strong>⏰ IMPORTANT - Time-Sensitive Access:</strong></p>
 //               <ul>
@@ -107,13 +107,13 @@
 //                 })}
 //               </p>
 //             </div>
-            
+
 //             <p>Or copy this link:</p>
 //             <p style="word-break: break-all; background: #e5e7eb; padding: 10px; border-radius: 5px;">
 //               ${bookingLink}
 //             </p>
 //           </div>
-          
+
 //           <div class="footer">
 //             <p>This is an automated email from GAD Portal.</p>
 //             <p>© 2026 GAD Portal. All rights reserved.</p>
@@ -122,19 +122,19 @@
 //       </body>
 //       </html>
 //     `;
-    
+
 //     await sendEmail({
 //       to: userEmail,
 //       subject: `🔔 Consultation Booking Link - ${ticketNumber} (Valid for 24 Hours)`,
 //       html
 //     });
-    
+
 //     res.status(200).json({
 //       success: true,
 //       message: 'Booking link sent successfully',
 //       expiresAt
 //     });
-    
+
 //   } catch (error) {
 //     console.error('Error sending booking link:', error);
 //     res.status(500).json({
@@ -414,7 +414,7 @@
 
 //   } catch (error) {
 //     console.error('❌ Error creating calendar event:', error);
-    
+
 //     if (error.name === 'ValidationError') {
 //       const messages = Object.values(error.errors).map(err => err.message);
 //       return res.status(400).json({
@@ -523,7 +523,7 @@ const crypto = require('crypto');
 const sendInterviewBookingLink = async (req, res) => {
   try {
     const { userEmail, userName, ticketNumber, userId } = req.body;
-    
+
     if (!userId || !ticketNumber) {
       return res.status(400).json({
         success: false,
@@ -569,7 +569,7 @@ const sendInterviewBookingLink = async (req, res) => {
     await user.save();
 
     const bookingLink = `${process.env.FRONTEND_URL}/user/interview?token=${bookingToken}&uid=${userId}&ticket=${ticketNumber}`;
-    
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -630,11 +630,11 @@ const sendInterviewBookingLink = async (req, res) => {
                 <li>❌ Past dates cannot be selected</li>
               </ul>
               <p style="margin-top: 10px; font-weight: bold;">
-                ⏳ Expires at: ${expiresAt.toLocaleString('en-US', { 
-                  timeZone: 'Asia/Manila',
-                  dateStyle: 'full',
-                  timeStyle: 'short'
-                })}
+                ⏳ Expires at: ${expiresAt.toLocaleString('en-US', {
+      timeZone: 'Asia/Manila',
+      dateStyle: 'full',
+      timeStyle: 'short'
+    })}
               </p>
             </div>
             
@@ -652,19 +652,19 @@ const sendInterviewBookingLink = async (req, res) => {
       </body>
       </html>
     `;
-    
+
     await sendEmail({
       to: userEmail,
       subject: `🔔 Consultation Booking Link - ${ticketNumber} (Valid for 24 Hours)`,
       html
     });
-    
+
     res.status(200).json({
       success: true,
       message: 'Booking link sent successfully',
       expiresAt
     });
-    
+
   } catch (error) {
     console.error('Error sending booking link:', error);
     res.status(500).json({
@@ -808,13 +808,15 @@ const getAllCalendarEvents = async (req, res) => {
         project.events.forEach(event => {
           if (!event.archived) {
             programEvents.push({
-              id: event._id,
+              _id: event._id,
               title: `${event.title} - ${project.name}`,
               start: event.date,
               end: event.date,
               color: getEventColor('program_event'),
               extendedProps: {
                 type: 'program_event',
+                programId: program._id,
+                projectId: project._id,
                 programName: program.name,
                 projectName: project.name,
                 venue: event.venue,
@@ -833,8 +835,8 @@ const getAllCalendarEvents = async (req, res) => {
     const formattedCalendarEvents = calendarEvents.map(event => {
       // ✅ FIXED: Extract user data from populated userId
       const user = event.userId;
-      const userName = user 
-        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+      const userName = user
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
         : event.extendedProps?.userName || 'Unknown User';
       const userEmail = user?.email || event.extendedProps?.userEmail || 'N/A';
 
@@ -870,7 +872,9 @@ const getAllCalendarEvents = async (req, res) => {
           userEmail: userEmail,
           mode: event.extendedProps?.mode || 'N/A',
           status: displayStatus || 'upcoming',
-          attachments // <-- Always include attachments here
+          attachments,
+          programId: event.programEventRef?.programId,
+          projectId: event.programEventRef?.projectId
         }
       };
     });
@@ -1001,9 +1005,9 @@ const createCalendarEvent = async (req, res) => {
       attachments = req.files.map(file => ({
         url: file.path || file.secure_url || file.url,
         public_id: file.public_id || file.filename,
-        type: file.mimetype.startsWith('image') ? 'image' : 
-              file.mimetype.startsWith('video') ? 'video' : 
-              file.mimetype.startsWith('application') ? 'document' : 'other',
+        type: file.mimetype.startsWith('image') ? 'image' :
+          file.mimetype.startsWith('video') ? 'video' :
+            file.mimetype.startsWith('application') ? 'document' : 'other',
         originalName: file.originalname,
         format: file.format || file.mimetype,
         bytes: file.size,
@@ -1032,7 +1036,7 @@ const createCalendarEvent = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error creating calendar event:', error);
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       console.error('❌ Validation errors:', messages);
@@ -1042,14 +1046,14 @@ const createCalendarEvent = async (req, res) => {
         errors: messages
       });
     }
-    
+
     console.error('❌ Server error details:', {
       message: error.message,
       stack: error.stack,
       body: req.body,
       files: req.files
     });
-    
+
     res.status(500).json({
       success: false,
       message: 'Server Error',
@@ -1159,8 +1163,8 @@ const getMyConsultations = async (req, res) => {
     // Format as in getAllCalendarEvents
     const formattedCalendarEvents = calendarEvents.map(event => {
       const user = event.userId;
-      const userName = user 
-        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+      const userName = user
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
         : event.extendedProps?.userName || 'Unknown User';
       const userEmail = user?.email || event.extendedProps?.userEmail || 'N/A';
       let displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;

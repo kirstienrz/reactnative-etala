@@ -3,10 +3,10 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { 
-  Plus, 
-  RefreshCcw, 
-  Calendar as CalendarIcon, 
+import {
+  Plus,
+  RefreshCcw,
+  Calendar as CalendarIcon,
   X,
   Edit,
   Trash2,
@@ -28,13 +28,14 @@ import {
   Maximize2,
   Minimize2
 } from "lucide-react";
-import { 
-  getAllCalendarEvents, 
+import {
+  getAllCalendarEvents,
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
   getEventTypes
 } from "../../api/calendar";
+import { deleteEvent as deleteProgramEvent } from "../../api/program";
 import API from '../../api/config';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -57,14 +58,14 @@ export default function SuperAdminCalendarUI() {
     color: "",
     status: "upcoming"
   });
-  
+
   const [stats, setStats] = useState({
     total: 0,
     thisMonth: 0,
     upcoming: 0,
     completed: 0
   });
-  
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -78,7 +79,7 @@ export default function SuperAdminCalendarUI() {
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const eventTypes = getEventTypes();
-  
+
   // Get event color based on type
   const getEventColor = (type) => {
     const eventType = eventTypes.find(et => et.value === type);
@@ -97,14 +98,14 @@ export default function SuperAdminCalendarUI() {
         return <FileText className="w-5 h-5" />;
       }
     }
-    
+
     // Check fileType from database
     if (fileType === 'image') {
       return <ImageIcon className="w-5 h-5" />;
     } else if (fileType === 'video') {
       return <Video className="w-5 h-5" />;
     }
-    
+
     // Fallback to extension check
     if (!filename) return <File className="w-5 h-5" />;
     const ext = filename.split('.').pop().toLowerCase();
@@ -123,10 +124,10 @@ export default function SuperAdminCalendarUI() {
   const isImageFile = (filename, fileType, mimeType) => {
     // Check mimeType first
     if (mimeType && mimeType.startsWith('image/')) return true;
-    
+
     // Check fileType from database
     if (fileType === 'image') return true;
-    
+
     // Fallback to extension check
     if (!filename) return false;
     const ext = filename.split('.').pop().toLowerCase();
@@ -137,10 +138,10 @@ export default function SuperAdminCalendarUI() {
   const isVideoFile = (filename, fileType, mimeType) => {
     // Check mimeType first
     if (mimeType && mimeType.startsWith('video/')) return true;
-    
+
     // Check fileType from database
     if (fileType === 'video') return true;
-    
+
     // Fallback to extension check
     if (!filename) return false;
     const ext = filename.split('.').pop().toLowerCase();
@@ -164,7 +165,7 @@ export default function SuperAdminCalendarUI() {
     try {
       setLoading(true);
       const response = await getAllCalendarEvents();
-      
+
       if (response.success) {
         const formattedEvents = formatEventsForCalendar(response.data);
         setEvents(formattedEvents);
@@ -188,13 +189,13 @@ export default function SuperAdminCalendarUI() {
     return apiEvents.map(event => {
       const eventType = event.extendedProps?.type || event.type || 'consultation';
       const color = event.color || getEventColor(eventType);
-      
+
       // Map 'scheduled' to 'upcoming' for display consistency
       const displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
-      
+
       // Get attachments - check multiple possible locations
       let attachments = [];
-      
+
       // Try to get attachments from various possible locations in the data structure
       if (event.attachments && Array.isArray(event.attachments)) {
         attachments = event.attachments;
@@ -203,7 +204,7 @@ export default function SuperAdminCalendarUI() {
       } else if (event.files && Array.isArray(event.files)) {
         attachments = event.files;
       }
-      
+
       // Format attachments
       const formattedAttachments = attachments.map(attachment => {
         return {
@@ -212,14 +213,14 @@ export default function SuperAdminCalendarUI() {
           filename: attachment.filename || attachment.name || 'File',
           mimetype: attachment.mimeType || attachment.mimetype || attachment.format || 'application/octet-stream',
           size: attachment.size || attachment.bytes || 0,
-          type: attachment.type || (attachment.mimetype?.startsWith('image/') ? 'image' : 
-                 attachment.mimetype?.startsWith('video/') ? 'video' : 'other'),
+          type: attachment.type || (attachment.mimetype?.startsWith('image/') ? 'image' :
+            attachment.mimetype?.startsWith('video/') ? 'video' : 'other'),
           public_id: attachment.public_id,
           uploadedAt: attachment.uploadedAt || attachment.createdAt,
           _id: attachment._id
         };
       });
-      
+
       return {
         id: event._id || event.id,
         title: event.title || "Untitled Event",
@@ -236,6 +237,8 @@ export default function SuperAdminCalendarUI() {
           userEmail: event.extendedProps?.userEmail || event.userEmail || event.email || "admin@example.com",
           mode: event.extendedProps?.mode || event.mode || "N/A",
           userId: event.userId || event.extendedProps?.userId,
+          programId: event.programId || event.extendedProps?.programId,
+          projectId: event.projectId || event.extendedProps?.projectId,
           attachments: formattedAttachments
         },
         backgroundColor: color,
@@ -279,18 +282,18 @@ export default function SuperAdminCalendarUI() {
     const title = event.title?.toLowerCase() || "";
     const location = event.extendedProps?.location?.toLowerCase() || "";
 
-    const matchesSearch = 
-      name.includes(searchText) || 
-      email.includes(searchText) || 
+    const matchesSearch =
+      name.includes(searchText) ||
+      email.includes(searchText) ||
       title.includes(searchText) ||
       location.includes(searchText);
 
-    const matchesType = 
-      typeFilter === "all" || 
+    const matchesType =
+      typeFilter === "all" ||
       event.extendedProps?.type === typeFilter;
 
-    const matchesStatus = 
-      statusFilter === "all" || 
+    const matchesStatus =
+      statusFilter === "all" ||
       event.extendedProps?.status === statusFilter;
 
     return matchesSearch && matchesType && matchesStatus;
@@ -318,7 +321,7 @@ export default function SuperAdminCalendarUI() {
   const handleEventClick = (info) => {
     const event = info.event;
     const extendedProps = event.extendedProps;
-    
+
     setSelectedEvent({
       id: event.id,
       title: event.title,
@@ -328,7 +331,7 @@ export default function SuperAdminCalendarUI() {
       allDay: event.allDay,
       backgroundColor: event.backgroundColor
     });
-    
+
     setShowDetailsModal(true);
   };
 
@@ -351,11 +354,32 @@ export default function SuperAdminCalendarUI() {
     setShowDetailsModal(false);
   };
 
-  const handleDeleteEvent = async (eventId) => {
+  const handleDeleteEvent = async (eventObj) => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
-    
+
+    // Get ID from either string parameter or event object
+    const eventId = typeof eventObj === 'object' ? (eventObj.id || eventObj._id) : eventObj;
+    const isProgramEvent = typeof eventObj === 'object' && (eventObj.type === 'program_event' || eventObj.extendedProps?.type === 'program_event');
+
+    console.log("Deleting event:", { eventId, isProgramEvent, eventObj });
+
     try {
-      const response = await deleteCalendarEvent(eventId);
+      let response;
+      if (isProgramEvent) {
+        // Look for IDs in multiple possible locations
+        const programId = eventObj.programId || eventObj.extendedProps?.programId;
+        const projectId = eventObj.projectId || eventObj.extendedProps?.projectId;
+
+        if (!programId || !projectId) {
+          console.warn("Missing metadata for program event:", eventObj);
+          toast.error("Missing program or project data for this event. Please refresh the page.");
+          return;
+        }
+        response = await deleteProgramEvent(programId, projectId, eventId);
+      } else {
+        response = await deleteCalendarEvent(eventId);
+      }
+
       if (response.success) {
         toast.success(response.message || "Event deleted successfully");
         setShowDetailsModal(false);
@@ -365,7 +389,7 @@ export default function SuperAdminCalendarUI() {
       }
     } catch (error) {
       console.error("Error deleting event:", error);
-      toast.error("Failed to delete event");
+      toast.error("Failed to delete event. " + (error.response?.data?.message || ""));
     }
   };
 
@@ -553,7 +577,7 @@ export default function SuperAdminCalendarUI() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 font-sans">
       <ToastContainer position="top-right" autoClose={3000} />
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
@@ -565,7 +589,7 @@ export default function SuperAdminCalendarUI() {
             Manage Programs, Projects, Events, Holidays & Consultations
           </p>
         </div>
-        
+
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <button
             onClick={fetchEvents}
@@ -575,7 +599,7 @@ export default function SuperAdminCalendarUI() {
             <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
             {loading ? "Refreshing..." : "Refresh"}
           </button>
-          
+
           <button
             onClick={() => {
               setModalMode("create");
@@ -603,18 +627,16 @@ export default function SuperAdminCalendarUI() {
                   {value}
                 </p>
               </div>
-              <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                key === 'total' ? 'bg-blue-100' :
+              <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${key === 'total' ? 'bg-blue-100' :
                 key === 'thisMonth' ? 'bg-green-100' :
-                key === 'upcoming' ? 'bg-orange-100' :
-                'bg-gray-100'
-              }`}>
-                <CalendarIcon className={`h-5 w-5 ${
-                  key === 'total' ? 'text-blue-600' :
+                  key === 'upcoming' ? 'bg-orange-100' :
+                    'bg-gray-100'
+                }`}>
+                <CalendarIcon className={`h-5 w-5 ${key === 'total' ? 'text-blue-600' :
                   key === 'thisMonth' ? 'text-green-600' :
-                  key === 'upcoming' ? 'text-orange-600' :
-                  'text-gray-600'
-                }`} />
+                    key === 'upcoming' ? 'text-orange-600' :
+                      'text-gray-600'
+                  }`} />
               </div>
             </div>
           </div>
@@ -627,8 +649,8 @@ export default function SuperAdminCalendarUI() {
         <div className="flex flex-wrap gap-4">
           {eventTypes.map((type) => (
             <div key={type.value} className="flex items-center gap-2">
-              <div 
-                className="w-4 h-4 rounded" 
+              <div
+                className="w-4 h-4 rounded"
                 style={{ backgroundColor: type.color }}
               ></div>
               <span className="text-sm text-gray-600 capitalize">
@@ -728,7 +750,7 @@ export default function SuperAdminCalendarUI() {
             Showing {filteredEvents.length} of {events.length} events
           </p>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -753,7 +775,7 @@ export default function SuperAdminCalendarUI() {
                 </th>
               </tr>
             </thead>
-            
+
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredEvents.length === 0 ? (
                 <tr>
@@ -761,8 +783,8 @@ export default function SuperAdminCalendarUI() {
                     <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-lg font-medium">No events found</p>
                     <p className="text-sm mt-1">
-                      {search || typeFilter !== "all" || statusFilter !== "all" 
-                        ? "Try changing your filters" 
+                      {search || typeFilter !== "all" || statusFilter !== "all"
+                        ? "Try changing your filters"
                         : "Create your first event by clicking 'New Event'"}
                     </p>
                   </td>
@@ -772,10 +794,10 @@ export default function SuperAdminCalendarUI() {
                   <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div 
+                        <div
                           className="h-3 w-3 rounded-full mr-3 flex-shrink-0"
-                          style={{ 
-                            backgroundColor: event.backgroundColor || getEventColor('default') 
+                          style={{
+                            backgroundColor: event.backgroundColor || getEventColor('default')
                           }}
                         ></div>
                         <div className="min-w-0">
@@ -796,7 +818,7 @@ export default function SuperAdminCalendarUI() {
                         </div>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <div className="text-sm text-gray-900">
@@ -805,18 +827,18 @@ export default function SuperAdminCalendarUI() {
                         {!event.allDay && (
                           <div className="flex items-center gap-1 text-sm text-gray-500">
                             <Clock size={12} />
-                            {new Date(event.start).toLocaleTimeString([], { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
+                            {new Date(event.start).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
                             })}
                           </div>
                         )}
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div 
+                        <div
                           className="w-2 h-2 rounded-full mr-2"
                           style={{ backgroundColor: getEventColor(event.extendedProps?.type) }}
                         ></div>
@@ -825,38 +847,37 @@ export default function SuperAdminCalendarUI() {
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        event.extendedProps?.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : event.extendedProps?.status === 'cancelled'
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${event.extendedProps?.status === 'completed'
+                        ? 'bg-green-100 text-green-800'
+                        : event.extendedProps?.status === 'cancelled'
                           ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
-                      }`}>
+                        }`}>
                         {event.extendedProps?.status || 'upcoming'}
                       </span>
                     </td>
-                    
+
                     <td className="px-6 py-4 whitespace-nowrap">
                       {event.extendedProps?.attachments?.length > 0 ? (
                         <div className="flex items-center gap-1">
                           <div className="flex -space-x-2">
                             {event.extendedProps.attachments.slice(0, 3).map((file, idx) => {
                               const isImage = isImageFile(
-                                file.originalname || file.filename, 
-                                file.type, 
+                                file.originalname || file.filename,
+                                file.type,
                                 file.mimetype
                               );
-                              
+
                               return isImage ? (
-                                <div 
+                                <div
                                   key={idx}
                                   className="relative w-8 h-8 rounded-full border-2 border-white overflow-hidden cursor-pointer hover:z-10 transition-transform hover:scale-110"
                                   onClick={() => handleFilePreview(file, event.extendedProps.attachments)}
                                 >
-                                  <img 
-                                    src={file.url} 
+                                  <img
+                                    src={file.url}
                                     alt={file.originalname}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -866,7 +887,7 @@ export default function SuperAdminCalendarUI() {
                                   />
                                 </div>
                               ) : (
-                                <div 
+                                <div
                                   key={idx}
                                   className="relative w-8 h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center cursor-pointer hover:z-10 transition-transform hover:scale-110"
                                   onClick={() => handleFilePreview(file, event.extendedProps.attachments)}
@@ -886,7 +907,7 @@ export default function SuperAdminCalendarUI() {
                         <span className="text-sm text-gray-400">-</span>
                       )}
                     </td>
-                    
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
@@ -928,7 +949,11 @@ export default function SuperAdminCalendarUI() {
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => handleDeleteEvent(event.id)}
+                          onClick={() => handleDeleteEvent({
+                            id: event.id,
+                            title: event.title,
+                            ...event.extendedProps
+                          })}
                           className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
                           title="Delete event"
                         >
@@ -961,11 +986,10 @@ export default function SuperAdminCalendarUI() {
                 <button
                   key={index + 1}
                   onClick={() => paginate(index + 1)}
-                  className={`px-3 py-1 border rounded-lg text-sm font-medium ${
-                    currentPage === index + 1
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`px-3 py-1 border rounded-lg text-sm font-medium ${currentPage === index + 1
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   {index + 1}
                 </button>
@@ -991,7 +1015,7 @@ export default function SuperAdminCalendarUI() {
               <h3 className="text-2xl font-bold text-gray-900">
                 Event Details
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowDetailsModal(false);
                   setSelectedEvent(null);
@@ -1006,7 +1030,7 @@ export default function SuperAdminCalendarUI() {
               {/* Event Title */}
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <div 
+                  <div
                     className="w-4 h-4 rounded-full flex-shrink-0"
                     style={{ backgroundColor: selectedEvent.backgroundColor || '#3b82f6' }}
                   ></div>
@@ -1026,13 +1050,12 @@ export default function SuperAdminCalendarUI() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Status</p>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    selectedEvent.status === 'completed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : selectedEvent.status === 'cancelled'
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedEvent.status === 'completed'
+                    ? 'bg-green-100 text-green-800'
+                    : selectedEvent.status === 'cancelled'
                       ? 'bg-red-100 text-red-800'
                       : 'bg-yellow-100 text-yellow-800'
-                  }`}>
+                    }`}>
                     {selectedEvent.status || 'upcoming'}
                   </span>
                 </div>
@@ -1047,13 +1070,13 @@ export default function SuperAdminCalendarUI() {
                   </p>
                   {!selectedEvent.allDay && (
                     <p className="text-sm text-gray-600 mt-1">
-                      {new Date(selectedEvent.start).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(selectedEvent.start).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
-                      {selectedEvent.end && ` - ${new Date(selectedEvent.end).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {selectedEvent.end && ` - ${new Date(selectedEvent.end).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}`}
                     </p>
                   )}
@@ -1101,31 +1124,31 @@ export default function SuperAdminCalendarUI() {
                       </h4>
                     </div>
                   </div>
-                  
+
                   {/* Image Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {selectedEvent.attachments.map((file, idx) => {
                       const isImage = isImageFile(
-                        file.originalname || file.filename, 
-                        file.type, 
+                        file.originalname || file.filename,
+                        file.type,
                         file.mimetype
                       );
                       const isVideo = isVideoFile(
-                        file.originalname || file.filename, 
-                        file.type, 
+                        file.originalname || file.filename,
+                        file.type,
                         file.mimetype
                       );
-                      
+
                       return (
-                        <div 
+                        <div
                           key={idx}
                           className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-lg transition-all"
                           onClick={() => handleFilePreview(file, selectedEvent.attachments)}
                         >
                           {isImage ? (
                             <div className="aspect-square">
-                              <img 
-                                src={file.url} 
+                              <img
+                                src={file.url}
                                 alt={file.originalname}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -1143,12 +1166,12 @@ export default function SuperAdminCalendarUI() {
                               {getFileIcon(file.originalname || file.filename, file.type, file.mimetype)}
                             </div>
                           )}
-                          
+
                           {/* Overlay */}
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                             <Eye className="w-6 h-6 text-white" />
                           </div>
-                          
+
                           {/* File type badge */}
                           <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
                             {isImage ? 'Image' : isVideo ? 'Video' : 'File'}
@@ -1205,7 +1228,7 @@ export default function SuperAdminCalendarUI() {
                 Edit Event
               </button>
               <button
-                onClick={() => handleDeleteEvent(selectedEvent.id)}
+                onClick={() => handleDeleteEvent(selectedEvent)}
                 className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors"
               >
                 <Trash2 size={16} />
@@ -1322,32 +1345,32 @@ export default function SuperAdminCalendarUI() {
 
               {/* PDF Preview - Google Docs viewer, Events style */}
               {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
-               !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
-               (['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
-                <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
-                  title={selectedFile.originalname}
-                  className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
-                  style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
-                />
-              )}
+                !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+                (['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
+                  <iframe
+                    src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
+                    title={selectedFile.originalname}
+                    className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
+                    style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
+                  />
+                )}
 
               {/* Other file types */}
-              {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) && 
-               !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
-               !(['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
-                <div className="text-center text-white">
-                  <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
-                  <p>Preview not available for this file type</p>
-                  <button
-                    onClick={() => handleFileDownload(selectedFile)}
-                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
-                  >
-                    <Download size={18} />
-                    Download File
-                  </button>
-                </div>
-              )}
+              {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+                !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
+                !(['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
+                  <div className="text-center text-white">
+                    <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
+                    <p>Preview not available for this file type</p>
+                    <button
+                      onClick={() => handleFileDownload(selectedFile)}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
+                    >
+                      <Download size={18} />
+                      Download File
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
         </div>
@@ -1362,7 +1385,7 @@ export default function SuperAdminCalendarUI() {
                 <h3 className="text-xl font-bold text-gray-900">
                   {modalMode === "edit" ? "Edit Event" : "Create New Event"}
                 </h3>
-                <button 
+                <button
                   onClick={() => {
                     setShowModal(false);
                     setSelectedEvent(null);
@@ -1383,12 +1406,12 @@ export default function SuperAdminCalendarUI() {
                     type="text"
                     placeholder="Enter event title"
                     value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     required
                   />
                 </div>
-                
+
                 {/* Event Type and Status */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1400,7 +1423,7 @@ export default function SuperAdminCalendarUI() {
                       onChange={(e) => {
                         const newType = e.target.value;
                         setFormData({
-                          ...formData, 
+                          ...formData,
                           type: newType,
                           color: getEventColor(newType)
                         });
@@ -1414,14 +1437,14 @@ export default function SuperAdminCalendarUI() {
                       <option value="not_available">Not Available</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Status
                     </label>
                     <select
                       value={formData.status}
-                      onChange={(e) => setFormData({...formData, status: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     >
                       <option value="upcoming">Upcoming</option>
@@ -1430,7 +1453,7 @@ export default function SuperAdminCalendarUI() {
                     </select>
                   </div>
                 </div>
-                
+
                 {/* Date Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1440,12 +1463,12 @@ export default function SuperAdminCalendarUI() {
                     <input
                       type="date"
                       value={formData.start}
-                      onChange={(e) => setFormData({...formData, start: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, start: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       End Date
@@ -1453,13 +1476,13 @@ export default function SuperAdminCalendarUI() {
                     <input
                       type="date"
                       value={formData.end}
-                      onChange={(e) => setFormData({...formData, end: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, end: e.target.value })}
                       min={formData.start}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     />
                   </div>
                 </div>
-                
+
                 {/* Location */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1469,11 +1492,11 @@ export default function SuperAdminCalendarUI() {
                     type="text"
                     placeholder="Enter location (optional)"
                     value={formData.location}
-                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                   />
                 </div>
-                
+
                 {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1482,12 +1505,12 @@ export default function SuperAdminCalendarUI() {
                   <textarea
                     placeholder="Enter description (optional)"
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     rows="3"
                   />
                 </div>
-                
+
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1496,36 +1519,36 @@ export default function SuperAdminCalendarUI() {
                   <textarea
                     placeholder="Enter notes (optional)"
                     value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                     rows="2"
                   />
                 </div>
-                
+
                 {/* All Day Checkbox */}
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="allDay"
                     checked={formData.allDay}
-                    onChange={(e) => setFormData({...formData, allDay: e.target.checked})}
+                    onChange={(e) => setFormData({ ...formData, allDay: e.target.checked })}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
                   <label htmlFor="allDay" className="text-sm text-gray-700">
                     All Day Event
                   </label>
                 </div>
-                
+
                 {/* Color Selection */}
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium text-gray-700">Color:</span>
-                  <div 
+                  <div
                     className="w-6 h-6 rounded-full border border-gray-300"
                     style={{ backgroundColor: formData.color || getEventColor(formData.type) }}
                   ></div>
                   <select
                     value={formData.color || getEventColor(formData.type)}
-                    onChange={(e) => setFormData({...formData, color: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                     className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="#8b5cf6">Purple (Consultation)</option>
@@ -1563,7 +1586,7 @@ export default function SuperAdminCalendarUI() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Action Buttons */}
                 <div className="flex space-x-3 pt-4">
                   <button

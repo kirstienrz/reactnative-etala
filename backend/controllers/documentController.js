@@ -9,7 +9,7 @@ export const getDocuments = async (req, res) => {
 
   let filter = { status: { $ne: "archived" } }; // Kunin lang ang hindi archived
   if (type) filter.document_type = type;
-  
+
   // Note: Tinanggal ang status filter dito para active lang talaga
   const docs = await Document.find(filter).sort({ createdAt: -1 });
   res.json(docs);
@@ -28,11 +28,11 @@ export const archiveDocument = async (req, res) => {
       { status: "archived" },
       { new: true }
     );
-    
+
     if (!document) {
       return res.status(404).json({ message: "Document not found" });
     }
-    
+
     res.json(document);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -47,11 +47,11 @@ export const restoreDocument = async (req, res) => {
       { $unset: { status: 1 } }, // Tanggalin ang status field o pwede rin { status: "active" }
       { new: true }
     );
-    
+
     if (!document) {
       return res.status(404).json({ message: "Document not found" });
     }
-    
+
     res.json(document);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -61,11 +61,13 @@ export const restoreDocument = async (req, res) => {
 export const createDocument = async (req, res) => {
   try {
     const file_url = req.file ? req.file.path : req.body.file_url;
+    const public_id = req.file ? req.file.filename : null;
     if (!file_url) return res.status(400).json({ message: "File is required." });
 
     const doc = await Document.create({
       ...req.body,
       file_url,
+      public_id
     });
     res.status(201).json(doc);
   } catch (err) {
@@ -80,8 +82,13 @@ export const updateDocument = async (req, res) => {
     if (!doc) return res.status(404).json({ message: "Document not found" });
 
     if (req.file) {
-      // optional: remove old file from Cloudinary
+      // 🛡️ Remove old file from Cloudinary (if public_id exists)
+      if (doc.public_id) {
+        const resourceType = doc.file_url.toLowerCase().endsWith('.pdf') ? 'image' : 'raw';
+        await cloudinary.uploader.destroy(doc.public_id, { resource_type: resourceType });
+      }
       doc.file_url = req.file.path;
+      doc.public_id = req.file.filename;
     } else if (req.body.file_url) {
       doc.file_url = req.body.file_url;
     }
@@ -102,11 +109,17 @@ export const deleteDocument = async (req, res) => {
     const doc = await Document.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
 
-    if (doc.file_url) await cloudinary.uploader.destroy(doc.file_url, { resource_type: "raw" });
-    await doc.remove();
+    // 🛡️ Permanent Cloudinary cleanup
+    if (doc.public_id) {
+      const resourceType = doc.file_url.toLowerCase().endsWith('.pdf') ? 'image' : 'raw';
+      await cloudinary.uploader.destroy(doc.public_id, { resource_type: resourceType });
+    }
 
-    res.json({ message: "Document deleted" });
+    await Document.deleteOne({ _id: req.params.id });
+
+    res.json({ success: true, message: "Document deleted permanently from Cloudinary & Database" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Delete Error:", err);
+    res.status(500).json({ message: "Failed to delete document", error: err.message });
   }
 };

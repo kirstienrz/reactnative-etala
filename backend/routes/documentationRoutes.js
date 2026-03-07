@@ -7,7 +7,7 @@ const ctrl = require("../controllers/documentationController");
 // Multer setup (memory storage)
 // ------------------------------
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024,
@@ -44,5 +44,8 @@ router.delete("/:docId/files/:fileId", ctrl.deleteFile);
 
 // Archive a documentation
 router.patch("/:id/archive", ctrl.archiveDoc);
+
+// Delete the documentation set itself
+router.delete("/:id", ctrl.deleteDoc);
 
 module.exports = router;

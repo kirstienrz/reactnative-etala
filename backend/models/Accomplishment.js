@@ -7,6 +7,7 @@ const accomplishmentSchema = new mongoose.Schema(
 
     fileUrl: { type: String, required: true }, // Cloudinary URL
     publicId: { type: String, required: true }, // Cloudinary ID
+    type: { type: String, default: 'pdf' }, // 'video', 'image', 'pdf'
 
     isArchived: { type: Boolean, default: false },
 

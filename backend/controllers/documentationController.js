@@ -70,15 +70,13 @@ const uploadFiles = async (req, res) => {
       let resourceType = "auto";
 
       if (mimeType === 'application/pdf') {
-        resourceType = "image"; // PDFs can be treated as 'image' for browser viewing
+        resourceType = "raw"; // PDFs should explicitly be stored as raw files
       } else if (mimeType.includes('image/')) {
         resourceType = "image";
       } else if (mimeType.includes('video/')) {
         resourceType = "video";
-      } else if (mimeType.includes('text/') ||
-        mimeType.includes('application/msword') ||
-        mimeType.includes('application/vnd.openxmlformats-officedocument')) {
-        resourceType = "raw"; // Documents should be 'raw'
+      } else {
+        resourceType = "raw"; // Documents like docx/xlsx should be 'raw'
       }
 
       console.log(`Uploading file: ${file.originalname}, MIME: ${mimeType}, Resource Type: ${resourceType}`);
@@ -140,16 +138,56 @@ const deleteFile = async (req, res) => {
     if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
     const file = doc.files.id(fileId);
-    if (!file) return res.status(404).json({ success: false, message: "File not found" });
-
-    if (file.cloudinaryId) {
-      await cloudinary.uploader.destroy(file.cloudinaryId, { resource_type: "auto" });
+    if (!file) {
+      console.warn("File not found in document:", { docId, fileId });
+      return res.status(404).json({ success: false, message: "File not found" });
     }
 
-    file.remove();
+    console.log("Deleting file from Cloudinary:", file.cloudinaryId);
+    if (file.cloudinaryId) {
+      try {
+        await cloudinary.uploader.destroy(file.cloudinaryId);
+      } catch (cErr) {
+        console.error("Cloudinary delete error:", cErr);
+        // Continue even if cloudinary fails
+      }
+    }
+
+    // Use pull for better compatibility with Mongoose arrays
+    doc.files.pull(fileId);
     await doc.save();
 
+    console.log("File deleted successfully from DB");
     res.json({ success: true, message: "File deleted" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Delete failed", error: err.message });
+  }
+};
+
+// ✅ DELETE DOC (Whole collection)
+const deleteDoc = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const doc = await Documentation.findById(id);
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
+
+    // Delete all files from Cloudinary
+    if (doc.files && doc.files.length > 0) {
+      for (const file of doc.files) {
+        if (file.cloudinaryId) {
+          try {
+            await cloudinary.uploader.destroy(file.cloudinaryId);
+          } catch (cErr) {
+            console.error("Cloudinary delete error:", cErr);
+          }
+        }
+      }
+    }
+
+    await Documentation.findByIdAndDelete(id);
+
+    res.json({ success: true, message: "Documentation deleted successfully" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Delete failed", error: err.message });
   }
@@ -194,5 +232,6 @@ module.exports = {
   getDoc,
   uploadFiles,
   deleteFile,
+  deleteDoc,        // new function for deleting the entire collection
   archiveDoc
 };
