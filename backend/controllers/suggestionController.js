@@ -22,7 +22,7 @@ exports.createSuggestion = async (req, res) => {
     const newId = await getNextId();
 
     // Set priority automatically to "low"
-    let priority = "low"; 
+    let priority = "low";
 
     // Only allow admin to override if they pass priority
     if (req.body.isAdmin && req.body.priority) {

@@ -1130,20 +1130,40 @@ export default function OrgChartManagement() {
     const handleBulkAction = async (action) => {
         if (selectedCharts.size === 0) return setError("Select at least one chart");
 
+        if (action === "delete" && !window.confirm(`Are you sure you want to permanently delete ${selectedCharts.size} chart(s)? This action cannot be undone.`)) {
+            return;
+        }
+
         setBulkProcessing(true);
         setError("");
         setSuccess("");
 
-        const promises = Array.from(selectedCharts).map((id) =>
-            action === "archive" ? archiveOrgChartImage(id) : restoreOrgChartImage(id)
-        );
+        const promises = Array.from(selectedCharts).map((id) => {
+            if (action === "archive") return archiveOrgChartImage(id);
+            if (action === "restore") return restoreOrgChartImage(id);
+            if (action === "delete") return deleteOrgChartImage(id);
+        });
 
         try {
             await Promise.all(promises);
-            setSuccess(`${action === 'archive' ? 'Archived' : 'Restored'} ${selectedCharts.size} chart(s) successfully!`);
+            let message = "";
+            if (action === "archive") message = `Archived ${selectedCharts.size} chart(s) successfully!`;
+            else if (action === "restore") message = `Restored ${selectedCharts.size} chart(s) successfully!`;
+            else message = `Deleted ${selectedCharts.size} chart(s) permanently!`;
+
+            setSuccess(message);
+
+            // Clear latest upload if we deleted it
+            if (action === "delete") {
+                const deletedIds = Array.from(selectedCharts);
+                if (latestUpload && deletedIds.includes(latestUpload._id)) {
+                    setLatestUpload(null);
+                }
+            }
+
             fetchCharts();
         } catch {
-            setError("Failed to perform bulk action");
+            setError(`Failed to perform bulk ${action}`);
         } finally {
             setBulkProcessing(false);
         }
@@ -1424,28 +1444,45 @@ export default function OrgChartManagement() {
                                 <span className="text-gray-600">
                                     <span className="font-bold text-blue-600">{selectedCharts.size}</span> selected
                                 </span>
-                                <button
-                                    onClick={() => handleBulkAction(viewArchived ? "restore" : "archive")}
-                                    disabled={bulkProcessing}
-                                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-3 font-semibold"
-                                >
-                                    {bulkProcessing ? (
-                                        <>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleBulkAction(viewArchived ? "restore" : "archive")}
+                                        disabled={bulkProcessing}
+                                        className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-3 font-semibold"
+                                    >
+                                        {bulkProcessing ? (
+                                            <>
+                                                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                                Processing...
+                                            </>
+                                        ) : viewArchived ? (
+                                            <>
+                                                <RefreshCw className="w-4 h-4" />
+                                                Restore Selected
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Archive className="w-4 h-4" />
+                                                Archive Selected
+                                            </>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleBulkAction("delete")}
+                                        disabled={bulkProcessing}
+                                        className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 disabled:opacity-50 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-3 font-semibold"
+                                    >
+                                        {bulkProcessing ? (
                                             <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                            Processing...
-                                        </>
-                                    ) : viewArchived ? (
-                                        <>
-                                            <RefreshCw className="w-4 h-4" />
-                                            Restore Selected
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Archive className="w-4 h-4" />
-                                            Archive Selected
-                                        </>
-                                    )}
-                                </button>
+                                        ) : (
+                                            <>
+                                                <Trash2 className="w-4 h-4" />
+                                                Delete Selected
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1503,6 +1540,7 @@ export default function OrgChartManagement() {
                                                 <div className="w-3.5 h-3.5 rounded-md border-2 border-gray-400"></div>
                                             )}
                                         </div>
+
                                     </div>
 
                                     {/* Loading Overlay for the whole card */}
@@ -1525,12 +1563,12 @@ export default function OrgChartManagement() {
                                             />
                                         </div>
 
-                                        <div className="flex flex-col gap-2">
-                                            {/* Action Button */}
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleIndividualAction(viewArchived ? "restore" : "archive", chart._id)}
                                                 disabled={processing[chart._id]}
-                                                className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${viewArchived
+                                                className={`flex-1 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${viewArchived
                                                     ? 'bg-gradient-to-r from-emerald-50 to-green-100 text-emerald-700 hover:from-emerald-100 hover:to-green-200 hover:text-emerald-800'
                                                     : chart._id === latestUpload?._id
                                                         ? 'bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 hover:from-green-100 hover:to-emerald-200 hover:text-green-800'
@@ -1545,37 +1583,31 @@ export default function OrgChartManagement() {
                                                 ) : viewArchived ? (
                                                     <>
                                                         <RefreshCw className="w-4 h-4" />
-                                                        Restore Chart
+                                                        Restore
                                                     </>
                                                 ) : chart._id === latestUpload?._id ? (
                                                     <>
                                                         <TrendingUp className="w-4 h-4" />
-                                                        Archive Chart - Current Active Chart
+                                                        Active
                                                     </>
                                                 ) : (
                                                     <>
                                                         <Archive className="w-4 h-4" />
-                                                        Archive Chart
+                                                        Archive
                                                     </>
                                                 )}
                                             </button>
 
-                                            {/* Delete Button */}
                                             <button
                                                 onClick={() => handleDelete(chart._id)}
                                                 disabled={processing[chart._id]}
-                                                className="w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-red-50 to-red-100 text-red-700 hover:from-red-100 hover:to-red-200 hover:text-red-800"
+                                                className="p-3 bg-gradient-to-r from-red-50 to-red-100 text-red-700 hover:from-red-100 hover:to-red-200 hover:text-red-800 rounded-xl transition-all duration-300 shadow-sm border border-red-200"
+                                                title="Delete Permanently"
                                             >
                                                 {processing[chart._id] ? (
-                                                    <>
-                                                        <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
-                                                        Deleting...
-                                                    </>
+                                                    <RefreshCw className="w-5 h-5 animate-spin" />
                                                 ) : (
-                                                    <>
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Delete Chart
-                                                    </>
+                                                    <Trash2 className="w-5 h-5" />
                                                 )}
                                             </button>
                                         </div>

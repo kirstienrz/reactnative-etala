@@ -312,8 +312,8 @@ export default function CarouselManagement() {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${isDragging
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
                 }`}
             >
               <input
@@ -478,20 +478,22 @@ export default function CarouselManagement() {
               </button>
 
               {/* Media Render */}
-              {img.type === "video" || img.imageUrl.endsWith(".mp4") || img.imageUrl.endsWith(".webm") ? (
-                <video
-                  src={img.imageUrl}
-                  onClick={() => setModalMedia({ url: img.imageUrl, type: 'video' })}
-                  className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition"
-                />
-              ) : (
-                <img
-                  src={img.imageUrl}
-                  alt="Carousel Media"
-                  onClick={() => setModalMedia({ url: img.imageUrl, type: 'image' })}
-                  className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition"
-                />
-              )}
+              <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+                {img.type === "video" || img.imageUrl.endsWith(".mp4") || img.imageUrl.endsWith(".webm") ? (
+                  <video
+                    src={img.imageUrl}
+                    onClick={() => setModalMedia({ url: img.imageUrl, type: 'video' })}
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
+                  />
+                ) : (
+                  <img
+                    src={img.imageUrl}
+                    alt="Carousel Media"
+                    onClick={() => setModalMedia({ url: img.imageUrl, type: 'image' })}
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
+                  />
+                )}
+              </div>
 
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent text-white p-3">
                 <div className="flex justify-between items-end">

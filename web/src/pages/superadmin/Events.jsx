@@ -1597,8 +1597,8 @@ export default function SuperAdminCalendarUI() {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragging
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
                       }`}
                   >
                     <input
