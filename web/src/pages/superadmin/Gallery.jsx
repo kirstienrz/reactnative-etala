@@ -58,6 +58,24 @@ export default function AlbumGalleryManagement() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [albumToDelete, setAlbumToDelete] = useState(null);
+
+  const [isCoverDragging, setIsCoverDragging] = useState(false);
+  const [isPhotosDragging, setIsPhotosDragging] = useState(false);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
   const [imageToDelete, setImageToDelete] = useState({ albumId: null, imageIndex: null });
   const [showImageDeleteModal, setShowImageDeleteModal] = useState(false);
 
@@ -1087,13 +1105,38 @@ export default function AlbumGalleryManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Cover Image *
                   </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverImageChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
+                  <div
+                    onDragEnter={(e) => { handleDragEnter(e); setIsCoverDragging(true); }}
+                    onDragOver={(e) => { handleDragOver(e); setIsCoverDragging(true); }}
+                    onDragLeave={(e) => { handleDragLeave(e); setIsCoverDragging(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsCoverDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        handleCoverImageChange({ target: { files: e.dataTransfer.files } });
+                      }
+                    }}
+                    className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${isCoverDragging
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                      }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCoverImageChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                      required
+                    />
+                    <div className="pointer-events-none">
+                      <div className={`inline-flex p-3 rounded-full mb-3 ${isCoverDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
+                        <Upload className={`w-6 h-6 ${isCoverDragging ? 'text-blue-600' : 'text-gray-500'}`} />
+                      </div>
+                      <p className="text-gray-600 font-medium">Click or drag cover image</p>
+                      <p className="text-sm text-gray-400">PNG, JPG, WebP up to 5MB</p>
+                    </div>
+                  </div>
                   {albumCoverPreview && (
                     <div className="mt-4">
                       <p className="text-sm text-gray-600 mb-2">Preview:</p>
@@ -1157,13 +1200,38 @@ export default function AlbumGalleryManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Photos *
                   </label>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageFilesChange}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-50 file:to-blue-100 file:text-blue-700 hover:file:from-blue-100 hover:file:to-blue-200"
-                  />
+                  <div
+                    onDragEnter={(e) => { handleDragEnter(e); setIsPhotosDragging(true); }}
+                    onDragOver={(e) => { handleDragOver(e); setIsPhotosDragging(true); }}
+                    onDragLeave={(e) => { handleDragLeave(e); setIsPhotosDragging(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsPhotosDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        handleImageFilesChange({ target: { files: e.dataTransfer.files } });
+                      }
+                    }}
+                    className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${isPhotosDragging
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                      }`}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleImageFilesChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                    />
+                    <div className="pointer-events-none">
+                      <div className={`inline-flex p-3 rounded-full mb-3 ${isPhotosDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
+                        <Upload className={`w-6 h-6 ${isPhotosDragging ? 'text-blue-600' : 'text-gray-500'}`} />
+                      </div>
+                      <p className="text-gray-600 font-medium">Click or drag photos here</p>
+                      <p className="text-sm text-gray-400">PNG, JPG, WebP up to 5MB each</p>
+                    </div>
+                  </div>
                 </div>
 
                 {uploadData.previews.length > 0 && (

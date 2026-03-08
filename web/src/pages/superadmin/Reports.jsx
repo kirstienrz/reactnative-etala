@@ -78,6 +78,37 @@ const AdminReports = () => {
   });
   const [showExternalReferralForm, setShowExternalReferralForm] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      setExternalReferralData(prev => ({
+        ...prev,
+        attachments: [...(prev.attachments || []), ...newFiles]
+      }));
+    }
+  };
+
   const [showViewReferralModal, setShowViewReferralModal] = useState(false);
   const [selectedReferral, setSelectedReferral] = useState(null);
   const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
@@ -443,28 +474,6 @@ const AdminReports = () => {
       showToast(`Failed to fetch reports: ${errorMessage}`, "error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      setExternalReferralData(prev => ({
-        ...prev,
-        attachments: [...(prev.attachments || []), ...files]
-      }));
     }
   };
 
@@ -2634,28 +2643,32 @@ const AdminReports = () => {
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Attachments</span>
                       <div className="flex-1 h-px bg-gray-100" />
                     </div>
-                    <label
+                    <div
+                      onDragEnter={handleDragEnter}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-6 cursor-pointer transition-all ${isDragging ? "border-indigo-500 bg-indigo-50 scale-[1.01]" : "border-gray-200 hover:border-indigo-400 hover:bg-indigo-50"}`}
+                      className={`relative flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-6 cursor-pointer transition-all ${isDragging
+                        ? "border-indigo-500 bg-indigo-50 scale-[1.01]"
+                        : "border-gray-200 hover:border-indigo-400 hover:bg-indigo-50"
+                        }`}
                     >
-                      <div className="flex flex-col items-center">
-                        <FileText className={`w-8 h-8 mb-2 transition-colors ${isDragging ? "text-indigo-600" : "text-gray-300"}`} />
-                        <p className={`text-xs font-bold ${isDragging ? "text-indigo-700" : "text-gray-500"}`}>
-                          {isDragging ? "Drop files now" : "Click or drag to upload"}
-                        </p>
-                      </div>
                       <input
                         type="file"
                         multiple
-                        className="hidden"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                         onChange={(e) => {
                           const files = Array.from(e.target.files);
                           setExternalReferralData(prev => ({ ...prev, attachments: [...(prev.attachments || []), ...files] }));
                         }}
                       />
-                    </label>
+                      <div className="pointer-events-none flex flex-col items-center">
+                        <FileText className={`w-8 h-8 mb-2 transition-colors ${isDragging ? "text-indigo-600" : "text-gray-300"}`} />
+                        <p className={`text-xs font-bold ${isDragging ? "text-indigo-700" : "text-gray-500"}`}>
+                          {isDragging ? "Drop files now" : "Click or drag to upload"}
+                        </p>
+                      </div>
+                    </div>
 
                     {externalReferralData.attachments?.length > 0 && (
                       <div className="grid grid-cols-1 gap-2 mt-3">

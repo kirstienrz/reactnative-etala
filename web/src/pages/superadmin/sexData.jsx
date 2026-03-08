@@ -56,7 +56,34 @@ export default function SexDataAdmin() {
     const [filters, setFilters] = useState({});
     const [showReportOptions, setShowReportOptions] = useState(false);
     const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
+    const [isDragging, setIsDragging] = useState(false);
     const chartRef = useRef(null);
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            setFile(e.dataTransfer.files[0]);
+        }
+    };
 
     const loadDatasets = async () => {
         try {
@@ -516,7 +543,7 @@ export default function SexDataAdmin() {
                                     </>
                                 )}
                             </div>
-                        </div>                        
+                        </div>
                     ))}
 
                     {currentDatasets.length === 0 && (
@@ -731,19 +758,28 @@ export default function SexDataAdmin() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Excel File
                                     </label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                                    <div
+                                        onDragEnter={handleDragEnter}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragging
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                                            }`}
+                                    >
                                         <input
                                             type="file"
                                             accept=".xlsx,.xls"
                                             onChange={(e) => setFile(e.target.files[0])}
-                                            className="hidden"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                                             id="fileUpload"
                                         />
-                                        <label htmlFor="fileUpload" className="cursor-pointer">
-                                            <Upload size={32} className="mx-auto text-gray-400 mb-2" />
-                                            <p className="text-gray-600 font-medium">Click to upload Excel file</p>
+                                        <div className="pointer-events-none">
+                                            <Upload size={32} className={`mx-auto mb-2 ${isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
+                                            <p className="text-gray-600 font-medium">Click to upload or drag and drop Excel file</p>
                                             <p className="text-sm text-gray-400 mt-1">.xlsx or .xls format</p>
-                                        </label>
+                                        </div>
                                         {file && (
                                             <p className="text-sm text-blue-600 mt-3">
                                                 Selected: {file.name}

@@ -22,6 +22,34 @@ export default function InfographicsAdmin() {
     const [modalImage, setModalImage] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0); // Add this
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleImageUpload({ target: { files: e.dataTransfer.files } });
+        }
+    };
 
     const [academicYears, setAcademicYears] = useState([]);
 
@@ -658,16 +686,25 @@ export default function InfographicsAdmin() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Upload Infographics * {!editingItem && '(Multiple files supported)'}
                                     </label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                                    <div
+                                        onDragEnter={handleDragEnter}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isDragging
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                                            }`}
+                                    >
                                         <input
                                             type="file"
                                             accept="image/*"
                                             multiple={!editingItem}
                                             onChange={handleImageUpload}
-                                            className="hidden"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                                             id="imageUpload"
                                         />
-                                        <label htmlFor="imageUpload" className="cursor-pointer">
+                                        <div className="pointer-events-none">
                                             {previewImages.length > 0 ? (
                                                 <div className="space-y-4">
                                                     <div className="grid grid-cols-2 gap-4">
@@ -686,13 +723,15 @@ export default function InfographicsAdmin() {
                                                 </div>
                                             ) : (
                                                 <div className="space-y-2">
-                                                    <Upload size={48} className="mx-auto text-gray-400" />
+                                                    <div className={`inline-flex p-3 rounded-full mb-3 ${isDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
+                                                        <Upload className={`w-6 h-6 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
+                                                    </div>
                                                     <p className="text-gray-600 font-medium">Click to upload infographics</p>
                                                     <p className="text-sm text-gray-400">PNG, JPG, WebP up to 5MB each</p>
                                                     {!editingItem && <p className="text-sm text-blue-600">You can select multiple files</p>}
                                                 </div>
                                             )}
-                                        </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

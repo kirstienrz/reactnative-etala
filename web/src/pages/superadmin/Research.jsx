@@ -98,6 +98,35 @@ export default function ResearchAdmin() {
   });
 
   // Fetch research data
+  const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+
+  // Handlers for Thumbnail
+  const handleThumbnailDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingThumbnail(true); };
+  const handleThumbnailDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingThumbnail(false); };
+  const handleThumbnailDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const handleThumbnailDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingThumbnail(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleThumbnailUpload({ target: { files: e.dataTransfer.files } });
+    }
+  };
+
+  // Handlers for File
+  const handleFileDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingFile(true); };
+  const handleFileDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingFile(false); };
+  const handleFileDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleResearchFileUpload({ target: { files: e.dataTransfer.files } });
+    }
+  };
+
   const fetchResearchData = async () => {
     try {
       setLoading(true);
@@ -910,15 +939,22 @@ export default function ResearchAdmin() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Thumbnail Image (Optional)
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                    <div
+                      onDragEnter={handleThumbnailDragEnter}
+                      onDragOver={handleThumbnailDragOver}
+                      onDragLeave={handleThumbnailDragLeave}
+                      onDrop={handleThumbnailDrop}
+                      className={`relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer text-center ${isDraggingThumbnail ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-500'
+                        }`}
+                    >
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleThumbnailUpload}
-                        className="hidden"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                         id="thumbnailUpload"
                       />
-                      <label htmlFor="thumbnailUpload" className="cursor-pointer">
+                      <div className="pointer-events-none">
                         {thumbnailPreview ? (
                           <div className="space-y-2">
                             <img
@@ -927,7 +963,7 @@ export default function ResearchAdmin() {
                               className="w-32 h-32 object-cover rounded-lg mx-auto"
                             />
                             <p className="text-center text-sm text-blue-600">
-                              Click to change thumbnail
+                              Click or drag to change thumbnail
                             </p>
                           </div>
                         ) : editingResearch?.thumbnail?.url ? (
@@ -938,17 +974,17 @@ export default function ResearchAdmin() {
                               className="w-32 h-32 object-cover rounded-lg mx-auto"
                             />
                             <p className="text-center text-sm text-blue-600">
-                              Click to change thumbnail
+                              Click or drag to change thumbnail
                             </p>
                           </div>
                         ) : (
                           <div className="text-center py-4">
-                            <Upload className="mx-auto text-gray-400 mb-2" size={24} />
-                            <p className="text-gray-600">Click to upload thumbnail</p>
+                            <Upload className={`mx-auto mb-2 ${isDraggingThumbnail ? 'text-blue-600' : 'text-gray-400'}`} size={24} />
+                            <p className="text-gray-600">Click or drag and drop thumbnail here</p>
                             <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP up to 5MB</p>
                           </div>
                         )}
-                      </label>
+                      </div>
                     </div>
                   </div>
 
@@ -956,28 +992,35 @@ export default function ResearchAdmin() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Research File (Optional - PDF, DOC, DOCX)
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                    <div
+                      onDragEnter={handleFileDragEnter}
+                      onDragOver={handleFileDragOver}
+                      onDragLeave={handleFileDragLeave}
+                      onDrop={handleFileDrop}
+                      className={`relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer text-center ${isDraggingFile ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-500'
+                        }`}
+                    >
                       <input
                         type="file"
                         accept=".pdf,.doc,.docx"
                         onChange={handleResearchFileUpload}
-                        className="hidden"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                         id="researchFileUpload"
                       />
-                      <label htmlFor="researchFileUpload" className="cursor-pointer">
+                      <div className="pointer-events-none">
                         <div className="text-center py-4">
-                          <FileText className="mx-auto text-gray-400 mb-2" size={24} />
+                          <FileText className={`mx-auto mb-2 ${isDraggingFile ? 'text-blue-600' : 'text-gray-400'}`} size={24} />
                           <p className="text-gray-600">
                             {researchFile
                               ? `Selected: ${researchFile.name}`
                               : editingResearch?.researchFile?.originalName
                                 ? `Current: ${editingResearch.researchFile.originalName}`
-                                : 'Click to upload research file'
+                                : 'Click or drag to upload research file'
                             }
                           </p>
                           <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX up to 10MB</p>
                         </div>
-                      </label>
+                      </div>
                     </div>
                   </div>
 

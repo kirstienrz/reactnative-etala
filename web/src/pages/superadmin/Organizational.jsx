@@ -972,6 +972,36 @@ export default function OrgChartManagement() {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [viewArchived, setViewArchived] = useState(false);
     const [selectedCharts, setSelectedCharts] = useState(new Set());
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!uploading) setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        if (uploading) return;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            setSelectedFile(file);
+            if (file) setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
 
     useEffect(() => {
         fetchCharts();
@@ -1296,14 +1326,34 @@ export default function OrgChartManagement() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Select Image File
                                     </label>
-                                    <div className="relative">
+                                    <div
+                                        onDragEnter={handleDragEnter}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${isDragging
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                                            }`}
+                                    >
                                         <input
                                             type="file"
                                             onChange={handleFileChange}
-                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-50 file:to-blue-100 file:text-blue-700 hover:file:from-blue-100 hover:file:to-blue-200"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                                             accept="image/*"
                                             disabled={uploading}
                                         />
+                                        <div className="pointer-events-none">
+                                            <Upload className={`mx-auto mb-2 ${isDragging ? 'text-blue-600' : 'text-gray-400'}`} size={24} />
+                                            {selectedFile ? (
+                                                <p className="text-gray-700 font-medium">Selected: {selectedFile.name}</p>
+                                            ) : (
+                                                <>
+                                                    <p className="text-gray-600 font-medium">Click to upload or drag and drop image here</p>
+                                                    <p className="text-sm text-gray-400 mt-1">Image formats supported</p>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-sm text-gray-500 mt-2">
                                         The uploaded chart will become the new "Latest Upload" displayed to users
@@ -1443,8 +1493,8 @@ export default function OrgChartManagement() {
                                                 toggleSelection(chart._id);
                                             }}
                                             className={`w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-300 backdrop-blur-md border ${selectedCharts.has(chart._id)
-                                                    ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/30 opacity-100'
-                                                    : 'bg-white/40 text-gray-500 border-white/60 hover:bg-white/80 opacity-0 group-hover:opacity-100'
+                                                ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/30 opacity-100'
+                                                : 'bg-white/40 text-gray-500 border-white/60 hover:bg-white/80 opacity-0 group-hover:opacity-100'
                                                 }`}
                                         >
                                             {selectedCharts.has(chart._id) ? (
@@ -1453,23 +1503,6 @@ export default function OrgChartManagement() {
                                                 <div className="w-3.5 h-3.5 rounded-md border-2 border-gray-400"></div>
                                             )}
                                         </div>
-
-                                        {/* Delete Button */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(chart._id);
-                                            }}
-                                            disabled={processing[chart._id]}
-                                            className="w-8 h-8 bg-red-500/20 hover:bg-red-500 text-red-600 hover:text-white rounded-xl transition-all duration-300 backdrop-blur-md opacity-0 group-hover:opacity-100 shadow-lg shadow-red-500/20 flex items-center justify-center border border-red-500/30"
-                                            title="Delete Permanently"
-                                        >
-                                            {processing[chart._id] ? (
-                                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="w-4 h-4" />
-                                            )}
-                                        </button>
                                     </div>
 
                                     {/* Loading Overlay for the whole card */}
@@ -1492,39 +1525,60 @@ export default function OrgChartManagement() {
                                             />
                                         </div>
 
-                                        {/* Action Button */}
-                                        <button
-                                            onClick={() => handleIndividualAction(viewArchived ? "restore" : "archive", chart._id)}
-                                            disabled={processing[chart._id]}
-                                            className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${viewArchived
-                                                ? 'bg-gradient-to-r from-emerald-50 to-green-100 text-emerald-700 hover:from-emerald-100 hover:to-green-200 hover:text-emerald-800'
-                                                : chart._id === latestUpload?._id
-                                                    ? 'bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 hover:from-green-100 hover:to-emerald-200 hover:text-green-800'
-                                                    : 'bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-700 hover:from-amber-100 hover:to-yellow-200 hover:text-amber-800'
-                                                }`}
-                                        >
-                                            {processing[chart._id] ? (
-                                                <>
-                                                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
-                                                    {viewArchived ? 'Restoring...' : 'Archiving...'}
-                                                </>
-                                            ) : viewArchived ? (
-                                                <>
-                                                    <RefreshCw className="w-4 h-4" />
-                                                    Restore Chart
-                                                </>
-                                            ) : chart._id === latestUpload?._id ? (
-                                                <>
-                                                    <TrendingUp className="w-4 h-4" />
-                                                    Current Active Chart
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Archive className="w-4 h-4" />
-                                                    Archive Chart
-                                                </>
-                                            )}
-                                        </button>
+                                        <div className="flex flex-col gap-2">
+                                            {/* Action Button */}
+                                            <button
+                                                onClick={() => handleIndividualAction(viewArchived ? "restore" : "archive", chart._id)}
+                                                disabled={processing[chart._id]}
+                                                className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${viewArchived
+                                                    ? 'bg-gradient-to-r from-emerald-50 to-green-100 text-emerald-700 hover:from-emerald-100 hover:to-green-200 hover:text-emerald-800'
+                                                    : chart._id === latestUpload?._id
+                                                        ? 'bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 hover:from-green-100 hover:to-emerald-200 hover:text-green-800'
+                                                        : 'bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-700 hover:from-amber-100 hover:to-yellow-200 hover:text-amber-800'
+                                                    }`}
+                                            >
+                                                {processing[chart._id] ? (
+                                                    <>
+                                                        <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
+                                                        {viewArchived ? 'Restoring...' : 'Archiving...'}
+                                                    </>
+                                                ) : viewArchived ? (
+                                                    <>
+                                                        <RefreshCw className="w-4 h-4" />
+                                                        Restore Chart
+                                                    </>
+                                                ) : chart._id === latestUpload?._id ? (
+                                                    <>
+                                                        <TrendingUp className="w-4 h-4" />
+                                                        Archive Chart - Current Active Chart
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Archive className="w-4 h-4" />
+                                                        Archive Chart
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            {/* Delete Button */}
+                                            <button
+                                                onClick={() => handleDelete(chart._id)}
+                                                disabled={processing[chart._id]}
+                                                className="w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-red-50 to-red-100 text-red-700 hover:from-red-100 hover:to-red-200 hover:text-red-800"
+                                            >
+                                                {processing[chart._id] ? (
+                                                    <>
+                                                        <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
+                                                        Deleting...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Trash2 className="w-4 h-4" />
+                                                        Delete Chart
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Date Badge */}

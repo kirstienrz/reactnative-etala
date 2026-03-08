@@ -133,6 +133,33 @@ const LandingPage = () => {
     fetchAnnouncements();
   }, []);
 
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+  };
+
+  const isVideo = (url) => {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.endsWith(".mov") || lowerUrl.includes("video/upload");
+  };
+
+  const isDocument = (url) => {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith(".pdf") || lowerUrl.endsWith(".doc") || lowerUrl.endsWith(".docx");
+  };
+
+  const getEmbedUrl = (url) => {
+    if (!url) return "";
+    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return `${url}#toolbar=0`;
+  };
+
   const heroSlides = [
     {
       image: '/assets/carousel/CAROUSEL1.jpg'
@@ -323,7 +350,25 @@ const LandingPage = () => {
                 >
                   {/* Image */}
                   <div className="h-80 bg-slate-200 overflow-hidden">
-                    {item.imageUrl ? (
+                    {getYouTubeEmbedUrl(item.link) ? (
+                      <iframe
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500 bg-black"
+                        src={getYouTubeEmbedUrl(item.link)}
+                        title={item.title}
+                        frameBorder="0"
+                        allowFullScreen
+                      />
+                    ) : item.imageUrl && isVideo(item.imageUrl) ? (
+                      <video
+                        src={item.imageUrl}
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500 bg-black"
+                      />
+                    ) : item.imageUrl && isDocument(item.imageUrl) ? (
+                      <div className="w-full h-full bg-violet-100 flex flex-col items-center justify-center text-violet-600">
+                        <FileText className="w-16 h-16 mb-2" />
+                        <span className="font-bold">Document</span>
+                      </div>
+                    ) : item.imageUrl ? (
                       <img
                         src={item.imageUrl}
                         alt={item.title}
@@ -533,14 +578,39 @@ const LandingPage = () => {
             </div>
 
             <div className="overflow-y-auto px-8 pb-8 -mt-12">
-              {selectedNews.imageUrl && (
-                <img
-                  src={selectedNews.imageUrl}
-                  alt={selectedNews.title}
-                  className="w-full h-64 md:h-80 object-cover rounded-xl mt-12 mb-6 shadow-md"
-                />
-              )}
-              <h2 className={`text-2xl md:text-3xl font-black text-slate-900 mb-4 ${!selectedNews.imageUrl ? "mt-12" : ""}`}>
+              <div className="w-full mt-12 mb-6">
+                {getYouTubeEmbedUrl(selectedNews.link) ? (
+                  <iframe
+                    className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md bg-black"
+                    src={getYouTubeEmbedUrl(selectedNews.link)}
+                    title={selectedNews.title}
+                    frameBorder="0"
+                    allowFullScreen
+                  />
+                ) : selectedNews.imageUrl ? (
+                  isVideo(selectedNews.imageUrl) ? (
+                    <video
+                      controls
+                      autoPlay
+                      src={selectedNews.imageUrl}
+                      className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md bg-black"
+                    />
+                  ) : isDocument(selectedNews.imageUrl) ? (
+                    <iframe
+                      src={getEmbedUrl(selectedNews.imageUrl)}
+                      className="w-full h-[60vh] border-none rounded-xl"
+                      title="Document Viewer"
+                    />
+                  ) : (
+                    <img
+                      src={selectedNews.imageUrl}
+                      alt={selectedNews.title}
+                      className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md"
+                    />
+                  )
+                ) : null}
+              </div>
+              <h2 className={`text-2xl md:text-3xl font-black text-slate-900 mb-4 ${!selectedNews.imageUrl && !getYouTubeEmbedUrl(selectedNews.link) ? "mt-12" : ""}`}>
                 {selectedNews.title}
               </h2>
               <p className="flex items-center gap-2 text-sm text-slate-500 mb-6 font-medium">

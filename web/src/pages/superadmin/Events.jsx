@@ -58,6 +58,33 @@ export default function SuperAdminCalendarUI() {
     color: "",
     status: "upcoming"
   });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setEventFiles(Array.from(e.dataTransfer.files));
+    }
+  };
 
   const [stats, setStats] = useState({
     total: 0,
@@ -1564,13 +1591,30 @@ export default function SuperAdminCalendarUI() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Attach Files (photos, videos, documents)
                   </label>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                    onChange={e => setEventFiles(Array.from(e.target.files))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                  />
+                  <div
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragging
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                      }`}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                      onChange={e => setEventFiles(Array.from(e.target.files))}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                    />
+                    <div className="pointer-events-none">
+                      <div className={`inline-flex p-3 rounded-full mb-3 ${isDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
+                        <FileText className={`w-6 h-6 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
+                      </div>
+                      <p className="text-gray-600 font-medium">Click to browse or drag and drop files here</p>
+                    </div>
+                  </div>
                   {eventFiles.length > 0 && (
                     <div className="mt-2 space-y-1">
                       <p className="text-xs font-medium text-gray-600">Selected files:</p>

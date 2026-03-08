@@ -1,6 +1,6 @@
-import { Download, FileText, X, Maximize2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Download, FileText, X, Maximize2, Minimize2 } from "lucide-react";
 import { getAccomplishments } from "../../api/accomplishments"; // Axios API call
-
 const Accomplishment = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -110,7 +110,7 @@ const Accomplishment = () => {
                   className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white"
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
-                  {isFullscreen ? <X className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
+                  {isFullscreen ? <Minimize2 className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
                 </button>
 
                 <button

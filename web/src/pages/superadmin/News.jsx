@@ -10,6 +10,7 @@ import {
   Save,
   Calendar,
   Link,
+  Upload
 } from "lucide-react";
 import {
   getNews,
@@ -40,6 +41,34 @@ const AdminNewsAnnouncements = () => {
     link: "",
     file: null, // for image upload
   });
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setFormData({ ...formData, file: e.dataTransfer.files[0] });
+    }
+  };
 
 
   // Fetch all on mount
@@ -414,17 +443,34 @@ const AdminNewsAnnouncements = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Media (Image or Video)
                       </label>
-                      <input
-                        type="file"
-                        accept="image/*,video/mp4,video/*"
-                        onChange={(e) =>
-                          setFormData({ ...formData, file: e.target.files[0] })
-                        }
-                        className="w-full border rounded-lg px-3 py-2"
-                      />
-                      {formData.file && (
-                        <p className="mt-2 text-sm text-gray-500">{formData.file.name}</p>
-                      )}
+                      <div
+                        onDragEnter={handleDragEnter}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                          }`}
+                      >
+                        <input
+                          type="file"
+                          accept="image/*,video/mp4,video/*"
+                          onChange={(e) =>
+                            setFormData({ ...formData, file: e.target.files[0] })
+                          }
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                        />
+                        <div className="pointer-events-none">
+                          <Upload className={`mx-auto mb-2 ${isDragging ? 'text-blue-600' : 'text-gray-400'}`} size={24} />
+                          {formData.file ? (
+                            <p className="mt-2 text-sm text-gray-700 font-medium">Selected: {formData.file.name}</p>
+                          ) : (
+                            <>
+                              <p className="text-gray-600 font-medium pb-1">Click to browse or drag and drop media here</p>
+                              <p className="text-xs text-gray-400">Image or Video formats supported</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div>

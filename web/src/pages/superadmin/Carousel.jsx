@@ -7,7 +7,7 @@ import {
   restoreCarouselImage,
   deleteCarouselImage,
 } from "../../api/carousel";
-import { Trash2, Archive, RefreshCcw, Eye, Search, Plus, Filter, CheckCircle, Info } from "lucide-react";
+import { Trash2, Archive, RefreshCcw, Eye, Search, Plus, Filter, CheckCircle, Info, Upload } from "lucide-react";
 
 export default function CarouselManagement() {
   const [images, setImages] = useState([]);
@@ -21,6 +21,33 @@ export default function CarouselManagement() {
   const [selectedImages, setSelectedImages] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileChange({ target: { files: e.dataTransfer.files } });
+    }
+  };
 
   useEffect(() => {
     fetchImages();
@@ -279,27 +306,44 @@ export default function CarouselManagement() {
         <div className="mb-6 bg-white border rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload New Media (Multiple Supported)</h2>
           <form onSubmit={handleUpload} className="space-y-4">
-            <div className="flex items-center gap-3">
+            <div
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${isDragging
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                }`}
+            >
               <input
                 type="file"
                 accept="image/*,video/*"
                 multiple
                 onChange={handleFileChange}
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md 
-                  file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 
-                  hover:file:bg-blue-100 cursor-pointer"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
               />
-              <button
-                type="submit"
-                disabled={selectedFiles.length === 0}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                Upload ({selectedFiles.length})
-              </button>
+              <div className="pointer-events-none flex flex-col items-center justify-center">
+                <div className={`inline-flex p-3 rounded-full mb-3 ${isDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
+                  <Upload className={`w-6 h-6 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
+                </div>
+                <p className="text-gray-600 font-medium mb-1">Click to browse or drag and drop files here</p>
+                <div className="text-xs text-gray-500">
+                  Maximum file size: 50MB per file • Recommended dimensions: <b>1080x1080 (1:1 ratio, Square for FB Post)</b> • Supported formats: JPG, PNG, WebP, MP4, WebM
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-gray-500">
-              Maximum file size: 50MB per file • Recommended dimensions: <b>1080x1080 (1:1 ratio, Square for FB Post)</b> • Supported formats: JPG, PNG, WebP, MP4, WebM
-            </div>
+            {selectedFiles.length > 0 && (
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={selectedFiles.length === 0}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  Upload ({selectedFiles.length})
+                </button>
+              </div>
+            )}
           </form>
 
           {/* Media Previews with Metadata */}

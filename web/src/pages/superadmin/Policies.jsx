@@ -59,6 +59,34 @@ const AdminDocuments = () => {
         file_url: "",
     });
 
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            setFormData({ ...formData, file: e.dataTransfer.files[0] });
+        }
+    };
+
     // ========================= FETCH =========================
     useEffect(() => {
         fetchAll();
@@ -617,11 +645,20 @@ const AdminDocuments = () => {
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 {editingItem ? "Replace File (Optional)" : "File *"}
                                             </label>
-                                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                            <div
+                                                onDragEnter={handleDragEnter}
+                                                onDragOver={handleDragOver}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={handleDrop}
+                                                className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${isDragging
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                                                    }`}
+                                            >
                                                 <input
                                                     type="file"
                                                     id="file-upload"
-                                                    className="hidden"
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                                                     onChange={(e) => {
                                                         const file = e.target.files[0];
                                                         if (file) {
@@ -630,7 +667,7 @@ const AdminDocuments = () => {
                                                     }}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                                                 />
-                                                <label htmlFor="file-upload" className="cursor-pointer">
+                                                <div className="pointer-events-none">
                                                     {formData.file ? (
                                                         <div className="flex items-center justify-center gap-2">
                                                             <FileText className="text-green-600" size={24} />
@@ -678,7 +715,7 @@ const AdminDocuments = () => {
                                                             </p>
                                                         </>
                                                     )}
-                                                </label>
+                                                </div>
                                             </div>
                                             <p className="mt-1 text-sm text-gray-500">
                                                 {editingItem

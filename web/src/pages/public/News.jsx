@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, ArrowRight, X } from "lucide-react";
+import { Calendar, ArrowRight, X, FileText } from "lucide-react";
 import { getNews } from "../../api/newsAnnouncement";
 
 const AllNews = () => {
@@ -30,7 +30,23 @@ const AllNews = () => {
   };
 
   const isVideo = (url) => {
-    return url && (url.toLowerCase().endsWith(".mp4") || url.toLowerCase().includes("video/upload"));
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.endsWith(".mov") || lowerUrl.includes("video/upload");
+  };
+
+  const isDocument = (url) => {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith(".pdf") || lowerUrl.endsWith(".doc") || lowerUrl.endsWith(".docx");
+  };
+
+  const getEmbedUrl = (url) => {
+    if (!url) return "";
+    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return `${url}#toolbar=0`;
   };
 
   return (
@@ -77,10 +93,14 @@ const AllNews = () => {
                 ) : item.imageUrl ? (
                   isVideo(item.imageUrl) ? (
                     <video
-                      controls
                       src={item.imageUrl}
                       className="w-full h-40 object-cover rounded-lg bg-black"
                     />
+                  ) : isDocument(item.imageUrl) ? (
+                    <div className="w-full h-40 bg-violet-100 rounded-lg flex flex-col items-center justify-center text-violet-600">
+                      <FileText className="w-10 h-10 mb-2" />
+                      <span className="font-bold text-sm">Document</span>
+                    </div>
                   ) : (
                     <img
                       src={item.imageUrl}
@@ -159,6 +179,12 @@ const AllNews = () => {
                       autoPlay
                       src={selectedNews.imageUrl}
                       className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md bg-black"
+                    />
+                  ) : isDocument(selectedNews.imageUrl) ? (
+                    <iframe
+                      src={getEmbedUrl(selectedNews.imageUrl)}
+                      className="w-full h-[60vh] border-none rounded-xl"
+                      title="Document Viewer"
                     />
                   ) : (
                     <img

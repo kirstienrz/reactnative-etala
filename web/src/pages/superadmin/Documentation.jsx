@@ -37,6 +37,34 @@ export default function DocumentationAdmin() {
     const [previewFiles, setPreviewFiles] = useState([]);
     const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileChange({ target: { files: e.dataTransfer.files } });
+        }
+    };
 
     // Toggle document expansion
     const toggleExpand = (docId) => {
@@ -845,27 +873,35 @@ export default function DocumentationAdmin() {
                         </div>
 
                         <div className="p-4">
-                            <input
-                                type="file"
-                                multiple
-                                onChange={handleFileChange}
-                                className="hidden"
-                                id="docFileUpload"
-                                accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
-                            />
-
-                            <label
-                                htmlFor="docFileUpload"
-                                className="cursor-pointer block"
+                            <div
+                                onDragEnter={handleDragEnter}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={`relative border-2 border-dashed rounded p-6 text-center transition-colors cursor-pointer ${isDragging
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-300 hover:border-blue-500 hover:bg-gray-50'
+                                    }`}
                             >
-                                <div className="border-2 border-dashed border-gray-300 rounded p-6 text-center hover:border-blue-500 transition-colors">
-                                    <Upload size={32} className="mx-auto text-gray-400 mb-2" />
-                                    <p className="text-gray-700 text-sm">Click to select files</p>
+                                <input
+                                    type="file"
+                                    multiple
+                                    onChange={handleFileChange}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                                    id="docFileUpload"
+                                    accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
+                                />
+
+                                <div className="pointer-events-none">
+                                    <div className={`inline-flex p-3 rounded-full mb-3 ${isDragging ? 'bg-blue-200' : 'bg-transparent'}`}>
+                                        <Upload size={32} className={`mx-auto ${isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
+                                    </div>
+                                    <p className="text-gray-700 text-sm">Click to select or drag and drop files here</p>
                                     <p className="text-xs text-gray-400 mt-1">
                                         Images, Videos, PDF, DOC, TXT, Excel
                                     </p>
                                 </div>
-                            </label>
+                            </div>
 
                             {fileUploads.length > 0 && (
                                 <div className="mt-4">

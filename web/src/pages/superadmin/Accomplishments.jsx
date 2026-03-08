@@ -20,7 +20,10 @@ import {
   FileCheck,
   CheckCircle2,
   Maximize2,
-  Trash2
+  Minimize2,
+  Trash2,
+  Upload,
+  Plus
 } from "lucide-react";
 
 const Accomplishments = () => {
@@ -40,6 +43,34 @@ const Accomplishments = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileChange({ target: { files: e.dataTransfer.files } });
+    }
+  };
 
   useEffect(() => {
     fetchReports();
@@ -165,6 +196,7 @@ const Accomplishments = () => {
       setTitle("");
       setYear("");
       setFile(null);
+      setShowAddModal(false);
       fetchReports();
     } catch (err) {
       setError("Failed to upload accomplishment report");
@@ -258,8 +290,10 @@ const Accomplishments = () => {
     if (fileError) {
       setError(fileError);
       setFile(null);
-      // Clear the file input
-      e.target.value = "";
+      // Clear the file input if possible
+      if (e.target.value) {
+        e.target.value = "";
+      }
       return;
     }
 
@@ -297,24 +331,59 @@ const Accomplishments = () => {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 leading-tight">Accomplishment Reports</h1>
-            <p className="text-gray-600 mt-1">Official documentation of achievements and milestones</p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Accomplishment Reports
+          </h1>
+          <p className="text-gray-600">
+            Manage official documentation of achievements and milestones
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-6 border-b">
           <button
-            onClick={() => setViewArchived(!viewArchived)}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm ${viewArchived
-              ? "bg-amber-100 text-amber-700 border border-amber-200"
-              : "bg-gray-900 text-white hover:bg-gray-800"
+            onClick={() => setViewArchived(false)}
+            className={`pb-3 px-4 font-medium transition ${!viewArchived
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-600 hover:text-gray-900"
               }`}
           >
-            {viewArchived ? (
-              <><RefreshCcw size={18} /> View Active</>
-            ) : (
-              <><Archive size={18} /> View Archived</>
-            )}
+            Active Reports
           </button>
+          <button
+            onClick={() => setViewArchived(true)}
+            className={`pb-3 px-4 font-medium transition ${viewArchived
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-600 hover:text-gray-900"
+              }`}
+          >
+            Archived
+          </button>
+        </div>
+
+        {/* Filters Bar */}
+        <div className="bg-white border rounded-lg p-4 mb-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex-1"></div>
+            {/* Right side */}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {!viewArchived && (
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition ml-auto relative z-30"
+                >
+                  <Plus size={18} />
+                  Add Report
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mb-4 text-sm text-gray-600">
+          Showing {activeList.length} {!viewArchived ? "active" : "archived"} reports
         </div>
 
         {/* Messaging */}
@@ -331,149 +400,193 @@ const Accomplishments = () => {
           </div>
         )}
 
-        {/* Upload Form - Only in Active View */}
-        {!viewArchived && (
-          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm mb-10">
-            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
-              Upload New Report
-            </h3>
-
-            <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 ml-1">Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Annual Report 2024"
-                  value={title}
-                  onChange={handleTitleChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all outline-none text-gray-900 font-medium"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 ml-1">Year</label>
-                <input
-                  type="number"
-                  placeholder="2024"
-                  value={year}
-                  onChange={handleYearChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all outline-none text-gray-900 font-medium"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 ml-1">File (PDF, Video, or Image)</label>
-                <input
-                  type="file"
-                  accept=".pdf,application/pdf,video/mp4,video/webm,image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-2 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all outline-none text-sm text-gray-500 font-medium cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  required
-                />
-                <p className="text-[10px] text-gray-500 mt-1 ml-1 uppercase tracking-wider font-bold">
-                  Max 50MB
-                </p>
-              </div>
-
-              <div className="md:col-span-3 pt-2">
+        {/* Upload Form Modal - Only in Active View */}
+        {showAddModal && !viewArchived && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+              <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
+                  Upload New Report
+                </h3>
                 <button
-                  type="submit"
-                  disabled={uploading}
-                  className="w-full md:w-auto px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={() => setShowAddModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500"
                 >
-                  {uploading ? (
-                    <><Loader2 className="animate-spin" size={20} /> Uploading...</>
-                  ) : (
-                    "Upload Report"
-                  )}
+                  <X size={24} />
                 </button>
               </div>
-            </form>
+
+              <div className="p-6 overflow-y-auto">
+                <form onSubmit={handleUpload} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">Title</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Annual Report 2024"
+                      value={title}
+                      onChange={handleTitleChange}
+                      className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all outline-none text-gray-900 font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">Year</label>
+                    <input
+                      type="number"
+                      placeholder="2024"
+                      value={year}
+                      onChange={handleYearChange}
+                      className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all outline-none text-gray-900 font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">File (PDF, Video, or Image)</label>
+                    <div
+                      onDragEnter={handleDragEnter}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors ${isDragging
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                        }`}
+                    >
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf,video/mp4,video/webm,image/*"
+                        onChange={handleFileChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                      />
+                      <div className="pointer-events-none">
+                        <div className={`inline-flex p-3 rounded-full mb-2 ${isDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
+                          <Upload className={`w-5 h-5 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
+                        </div>
+                        {file ? (
+                          <p className="text-gray-800 font-bold text-sm">Selected: {file.name}</p>
+                        ) : (
+                          <>
+                            <p className="text-gray-600 font-medium text-sm">Click or drag and drop files here</p>
+                            <p className="text-gray-400 text-xs mt-1">PDF, Video, Image</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1 ml-1 uppercase tracking-wider font-bold flex justify-between">
+                      <span>Max 50MB</span>
+                      {error && (error.includes("file") || error.includes("File")) && (
+                        <span className="text-red-500">{error}</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddModal(false)}
+                      className="flex-1 px-8 py-3.5 bg-gray-100 text-gray-700 rounded-2xl font-bold hover:bg-gray-200 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={uploading}
+                      className="flex-1 px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {uploading ? (
+                        <><Loader2 className="animate-spin" size={20} /> Uploading...</>
+                      ) : (
+                        "Upload Report"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Table List */}
+        <div className="bg-white border rounded-lg shadow-sm overflow-hidden mb-8">
           {activeList.length === 0 ? (
-            <div className="col-span-full py-24 text-center">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <FileText size={48} className="text-gray-300" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">No documents found</h3>
-              <p className="text-gray-500">Your collection of reports will appear here</p>
+            <div className="text-center py-12 text-gray-500">
+              <p>No {!viewArchived ? "active" : "archived"} reports found</p>
             </div>
           ) : (
-            activeList.map((report) => (
-              <div key={report._id} className="group bg-white rounded-[2rem] border border-gray-100 p-8 hover:shadow-2xl hover:shadow-blue-900/5 hover:border-blue-100 transition-all duration-300 relative flex flex-col h-full overflow-hidden">
-                {/* Delete Button - Top Right */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(report._id);
-                  }}
-                  disabled={deleting[report._id]}
-                  className="absolute top-4 right-4 p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all duration-300 backdrop-blur-md opacity-0 group-hover:opacity-100 z-10 shadow-lg shadow-red-500/20"
-                  title="Delete Permanently"
-                >
-                  {deleting[report._id] ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-5 h-5" />
-                  )}
-                </button>
-
-                <div className="mb-6">
-                  <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <FileText size={28} />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors leading-snug">
-                    {report.title}
-                  </h3>
-                  <div className="flex items-center gap-3 text-gray-500 text-sm font-medium">
-                    <Calendar size={16} />
-                    <span>Academic Year {report.year}</span>
-                  </div>
-                </div>
-
-                <div className="mt-auto pt-8 flex items-center justify-between border-t border-gray-50">
-                  <button
-                    onClick={() => {
-                      setSelectedPdf(report.fileUrl);
-                      setSelectedPdfName(report.title);
-                      setSelectedPdfType(report.type || (report.fileUrl.toLowerCase().endsWith('.mp4') ? 'video' : report.fileUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? 'image' : 'pdf'));
-                    }}
-                    className="flex items-center gap-2 text-blue-600 font-bold hover:gap-3 transition-all"
-                  >
-                    View Report <Eye size={18} />
-                  </button>
-
-                  <div className="flex gap-2">
-                    {viewArchived ? (
+            <table className="w-full">
+              <thead className="bg-gray-100 text-gray-700">
+                <tr>
+                  <th className="p-3 text-left">Title</th>
+                  <th className="p-3 text-left">Academic Year</th>
+                  <th className="p-3 text-center">File</th>
+                  <th className="p-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeList.map((report) => (
+                  <tr key={report._id} className="border-t hover:bg-gray-50">
+                    <td className="p-3 font-medium">{report.title}</td>
+                    <td className="p-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                        {report.year}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
                       <button
-                        onClick={() => handleRestore(report._id)}
-                        disabled={restoring[report._id]}
-                        className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all duration-200 shadow-sm"
-                        title="Restore"
+                        onClick={() => {
+                          setSelectedPdf(report.fileUrl);
+                          setSelectedPdfName(report.title);
+                          setSelectedPdfType(report.type || (report.fileUrl.toLowerCase().endsWith('.mp4') ? 'video' : report.fileUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? 'image' : 'pdf'));
+                        }}
+                        className="text-blue-600 hover:text-blue-800 flex justify-center w-full items-center gap-2"
+                        title="View Document"
                       >
-                        {restoring[report._id] ? <Loader2 size={18} className="animate-spin" /> : <RefreshCcw size={18} />}
+                        <Eye size={18} />
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => handleArchive(report._id)}
-                        disabled={archiving[report._id]}
-                        className="p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-white transition-all duration-200 shadow-sm"
-                        title="Archive"
-                      >
-                        {archiving[report._id] ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
+                    </td>
+                    <td className="p-3">
+                      <div className="flex gap-2 justify-center">
+                        {!viewArchived ? (
+                          <>
+                            <button
+                              onClick={() => handleArchive(report._id)}
+                              disabled={archiving[report._id]}
+                              className="p-2 text-yellow-600 hover:bg-yellow-50 rounded disabled:opacity-50"
+                              title="Archive"
+                            >
+                              {archiving[report._id] ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleRestore(report._id)}
+                            disabled={restoring[report._id]}
+                            className="px-3 py-1 text-green-600 hover:bg-green-50 rounded border border-green-200 disabled:opacity-50"
+                            title="Restore"
+                          >
+                            {restoring[report._id] ? <Loader2 size={16} className="animate-spin inline mr-1" /> : null} Restore
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(report._id);
+                          }}
+                          disabled={deleting[report._id]}
+                          className="p-1.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all disabled:opacity-50"
+                          title="Delete Permanently"
+                        >
+                          {deleting[report._id] ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
@@ -503,7 +616,7 @@ const Accomplishments = () => {
                   className="p-3 hover:bg-gray-100 rounded-2xl transition-all text-gray-500"
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
-                  {isFullscreen ? <X size={24} /> : <Maximize2 size={24} />}
+                  {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
                 </button>
 
                 <button
@@ -558,15 +671,6 @@ const Accomplishments = () => {
               <div className="p-4 md:px-8 md:py-6 border-t bg-gray-50 flex justify-between items-center">
                 <p className="text-sm text-gray-500 font-medium">Reviewing {selectedPdfName}</p>
                 <div className="flex gap-3">
-                  <a
-                    href={selectedPdf}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-xl text-sm font-bold transition flex items-center gap-2 hover:bg-gray-300"
-                  >
-                    <Download size={18} /> Download
-                  </a>
                   <button
                     onClick={() => setSelectedPdf(null)}
                     className="px-6 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition shadow-lg"
