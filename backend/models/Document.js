@@ -1,5 +1,17 @@
 import mongoose from "mongoose";
 
+const fileSchema = new mongoose.Schema({
+  fileUrl: { type: String, required: true },
+  cloudinaryId: { type: String, required: true },
+  fileType: { type: String }, // image | video | pdf | document
+  resourceType: { type: String }, // image | video | raw
+  format: { type: String },
+  originalName: { type: String },
+  size: { type: Number },
+  caption: { type: String, default: "" },
+  uploadedAt: { type: Date, default: Date.now }
+});
+
 const documentSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -11,12 +23,15 @@ const documentSchema = new mongoose.Schema(
     description: { type: String },
     issued_by: { type: String },
     date_issued: { type: Date },
-    file_url: { type: String, required: true },
-    public_id: { type: String },
+    files: [fileSchema],
     status: {
       type: String,
       enum: ["draft", "published", "archived"],
       default: "draft",
+    },
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   { timestamps: true }

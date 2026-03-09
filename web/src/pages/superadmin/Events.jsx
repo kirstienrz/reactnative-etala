@@ -266,7 +266,8 @@ export default function SuperAdminCalendarUI() {
           userId: event.userId || event.extendedProps?.userId,
           programId: event.programId || event.extendedProps?.programId,
           projectId: event.projectId || event.extendedProps?.projectId,
-          attachments: formattedAttachments
+          attachments: formattedAttachments,
+          source: event.extendedProps?.source || 'calendar'
         },
         backgroundColor: color,
         borderColor: color,
@@ -386,13 +387,15 @@ export default function SuperAdminCalendarUI() {
 
     // Get ID from either string parameter or event object
     const eventId = typeof eventObj === 'object' ? (eventObj.id || eventObj._id) : eventObj;
-    const isProgramEvent = typeof eventObj === 'object' && (eventObj.type === 'program_event' || eventObj.extendedProps?.type === 'program_event');
+    // Check source directly - either from top level (table spread) or extendedProps (FullCalendar object)
+    const source = typeof eventObj === 'object' ? (eventObj.source || eventObj.extendedProps?.source) : 'calendar';
+    const isProgramSource = source === 'program';
 
-    console.log("Deleting event:", { eventId, isProgramEvent, eventObj });
+    console.log("Deleting event:", { eventId, source, isProgramSource, eventObj });
 
     try {
       let response;
-      if (isProgramEvent) {
+      if (isProgramSource) {
         // Look for IDs in multiple possible locations
         const programId = eventObj.programId || eventObj.extendedProps?.programId;
         const projectId = eventObj.projectId || eventObj.extendedProps?.projectId;

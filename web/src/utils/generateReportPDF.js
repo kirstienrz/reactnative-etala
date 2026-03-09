@@ -32,6 +32,8 @@ export const generateReportPDF = async ({ formData, ticketNumber, isAnonymous })
     head: [["Report Configuration", "Status"]],
     body: [
       ["Reporting Mode", isAnonymous ? "Anonymous / Confidential" : "Identified"],
+      ["TUP Affiliation", formData.tupRole || "N/A"],
+      ["Department", formData.reporterDepartment || "N/A"],
       ["Submission Date", new Date().toLocaleDateString()],
       ["Case Category", formData.category || "General Incident"],
     ],

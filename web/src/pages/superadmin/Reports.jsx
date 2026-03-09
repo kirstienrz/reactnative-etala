@@ -1917,6 +1917,12 @@ const AdminReports = () => {
                               <p className="text-yellow-900">{selectedReport.anonymousGender}</p>
                             </div>
                           )}
+                          {selectedReport.tupRole && (
+                            <div>
+                              <label className="text-yellow-700">TUP Affiliation</label>
+                              <p className="text-yellow-900">{selectedReport.tupRole}</p>
+                            </div>
+                          )}
                           <div className="mb-4">
                             <label className="block text-sm text-gray-600 mb-1">Department</label>
                             <p className="text-gray-900 font-medium">
@@ -1955,6 +1961,7 @@ const AdminReports = () => {
                     </h3>
 
                     <div className="grid grid-cols-2 gap-4">
+                      <InfoItem label="TUP Affiliation" value={selectedReport.tupRole} />
                       <InfoItem label="Last Name" value={selectedReport.lastName} />
                       <InfoItem label="First Name" value={selectedReport.firstName} />
                       <InfoItem label="Middle Name" value={selectedReport.middleName} />

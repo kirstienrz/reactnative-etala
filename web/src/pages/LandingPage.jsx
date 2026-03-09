@@ -149,14 +149,23 @@ const LandingPage = () => {
   const isDocument = (url) => {
     if (!url) return false;
     const lowerUrl = url.toLowerCase();
-    return lowerUrl.endsWith(".pdf") || lowerUrl.endsWith(".doc") || lowerUrl.endsWith(".docx");
+    return lowerUrl.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|csv|txt)$/) || lowerUrl.includes('raw/upload');
   };
 
   const getEmbedUrl = (url) => {
     if (!url) return "";
-    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    const lowerUrl = url.toLowerCase();
+
+    // Microsoft Office Formats (Excel, PowerPoint, Word)
+    if (lowerUrl.match(/\.(xls|xlsx|ppt|pptx|doc|docx)$/)) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     }
+
+    // All documents (PDF, CSV, TXT)
+    if (lowerUrl.match(/\.(pdf|csv|txt)$/) || url.includes('/raw/upload/')) {
+      return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+
     return `${url}#toolbar=0`;
   };
 
