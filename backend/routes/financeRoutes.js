@@ -4,6 +4,8 @@ const financeController = require("../controllers/financeController");
 
 // Budget
 router.post("/budget", financeController.createBudget);
+router.put("/budget/:id", financeController.updateBudget);
+router.delete("/budget/:id", financeController.deleteBudget);
 
 // Expense
 router.post("/expense", financeController.createExpense);

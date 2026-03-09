@@ -30,4 +30,16 @@ export const deleteExpense = async (expenseId) => {
 export const updateExpense = async (expenseId, data) => {
   const res = await API.put(`/finance/expense/${expenseId}`, data);
   return res.data;
-}
+};
+
+// 💼 UPDATE budget
+export const updateBudget = async (budgetId, data) => {
+  const res = await API.put(`/finance/budget/${budgetId}`, data);
+  return res.data;
+};
+
+// 💼 DELETE budget
+export const deleteBudget = async (budgetId) => {
+  const res = await API.delete(`/finance/budget/${budgetId}`);
+  return res.data;
+};

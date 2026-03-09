@@ -4,7 +4,9 @@ import {
     createBudget,
     createExpense,
     deleteExpense,
-    updateExpense
+    updateExpense,
+    updateBudget,
+    deleteBudget
 } from "../../api/finance";
 import {
     Loader2,
@@ -80,6 +82,9 @@ const Finance = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
 
+    const [showEditBudgetModal, setShowEditBudgetModal] = useState(false);
+    const [editingBudget, setEditingBudget] = useState(null);
+
     const handleEditExpense = (expense) => {
     console.log("Editing expense:", expense); // Debug log
     setEditingExpense(expense);
@@ -132,6 +137,65 @@ const Finance = () => {
         setError(err.response?.data?.message || err.message || "Failed to update expense");
     }
 };
+
+const handleEditBudget = (category, data) => {
+    setEditingBudget({
+        id: data.budgetId,
+        category: category,
+        amount: data.budget
+    });
+    setBudgetCategory(category);
+    setBudgetAmount(data.budget.toString());
+    setShowEditBudgetModal(true);
+};
+
+const handleUpdateBudget = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!budgetCategory || !budgetAmount) {
+        setError("Category and amount are required");
+        return;
+    }
+
+    try {
+        await updateBudget(editingBudget.id, {
+            category: budgetCategory,
+            amount: Number(budgetAmount)
+        });
+
+        setSuccess("Budget updated successfully");
+        setShowEditBudgetModal(false);
+        setEditingBudget(null);
+        setBudgetCategory("");
+        setBudgetAmount("");
+        fetchSummary();
+    } catch (err) {
+        setError(err.response?.data?.message || err.message || "Failed to update budget");
+    }
+};
+
+const handleDeleteBudget = async (budgetId) => {
+    if (!budgetId) {
+        setError("Cannot delete budget: Missing budget ID");
+        return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this entire budget and its categories? This will NOT delete the expenses but they will no longer have a budget assigned.')) {
+        try {
+            setLoading(true);
+            await deleteBudget(budgetId);
+            setSuccess("Budget deleted successfully");
+            await fetchSummary();
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to delete budget");
+        } finally {
+            setLoading(false);
+        }
+    }
+};
+
     useEffect(() => {
         fetchSummary();
     }, [month]);
@@ -474,6 +538,28 @@ const Finance = () => {
                                                                     <p className={`font-bold ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
                                                                         ₱{data.remaining.toLocaleString()}
                                                                     </p>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 border-l pl-4 ml-2">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleEditBudget(category, data);
+                                                                        }}
+                                                                        className="p-2 hover:bg-white rounded-lg transition"
+                                                                        title="Edit Budget"
+                                                                    >
+                                                                        <Edit2 className="h-4 w-4 text-gray-600" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteBudget(data.budgetId);
+                                                                        }}
+                                                                        className="p-2 hover:bg-red-50 rounded-lg transition"
+                                                                        title="Delete Budget"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 text-red-600" />
+                                                                    </button>
                                                                 </div>
                                                                 <div className="w-6 h-6 flex items-center justify-center">
                                                                     {isExpanded ? (
@@ -932,6 +1018,82 @@ const Finance = () => {
                                         className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Add Expense
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Budget Modal */}
+            {showEditBudgetModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold">Edit Budget</h3>
+                            <button
+                                onClick={() => {
+                                    setShowEditBudgetModal(false);
+                                    setEditingBudget(null);
+                                    setBudgetCategory("");
+                                    setBudgetAmount("");
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-lg text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdateBudget} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Category Name</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g., Event 1, Program 1"
+                                    value={budgetCategory}
+                                    onChange={(e) => setBudgetCategory(e.target.value)}
+                                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Budget Amount</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={budgetAmount}
+                                        onChange={(e) => setBudgetAmount(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                        min="0"
+                                        step="0.01"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t">
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowEditBudgetModal(false);
+                                            setEditingBudget(null);
+                                            setBudgetCategory("");
+                                            setBudgetAmount("");
+                                        }}
+                                        className="flex-1 py-3 border rounded-lg hover:bg-gray-50 transition font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                                    >
+                                        Update Budget
                                     </button>
                                 </div>
                             </div>

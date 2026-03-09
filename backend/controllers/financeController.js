@@ -118,6 +118,7 @@ exports.getSummary = async (req, res) => {
 
       if (r.type === "budget") {
         summary[r.category].budget += r.amount;
+        summary[r.category].budgetId = r._id; // Include budgetId for editing/deletion
       } else if (r.type === "expense") {
         summary[r.category].spent += r.amount;
         summary[r.category].expenses.push({
@@ -312,3 +313,69 @@ exports.updateExpense = async (req, res) => {
     });
   }
 };
+
+// =======================
+// UPDATE BUDGET
+// =======================
+exports.updateBudget = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, category } = req.body;
+
+    const budget = await Finance.findOne({ _id: id, type: "budget" });
+
+    if (!budget) {
+      return res.status(404).json({
+        success: false,
+        message: "Budget not found"
+      });
+    }
+
+    // Update the budget
+    const updatedBudget = await Finance.findByIdAndUpdate(
+      id,
+      {
+        amount: amount !== undefined ? amount : budget.amount,
+        category: category || budget.category
+      },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: "Budget updated successfully",
+      data: updatedBudget
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// =======================
+// DELETE BUDGET
+// =======================
+exports.deleteBudget = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const budget = await Finance.findOne({ _id: id, type: "budget" });
+
+    if (!budget) {
+      return res.status(404).json({
+        success: false,
+        message: "Budget not found"
+      });
+    }
+
+    // Optional: Warn if there are expenses? Or just delete?
+    // The user said "delete yung mismong budget", so we delete it.
+    await Finance.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Budget deleted successfully"
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
