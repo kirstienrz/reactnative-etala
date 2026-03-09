@@ -45,7 +45,8 @@ export const getArchivedSexDatasets = async () => {
   return res.data;
 };
 
-// You might need to update your backend routes to handle these endpoints:
-// PUT /api/sex-data/:id/archive - Archive a dataset
-// PUT /api/sex-data/:id/restore - Restore a dataset
-// GET /api/sex-data/archived - Get archived datasets
+// UPDATE DATASET
+export const updateSexDataset = async (id, data) => {
+  const res = await API.put(`/datasets/${id}`, data);
+  return res.data;
+};

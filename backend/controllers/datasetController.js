@@ -110,6 +110,32 @@ exports.deleteDataset = async (req, res) => {
     }
 };
 
+// Update a dataset (Name and/or Rows)
+exports.updateDataset = async (req, res) => {
+    try {
+        const { name, rows } = req.body;
+        const dataset = await Dataset.findById(req.params.id);
+
+        if (!dataset) {
+            return res.status(404).json({ error: 'Dataset not found' });
+        }
+
+        if (name) dataset.name = name;
+        if (rows) dataset.rows = rows;
+
+        await dataset.save();
+
+        res.status(200).json({
+            message: 'Dataset updated successfully',
+            dataset: dataset
+        });
+    } catch (error) {
+        console.error('Error updating dataset:', error);
+        res.status(500).json({ error: 'Failed to update dataset' });
+    }
+};
+
+
 // UPLOAD EXCEL - COMPLETE FUNCTION
 exports.uploadExcel = async (req, res) => {
     try {

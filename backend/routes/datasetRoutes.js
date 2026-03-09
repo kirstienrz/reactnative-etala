@@ -35,6 +35,9 @@ router.put('/:id/archive', datasetController.archiveDataset);
 // Restore a dataset
 router.put('/:id/restore', datasetController.restoreDataset);
 
+// Update a dataset
+router.put('/:id', datasetController.updateDataset);
+
 // Delete a dataset
 router.delete('/:id', datasetController.deleteDataset);
 

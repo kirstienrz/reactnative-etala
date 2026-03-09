@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-    Upload, Trash2, X, RefreshCw, BarChart2, Archive,      // Added for archive icon
-    RotateCcw,    // Added for restore iconDownload, Filter, Folder, FolderArchive } from "lucide-react";
-    Download, Filter, Folder, FolderArchive
+    Upload, Trash2, X, RefreshCw, BarChart2, Archive,
+    RotateCcw, Download, Filter, Folder, FolderArchive, Edit2, Check
 } from "lucide-react";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import {
@@ -25,7 +24,8 @@ import {
     deleteSexDataset,
     archiveSexDataset,
     restoreSexDataset,
-    getArchivedSexDatasets
+    getArchivedSexDatasets,
+    updateSexDataset
 } from "../../api/sexData";
 
 // Register ChartJS components
@@ -57,6 +57,10 @@ export default function SexDataAdmin() {
     const [showReportOptions, setShowReportOptions] = useState(false);
     const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
     const [isDragging, setIsDragging] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editingRow, setEditingRow] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
     const chartRef = useRef(null);
 
     const handleDragEnter = (e) => {
@@ -209,6 +213,40 @@ export default function SexDataAdmin() {
         } catch (err) {
             console.error(err);
             alert("Failed to delete dataset");
+        }
+    };
+
+    const handleUpdateName = async () => {
+        if (!editName.trim()) return alert("Name cannot be empty");
+        try {
+            setIsSaving(true);
+            await updateSexDataset(active._id, { name: editName });
+            setActive({ ...active, name: editName });
+            setIsEditing(false);
+            loadDatasets();
+            alert("Dataset renamed successfully!");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to rename dataset");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleUpdateRow = async (index) => {
+        try {
+            setIsSaving(true);
+            const updatedRows = [...active.rows];
+            updatedRows[index] = editingRow;
+            await updateSexDataset(active._id, { rows: updatedRows });
+            setActive({ ...active, rows: updatedRows });
+            setEditingRow(null);
+            alert("Row updated successfully!");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to update row");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -572,12 +610,46 @@ export default function SexDataAdmin() {
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h2 className="text-xl font-bold text-gray-800">{active.name}</h2>
+                                    <button
+                                        onClick={() => {
+                                            setEditName(active.name);
+                                            setIsEditing(true);
+                                        }}
+                                        className="p-1 hover:bg-gray-100 rounded-full text-blue-600 transition"
+                                        title="Rename dataset"
+                                    >
+                                        <Edit2 size={16} />
+                                    </button>
                                     {active.isArchived && (
                                         <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
                                             Archived
                                         </span>
                                     )}
                                 </div>
+                                {isEditing && (
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            className="px-2 py-1 border rounded text-sm focus:ring-1 focus:ring-blue-500"
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={handleUpdateName}
+                                            disabled={isSaving}
+                                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                        >
+                                            <Check size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => setIsEditing(false)}
+                                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                )}
                                 <p className="text-gray-600 text-sm">
                                     Showing {getFilteredRows().length} of {active.rows?.length || 0} records
                                 </p>
@@ -703,18 +775,62 @@ export default function SexDataAdmin() {
                                                 {h}
                                             </th>
                                         ))}
+                                        <th className="px-3 py-2 text-left text-sm font-medium text-gray-700 border">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {getFilteredRows().slice(0, 100).map((row, i) => (
-                                        <tr key={i} className="border-b hover:bg-gray-50">
-                                            {active.headers.map((h) => (
-                                                <td key={`${i}-${h}`} className="px-3 py-2 text-sm text-gray-600 border">
-                                                    {row[h]}
+                                    {getFilteredRows().slice(0, 100).map((row, i) => {
+                                        const originalIndex = active.rows.findIndex(r => r === row);
+                                        const isThisRowEditing = editingRow && editingRow._index === originalIndex;
+
+                                        return (
+                                            <tr key={i} className="border-b hover:bg-gray-50">
+                                                {active.headers.map((h) => (
+                                                    <td key={`${i}-${h}`} className="px-3 py-2 text-sm text-gray-600 border">
+                                                        {isThisRowEditing ? (
+                                                            <input
+                                                                type="text"
+                                                                value={editingRow[h] || ""}
+                                                                onChange={(e) => setEditingRow({ ...editingRow, [h]: e.target.value })}
+                                                                className="w-full px-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            row[h]
+                                                        )}
+                                                    </td>
+                                                ))}
+                                                <td className="px-3 py-2 text-sm text-gray-600 border">
+                                                    {isThisRowEditing ? (
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => handleUpdateRow(originalIndex)}
+                                                                disabled={isSaving}
+                                                                className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                                                                title="Save"
+                                                            >
+                                                                <Check size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingRow(null)}
+                                                                className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                                                title="Cancel"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setEditingRow({ ...row, _index: originalIndex })}
+                                                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                                                            title="Edit Row"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                    )}
                                                 </td>
-                                            ))}
-                                        </tr>
-                                    ))}
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                             {getFilteredRows().length > 100 && (
