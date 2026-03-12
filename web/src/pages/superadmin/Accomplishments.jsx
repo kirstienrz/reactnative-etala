@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import {
   getAccomplishments,
   getArchivedAccomplishments,
-  uploadAccomplishment,
+  createAccomplishment,
+  uploadFiles,
   archiveAccomplishment,
   restoreAccomplishment,
   deleteAccomplishment,
+  deleteFile as deleteSingleFile,
 } from "../../api/accomplishments";
 import {
   FileText,
@@ -23,7 +25,14 @@ import {
   Minimize2,
   Trash2,
   Upload,
-  Plus
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Image as ImageIcon,
+  FileVideo,
+  File,
+  Filter
 } from "lucide-react";
 
 const Accomplishments = () => {
@@ -31,46 +40,28 @@ const Accomplishments = () => {
   const [viewArchived, setViewArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [archiving, setArchiving] = useState({});
-  const [restoring, setRestoring] = useState({});
-  const [deleting, setDeleting] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Modals
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showUploadMoreModal, setShowUploadMoreModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  // Creation States
   const [title, setTitle] = useState("");
-  const [year, setYear] = useState("");
-  const [file, setFile] = useState(null);
-  const [selectedPdf, setSelectedPdf] = useState(null);
-  const [selectedPdfName, setSelectedPdfName] = useState("");
-  const [selectedPdfType, setSelectedPdfType] = useState("pdf");
+  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [description, setDescription] = useState("");
+  const [filesToUpload, setFilesToUpload] = useState([]);
+
+  // Viewer State
+  const [showViewer, setShowViewer] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewFiles, setPreviewFiles] = useState([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  const handleDragEnter = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileChange({ target: { files: e.dataTransfer.files } });
-    }
-  };
 
   useEffect(() => {
     fetchReports();
@@ -82,7 +73,7 @@ const Accomplishments = () => {
       const data = viewArchived
         ? await getArchivedAccomplishments()
         : await getAccomplishments();
-      setReports(data);
+      setReports(data || []);
     } catch (err) {
       setError("Failed to load accomplishment reports");
     } finally {
@@ -90,596 +81,466 @@ const Accomplishments = () => {
     }
   };
 
-  // Validation function for title
-  const validateTitle = (titleValue) => {
-    if (!titleValue.trim()) {
-      return "Report title is required";
-    }
-
-    if (titleValue.trim().length < 3) {
-      return "Title must be at least 3 characters long";
-    }
-
-    if (titleValue.trim().length > 100) {
-      return "Title must be less than 100 characters";
-    }
-
-    // Check if title is purely numeric
-    if (/^\d+$/.test(titleValue.trim())) {
-      return "Title cannot be purely numeric";
-    }
-
-    // Optional: Check if title contains at least one letter
-    if (!/[a-zA-Z]/.test(titleValue)) {
-      return "Title must contain at least one letter";
-    }
-
-    return ""; // No error
-  };
-
-  // Validation function for year
-  const validateYear = (yearValue) => {
-    const currentYear = new Date().getFullYear();
-    const minYear = 1900; // Adjust this based on your requirements
-
-    if (!yearValue) {
-      return "Year is required";
-    }
-
-    const yearNum = parseInt(yearValue);
-
-    if (isNaN(yearNum)) {
-      return "Year must be a valid number";
-    }
-
-    if (yearNum < minYear || yearNum > currentYear) {
-      return `Year must be between ${minYear} and ${currentYear}`;
-    }
-
-    if (yearValue.length !== 4) {
-      return "Year must be 4 digits (e.g. 2024)";
-    }
-
-    return ""; // No error
-  };
-
-  // Validation function for file type
-  const validateFile = (file) => {
-    if (!file) {
-      return "File is required";
-    }
-
-    // Check file extension
-    const fileName = file.name.toLowerCase();
-    const validExtensions = ['.pdf', '.mp4', '.webm', '.png', '.jpg', '.jpeg'];
-    const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
-
-    if (!validExtensions.includes(fileExtension)) {
-      return "Only PDF, MP4, WebM, and Image files are allowed";
-    }
-
-    // Check MIME type as well for extra security
-    const validMimeTypes = ['application/pdf', 'video/mp4', 'video/webm', 'image/png', 'image/jpeg', 'image/jpg'];
-    if (!validMimeTypes.includes(file.type)) {
-      return "File must be a valid document or media file";
-    }
-
-    // Optional: Check file size (e.g., max 50MB)
-    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
-    if (file.size > maxSize) {
-      return "File size must be less than 50MB";
-    }
-
-    return ""; // No error
-  };
-
-  const handleUpload = async (e) => {
+  const handleCreateAndUpload = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!title || !year || !file) {
-      setError("All fields are required");
-      return;
-    }
-
+    if (!title || !year) return;
     setUploading(true);
-
-    const formData = new FormData();
-    formData.append("title", title.trim());
-    formData.append("year", year);
-    formData.append("file", file);
-
     try {
-      await uploadAccomplishment(formData);
-      setSuccess("Accomplishment report uploaded successfully");
-      setTitle("");
-      setYear("");
-      setFile(null);
+      // 1. Create the accomplishment entry
+      const createRes = await createAccomplishment({
+        title: title.trim(),
+        year: parseInt(year),
+        description
+      });
+
+      const newId = createRes.data._id;
+
+      // 2. If files selected, upload them
+      if (filesToUpload.length > 0) {
+        await uploadFiles(newId, filesToUpload);
+      }
+
+      setSuccess("Accomplishment report created successfully");
       setShowAddModal(false);
+      resetForm();
       fetchReports();
     } catch (err) {
-      setError("Failed to upload accomplishment report");
+      setError("Failed to create accomplishment");
     } finally {
       setUploading(false);
     }
   };
 
+  const handleUploadMore = async () => {
+    if (!selectedReport || filesToUpload.length === 0) return;
+    setUploading(true);
+    try {
+      await uploadFiles(selectedReport._id, filesToUpload);
+      setSuccess("Files added successfully");
+      setShowUploadMoreModal(false);
+      resetForm();
+      fetchReports();
+    } catch (err) {
+      setError("Failed to upload files");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setYear(new Date().getFullYear().toString());
+    setDescription("");
+    setFilesToUpload([]);
+    setSelectedReport(null);
+  };
+
   const handleArchive = async (id) => {
     if (!window.confirm("Archive this accomplishment report?")) return;
-
-    setArchiving(prev => ({ ...prev, [id]: true }));
-
     try {
       await archiveAccomplishment(id);
       fetchReports();
     } catch (err) {
-      setError("Failed to archive accomplishment report");
-    } finally {
-      setArchiving(prev => ({ ...prev, [id]: false }));
+      setError("Failed to archive");
     }
   };
 
   const handleRestore = async (id) => {
     if (!window.confirm("Restore this accomplishment report?")) return;
-
-    setRestoring(prev => ({ ...prev, [id]: true }));
-
     try {
       await restoreAccomplishment(id);
       fetchReports();
     } catch (err) {
-      setError("Failed to restore accomplishment report");
-    } finally {
-      setRestoring(prev => ({ ...prev, [id]: false }));
+      setError("Failed to restore");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to permanently delete this accomplishment? This action cannot be undone.")) return;
-
-    setDeleting(prev => ({ ...prev, [id]: true }));
-
+    if (!window.confirm("Are you sure you want to permanently delete this accomplishment? This cannot be undone.")) return;
     try {
       await deleteAccomplishment(id);
+      setSuccess("Deleted successfully");
       fetchReports();
-      setSuccess("Accomplishment deleted permanently");
     } catch (err) {
-      setError("Failed to delete accomplishment report");
-    } finally {
-      setDeleting(prev => ({ ...prev, [id]: false }));
+      setError("Failed to delete");
     }
   };
 
-  // Handle title input change with validation
-  const handleTitleChange = (e) => {
-    const value = e.target.value;
-    setTitle(value);
-
-    // Clear any previous title errors when user starts typing
-    if (error && (error.includes("Title") || error.includes("title"))) {
-      setError("");
+  // Media Helpers
+  const getFileExtension = (file) => {
+    const fileName = file.originalName || file.name || '';
+    const fileUrl = file.fileUrl || file.url || '';
+    if (fileName.includes('.')) return fileName.toLowerCase().split('.').pop();
+    if (fileUrl.includes('.')) {
+      const urlParts = fileUrl.split('.');
+      return urlParts[urlParts.length - 1].split('?')[0].toLowerCase();
     }
+    return '';
   };
 
-  // Handle year input change with validation
-  const handleYearChange = (e) => {
-    const value = e.target.value;
-    setYear(value);
-
-    // Clear any previous year errors when user starts typing
-    if (value && value.length === 4) {
-      const errorMsg = validateYear(value);
-      if (errorMsg) {
-        setError("");
-      }
-    }
+  const isImageFile = (file) => {
+    const ext = getFileExtension(file);
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (file.fileType === 'image');
   };
 
-  // Handle file selection with validation
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-
-    if (!selectedFile) {
-      setFile(null);
-      return;
-    }
-
-    // Validate file immediately when selected
-    const fileError = validateFile(selectedFile);
-    if (fileError) {
-      setError(fileError);
-      setFile(null);
-      // Clear the file input if possible
-      if (e.target.value) {
-        e.target.value = "";
-      }
-      return;
-    }
-
-    // Clear any previous errors if file is valid
-    if (error && (error.includes("file") || error.includes("File"))) {
-      setError("");
-    }
-
-    setFile(selectedFile);
+  const isVideoFile = (file) => {
+    const ext = getFileExtension(file);
+    return ['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(ext) || (file.fileType === 'video');
   };
 
-  // Robust PDF Embed URL generator
-  const getEmbedUrl = (url) => {
+  const isPdfFile = (file) => {
+    const ext = getFileExtension(file);
+    return ext === 'pdf' || (file.fileType === 'pdf');
+  };
+
+  const getFileIcon = (file) => {
+    if (isPdfFile(file)) return <FileText size={18} className="text-red-500" />;
+    if (isVideoFile(file)) return <FileVideo size={18} className="text-red-500" />;
+    if (isImageFile(file)) return <ImageIcon size={18} className="text-blue-500" />;
+    return <File size={18} className="text-gray-400" />;
+  };
+
+  const getEmbedUrl = (file) => {
+    const url = file.fileUrl || file.url;
     if (!url) return "";
-    // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
-    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.match(/\.(xls|xlsx|ppt|pptx|doc|docx)$/)) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     }
-    // For 'image' resource type PDFs (new uploads), standard URL works
-    return `${url}#toolbar=0`;
+    if (lowerUrl.match(/\.(pdf|csv|txt)$/) || url.includes('/raw/upload/')) {
+      return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return url;
   };
 
-  if (loading && reports.length === 0) {
-    return (
-      <div className="max-w-7xl mx-auto p-12 flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
-        <p className="text-gray-500 font-medium">Loading reports...</p>
-      </div>
-    );
-  }
+  const handleFileAction = (file, allFiles = []) => {
+    setPreviewFiles(allFiles);
+    const index = allFiles.findIndex(f => (f._id || f.id) === (file._id || file.id));
+    setCurrentPreviewIndex(index >= 0 ? index : 0);
+    setSelectedFile(file);
+    setShowViewer(true);
+  };
 
-  const activeList = reports;
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return '0B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+  };
+
+  const filteredReports = reports.filter(r =>
+    r.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.year?.toString().includes(searchQuery)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Accomplishment Reports
-          </h1>
-          <p className="text-gray-600">
-            Manage official documentation of achievements and milestones
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Accomplishment Reports</h1>
+          <p className="text-gray-600">Official documentation of achievements and milestones</p>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b">
           <button
             onClick={() => setViewArchived(false)}
-            className={`pb-3 px-4 font-medium transition ${!viewArchived
-              ? "border-b-2 border-blue-600 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-              }`}
+            className={`pb-3 px-4 font-medium transition ${!viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"}`}
           >
             Active Reports
           </button>
           <button
             onClick={() => setViewArchived(true)}
-            className={`pb-3 px-4 font-medium transition ${viewArchived
-              ? "border-b-2 border-blue-600 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-              }`}
+            className={`pb-3 px-4 font-medium transition ${viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"}`}
           >
             Archived
           </button>
         </div>
 
-        {/* Filters Bar */}
-        <div className="bg-white border rounded-lg p-4 mb-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div className="flex-1"></div>
-            {/* Right side */}
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              {!viewArchived && (
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition ml-auto relative z-30"
-                >
-                  <Plus size={18} />
-                  Add Report
-                </button>
-              )}
-            </div>
+        {/* Action Bar */}
+        <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search reports..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all"
+            />
           </div>
-        </div>
-
-        {/* Results Count */}
-        <div className="mb-4 text-sm text-gray-600">
-          Showing {activeList.length} {!viewArchived ? "active" : "archived"} reports
+          {!viewArchived && (
+            <button
+              onClick={() => { resetForm(); setShowAddModal(true); }}
+              className="w-full md:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              <Plus size={18} /> Add New Report
+            </button>
+          )}
         </div>
 
         {/* Messaging */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-            <X size={18} className="cursor-pointer" onClick={() => setError("")} />
-            <span className="font-medium">{error}</span>
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-100 text-green-600 rounded-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-            <CheckCircle2 size={18} />
-            <span className="font-medium">{success}</span>
+        {(error || success) && (
+          <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 font-semibold animate-in fade-in slide-in-from-top-2 ${error ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+            {error ? <X size={20} /> : <CheckCircle2 size={20} />}
+            <span className="flex-1">{error || success}</span>
+            <X size={18} className="cursor-pointer opacity-50 hover:opacity-100" onClick={() => { setError(""); setSuccess(""); }} />
           </div>
         )}
 
-        {/* Upload Form Modal - Only in Active View */}
-        {showAddModal && !viewArchived && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-              <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
-                  Upload New Report
-                </h3>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto">
-                <form onSubmit={handleUpload} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 ml-1">Title</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Annual Report 2024"
-                      value={title}
-                      onChange={handleTitleChange}
-                      className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all outline-none text-gray-900 font-medium"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 ml-1">Year</label>
-                    <input
-                      type="number"
-                      placeholder="2024"
-                      value={year}
-                      onChange={handleYearChange}
-                      className="w-full px-4 py-3 bg-gray-50 border border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all outline-none text-gray-900 font-medium"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700 ml-1">File (PDF, Video, or Image)</label>
-                    <div
-                      onDragEnter={handleDragEnter}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors ${isDragging
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                        }`}
-                    >
-                      <input
-                        type="file"
-                        accept=".pdf,application/pdf,video/mp4,video/webm,image/*"
-                        onChange={handleFileChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
-                      />
-                      <div className="pointer-events-none">
-                        <div className={`inline-flex p-3 rounded-full mb-2 ${isDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
-                          <Upload className={`w-5 h-5 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
-                        </div>
-                        {file ? (
-                          <p className="text-gray-800 font-bold text-sm">Selected: {file.name}</p>
-                        ) : (
-                          <>
-                            <p className="text-gray-600 font-medium text-sm">Click or drag and drop files here</p>
-                            <p className="text-gray-400 text-xs mt-1">PDF, Video, Image</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-1 ml-1 uppercase tracking-wider font-bold flex justify-between">
-                      <span>Max 50MB</span>
-                      {error && (error.includes("file") || error.includes("File")) && (
-                        <span className="text-red-500">{error}</span>
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddModal(false)}
-                      className="flex-1 px-8 py-3.5 bg-gray-100 text-gray-700 rounded-2xl font-bold hover:bg-gray-200 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={uploading}
-                      className="flex-1 px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {uploading ? (
-                        <><Loader2 className="animate-spin" size={20} /> Uploading...</>
-                      ) : (
-                        "Upload Report"
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
+        {/* Main Table */}
+        <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+          {loading ? (
+            <div className="p-20 flex flex-col items-center">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+              <p className="mt-4 text-gray-500 font-medium">Loading reports...</p>
             </div>
-          </div>
-        )}
-
-        {/* Table List */}
-        <div className="bg-white border rounded-lg shadow-sm overflow-hidden mb-8">
-          {activeList.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p>No {!viewArchived ? "active" : "archived"} reports found</p>
+          ) : filteredReports.length === 0 ? (
+            <div className="p-20 text-center text-gray-400">
+              <FileText size={48} className="mx-auto mb-4 opacity-10" />
+              <p>No reports found.</p>
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-100 text-gray-700">
-                <tr>
-                  <th className="p-3 text-left">Title</th>
-                  <th className="p-3 text-left">Academic Year</th>
-                  <th className="p-3 text-center">File</th>
-                  <th className="p-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeList.map((report) => (
-                  <tr key={report._id} className="border-t hover:bg-gray-50">
-                    <td className="p-3 font-medium">{report.title}</td>
-                    <td className="p-3">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                        {report.year}
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedPdf(report.fileUrl);
-                          setSelectedPdfName(report.title);
-                          setSelectedPdfType(report.type || (report.fileUrl.toLowerCase().endsWith('.mp4') ? 'video' : report.fileUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? 'image' : 'pdf'));
-                        }}
-                        className="text-blue-600 hover:text-blue-800 flex justify-center w-full items-center gap-2"
-                        title="View Document"
-                      >
-                        <Eye size={18} />
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-2 justify-center">
-                        {!viewArchived ? (
-                          <>
-                            <button
-                              onClick={() => handleArchive(report._id)}
-                              disabled={archiving[report._id]}
-                              className="p-2 text-yellow-600 hover:bg-yellow-50 rounded disabled:opacity-50"
-                              title="Archive"
-                            >
-                              {archiving[report._id] ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => handleRestore(report._id)}
-                            disabled={restoring[report._id]}
-                            className="px-3 py-1 text-green-600 hover:bg-green-50 rounded border border-green-200 disabled:opacity-50"
-                            title="Restore"
-                          >
-                            {restoring[report._id] ? <Loader2 size={16} className="animate-spin inline mr-1" /> : null} Restore
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(report._id);
-                          }}
-                          disabled={deleting[report._id]}
-                          className="p-1.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all disabled:opacity-50"
-                          title="Delete Permanently"
-                        >
-                          {deleting[report._id] ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                        </button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-black tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4">Title</th>
+                    <th className="px-6 py-4">Year</th>
+                    <th className="px-6 py-4">Files</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredReports.map(report => {
+                    const files = report.files || [];
+                    return (
+                      <tr key={report._id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-gray-900">{report.title}</p>
+                          {report.description && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{report.description}</p>}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-black">{report.year}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {files.length > 0 ? (
+                            <div className="flex items-center -space-x-2">
+                              {files.slice(0, 3).map((f, i) => (
+                                <div
+                                  key={i}
+                                  onClick={() => handleFileAction(f, files)}
+                                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 shadow-sm overflow-hidden cursor-pointer hover:z-10 hover:scale-110 transition-all flex items-center justify-center"
+                                >
+                                  {isImageFile(f) ? (
+                                    <img src={f.fileUrl} alt="" className="w-full h-full object-cover" />
+                                  ) : getFileIcon(f)}
+                                </div>
+                              ))}
+                              {files.length > 3 && (
+                                <div className="w-8 h-8 rounded-full border-2 border-white bg-blue-600 text-white text-[10px] font-black flex items-center justify-center shadow-sm">
+                                  +{files.length - 3}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-300 text-xs italic">No files</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center items-center gap-2">
+                            {files.length > 0 && (
+                              <button
+                                onClick={() => handleFileAction(files[0], files)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                title="View Files"
+                              >
+                                <Eye size={18} />
+                              </button>
+                            )}
+                            {!viewArchived ? (
+                              <>
+                                <button
+                                  onClick={() => handleArchive(report._id)}
+                                  className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-all"
+                                  title="Archive"
+                                >
+                                  <Archive size={18} />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleRestore(report._id)}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                title="Restore"
+                              >
+                                <RefreshCcw size={18} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDelete(report._id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                              title="Delete Permanently"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Media Viewer Modal */}
-      {selectedPdf && (
-        <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} p-4 backdrop-blur-sm transition-all animate-in fade-in duration-300`}>
-          <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white rounded-[2.5rem] shadow-2xl w-full max-w-6xl h-[90vh]'} flex flex-col overflow-hidden animate-in zoom-in-95 duration-300`}>
+      {/* CREATE MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in transition-all">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95">
+            <div className="p-6 border-b flex justify-between items-center bg-white">
+              <h3 className="text-xl font-bold text-gray-900">Add Accomplishment Report</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+            </div>
+            <form onSubmit={handleCreateAndUpload} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Report Title</label>
+                <input type="text" value={title} onChange={e => setTitle(e.target.value)} required placeholder="e.g. Annual Audit 2024" className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Academic Year</label>
+                <input type="number" value={year} onChange={e => setYear(e.target.value)} required placeholder="2024" className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Summary (Optional)</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} rows="3" placeholder="Brief details about this report..." className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Upload Files</label>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition-all bg-gray-50 relative pointer">
+                  <input type="file" multiple onChange={e => setFilesToUpload(Array.from(e.target.files))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <div className="space-y-1 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                    <div className="flex text-sm text-gray-600">
+                      <span className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500">
+                        {filesToUpload.length > 0 ? `${filesToUpload.length} files selected` : "Select files for this report"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">PDF, Images, Videos, Office Docs up to 50MB</p>
+                  </div>
+                </div>
+                {filesToUpload.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    {filesToUpload.map((file, i) => (
+                      <div key={i} className="bg-gray-50 p-3 rounded-xl flex items-start gap-4 border border-gray-100">
+                        <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0">
+                          {getFileIcon(file)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between">
+                            <p className="font-bold text-gray-900 text-xs truncate pr-4">{file.name}</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newFiles = [...filesToUpload];
+                                newFiles.splice(i, 1);
+                                setFilesToUpload(newFiles);
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-lg font-bold hover:bg-gray-200 transition-all">Cancel</button>
+                <button type="submit" disabled={uploading} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                  {uploading ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+                  {uploading ? "Creating..." : "Save Report"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-            {/* Modal Header */}
-            <div className="p-4 md:px-8 md:py-6 border-b flex justify-between items-center bg-white text-gray-900 sticky top-0 z-10">
-              <div className="flex items-center gap-4 overflow-hidden">
-                <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <FileText size={24} />
+      {/* VIEWER MODAL */}
+      {showViewer && selectedFile && (
+        <div className={`fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm transition-all animate-in fade-in duration-300`}>
+          <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-2xl'} flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative`}>
+
+            <div className="p-3 sm:px-6 sm:py-4 border-b flex justify-between items-center bg-white text-gray-900 sticky top-0 z-10 flex-shrink-0">
+              <div className="flex items-center gap-3 min-w-0 pr-4">
+                <div className="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText size={20} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-lg md:text-xl font-bold truncate leading-tight">{selectedPdfName || "Accomplishment Report"}</h3>
-                  <p className="text-xs text-gray-500 font-semibold flex items-center gap-1 uppercase tracking-wider">
-                    {selectedPdfType} Document
+                  <h3 className="text-sm sm:text-lg font-bold truncate leading-tight">{selectedFile.originalName}</h3>
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider">
+                    {isImageFile(selectedFile) ? 'Image' : isVideoFile(selectedFile) ? 'Video' : 'Document'} • {formatFileSize(selectedFile.size)}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 md:gap-4">
-                <button
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="p-3 hover:bg-gray-100 rounded-2xl transition-all text-gray-500"
-                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                >
-                  {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedPdf(null);
-                    setIsFullscreen(false);
-                  }}
-                  className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-2xl transition-all"
-                >
-                  <X size={24} />
-                </button>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <a href={selectedFile.fileUrl} download={selectedFile.originalName} target="_blank" rel="noreferrer" className="p-2 hover:bg-gray-100 rounded-full transition-all text-gray-500" title="Download"><Download size={20} /></a>
+                <button onClick={() => setIsFullscreen(!isFullscreen)} className="hidden sm:flex p-2 hover:bg-gray-100 rounded-full transition-all text-gray-500">{isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}</button>
+                <button onClick={() => { setShowViewer(false); setSelectedFile(null); }} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-all"><X size={24} /></button>
               </div>
             </div>
 
-            {/* Modal Content */}
-            <div className="flex-1 bg-gray-900 flex items-center justify-center relative overflow-hidden">
-              {selectedPdfType === "video" ? (
-                <video
-                  src={selectedPdf}
-                  controls
-                  autoPlay
-                  className="w-full max-h-full"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-              ) : selectedPdfType === "image" ? (
-                <img
-                  src={selectedPdf}
-                  alt={selectedPdfName}
-                  className="w-full h-full object-contain"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-              ) : (
-                <iframe
-                  src={getEmbedUrl(selectedPdf)}
-                  className="w-full h-full border-none bg-white"
-                  title="PDF Viewer"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-              )}
-
-              {/* Corner Info Overlay */}
-              {!isFullscreen && (
-                <div className="absolute top-6 left-6 pointer-events-none select-none hidden md:block">
-                  <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-4 py-2 rounded-2xl text-[11px] uppercase tracking-widest font-black text-white shadow-2xl">
-                    Official Documentation
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {!isFullscreen && (
-              <div className="p-4 md:px-8 md:py-6 border-t bg-gray-50 flex justify-between items-center">
-                <p className="text-sm text-gray-500 font-medium">Reviewing {selectedPdfName}</p>
-                <div className="flex gap-3">
+            <div className="flex-1 bg-gray-900 flex items-center justify-center relative group min-h-0 overflow-hidden">
+              {previewFiles.length > 1 && (
+                <>
                   <button
-                    onClick={() => setSelectedPdf(null)}
-                    className="px-6 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition shadow-lg"
+                    onClick={() => {
+                      const newIndex = (currentPreviewIndex - 1 + previewFiles.length) % previewFiles.length;
+                      setCurrentPreviewIndex(newIndex);
+                      setSelectedFile(previewFiles[newIndex]);
+                    }}
+                    className="absolute left-4 z-20 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all opacity-0 group-hover:opacity-100"
                   >
-                    Close Preview
+                    <ChevronLeft size={24} />
                   </button>
-                </div>
+                  <button
+                    onClick={() => {
+                      const newIndex = (currentPreviewIndex + 1) % previewFiles.length;
+                      setCurrentPreviewIndex(newIndex);
+                      setSelectedFile(previewFiles[newIndex]);
+                    }}
+                    className="absolute right-4 z-20 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                </>
+              )}
+
+              <div className="w-full h-full flex items-center justify-center p-2 sm:p-6">
+                {isImageFile(selectedFile) ? (
+                  <img src={selectedFile.fileUrl} className="max-w-full max-h-full object-contain rounded shadow-2xl" onContextMenu={e => e.preventDefault()} />
+                ) : isVideoFile(selectedFile) ? (
+                  <video src={selectedFile.fileUrl} controls autoPlay className="max-w-full max-h-full rounded shadow-2xl" />
+                ) : (
+                  <iframe src={getEmbedUrl(selectedFile)} className="w-full h-full border-none bg-white rounded shadow-2xl" onContextMenu={e => e.preventDefault()} />
+                )}
               </div>
-            )}
+
+              {previewFiles.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest">
+                  {currentPreviewIndex + 1} / {previewFiles.length}
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       )}

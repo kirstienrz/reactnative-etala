@@ -358,8 +358,8 @@ const BudgetProgramsDashboard = () => {
           {["reports", "archived", "budgetUpload"].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === tab
-                  ? "bg-blue-600 text-white shadow-md"
-                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                 }`}
             >
               {tab === "budgetUpload" ? "Upload New" : tab === "archived" ? "Archived" : "Active Documents"}
@@ -443,8 +443,8 @@ const BudgetProgramsDashboard = () => {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isDragging
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
                       }`}
                   >
                     <input
@@ -771,8 +771,8 @@ const BudgetProgramsDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                   {currentBudgets.map(item => (
                     <div key={item._id} className={`group bg-white rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden relative ${isSelectionMode && selectedItems.includes(item._id)
-                        ? 'border-2 border-orange-500 ring-2 ring-orange-200'
-                        : 'border-2 border-gray-200 hover:border-blue-300'
+                      ? 'border-2 border-orange-500 ring-2 ring-orange-200'
+                      : 'border-2 border-gray-200 hover:border-blue-300'
                       }`}>
                       {/* Delete Button - Top Right */}
                       <button
@@ -909,8 +909,8 @@ const BudgetProgramsDashboard = () => {
                               key={page}
                               onClick={() => goToPage(page)}
                               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${currentPageList === page
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                                 }`}
                             >
                               {page}
@@ -961,9 +961,9 @@ const BudgetProgramsDashboard = () => {
                       {previewFile.year}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full font-medium ${previewFile.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                        previewFile.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                          previewFile.status === 'Draft' ? 'bg-gray-100 text-gray-700' :
-                            'bg-red-100 text-red-700'
+                      previewFile.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                        previewFile.status === 'Draft' ? 'bg-gray-100 text-gray-700' :
+                          'bg-red-100 text-red-700'
                       }`}>
                       {previewFile.status}
                     </span>
@@ -1076,8 +1076,8 @@ const BudgetProgramsDashboard = () => {
                 <button
                   onClick={() => setAlertModal(null)}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${alertModal.type === 'success'
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-red-600 text-white hover:bg-red-700'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-red-600 text-white hover:bg-red-700'
                     }`}>
                   OK
                 </button>

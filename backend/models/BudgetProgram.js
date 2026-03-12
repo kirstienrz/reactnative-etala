@@ -5,10 +5,10 @@ const BudgetProgramSchema = new mongoose.Schema({
   description: { type: String },
   year: { type: String, required: true },
   dateApproved: { type: Date },
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     enum: ['Approved', 'Pending', 'Draft', 'Rejected'],
-    default: 'Pending' 
+    default: 'Pending'
   },
   isArchived: { type: Boolean, default: false }, // NEW - archive status
   archivedAt: { type: Date }, // NEW - archive timestamp

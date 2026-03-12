@@ -824,7 +824,8 @@ const getAllCalendarEvents = async (req, res) => {
                 status: event.status,
                 description: event.description || '',
                 date: event.date,
-                _id: event._id
+                _id: event._id,
+                source: 'program'
               }
             });
           }
@@ -874,7 +875,8 @@ const getAllCalendarEvents = async (req, res) => {
           status: displayStatus || 'upcoming',
           attachments,
           programId: event.programEventRef?.programId,
-          projectId: event.programEventRef?.projectId
+          projectId: event.programEventRef?.projectId,
+          source: 'calendar'
         }
       };
     });

@@ -27,11 +27,10 @@ const reportStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "gadportal_reports",
-    allowed_formats: ["jpg", "png", "jpeg", "pdf", "mp4"],
+    allowed_formats: ["jpg", "png", "jpeg", "pdf", "mp4", "doc", "docx", "xls", "xlsx", "csv", "txt", "ppt", "pptx"],
     resource_type: (req, file) => {
       if (file.mimetype.startsWith("image/")) return "image";
       if (file.mimetype.startsWith("video/")) return "video";
-      if (file.mimetype === "application/pdf") return "raw";
       return "raw";
     }
   },
@@ -70,11 +69,18 @@ const accomplishmentStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "gadportal_accomplishments",
-    allowed_formats: ["pdf", "mp4", "webm", "png", "jpg", "jpeg"],
+    allowed_formats: ["pdf", "mp4", "webm", "png", "jpg", "jpeg", "doc", "docx", "xls", "xlsx", "csv", "txt", "ppt", "pptx"],
     resource_type: (req, file) => {
       if (file.mimetype && file.mimetype.startsWith("video/")) return "video";
       if (file.mimetype && file.mimetype.startsWith("image/")) return "image";
       return "raw";
+    },
+    public_id: (req, file) => {
+      const lastDotIndex = file.originalname.lastIndexOf('.');
+      const nameWithoutExt = lastDotIndex !== -1 ? file.originalname.substring(0, lastDotIndex) : file.originalname;
+      const sanitizedName = nameWithoutExt.replace(/\s+/g, "_");
+      const extension = path.extname(file.originalname);
+      return `accomplishment_${Date.now()}_${sanitizedName}${extension.toLowerCase() === '.pdf' ? '' : extension}`;
     }
   }
 });
@@ -92,10 +98,17 @@ const documentStorage = new CloudinaryStorage({
       if (file.mimetype === "application/pdf") return "raw";
       return "raw";
     },
-    allowed_formats: ["pdf", "doc", "docx"]
+    public_id: (req, file) => {
+      const lastDotIndex = file.originalname.lastIndexOf('.');
+      const nameWithoutExt = lastDotIndex !== -1 ? file.originalname.substring(0, lastDotIndex) : file.originalname;
+      const sanitizedName = nameWithoutExt.replace(/\s+/g, "_");
+      const extension = path.extname(file.originalname);
+      return `doc_${Date.now()}_${sanitizedName}${extension.toLowerCase() === '.pdf' ? '' : extension}`;
+    },
+    allowed_formats: ["pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "ppt", "pptx"]
   }
 });
-const uploadDocument = multer({ storage: documentStorage, limits: { fileSize: 15 * 1024 * 1024 } });
+const uploadDocument = multer({ storage: documentStorage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // =========================
 // Research thumbnails (images only)

@@ -9,16 +9,27 @@ import {
     Calendar,
     File,
     Archive,
-    Paperclip,
     Upload,
     Filter,
     Eye,
-    Trash2
+    Trash2,
+    ChevronLeft,
+    ChevronRight,
+    Maximize2,
+    Minimize2,
+    Download,
+    CheckCircle2,
+    Loader2,
+    Image as ImageIcon,
+    FileVideo
 } from "lucide-react";
 import {
     getDocuments,
     getArchivedDocuments,
-    uploadDocument,
+    createDocument,
+    updateDocument,
+    uploadDocumentFiles,
+    deleteDocumentFile,
     archiveDocument,
     restoreDocument,
     deleteDocument,
@@ -34,799 +45,517 @@ const DOCUMENT_TYPES = [
 
 const AdminDocuments = () => {
     const [documents, setDocuments] = useState([]);
-    const [archived, setArchived] = useState([]);
-    const [activeTab, setActiveTab] = useState("active");
+    const [viewArchived, setViewArchived] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedTypeFilter, setSelectedTypeFilter] = useState("all");
     const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
+    // Modals
     const [showModal, setShowModal] = useState(false);
+    const [showUploadModal, setShowUploadModal] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [fetching, setFetching] = useState(false);
-    const [selectedPdf, setSelectedPdf] = useState(null);
 
-    const [errors, setErrors] = useState({});
-    const [touched, setTouched] = useState({});
+    // Viewer State
+    const [showViewer, setShowViewer] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewFiles, setPreviewFiles] = useState([]);
+    const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    // Form Data
     const [formData, setFormData] = useState({
         title: "",
         document_type: "policy",
         issued_by: "",
         date_issued: "",
         description: "",
-        file: null,
-        file_url: "",
     });
 
+    const [filesToUpload, setFilesToUpload] = useState([]);
+    const [captions, setCaptions] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
 
-    const handleDragEnter = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
+    const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
+    const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
+    const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
     const handleDrop = (e) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            setFormData({ ...formData, file: e.dataTransfer.files[0] });
+        if (e.dataTransfer.files?.length) {
+            setFilesToUpload(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
         }
     };
 
-    // ========================= FETCH =========================
     useEffect(() => {
         fetchAll();
-    }, []);
+    }, [viewArchived]);
 
     const fetchAll = async () => {
         try {
             setFetching(true);
-            const docs = await getDocuments(); // Active lang (status !== "archived")
-            const archivedDocs = await getArchivedDocuments(); // Archived lang (status === "archived")
-
-            setDocuments(docs);
-            setArchived(archivedDocs);
+            const data = viewArchived ? await getArchivedDocuments() : await getDocuments();
+            setDocuments(data || []);
         } catch (err) {
-            console.error("Fetch error:", err);
-            alert("Failed to load documents");
+            setError("Failed to load documents");
         } finally {
             setFetching(false);
         }
     };
 
-    // ========================= FILTERING =========================
-    const activeList = (activeTab === "active" ? documents : archived).filter((d) => {
-        const matchesSearch =
-            d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            d.document_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (d.issued_by && d.issued_by.toLowerCase().includes(searchQuery.toLowerCase()));
-
-        const matchesType = selectedTypeFilter === "all" || d.document_type === selectedTypeFilter;
-
-        return matchesSearch && matchesType;
-    });
-
-    const resetFilters = () => {
-        setSearchQuery("");
-        setSelectedTypeFilter("all");
-    };
-
-    // ========================= MODAL =========================
-    const openModal = (item = null) => {
-        console.log("openModal called with:", item); // Debug
-        setErrors({});
-        setTouched({});
-
-        if (item) {
-            setEditingItem(item);
-            setFormData({
-                title: item.title,
-                document_type: item.document_type,
-                issued_by: item.issued_by || "",
-                date_issued: item.date_issued?.slice(0, 10) || "",
-                description: item.description || "",
-                file: null,
-                file_url: item.file_url || "",
-            });
-        } else {
-            setEditingItem(null);
-            setFormData({
-                title: "",
-                document_type: "policy",
-                issued_by: "",
-                date_issued: "",
-                description: "",
-                file: null,
-                file_url: "",
-            });
-        }
-        setShowModal(true);
-    };
-
-    const closeModal = () => {
-        console.log("closeModal called"); // Debug
-        setShowModal(false);
-        setEditingItem(null);
-        setErrors({});
-        setTouched({});
-    };
-
-    // ========================= ARCHIVE/RESTORE =========================
-    const handleArchive = async (id) => {
-        if (window.confirm("Are you sure you want to archive this document? It will be moved to the archived tab.")) {
-            try {
-                await archiveDocument(id);
-                await fetchAll();
-            } catch (err) {
-                console.error("Archive error:", err);
-                alert("Failed to archive document.");
+    const handleCreateOrUpdate = async (e) => {
+        e.preventDefault();
+        if (!formData.title || !formData.document_type) return;
+        setUploading(true);
+        try {
+            let res;
+            if (editingItem) {
+                res = await updateDocument(editingItem._id, formData);
+                setSuccess("Document info updated");
+            } else {
+                res = await createDocument(formData);
+                const newId = res.data._id;
+                if (filesToUpload.length > 0) {
+                    await uploadDocumentFiles(newId, filesToUpload, captions);
+                }
+                setSuccess("Document created successfully");
             }
+            setShowModal(false);
+            resetForm();
+            fetchAll();
+        } catch (err) {
+            setError("Failed to save document");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleUploadMore = async () => {
+        if (!editingItem || filesToUpload.length === 0) return;
+        setUploading(true);
+        try {
+            await uploadDocumentFiles(editingItem._id, filesToUpload, captions);
+            setSuccess("Files added successfully");
+            setShowUploadModal(false);
+            resetForm();
+            fetchAll();
+        } catch (err) {
+            setError("Failed to upload files");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const resetForm = () => {
+        setFormData({
+            title: "",
+            document_type: "policy",
+            issued_by: "",
+            date_issued: "",
+            description: "",
+        });
+        setFilesToUpload([]);
+        setCaptions([]);
+        setEditingItem(null);
+    };
+
+    const handleArchive = async (id) => {
+        if (!window.confirm("Archive this document?")) return;
+        try {
+            await archiveDocument(id);
+            fetchAll();
+        } catch (err) {
+            setError("Failed to archive");
         }
     };
 
     const handleRestore = async (id) => {
-        if (window.confirm("Are you sure you want to restore this document to active?")) {
-            try {
-                await restoreDocument(id);
-                await fetchAll();
-            } catch (err) {
-                console.error("Restore error:", err);
-                alert("Failed to restore document.");
-            }
+        if (!window.confirm("Restore this document?")) return;
+        try {
+            await restoreDocument(id);
+            fetchAll();
+        } catch (err) {
+            setError("Failed to restore");
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm("Are you sure you want to permanently delete this document? This action cannot be undone.")) {
-            try {
-                await deleteDocument(id);
-                await fetchAll();
-            } catch (err) {
-                console.error("Delete error:", err);
-                alert("Failed to delete document.");
-            }
-        }
-    };
-
-    // ========================= SUBMIT =========================
-    const handleSubmit = async () => {
-        // Validation
-        const allTouched = {
-            title: true,
-            issued_by: true,
-            date_issued: true,
-            description: true,
-            file: true,
-        };
-        setTouched(allTouched);
-
-        // Simple validation
-        if (!formData.title.trim()) {
-            alert("Title is required");
-            return;
-        }
-
-        if (!editingItem && !formData.file) {
-            alert("File is required for new documents");
-            return;
-        }
-
+        if (!window.confirm("PERMANENTLY delete this document?")) return;
         try {
-            setLoading(true);
-
-            const payload = new FormData();
-            payload.append("title", formData.title.trim());
-            payload.append("document_type", formData.document_type);
-            payload.append("issued_by", formData.issued_by.trim());
-            payload.append("date_issued", formData.date_issued);
-            payload.append("description", formData.description.trim());
-
-            if (formData.file) {
-                payload.append("file", formData.file);
-            } else if (editingItem && formData.file_url) {
-                payload.append("file_url", formData.file_url);
-            }
-
-            if (editingItem) {
-                await uploadDocument(editingItem._id, payload);
-            } else {
-                await uploadDocument(null, payload);
-            }
-
-            await fetchAll();
-            closeModal();
+            await deleteDocument(id);
+            fetchAll();
         } catch (err) {
-            console.error("Save error:", err);
-            alert("Failed to save document.");
-        } finally {
-            setLoading(false);
+            setError("Failed to delete");
         }
     };
 
-    // Robust PDF Embed URL generator
-    const getEmbedUrl = (url) => {
+    const handleDeleteFile = async (docId, fileId) => {
+        if (!window.confirm("Delete this file?")) return;
+        try {
+            await deleteDocumentFile(docId, fileId);
+            fetchAll();
+        } catch (err) {
+            setError("Failed to delete file");
+        }
+    };
+
+    // Media Helpers
+    const getFileExtension = (file) => {
+        const fileName = file.originalName || file.name || '';
+        const fileUrl = file.fileUrl || file.url || '';
+        if (fileName.includes('.')) return fileName.toLowerCase().split('.').pop();
+        if (fileUrl.includes('.')) {
+            const urlParts = fileUrl.split('.');
+            return urlParts[urlParts.length - 1].split('?')[0].toLowerCase();
+        }
+        return '';
+    };
+
+    const isImageFile = (file) => {
+        const ext = getFileExtension(file);
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (file.fileType === 'image');
+    };
+
+    const isVideoFile = (file) => {
+        const ext = getFileExtension(file);
+        return ['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(ext) || (file.fileType === 'video');
+    };
+
+    const isPdfFile = (file) => {
+        const ext = getFileExtension(file);
+        return ext === 'pdf' || (file.fileType === 'pdf');
+    };
+
+    const getFileIcon = (file) => {
+        if (isPdfFile(file)) return <FileText size={18} className="text-red-500" />;
+        if (isVideoFile(file)) return <FileVideo size={18} className="text-red-500" />;
+        if (isImageFile(file)) return <ImageIcon size={18} className="text-blue-500" />;
+        return <File size={18} className="text-gray-400" />;
+    };
+
+    const getEmbedUrl = (file) => {
+        const url = file.fileUrl || file.url;
         if (!url) return "";
-        // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
-        if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
-            return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.match(/\.(xls|xlsx|ppt|pptx|doc|docx)$/)) {
+            return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
         }
-        // General Google Docs Viewer fallback for general documents
-        if (!url.toLowerCase().endsWith('.pdf')) {
-            return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        if (lowerUrl.match(/\.(pdf|csv|txt)$/) || url.includes('/raw/upload/')) {
+            return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
         }
-        return `${url}#toolbar=0`;
+        return url;
     };
 
-    // ========================= UI =========================
+    const handleFileAction = (file, allFiles = []) => {
+        setPreviewFiles(allFiles);
+        const index = allFiles.findIndex(f => (f._id || f.id) === (file._id || file.id));
+        setCurrentPreviewIndex(index >= 0 ? index : 0);
+        setSelectedFile(file);
+        setShowViewer(true);
+    };
+
+    const formatFileSize = (bytes) => {
+        if (!bytes || bytes === 0) return '0B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+    };
+
+    const filteredDocs = documents.filter(d => {
+        const matchesSearch = d.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            d.issued_by?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesType = selectedTypeFilter === "all" || d.document_type === selectedTypeFilter;
+        return matchesSearch && matchesType;
+    });
+
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                        Policies & Issuances
-                    </h1>
-                    <p className="text-gray-600">
-                        Manage policies, circulars, resolutions, memoranda, and office orders
-                    </p>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Policies & Issuances</h1>
+                    <p className="text-gray-600">Official documentation and university policies</p>
                 </div>
 
-                {/* Tabs */}
                 <div className="flex gap-4 mb-6 border-b">
-                    <button
-                        onClick={() => setActiveTab("active")}
-                        className={`pb-3 px-4 font-medium transition ${activeTab === "active"
-                            ? "border-b-2 border-blue-600 text-blue-600"
-                            : "text-gray-600 hover:text-gray-900"
-                            }`}
-                    >
-                        Active Documents ({documents.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("archived")}
-                        className={`pb-3 px-4 font-medium transition ${activeTab === "archived"
-                            ? "border-b-2 border-blue-600 text-blue-600"
-                            : "text-gray-600 hover:text-gray-900"
-                            }`}
-                    >
-                        Archived ({archived.length})
-                    </button>
+                    <button onClick={() => setViewArchived(false)} className={`pb-3 px-4 font-medium transition ${!viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}>Active</button>
+                    <button onClick={() => setViewArchived(true)} className={`pb-3 px-4 font-medium transition ${viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}>Archived</button>
                 </div>
 
-                {/* Filters Bar */}
-                <div className="bg-white border rounded-lg p-4 mb-6 shadow-sm">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        {/* Search */}
-                        <div className="flex items-center w-full sm:w-96 border rounded-lg px-3 py-2 bg-white">
-                            <Search className="text-gray-400 mr-2" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search by title, type, or issued by..."
-                                className="flex-1 outline-none"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery("")}
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <X size={18} />
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Right side */}
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                            {/* Filter Dropdown */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
-                                    className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition ${selectedTypeFilter !== "all"
-                                        ? "bg-blue-50 text-blue-600 border-blue-200"
-                                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                                        }`}
-                                >
-                                    <Filter size={18} />
-                                    Filter by Type
-                                    {selectedTypeFilter !== "all" && (
-                                        <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
-                                            {DOCUMENT_TYPES.find(t => t.value === selectedTypeFilter)?.label}
-                                        </span>
-                                    )}
-                                </button>
-
-                                {filterDropdownOpen && (
-                                    <>
-                                        <div
-                                            className="fixed inset-0 z-10"
-                                            onClick={() => setFilterDropdownOpen(false)}
-                                        />
-                                        <div className="absolute right-0 mt-2 w-64 bg-white border rounded-lg shadow-lg z-20">
-                                            <div className="p-3 border-b">
-                                                <h3 className="font-medium text-gray-700">Filter by Document Type</h3>
-                                            </div>
-                                            <div className="p-2">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedTypeFilter("all");
-                                                        setFilterDropdownOpen(false);
-                                                    }}
-                                                    className={`w-full text-left px-3 py-2 rounded ${selectedTypeFilter === "all"
-                                                        ? "bg-blue-50 text-blue-600"
-                                                        : "hover:bg-gray-50"
-                                                        }`}
-                                                >
-                                                    All Types
-                                                </button>
-                                                {DOCUMENT_TYPES.map((type) => (
-                                                    <button
-                                                        key={type.value}
-                                                        onClick={() => {
-                                                            setSelectedTypeFilter(type.value);
-                                                            setFilterDropdownOpen(false);
-                                                        }}
-                                                        className={`w-full text-left px-3 py-2 rounded ${selectedTypeFilter === type.value
-                                                            ? "bg-blue-50 text-blue-600"
-                                                            : "hover:bg-gray-50"
-                                                            }`}
-                                                    >
-                                                        {type.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div className="border-t p-2">
-                                                <button
-                                                    onClick={resetFilters}
-                                                    className="w-full text-center px-3 py-2 text-gray-600 hover:bg-gray-50 rounded"
-                                                >
-                                                    Reset All Filters
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Add Document Button - Active tab lang */}
-                            {activeTab === "active" && (
-                                <button
-                                    onClick={() => openModal()}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition ml-auto relative z-30"
-                                >
-                                    <Plus size={18} />
-                                    Add Document
-                                </button>
-                            )}
-                        </div>
+                <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="relative w-full md:w-96">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input type="text" placeholder="Search policies..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all" />
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <select value={selectedTypeFilter} onChange={e => setSelectedTypeFilter(e.target.value)} className="px-4 py-2 bg-white border rounded-lg outline-none focus:border-blue-500">
+                            <option value="all">All Types</option>
+                            {DOCUMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                        {!viewArchived && (
+                            <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                                <Plus size={18} /> Add Policy
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Results Count */}
-                <div className="mb-4 text-sm text-gray-600">
-                    Showing {activeList.length} {activeTab === "active" ? "active" : "archived"} documents
-                </div>
-
-                {/* Loading */}
-                {fetching && (
-                    <div className="text-center py-6 text-gray-600">
-                        Loading documents...
+                {/* Messaging */}
+                {(error || success) && (
+                    <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 font-semibold ${error ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+                        {error ? <X size={20} /> : <CheckCircle2 size={20} />}
+                        <span className="flex-1">{error || success}</span>
+                        <X size={18} className="cursor-pointer opacity-50" onClick={() => { setError(""); setSuccess(""); }} />
                     </div>
                 )}
 
-                {/* Table */}
-                {!fetching && (
-                    <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                        {activeList.length === 0 ? (
-                            <div className="text-center py-12 text-gray-500">
-                                {searchQuery || selectedTypeFilter !== "all" ? (
-                                    <>
-                                        <p className="mb-2">No documents match your filters</p>
-                                        <button
-                                            onClick={resetFilters}
-                                            className="text-blue-600 hover:text-blue-800"
-                                        >
-                                            Clear all filters
-                                        </button>
-                                    </>
-                                ) : (
-                                    <p>No {activeTab === "active" ? "active" : "archived"} documents found</p>
-                                )}
-                            </div>
-                        ) : (
+                <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                    {fetching ? (
+                        <div className="p-20 flex flex-col items-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>
+                    ) : filteredDocs.length === 0 ? (
+                        <div className="p-20 text-center text-gray-400"><p>No documents found.</p></div>
+                    ) : (
+                        <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-100 text-gray-700">
+                                <thead className="bg-gray-50 text-gray-600 text-xs font-black uppercase">
                                     <tr>
-                                        <th className="p-3 text-left">Title</th>
-                                        <th className="p-3 text-left">Type</th>
-                                        <th className="p-3 text-left">Issued By</th>
-                                        <th className="p-3 text-left">Date</th>
-                                        <th className="p-3 text-center">File</th>
-                                        <th className="p-3 text-center">Actions</th>
+                                        <th className="px-6 py-4 text-left">Title</th>
+                                        <th className="px-6 py-4 text-left">Type</th>
+                                        <th className="px-6 py-4 text-left">Issued By</th>
+                                        <th className="px-6 py-4 text-left">Files</th>
+                                        <th className="px-6 py-4 text-center">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {activeList.map((d) => (
-                                        <tr key={d._id} className="border-t hover:bg-gray-50">
-                                            <td className="p-3 font-medium">{d.title}</td>
-                                            <td className="p-3">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                                                    {d.document_type}
-                                                </span>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredDocs.map(d => (
+                                        <tr key={d._id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 font-bold text-gray-900">{d.title}</td>
+                                            <td className="px-6 py-4 uppercase text-[10px] font-black"><span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md">{d.document_type}</span></td>
+                                            <td className="px-6 py-4 text-gray-500 text-sm">{d.issued_by || "-"}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex -space-x-2">
+                                                    {(d.files || []).slice(0, 3).map((f, i) => (
+                                                        <div key={i} onClick={() => handleFileAction(f, d.files)} className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:scale-110 transition-all">
+                                                            {isImageFile(f) ? <img src={f.fileUrl} className="w-full h-full object-cover rounded-full" /> : getFileIcon(f)}
+                                                        </div>
+                                                    ))}
+                                                    {(d.files || []).length > 3 && <div className="w-8 h-8 rounded-full border-2 border-white bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">+{(d.files || []).length - 3}</div>}
+                                                </div>
                                             </td>
-                                            <td className="p-3">{d.issued_by || "-"}</td>
-                                            <td className="p-3">
-                                                {d.date_issued
-                                                    ? new Date(d.date_issued).toLocaleDateString()
-                                                    : "-"}
-                                            </td>
-                                            <td className="p-3 text-center">
-                                                {d.file_url && (
-                                                    <button
-                                                        onClick={() => setSelectedPdf(d)}
-                                                        className="text-blue-600 hover:text-blue-800 flex justify-center w-full"
-                                                        title="View Document"
-                                                    >
-                                                        <Eye size={18} />
-                                                    </button>
-                                                )}
-                                            </td>
-                                            <td className="p-3">
-                                                <div className="flex gap-2 justify-center">
-                                                    {activeTab === "active" ? (
+                                            <td className="px-6 py-4">
+                                                <div className="flex justify-center gap-2">
+                                                    {(d.files || []).length > 0 && <button onClick={() => handleFileAction(d.files[0], d.files)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Eye size={18} /></button>}
+                                                    {!viewArchived ? (
                                                         <>
-                                                            <button
-                                                                onClick={() => openModal(d)}
-                                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                                                                title="Edit"
-                                                            >
-                                                                <Edit2 size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleArchive(d._id)}
-                                                                className="p-2 text-yellow-600 hover:bg-yellow-50 rounded"
-                                                                title="Archive"
-                                                            >
-                                                                <Archive size={16} />
-                                                            </button>
+                                                            <button onClick={() => { setEditingItem(d); setFormData({ title: d.title, document_type: d.document_type, issued_by: d.issued_by || "", date_issued: d.date_issued?.slice(0, 10) || "", description: d.description || "" }); setShowModal(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button>
+                                                            <button onClick={() => { setEditingItem(d); setFilesToUpload([]); setShowUploadModal(true); }} className="p-2 text-green-600 hover:bg-green-50 rounded-lg" title="Add Files"><Upload size={18} /></button>
+                                                            <button onClick={() => handleArchive(d._id)} className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg"><Archive size={18} /></button>
                                                         </>
                                                     ) : (
-                                                        <button
-                                                            onClick={() => handleRestore(d._id)}
-                                                            className="px-3 py-1 text-green-600 hover:bg-green-50 rounded border border-green-200"
-                                                            title="Restore"
-                                                        >
-                                                            Restore
-                                                        </button>
+                                                        <button onClick={() => handleRestore(d._id)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg"><RefreshCcw size={18} /></button>
                                                     )}
-                                                    <button
-                                                        onClick={() => handleDelete(d._id)}
-                                                        className="p-1.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
-                                                        title="Delete Permanently"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <button onClick={() => handleDelete(d._id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
                                                 </div>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                        )}
-                    </div>
-                )}
+                        </div>
+                    )}
+                </div>
+            </div>
 
-                {/* ==================== MODAL ==================== */}
-                {showModal && (
-                    <>
-                        {/* Backdrop */}
-                        <div
-                            className="fixed inset-0 bg-black bg-opacity-50 z-50"
-                            onClick={closeModal}
-                        />
-
-                        {/* Modal */}
-                        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-                            <div
-                                className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {/* Modal Header */}
-                                <div className="flex items-center justify-between p-6 border-b">
-                                    <h2 className="text-xl font-semibold text-gray-900">
-                                        {editingItem ? "Edit Document" : "Add New Document"}
-                                    </h2>
-                                    <button
-                                        onClick={closeModal}
-                                        className="text-gray-400 hover:text-gray-600"
-                                    >
-                                        <X size={24} />
-                                    </button>
+            {/* FORM MODAL */}
+            {showModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <h3 className="text-xl font-bold">{editingItem ? "Edit Policy" : "New Policy"}</h3>
+                            <button onClick={() => setShowModal(false)}><X size={24} /></button>
+                        </div>
+                        <form onSubmit={handleCreateOrUpdate} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-black text-gray-500 uppercase mb-1">Title</label>
+                                <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required className="w-full px-4 py-2 bg-gray-50 border rounded-lg" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-black text-gray-500 uppercase mb-1">Type</label>
+                                    <select value={formData.document_type} onChange={e => setFormData({ ...formData, document_type: e.target.value })} className="w-full px-4 py-2 bg-gray-50 border rounded-lg">
+                                        {DOCUMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                    </select>
                                 </div>
-
-                                {/* Modal Body */}
-                                <div className="p-6">
-                                    <div className="space-y-4">
-                                        {/* Title */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Title *
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.title}
-                                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                className={`w-full px-3 py-2 border rounded-lg ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
-                                                placeholder="Enter document title"
-                                            />
-                                            {errors.title && (
-                                                <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-                                            )}
+                                <div>
+                                    <label className="block text-xs font-black text-gray-500 uppercase mb-1">Date Issued</label>
+                                    <input type="date" value={formData.date_issued} onChange={e => setFormData({ ...formData, date_issued: e.target.value })} className="w-full px-4 py-2 bg-gray-50 border rounded-lg" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-gray-500 uppercase mb-1">Issued By</label>
+                                <input type="text" value={formData.issued_by} onChange={e => setFormData({ ...formData, issued_by: e.target.value })} className="w-full px-4 py-2 bg-gray-50 border rounded-lg" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-gray-500 uppercase mb-2">Upload Files (Initial)</label>
+                                <div
+                                    onDragEnter={handleDragEnter}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                    className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${isDragging ? 'border-blue-600 bg-blue-50 scale-[1.02]' : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'}`}
+                                >
+                                    <input
+                                        type="file"
+                                        multiple
+                                        onChange={e => setFilesToUpload(prev => [...prev, ...Array.from(e.target.files)])}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    />
+                                    <div className="flex flex-col items-center gap-2 pointer-events-none">
+                                        <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
+                                            <Upload size={24} />
                                         </div>
-
-                                        {/* Document Type & Issued By */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Document Type *
-                                                </label>
-                                                <select
-                                                    value={formData.document_type}
-                                                    onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                >
-                                                    {DOCUMENT_TYPES.map((type) => (
-                                                        <option key={type.value} value={type.value}>
-                                                            {type.label}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Issued By *
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.issued_by}
-                                                    onChange={(e) => setFormData({ ...formData, issued_by: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                    placeholder="e.g., Office of the President"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Date Issued */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Date Issued *
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type="date"
-                                                    value={formData.date_issued}
-                                                    onChange={(e) => setFormData({ ...formData, date_issued: e.target.value })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                />
-                                                <Calendar className="absolute right-3 top-2.5 text-gray-400" size={18} />
-                                            </div>
-                                        </div>
-
-                                        {/* Description */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Description
-                                            </label>
-                                            <textarea
-                                                value={formData.description}
-                                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                rows="3"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                placeholder="Brief description of the document..."
-                                            />
-                                        </div>
-
-                                        {/* File Upload */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                {editingItem ? "Replace File (Optional)" : "File *"}
-                                            </label>
-                                            <div
-                                                onDragEnter={handleDragEnter}
-                                                onDragOver={handleDragOver}
-                                                onDragLeave={handleDragLeave}
-                                                onDrop={handleDrop}
-                                                className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${isDragging
-                                                    ? 'border-blue-500 bg-blue-50'
-                                                    : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                                                    }`}
-                                            >
-                                                <input
-                                                    type="file"
-                                                    id="file-upload"
-                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
-                                                    onChange={(e) => {
-                                                        const file = e.target.files[0];
-                                                        if (file) {
-                                                            setFormData({ ...formData, file: file });
-                                                        }
-                                                    }}
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                                                />
-                                                <div className="pointer-events-none">
-                                                    {formData.file ? (
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <FileText className="text-green-600" size={24} />
-                                                            <div className="text-left">
-                                                                <p className="font-medium text-gray-900">{formData.file.name}</p>
-                                                                <p className="text-sm text-gray-500">
-                                                                    {(formData.file.size / 1024 / 1024).toFixed(2)} MB
-                                                                </p>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setFormData({ ...formData, file: null });
-                                                                }}
-                                                                className="ml-2 text-red-600"
-                                                            >
-                                                                <X size={18} />
-                                                            </button>
-                                                        </div>
-                                                    ) : formData.file_url ? (
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <FileText className="text-blue-600" size={24} />
-                                                            <div>
-                                                                <p className="font-medium text-gray-900">Current file attached</p>
-                                                                <a
-                                                                    href={formData.file_url}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="text-sm text-blue-600 hover:underline"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    View existing file
-                                                                </a>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <Upload className="mx-auto text-gray-400 mb-2" size={24} />
-                                                            <p className="text-gray-600 mb-1">
-                                                                Click to upload or drag and drop
-                                                            </p>
-                                                            <p className="text-sm text-gray-500">
-                                                                PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX (Max: 10MB)
-                                                            </p>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <p className="mt-1 text-sm text-gray-500">
-                                                {editingItem
-                                                    ? "Leave empty to keep existing file"
-                                                    : "File is required for new documents"}
-                                            </p>
-                                        </div>
+                                        <p className="font-bold text-gray-900">Click to upload or drag & drop</p>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">PDF, Images, Videos, Office Docs</p>
                                     </div>
                                 </div>
 
-                                {/* Modal Footer */}
-                                <div className="flex justify-end gap-3 p-6 border-t">
-                                    <button
-                                        onClick={closeModal}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                                        disabled={loading}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={loading}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save size={18} />
-                                                {editingItem ? "Update Document" : "Save Document"}
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
+                                {filesToUpload.length > 0 && (
+                                    <div className="mt-4 space-y-2">
+                                        {filesToUpload.map((file, i) => (
+                                            <div key={i} className="bg-gray-50 p-3 rounded-xl flex items-center justify-between border border-gray-100">
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    {getFileIcon(file)}
+                                                    <span className="text-[10px] font-bold text-gray-900 truncate max-w-[200px]">{file.name}</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFilesToUpload(prev => prev.filter((_, idx) => idx !== i))}
+                                                    className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    </>
-                )}
-            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 bg-gray-100 rounded-lg font-bold">Cancel</button>
+                                <button type="submit" disabled={uploading} className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold flex justify-center items-center gap-2">
+                                    {uploading && <Loader2 size={18} className="animate-spin" />}
+                                    {editingItem ? "Update" : "Save"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
-            {/* PDF Viewer Modal */}
-            {selectedPdf && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-                        {/* Modal Header */}
-                        <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900">{selectedPdf.title}</h3>
-                                <div className="flex gap-2 mt-1">
-                                    <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full capitalize font-semibold">
-                                        {selectedPdf.document_type}
-                                    </span>
-                                    {selectedPdf.date_issued && (
-                                        <span className="text-xs text-gray-500">
-                                            Issued: {new Date(selectedPdf.date_issued).toLocaleDateString()}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setSelectedPdf(null)}
-                                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-                                title="Close"
+            {/* UPLOAD MODAL */}
+            {showUploadModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <h3 className="text-xl font-bold">Add Files</h3>
+                            <button onClick={() => setShowUploadModal(false)}><X size={24} /></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm font-medium">Adding files to: <span className="font-bold text-blue-600">{editingItem?.title}</span></p>
+
+                            <div
+                                onDragEnter={handleDragEnter}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer ${isDragging ? 'border-blue-600 bg-blue-50 scale-[1.02]' : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'}`}
                             >
-                                <X size={24} className="text-gray-500" />
-                            </button>
-                        </div>
+                                <input
+                                    type="file"
+                                    multiple
+                                    onChange={e => setFilesToUpload(prev => [...prev, ...Array.from(e.target.files)])}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                />
+                                <div className="flex flex-col items-center gap-3 pointer-events-none">
+                                    <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
+                                        <Upload size={28} />
+                                    </div>
+                                    <p className="font-black text-gray-900 text-lg">Drop your files here</p>
+                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">or click to browse local files</p>
+                                </div>
+                            </div>
 
-                        {/* Modal Content - Iframe Viewer */}
-                        <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
-                            {selectedPdf.file_url.toLowerCase().includes('.pdf') && selectedPdf.file_url.includes('localhost') ? (
-                                <embed
-                                    src={selectedPdf.file_url}
-                                    type="application/pdf"
-                                    className="w-full h-full"
-                                />
-                            ) : selectedPdf.file_url.toLowerCase().includes('.pdf') || selectedPdf.file_url.includes('/image/upload/') || selectedPdf.file_url.includes('/raw/upload/') ? (
-                                <iframe
-                                    src={getEmbedUrl(selectedPdf.file_url)}
-                                    className="w-full h-full border-none"
-                                    title={selectedPdf.title}
-                                />
-                            ) : (
-                                <div className="text-center p-8 bg-white rounded-xl shadow-sm max-w-sm">
-                                    <File size={48} className="mx-auto text-gray-300 mb-4" />
-                                    <p className="text-gray-600 mb-4">This document type cannot be previewed directly in the browser.</p>
-                                    <a
-                                        href={selectedPdf.file_url}
-                                        className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                        download
-                                    >
-                                        Download File
-                                    </a>
+                            {filesToUpload.length > 0 && (
+                                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {filesToUpload.map((file, i) => (
+                                        <div key={i} className="bg-gray-50 p-4 rounded-xl flex items-center justify-between border border-gray-100 group/file">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover/file:scale-110 transition-transform">
+                                                    {getFileIcon(file)}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black text-gray-900 truncate max-w-[240px]">{file.name}</span>
+                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{formatFileSize(file.size)}</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFilesToUpload(prev => prev.filter((_, idx) => idx !== i))}
+                                                className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"
+                                            >
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
 
-                            {/* Actions Overlay */}
-                            <div className="absolute bottom-6 right-6 flex gap-3">
-                                <a
-                                    href={selectedPdf.file_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-4 py-2 bg-white/90 backdrop-blur-md text-gray-700 border border-gray-200 rounded-lg text-sm font-semibold hover:bg-white transition shadow-lg flex items-center gap-2"
-                                >
-                                    <File size={16} />
-                                    Open Original
-                                </a>
+                            <div className="flex gap-3 pt-4">
+                                <button onClick={() => setShowUploadModal(false)} className="flex-1 py-3 bg-gray-100 rounded-lg font-bold">Cancel</button>
+                                <button onClick={handleUploadMore} disabled={uploading || filesToUpload.length === 0} className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold flex justify-center items-center gap-2">
+                                    {uploading && <Loader2 size={18} className="animate-spin" />}
+                                    Upload
+                                </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* VIEWER MODAL */}
+            {showViewer && selectedFile && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in transition-all">
+                    <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-2xl'} flex flex-col overflow-hidden`}>
+                        <div className="p-4 border-b flex justify-between items-center bg-white text-gray-900 sticky top-0 z-10">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center flex-shrink-0"><FileText size={20} /></div>
+                                <div className="min-w-0">
+                                    <h3 className="text-sm sm:text-lg font-bold truncate">{selectedFile.originalName}</h3>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{formatFileSize(selectedFile.size)}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <a href={selectedFile.fileUrl} download={selectedFile.originalName} target="_blank" rel="noreferrer" className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"><Download size={20} /></a>
+                                <button onClick={() => setIsFullscreen(!isFullscreen)} className="hidden sm:block p-2 text-gray-500 hover:bg-gray-100 rounded-lg">{isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}</button>
+                                <button onClick={() => setShowViewer(false)} className="p-2 text-gray-400 hover:text-red-500 bg-gray-100/50 rounded-full transition-all"><X size={24} /></button>
+                            </div>
+                        </div>
+                        <div className="flex-1 bg-gray-900 flex items-center justify-center relative group overflow-hidden">
+                            {previewFiles.length > 1 && (
+                                <>
+                                    <button onClick={() => { const i = (currentPreviewIndex - 1 + previewFiles.length) % previewFiles.length; setCurrentPreviewIndex(i); setSelectedFile(previewFiles[i]); }} className="absolute left-4 z-20 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"><ChevronLeft size={24} /></button>
+                                    <button onClick={() => { const i = (currentPreviewIndex + 1) % previewFiles.length; setCurrentPreviewIndex(i); setSelectedFile(previewFiles[i]); }} className="absolute right-4 z-20 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"><ChevronRight size={24} /></button>
+                                </>
+                            )}
+                            <div className="w-full h-full p-2 sm:p-6 flex items-center justify-center">
+                                {isImageFile(selectedFile) ? <img src={selectedFile.fileUrl} className="max-w-full max-h-full object-contain" /> : isVideoFile(selectedFile) ? <video src={selectedFile.fileUrl} controls autoPlay className="max-w-full max-h-full" /> : <iframe src={getEmbedUrl(selectedFile)} className="w-full h-full bg-white rounded-lg shadow-2xl" />}
+                            </div>
+                            {previewFiles.length > 1 && <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest">{currentPreviewIndex + 1} / {previewFiles.length}</div>}
+                            {!viewArchived && <button onClick={() => handleDeleteFile(editingItem?._id || previewFiles[0]?.documentId, selectedFile._id)} className="absolute top-4 right-4 p-2 bg-red-500/50 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>}
                         </div>
                     </div>
                 </div>

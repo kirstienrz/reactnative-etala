@@ -1863,6 +1863,25 @@ const ReportForm = () => {
                 <option value="Mandatory Reporter">Mandatory Reporter</option>
               </select>
             </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.inputLabel}>
+                TUP Affiliation
+                <span style={styles.requiredStar}> *</span>
+              </label>
+              <select
+                style={styles.selectInput}
+                value={formData.tupRole}
+                onChange={(e) => setFormData(prev => ({ ...prev, tupRole: e.target.value }))}
+              >
+                <option value="">Select affiliation</option>
+                <option value="Student">Student</option>
+                <option value="Faculty">Faculty</option>
+                <option value="Staff">Staff</option>
+                <option value="Alumni">Alumni</option>
+                <option value="Visitor">Visitor</option>
+              </select>
+            </div>
           </div>
 
           <div>

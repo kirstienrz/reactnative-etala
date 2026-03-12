@@ -81,34 +81,33 @@ const uploadFiles = async (req, res) => {
 
       console.log(`Uploading file: ${file.originalname}, MIME: ${mimeType}, Resource Type: ${resourceType}`);
 
+      const fileNameWithoutExt = file.originalname.split('.')[0].replace(/\s+/g, "_");
+      const fileExt = file.originalname.substring(file.originalname.lastIndexOf('.'));
+      const finalExt = fileExt.toLowerCase() === '.pdf' ? '' : fileExt;
+
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: `gad-portal/docs/${id}`,
-            resource_type: resourceType, // <-- FIXED: Use correct resource type
-            public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`
+            resource_type: resourceType,
+            public_id: `${Date.now()}_${fileNameWithoutExt}${finalExt}`
           },
           (err, result) => err ? reject(err) : resolve(result)
         );
         uploadStream.end(file.buffer);
       });
 
-      // FIXED: Get correct file type from MIME type, not from Cloudinary
-      let fileType = mimeType;
-      if (mimeType === 'application/pdf') {
-        fileType = 'application/pdf';
-      } else if (mimeType.includes('image/')) {
-        fileType = 'image';
-      } else if (mimeType.includes('video/')) {
-        fileType = 'video';
-      } else {
-        fileType = mimeType;
-      }
+      // Categorize for DB
+      let fileType = 'document';
+      if (mimeType.startsWith('image/')) fileType = 'image';
+      else if (mimeType.startsWith('video/')) fileType = 'video';
+      else if (mimeType === 'application/pdf') fileType = 'pdf';
 
       newFiles.push({
         fileUrl: result.secure_url,
         cloudinaryId: result.public_id,
-        fileType: fileType, // <-- FIXED: Use actual MIME type, not Cloudinary's resource_type
+        fileType: fileType,
+        resourceType: resourceType,
         originalName: file.originalname,
         size: file.size,
         caption,
@@ -143,13 +142,14 @@ const deleteFile = async (req, res) => {
       return res.status(404).json({ success: false, message: "File not found" });
     }
 
-    console.log("Deleting file from Cloudinary:", file.cloudinaryId);
+    console.log("Deleting file from Cloudinary:", file.cloudinaryId, "ResourceType:", file.resourceType || "auto");
     if (file.cloudinaryId) {
       try {
-        await cloudinary.uploader.destroy(file.cloudinaryId);
+        await cloudinary.uploader.destroy(file.cloudinaryId, {
+          resource_type: file.resourceType || (file.fileUrl.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|csv|txt)$/) ? 'raw' : 'image')
+        });
       } catch (cErr) {
         console.error("Cloudinary delete error:", cErr);
-        // Continue even if cloudinary fails
       }
     }
 

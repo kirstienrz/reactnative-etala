@@ -297,14 +297,24 @@ export default function DocumentationAdmin() {
         return videoExtensions.includes(extension);
     };
 
-    // Robust Google Docs Viewer URL generator
+    // Robust Media/Document Embed URL generator
     const getEmbedUrl = (file) => {
         const url = file.fileUrl || file.url;
         if (!url) return "";
+        const lowerUrl = url.toLowerCase();
 
-        // Specifically use Google Viewer for all document types
-        // This is often more robust than gview
-        return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        // Microsoft Office Formats (Excel, PowerPoint, Word)
+        // Using embed.aspx to provide a cleaner, toolbar-free preview
+        if (lowerUrl.match(/\.(xls|xlsx|ppt|pptx|doc|docx)$/)) {
+            return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+        }
+
+        // PDFs, CSV, and Text files
+        if (lowerUrl.match(/\.(pdf|csv|txt)$/) || url.includes('/raw/upload/')) {
+            return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+        }
+
+        return url;
     };
 
     // Handle file viewing
@@ -889,7 +899,7 @@ export default function DocumentationAdmin() {
                                     onChange={handleFileChange}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                                     id="docFileUpload"
-                                    accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
+                                    accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx"
                                 />
 
                                 <div className="pointer-events-none">
@@ -1075,8 +1085,9 @@ export default function DocumentationAdmin() {
                                     Your browser does not support the video tag.
                                 </video>
                             ) : (isPdfFile(selectedFile) ||
-                                ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'].includes(getFileExtension(selectedFile)) ||
-                                (selectedFile.mimetype && (selectedFile.mimetype.includes('pdf') || selectedFile.mimetype.includes('document') || selectedFile.mimetype.includes('sheet')))
+                                selectedFile.fileType === 'document' ||
+                                ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'].includes(getFileExtension(selectedFile).toLowerCase()) ||
+                                (selectedFile.mimetype && (selectedFile.mimetype.includes('pdf') || selectedFile.mimetype.includes('document') || selectedFile.mimetype.includes('sheet') || selectedFile.mimetype.includes('csv') || selectedFile.mimetype.includes('presentation')))
                             ) ? (
                                 <div className="w-full h-full bg-white rounded overflow-hidden">
                                     {isPdfFile(selectedFile) && (selectedFile.fileUrl || selectedFile.url).includes('localhost') ? (

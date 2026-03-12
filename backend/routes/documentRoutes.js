@@ -1,5 +1,6 @@
 const express = require("express");
-const { uploadDocument } = require("../config/multer");
+const router = express.Router();
+const multer = require("multer");
 const {
   createDocument,
   getDocuments,
@@ -8,29 +9,32 @@ const {
   archiveDocument,
   restoreDocument,
   deleteDocument,
+  uploadFiles,
+  deleteFile
 } = require("../controllers/documentController");
 
-const router = express.Router();
+// Use memory storage for multiple file support
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB
+    files: 20,
+  }
+});
 
-// ✅ Create new document (file upload)
-router.post("/", uploadDocument.single("file"), createDocument);
-
-// ✅ Get all active documents
 router.get("/", getDocuments);
-
-// ✅ Get all archived documents
 router.get("/archived", getArchivedDocuments);
-
-// ✅ Update document (optional file replacement)
-router.put("/:id", uploadDocument.single("file"), updateDocument);
-
-// ✅ Archive document (soft delete)
-router.patch("/:id/archive", archiveDocument);
-
-// ✅ Restore archived document
-router.patch("/:id/restore", restoreDocument);
-
-// ✅ Permanent delete
+router.post("/", createDocument);
+router.put("/:id", updateDocument);
 router.delete("/:id", deleteDocument);
+
+// File management
+router.post("/:id/files", upload.array("files", 20), uploadFiles);
+router.delete("/:documentId/files/:fileId", deleteFile);
+
+// Status changes
+router.patch("/:id/archive", archiveDocument);
+router.patch("/:id/restore", restoreDocument);
 
 module.exports = router;

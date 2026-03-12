@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Download, FileText, X, Maximize2, Minimize2 } from "lucide-react";
+import { Download, FileText, X, Maximize2, Minimize2, ChevronLeft, ChevronRight, Eye, Image as ImageIcon, FileVideo, File } from "lucide-react";
 import { getAccomplishments } from "../../api/accomplishments"; // Axios API call
+
 const Accomplishment = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedPdf, setSelectedPdf] = useState(null);
-  const [selectedPdfName, setSelectedPdfName] = useState("");
-  const [selectedPdfType, setSelectedPdfType] = useState("pdf");
+
+  // Viewer State
+  const [showViewer, setShowViewer] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewFiles, setPreviewFiles] = useState([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -17,8 +21,8 @@ const Accomplishment = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const data = await getAccomplishments(); // GET /api/accomplishments
-      setReports(data);
+      const data = await getAccomplishments();
+      setReports(data || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load accomplishment reports.");
@@ -27,15 +31,55 @@ const Accomplishment = () => {
     }
   };
 
-  // Robust PDF Embed URL generator
-  const getEmbedUrl = (url) => {
-    if (!url) return "";
-    // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
-    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+  // Media Helpers
+  const getFileExtension = (file) => {
+    const fileName = file.originalName || file.name || '';
+    const fileUrl = file.fileUrl || file.url || '';
+    if (fileName.includes('.')) return fileName.toLowerCase().split('.').pop();
+    if (fileUrl.includes('.')) {
+      const urlParts = fileUrl.split('.');
+      return urlParts[urlParts.length - 1].split('?')[0].toLowerCase();
     }
-    // For 'image' resource type PDFs, standard URL works
-    return `${url}#toolbar=0`;
+    return '';
+  };
+
+  const isImageFile = (file) => {
+    if (!file) return false;
+    const ext = getFileExtension(file);
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (file.fileType === 'image');
+  };
+
+  const isVideoFile = (file) => {
+    if (!file) return false;
+    const ext = getFileExtension(file);
+    return ['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(ext) || (file.fileType === 'video');
+  };
+
+  const isPdfFile = (file) => {
+    if (!file) return false;
+    const ext = getFileExtension(file);
+    return ext === 'pdf' || (file.fileType === 'pdf');
+  };
+
+  const getEmbedUrl = (file) => {
+    const url = file.fileUrl || file.url;
+    if (!url) return "";
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.match(/\.(xls|xlsx|ppt|pptx|doc|docx)$/)) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+    }
+    if (lowerUrl.match(/\.(pdf|csv|txt)$/) || url.includes('/raw/upload/')) {
+      return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return url;
+  };
+
+  const handleFileAction = (file, allFiles = []) => {
+    setPreviewFiles(allFiles);
+    const index = allFiles.findIndex(f => (f._id || f.id) === (file._id || file.id));
+    setCurrentPreviewIndex(index >= 0 ? index : 0);
+    setSelectedFile(file);
+    setShowViewer(true);
   };
 
   return (
@@ -46,125 +90,171 @@ const Accomplishment = () => {
           <h1 className="text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
             Accomplishment Reports
           </h1>
-          <div className="w-20 h-1 bg-violet-400 mx-auto"></div>
+          <p className="text-violet-200 text-lg font-medium opacity-80 max-w-2xl mx-auto mb-8 text-center">
+            Tracking our progress, achievements, and milestones throughout the academic years.
+          </p>
+          <div className="w-20 h-1 bg-violet-400 mx-auto rounded-full"></div>
         </div>
       </section>
 
       {/* Reports Section */}
       <section className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-8">
-          {loading && <p className="text-center text-gray-500">Loading...</p>}
-          {error && <p className="text-center text-red-500">{error}</p>}
+          {loading && (
+            <div className="flex flex-col items-center py-12">
+              <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mb-4"></div>
+              <p className="text-slate-400 font-bold">Synchronizing reports...</p>
+            </div>
+          )}
+          {error && <p className="text-center text-red-500 font-bold bg-red-50 p-4 rounded-2xl border border-red-100">{error}</p>}
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {!loading && !error && reports.length === 0 && (
-              <p className="text-center text-gray-500">No reports available.</p>
+              <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-100">
+                <FileText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                <p className="text-slate-400 font-bold text-xl">No reports available at this time.</p>
+              </div>
             )}
 
             {reports.map((report) => (
               <div
                 key={report._id}
-                onClick={() => {
-                  setSelectedPdf(report.fileUrl);
-                  setSelectedPdfName(report.title);
-                  setSelectedPdfType(report.type || "pdf");
-                }}
-                className="group flex flex-col md:flex-row items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                className="group bg-white border border-slate-200 hover:border-violet-600 hover:shadow-2xl hover:shadow-violet-100 p-8 rounded-[2.5rem] transition-all duration-500"
               >
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-slate-900 mb-1">
-                    {report.title} ({report.year})
-                  </h3>
-                  <p className="text-slate-400 text-xs">
-                    Published: {new Date(report.createdAt).toLocaleDateString()}
-                  </p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="bg-violet-100 text-violet-700 px-4 py-1 rounded-full text-xs font-black tracking-widest">{report.year}</span>
+                      <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Published: {new Date(report.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-900 leading-tight group-hover:text-violet-700 transition-colors">
+                      {report.title}
+                    </h3>
+                    {report.description && <p className="text-slate-500 font-medium mt-3 text-sm leading-relaxed">{report.description}</p>}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {report.files?.length > 0 ? (
+                      <button
+                        onClick={() => handleFileAction(report.files[0], report.files)}
+                        className="bg-violet-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm hover:bg-violet-700 transition-all shadow-xl shadow-violet-200 flex items-center gap-3 active:scale-95"
+                      >
+                        View Reports
+                        <Eye size={20} />
+                      </button>
+                    ) : (
+                      <span className="text-slate-300 font-bold text-sm italic">No attached files</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-violet-600 font-semibold mt-4 md:mt-0 group-hover:gap-4 transition-all">
-                  <span>View Report</span>
-                  <FileText className="w-5 h-5" />
-                </div>
+
+                {/* File Preview Stack if multiple */}
+                {report.files?.length > 1 && (
+                  <div className="mt-8 pt-8 border-t border-slate-50 flex flex-wrap gap-3">
+                    {report.files.map((file, i) => (
+                      <div
+                        key={i}
+                        onClick={() => handleFileAction(file, report.files)}
+                        className="bg-slate-50 hover:bg-violet-50 p-3 rounded-2xl transition-all border border-transparent hover:border-violet-200 flex items-center gap-3 cursor-pointer group/file"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 group-hover/file:scale-110 transition-transform">
+                          {isImageFile(file) ? <ImageIcon size={16} className="text-violet-500" /> : isVideoFile(file) ? <FileVideo size={16} className="text-red-500" /> : <FileText size={16} className="text-slate-500" />}
+                        </div>
+                        <span className="text-[10px] font-black text-slate-900 truncate max-w-[120px] uppercase tracking-tighter">{file.originalName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* PDF Viewer Modal - Events Style */}
-      {selectedPdf && (
-        <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} p-4 backdrop-blur-sm transition-all shadow-2xl`}>
-          <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh]'} flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300`}>
+      {/* VIEW MODAL (Same robust viewer as admin) */}
+      {showViewer && selectedFile && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className={isFullscreen ? "w-screen h-screen" : "bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"}>
 
-            {/* Info bar / Header */}
-            <div className="p-4 border-b flex justify-between items-center bg-gray-900 text-white">
+            {/* Header */}
+            <div className="p-4 sm:px-8 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10 flex-shrink-0">
               <div className="flex items-center gap-3 overflow-hidden">
-                <FileText className="text-violet-400 flex-shrink-0" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText size={20} className="sm:w-6 sm:h-6" />
+                </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold truncate">{selectedPdfName || "Report Preview"}</h3>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Accomplishment Report</p>
+                  <h3 className="text-base sm:text-xl font-black truncate leading-tight uppercase tracking-tight">{selectedFile.originalName}</h3>
+                  <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Accomplishment report material</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <a
+                  href={selectedFile.fileUrl}
+                  download={selectedFile.originalName}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2 sm:p-3 hover:bg-slate-50 text-slate-500 rounded-xl transition-all"
+                  title="Download"
+                >
+                  <Download size={22} />
+                </a>
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white"
-                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                  className="hidden sm:flex p-2 sm:p-3 hover:bg-slate-50 text-slate-500 rounded-xl transition-all"
                 >
-                  {isFullscreen ? <Minimize2 className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
+                  {isFullscreen ? <Minimize2 size={22} /> : <Maximize2 size={22} />}
                 </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedPdf(null);
-                    setIsFullscreen(false);
-                  }}
-                  className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white"
-                >
-                  <X className="h-6 w-6" />
+                <button onClick={() => { setShowViewer(false); setSelectedFile(null); }} className="p-2 sm:p-3 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-xl transition-all">
+                  <X size={24} />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 bg-white flex items-center justify-center">
-              {selectedPdfType === "video" ? (
-                <video
-                  src={selectedPdf}
-                  controls
-                  autoPlay
-                  className="w-full max-h-full rounded-lg bg-black"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-              ) : selectedPdfType === "image" ? (
-                <img
-                  src={selectedPdf}
-                  alt={selectedPdfName}
-                  className="w-full max-h-full object-contain rounded-lg"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-              ) : (
-                <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedPdf)}&embedded=true`}
-                  className="w-full h-full border-none"
-                  title="PDF Viewer"
-                  onContextMenu={(e) => e.preventDefault()}
-                ></iframe>
+            {/* Content */}
+            <div className="flex-1 bg-slate-900 flex items-center justify-center relative group overflow-hidden">
+              {/* Navigation */}
+              {previewFiles.length > 1 && (
+                <>
+                  <button
+                    onClick={() => {
+                      const newIndex = (currentPreviewIndex - 1 + previewFiles.length) % previewFiles.length;
+                      setCurrentPreviewIndex(newIndex);
+                      setSelectedFile(previewFiles[newIndex]);
+                    }}
+                    className="absolute left-4 z-20 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"
+                  >
+                    <ChevronLeft size={32} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const newIndex = (currentPreviewIndex + 1) % previewFiles.length;
+                      setCurrentPreviewIndex(newIndex);
+                      setSelectedFile(previewFiles[newIndex]);
+                    }}
+                    className="absolute right-4 z-20 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"
+                  >
+                    <ChevronRight size={32} />
+                  </button>
+                </>
+              )}
+
+              <div className="w-full h-full flex items-center justify-center p-2 sm:p-8">
+                {isImageFile(selectedFile) ? (
+                  <img src={selectedFile.fileUrl} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onContextMenu={e => e.preventDefault()} />
+                ) : isVideoFile(selectedFile) ? (
+                  <video src={selectedFile.fileUrl} controls autoPlay className="max-w-full max-h-full rounded-lg shadow-2xl" />
+                ) : (
+                  <iframe src={getEmbedUrl(selectedFile)} className="w-full h-full border-none bg-white rounded-2xl shadow-2xl" />
+                )}
+              </div>
+
+              {previewFiles.length > 1 && (
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-6 py-2 rounded-full text-xs font-black tracking-widest transition-opacity group-hover:opacity-100 opacity-80">
+                  {currentPreviewIndex + 1} / {previewFiles.length}
+                </div>
               )}
             </div>
-
-            {!isFullscreen && (
-              <div className="p-4 border-t bg-gray-50 flex justify-between items-center text-slate-900">
-                <p className="text-sm font-medium text-slate-500 italic">Previewing official document...</p>
-                <button
-                  onClick={() => {
-                    setSelectedPdf(null);
-                    setIsFullscreen(false);
-                  }}
-                  className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-black transition-colors font-medium shadow-md shadow-slate-200"
-                >
-                  Close Preview
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
