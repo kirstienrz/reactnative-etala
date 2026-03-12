@@ -583,6 +583,9 @@ const ReportForm = () => {
   const [aiValidationResult, setAiValidationResult] = useState(null);
   const [showAIValidation, setShowAIValidation] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showConfidentialityModal, setShowConfidentialityModal] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [hasAgreedPersistent, setHasAgreedPersistent] = useState(false);
 
   const [formData, setFormData] = useState({
     // Reporter/Victim Information (all optional now)
@@ -643,7 +646,30 @@ const ReportForm = () => {
 
   useEffect(() => {
     loadSavedProgress();
+    checkConfidentiality();
   }, []);
+
+  const checkConfidentiality = () => {
+    const token = localStorage.getItem('token');
+    const acceptedToken = localStorage.getItem('confidentialityAcceptedToken');
+    
+    if (token && acceptedToken === token) {
+      setHasAgreedPersistent(true);
+    } else {
+      setShowConfidentialityModal(true);
+    }
+  };
+
+  const handleAcceptConfidentiality = () => {
+    if (!agreedToTerms) return;
+    
+    const token = localStorage.getItem('token');
+    if (token) {
+      localStorage.setItem('confidentialityAcceptedToken', token);
+    }
+    setHasAgreedPersistent(true);
+    setShowConfidentialityModal(false);
+  };
 
   // Reset the AI validation when user edits the form
 
@@ -1633,6 +1659,135 @@ const ReportForm = () => {
     );
   };
 
+  const renderConfidentialityModal = () => {
+    if (!showConfidentialityModal) return null;
+
+    return (
+      <div style={{
+          ...styles.modalOverlay,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 10000
+      }}>
+        <div style={{
+          ...styles.modalContent,
+          maxWidth: '600px',
+          padding: '40px',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '32px',
+              backgroundColor: '#eff6ff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: `1px solid #dbeafe`,
+            }}>
+              <Shield size={32} color={styles.colors.primary} />
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: styles.colors.textPrimary, margin: '0 0 8px 0' }}>
+              Terms of Confidentiality
+            </h2>
+            <p style={{ fontSize: '14px', color: styles.colors.textSecondary, margin: 0 }}>
+              Please review and agree to our confidentiality terms to proceed.
+            </p>
+          </div>
+
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            paddingRight: '12px',
+            marginBottom: '32px',
+            fontSize: '14px',
+            lineHeight: '1.6',
+            color: styles.colors.textPrimary,
+            textAlign: 'justify'
+          }}>
+            <p style={{ fontWeight: '600', marginBottom: '16px' }}>
+              By proceeding with the submission of this report, you acknowledge and agree to the following confidentiality terms:
+            </p>
+            
+            <p style={{ marginBottom: '16px' }}>
+              All information provided in this report will be treated with strict confidentiality and will only be accessed by authorized personnel of the system for the purpose of reviewing, processing, and responding to the concern submitted.
+            </p>
+
+            <p style={{ marginBottom: '16px' }}>
+              The information you provide may be viewed by designated administrators or authorized individuals responsible for handling reports and ensuring appropriate action. These individuals are required to handle all submitted information with respect, privacy, and confidentiality.
+            </p>
+
+            <p style={{ marginBottom: '16px' }}>
+              Your personal information and report details will not be disclosed to unauthorized persons and will only be used for documentation, analysis, and appropriate response related to the concern filed within the system.
+            </p>
+
+            <p style={{ marginBottom: '16px' }}>
+              By submitting this report, you confirm that the information you are providing is true and accurate to the best of your knowledge, and you understand that the report will be handled according to the confidentiality and data protection policies of the system.
+            </p>
+
+            <p style={{ fontStyle: 'italic', color: styles.colors.textSecondary }}>
+              If you do not agree with these terms, you may choose not to proceed with the submission of your report.
+            </p>
+          </div>
+
+          <div style={{ borderTop: `1px solid ${styles.colors.border}`, paddingTop: '24px' }}>
+            <div 
+              style={{
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '12px', 
+                cursor: 'pointer',
+                marginBottom: '24px'
+              }}
+              onClick={() => setAgreedToTerms(!agreedToTerms)}
+            >
+              <div style={{
+                ...styles.checkbox,
+                backgroundColor: agreedToTerms ? styles.colors.primary : 'white',
+                borderColor: agreedToTerms ? styles.colors.primary : styles.colors.border,
+                marginTop: '2px'
+              }}>
+                {agreedToTerms && <Check size={14} color="white" />}
+              </div>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: styles.colors.textPrimary, lineHeight: '1.4' }}>
+                I have read and agree to the terms of confidentiality and confirm that all information provided is true and accurate.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                style={{
+                  ...styles.secondaryButton,
+                  flex: 1
+                }}
+                onClick={() => window.history.back()}
+              >
+                Go Back
+              </button>
+              <button 
+                style={{
+                  ...styles.primaryButton,
+                  flex: 2,
+                  backgroundColor: agreedToTerms ? styles.colors.primary : styles.colors.border,
+                  cursor: agreedToTerms ? 'pointer' : 'not-allowed',
+                  boxShadow: agreedToTerms ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none'
+                }}
+                disabled={!agreedToTerms}
+                onClick={handleAcceptConfidentiality}
+              >
+                Agree and Proceed
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderProgressBar = () => (
     <div style={styles.progressContainer}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -2337,6 +2492,7 @@ const ReportForm = () => {
       </div>
 
       {renderAIValidationModal()}
+      {renderConfidentialityModal()}
 
       {showDatePicker && (
         <div style={styles.modalOverlay} onClick={() => setShowDatePicker(false)}>
