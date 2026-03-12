@@ -7,6 +7,7 @@ const UserKnowledgeHub = () => {
   const [webinars, setWebinars] = useState([]);
   const [resources, setResources] = useState([]);
   const [activeTab, setActiveTab] = useState("webinars");
+  const [playingVideoId, setPlayingVideoId] = useState(null);
 
   useEffect(() => {
     fetchWebinars();
@@ -77,12 +78,29 @@ const UserKnowledgeHub = () => {
               <div key={item._id} className="bg-white border rounded-lg shadow-sm hover:shadow-md transition">
                 <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
                   {item.videoUrl ? (
-                    <img
-                      src={`https://img.youtube.com/vi/${getYouTubeID(item.videoUrl)}/hqdefault.jpg`}
-                      alt={item.title}
-                      className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => window.open(item.videoUrl, "_blank")}
-                    />
+                    playingVideoId === item._id ? (
+                      <iframe
+                        className="w-full h-full"
+                        src={`https://www.youtube.com/embed/${getYouTubeID(item.videoUrl)}?autoplay=1`}
+                        title={item.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    ) : (
+                      <div className="relative w-full h-full group cursor-pointer" onClick={() => setPlayingVideoId(item._id)}>
+                        <img
+                          src={`https://img.youtube.com/vi/${getYouTubeID(item.videoUrl)}/hqdefault.jpg`}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all">
+                          <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-blue-600 border-b-[10px] border-b-transparent ml-1"></div>
+                          </div>
+                        </div>
+                      </div>
+                    )
                   ) : (
                     <div className="flex items-center justify-center w-full h-full text-gray-400">
                       No Video

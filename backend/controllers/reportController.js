@@ -403,17 +403,40 @@ const addReferral = async (req, res) => {
     };
 
     // 5. Update Report
+    const updateData = {
+      $push: {
+        referrals: referralData,
+        timeline: timelineEntry
+      },
+      $set: {
+        lastUpdated: new Date()
+      }
+    };
+
+    // ✅ NEW: If external referral, automatically archive the report as it's now handled outside
+    if (body.referralType === "External") {
+      updateData.$set.archived = true;
+      updateData.$set.archivedAt = new Date();
+      updateData.$set.status = "Closed";
+      updateData.$set.caseStatus = "Case Closed";
+      
+      // Also add an automated timeline entry for archiving
+      updateData.$push.timeline = {
+        $each: [
+          timelineEntry,
+          {
+            action: "System: Report Archived",
+            performedBy: req.user.id,
+            timestamp: new Date(),
+            remarks: "Automatically archived due to External Referral (Barangay)."
+          }
+        ]
+      };
+    }
+
     const report = await Report.findByIdAndUpdate(
       id,
-      {
-        $push: {
-          referrals: referralData,
-          timeline: timelineEntry
-        },
-        $set: {
-          lastUpdated: new Date()
-        }
-      },
+      updateData,
       { new: true }
     ).populate("createdBy", "firstName lastName email");
 
@@ -422,6 +445,19 @@ const addReferral = async (req, res) => {
         success: false,
         message: "Report not found"
       });
+    }
+
+    // ✅ NEW: Also close the associated ticket if external referral
+    if (body.referralType === "External" && report.ticketNumber) {
+      await Ticket.findOneAndUpdate(
+        { ticketNumber: report.ticketNumber },
+        { 
+          status: "Closed", 
+          closedAt: new Date(),
+          closedReason: "Referred to External Agency (Barangay)"
+        }
+      );
+      console.log(`✅ Associated ticket ${report.ticketNumber} closed due to external referral.`);
     }
 
     console.log(`✅ Referral (${referralData.referralType}) added to report ${id}`);

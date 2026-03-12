@@ -14,6 +14,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import FloatingChatbot from "./components/FloatingChatbot";
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
 
 import SuperAdminLayout from "./components/SuperAdminLayout";
 
@@ -79,6 +80,7 @@ const App = () => {
   return (
     <Provider store={store}>
       <Router>
+        <ScrollToTop />
         <Layout>
           <Routes>
             <Route path="/" element={<LandingPage />} />

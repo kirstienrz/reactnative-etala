@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { sendChatbotMessage } from "../api/chatbot";
+import { useLocation } from "react-router-dom";
 
 export default function FloatingChatbot() {
+  const location = useLocation();
+  const isSuperAdminRoute = location.pathname.startsWith("/superadmin");
+  
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [visible, setVisible] = useState(false);
@@ -197,6 +201,8 @@ chatContainer: {
       marginTop: "6px",
     },
   };
+
+  if (isSuperAdminRoute) return null;
 
   return (
     <>
