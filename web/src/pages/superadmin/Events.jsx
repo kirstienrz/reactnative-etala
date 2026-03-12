@@ -59,6 +59,7 @@ export default function SuperAdminCalendarUI() {
     status: "upcoming"
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState(new Set());
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -423,6 +424,79 @@ export default function SuperAdminCalendarUI() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedEvents.size === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedEvents.size} selected event(s)?`)) return;
+
+    setLoading(true);
+    const results = { success: 0, failed: 0 };
+
+    try {
+      for (let eventId of selectedEvents) {
+        // Find the event to check its source
+        const eventObj = events.find(e => e.id === eventId);
+        const source = eventObj?.extendedProps?.source || 'calendar';
+        const isProgramSource = source === 'program';
+
+        try {
+          let response;
+          if (isProgramSource) {
+            const programId = eventObj.extendedProps?.programId;
+            const projectId = eventObj.extendedProps?.projectId;
+            if (programId && projectId) {
+              response = await deleteProgramEvent(programId, projectId, eventId);
+            } else {
+              response = { success: false };
+            }
+          } else {
+            response = await deleteCalendarEvent(eventId);
+          }
+
+          if (response.success) {
+            results.success++;
+          } else {
+            results.failed++;
+          }
+        } catch (err) {
+          results.failed++;
+        }
+      }
+
+      if (results.success > 0) {
+        toast.success(`Successfully deleted ${results.success} event(s)`);
+      }
+      if (results.failed > 0) {
+        toast.error(`Failed to delete ${results.failed} event(s)`);
+      }
+
+      setSelectedEvents(new Set());
+      fetchEvents();
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      toast.error("An error occurred during bulk deletion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleEventSelection = (id) => {
+    const newSelected = new Set(selectedEvents);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedEvents(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedEvents.size === filteredEvents.length) {
+      setSelectedEvents(new Set());
+    } else {
+      setSelectedEvents(new Set(filteredEvents.map(e => e.id)));
+    }
+  };
+
   const handleSaveEvent = async () => {
     if (!formData.title.trim()) {
       toast.error("Please enter event title");
@@ -772,19 +846,37 @@ export default function SuperAdminCalendarUI() {
 
       {/* Events Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            All Events ({filteredEvents.length})
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Showing {filteredEvents.length} of {events.length} events
-          </p>
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              All Events ({filteredEvents.length})
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Showing {filteredEvents.length} of {events.length} events
+            </p>
+          </div>
+          {selectedEvents.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium shadow-sm animate-in fade-in slide-in-from-right-4"
+            >
+              <Trash2 size={16} /> Delete Selected ({selectedEvents.size})
+            </button>
+          )}
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedEvents.size === filteredEvents.length && filteredEvents.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Event
                 </th>
@@ -821,7 +913,15 @@ export default function SuperAdminCalendarUI() {
                 </tr>
               ) : (
                 currentItems.map((event) => (
-                  <tr key={event.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={event.id} className={`hover:bg-gray-50 transition-colors ${selectedEvents.has(event.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedEvents.has(event.id)}
+                        onChange={() => toggleEventSelection(event.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div

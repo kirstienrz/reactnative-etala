@@ -38,8 +38,8 @@ export default function SexDataViewer() {
     const [xField, setXField] = useState("");
     const [yField, setYField] = useState("");
     const [chartType, setChartType] = useState("bar");
-    const [selectedCharts, setSelectedCharts] = useState(["bar"]);
     const [filters, setFilters] = useState({});
+    const [viewMode, setViewMode] = useState("charts"); // "charts" or "table"
     const [showReportOptions, setShowReportOptions] = useState(false);
     const chartRef = useRef(null);
 
@@ -74,7 +74,6 @@ export default function SexDataViewer() {
             setXField("");
             setYField("");
             setChartType("bar");
-            setSelectedCharts(["bar"]);
 
             // Auto-select first text field for X and first numeric for Y
             if (data && data.headers && data.rows) {
@@ -303,15 +302,6 @@ export default function SexDataViewer() {
         }));
     };
 
-    const toggleChartSelection = (type) => {
-        setSelectedCharts(prev => {
-            if (prev.includes(type)) {
-                return prev.filter(t => t !== type);
-            } else {
-                return [...prev, type];
-            }
-        });
-    };
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -334,192 +324,241 @@ export default function SexDataViewer() {
                 </div>
 
                 {/* Datasets Grid - View Only */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                     {datasets.map((d) => (
                         <div
                             key={d._id}
-                            className="bg-white border rounded-lg p-4 hover:shadow-lg transition flex flex-col justify-between"
+                            onClick={() => openDataset(d._id)}
+                            className={`group relative bg-white border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer overflow-hidden ${active?._id === d._id ? 'ring-2 ring-blue-500 border-transparent bg-blue-50/30' : 'hover:border-blue-200'}`}
                         >
-                            <div>
-                                <h3 className="font-medium text-gray-800 truncate">{d.name}</h3>
-                                <p className="text-gray-500 text-sm mt-1">
-                                    {d.rows?.length || 0} rows, {d.headers?.length || 0} columns
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                    Created: {new Date(d.createdAt).toLocaleDateString()}
-                                </p>
-                            </div>
-                            <div className="flex justify-end gap-2 mt-4">
-                                <button
-                                    onClick={() => openDataset(d._id)}
-                                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 rounded text-white text-xs transition flex items-center gap-1"
-                                >
-                                    <Eye size={12} /> View Data
-                                </button>
+                            <div className="flex flex-col h-full">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className={`p-2 rounded-lg ${active?._id === d._id ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'}`}>
+                                        <BarChart2 size={20} />
+                                    </div>
+                                    <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{d.name}</h3>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-gray-500 text-sm flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                        {d.rows?.length || 0} Records
+                                    </p>
+                                    <p className="text-gray-500 text-sm flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                        {d.headers?.length || 0} Columns
+                                    </p>
+                                </div>
+                                <div className="mt-auto pt-4 flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(d.createdAt).toLocaleDateString()}</span>
+                                    <div className={`p-1.5 rounded-full transition-all ${active?._id === d._id ? 'bg-blue-500 text-white' : 'text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                                        <Eye size={16} />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     ))}
 
                     {datasets.length === 0 && (
-                        <div className="col-span-full text-center py-12 bg-white rounded-lg border">
-                            <BarChart2 size={48} className="mx-auto text-gray-300 mb-4" />
-                            <h3 className="text-xl font-semibold text-gray-600 mb-2">No datasets available</h3>
-                            <p className="text-gray-500">Check back later for updated datasets</p>
+                        <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+                            <BarChart2 size={64} className="mx-auto text-gray-200 mb-4" />
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">No datasets available</h3>
+                            <p className="text-gray-500 max-w-sm mx-auto">Check back later for updated sex-disaggregated statistics and analysis.</p>
                         </div>
                     )}
                 </div>
 
                 {/* Active Dataset Section */}
                 {active && (
-                    <div className="bg-white rounded-lg border p-4 md:p-6 mb-6">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">{active.name}</h2>
-                                <p className="text-gray-600 text-sm">
-                                    Showing {getFilteredRows().length} of {active.rows?.length || 0} records
-                                </p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setShowReportOptions(true)}
-                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 text-sm"
-                                >
-                                    <Download size={16} /> Export Report
-                                </button>
-                                <button
-                                    onClick={() => setActive(null)}
-                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
-                                >
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Filters Section */}
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Filter size={16} className="text-gray-600" />
-                                <h3 className="font-medium text-gray-700">Filter Data</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                {active.headers.slice(0, 3).map((header) => (
-                                    <input
-                                        key={header}
-                                        type="text"
-                                        placeholder={`Filter ${header}...`}
-                                        value={filters[header] || ""}
-                                        onChange={(e) => handleFilterChange(header, e.target.value)}
-                                        className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                ))}
-                                {active.headers.length > 3 && (
-                                    <div className="text-sm text-gray-500">
-                                        + {active.headers.length - 3} more columns
+                    <div className="bg-white rounded-3xl border shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-500">
+                        {/* Dataset Header */}
+                        <div className="p-6 md:p-8 border-b bg-gradient-to-r from-gray-50 to-white">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="bg-blue-600 text-white p-2 rounded-xl">
+                                            <BarChart2 size={24} />
+                                        </div>
+                                        <h2 className="text-2xl font-black text-gray-900 leading-tight">{active.name}</h2>
                                     </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Chart Controls */}
-                        <div className="mb-6">
-                            <h3 className="font-medium text-gray-700 mb-3">Chart Configuration</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                                <select
-                                    value={xField}
-                                    onChange={(e) => setXField(e.target.value)}
-                                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">Select X-axis</option>
-                                    {active.headers.map((h) => (
-                                        <option key={h} value={h}>{h}</option>
-                                    ))}
-                                </select>
-
-                                <select
-                                    value={yField}
-                                    onChange={(e) => setYField(e.target.value)}
-                                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">Select Y-axis (numeric)</option>
-                                    {numericFields.map((h) => (
-                                        <option key={h} value={h}>{h}</option>
-                                    ))}
-                                </select>
-
-                                <select
-                                    value={chartType}
-                                    onChange={(e) => setChartType(e.target.value)}
-                                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="bar">Bar Chart</option>
-                                    <option value="line">Line Chart</option>
-                                    <option value="pie">Pie Chart</option>
-                                </select>
-
-                                <div className="flex gap-2 items-center">
-                                    <span className="text-sm text-gray-600">Charts:</span>
-                                    {['bar', 'line', 'pie'].map(type => (
-                                        <button
-                                            key={type}
-                                            onClick={() => toggleChartSelection(type)}
-                                            className={`px-3 py-1 rounded text-xs ${selectedCharts.includes(type)
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                }`}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
+                                    <p className="text-gray-500 font-medium ml-12">
+                                        Analyzing <span className="text-blue-600 font-bold">{getFilteredRows().length}</span> entries
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                                    <div className="flex p-1 bg-gray-100 rounded-xl mr-2">
+                                        {[
+                                            { id: 'charts', label: 'Charts', icon: BarChart2 },
+                                            { id: 'table', label: 'Data Table', icon: Filter }
+                                        ].map(mode => (
+                                            <button
+                                                key={mode.id}
+                                                onClick={() => setViewMode(mode.id)}
+                                                className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                            >
+                                                <mode.icon size={14} />
+                                                {mode.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        onClick={() => setShowReportOptions(true)}
+                                        className="flex-1 md:flex-none px-6 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-200 flex items-center justify-center gap-2"
+                                    >
+                                        <Download size={18} /> Export
+                                    </button>
+                                    <button
+                                        onClick={() => setActive(null)}
+                                        className="flex-1 md:flex-none px-6 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition"
+                                    >
+                                        Close
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Charts Display */}
-                        <div className="mb-8">
-                            <div ref={chartRef} className="space-y-6">
-                                {selectedCharts.map(type => (
-                                    <div key={type} className="bg-gray-50 p-4 rounded-lg">
-                                        <div className="h-64">
-                                            {renderChart(type)}
+                        <div className="p-6 md:p-8 space-y-8">
+                            {/* Controls Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                {/* Configuration */}
+                                <div className="lg:col-span-4 space-y-6">
+                                    <div>
+                                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <Filter size={14} /> Filter & Grouping
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="bg-gray-50 p-4 rounded-2xl space-y-4">
+                                                {active.headers.slice(0, 2).map((header) => (
+                                                    <div key={header}>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">{header}</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder={`Search ${header}...`}
+                                                            value={filters[header] || ""}
+                                                            onChange={(e) => handleFilterChange(header, e.target.value)}
+                                                            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
 
-                        {/* Data Table - Read Only */}
-                        <div className="overflow-x-auto">
-                            <div className="mb-3">
-                                <h3 className="font-medium text-gray-700">Data Preview</h3>
-                                <p className="text-gray-500 text-sm">This is a read-only view of the dataset</p>
-                            </div>
-                            <table className="min-w-full border">
-                                <thead className="bg-gray-100">
-                                    <tr>
-                                        {active.headers.map((h) => (
-                                            <th key={h} className="px-3 py-2 text-left text-sm font-medium text-gray-700 border">
-                                                {h}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {getFilteredRows().slice(0, 50).map((row, i) => (
-                                        <tr key={i} className="border-b hover:bg-gray-50">
-                                            {active.headers.map((h) => (
-                                                <td key={`${i}-${h}`} className="px-3 py-2 text-sm text-gray-600 border">
-                                                    {row[h]}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {getFilteredRows().length > 50 && (
-                                <div className="text-sm text-gray-500 mt-2">
-                                    Showing first 50 of {getFilteredRows().length} records
+                                    <div>
+                                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <BarChart2 size={14} /> Chart Settings
+                                        </h3>
+                                        <div className="bg-gray-50 p-4 rounded-2xl space-y-4">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis (Label)</label>
+                                                <select
+                                                    value={xField}
+                                                    onChange={(e) => setXField(e.target.value)}
+                                                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                >
+                                                    <option value="">Select Field</option>
+                                                    {active.headers.map((h) => (
+                                                        <option key={h} value={h}>{h}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis (Value)</label>
+                                                <select
+                                                    value={yField}
+                                                    onChange={(e) => setYField(e.target.value)}
+                                                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                >
+                                                    <option value="">Select Numeric Field</option>
+                                                    {numericFields.map((h) => (
+                                                        <option key={h} value={h}>{h}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Visualization</label>
+                                                <div className="flex p-1 bg-white border rounded-xl">
+                                                    {['bar', 'line', 'pie'].map(type => (
+                                                        <button
+                                                            key={type}
+                                                            onClick={() => setChartType(type)}
+                                                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${chartType === type ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+                                                        >
+                                                            {type.toUpperCase()}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
+
+                                {/* Visualization Area */}
+                                <div className="lg:col-span-8 flex flex-col gap-6">
+                                    {viewMode === 'charts' ? (
+                                        <div className="bg-gray-50 rounded-3xl p-6 md:p-8 flex-1 border border-gray-100 min-h-[400px]">
+                                            <div ref={chartRef} className="w-full h-full flex flex-col">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <h3 className="text-lg font-bold text-gray-900">
+                                                        {yField || "Values"} by {xField || "Categories"}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`w-2 h-2 rounded-full ${generateChartData() ? 'bg-green-500' : 'bg-gray-300 animate-pulse'}`}></span>
+                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Preview</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 flex items-center justify-center">
+                                                    {renderChart(chartType)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
+                                            <div className="px-6 py-5 border-b bg-gray-50/50 flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
+                                                        <Filter size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-lg font-black text-gray-900">Detailed Data Table</p>
+                                                        <p className="text-xs font-medium text-gray-500">View raw records and filtered results</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead className="bg-gray-50/80 backdrop-blur sticky top-0 z-10">
+                                                        <tr>
+                                                            {active.headers.map((h) => (
+                                                                <th key={h} className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
+                                                                    {h}
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-100">
+                                                        {getFilteredRows().map((row, i) => (
+                                                            <tr key={i} className="hover:bg-blue-50/30 transition-colors">
+                                                                {active.headers.map((h) => (
+                                                                    <td key={`${i}-${h}`} className="px-6 py-4 text-sm font-medium text-gray-600">
+                                                                        {row[h]}
+                                                                    </td>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                {getFilteredRows().length === 0 && (
+                                                    <div className="py-20 text-center text-gray-400 font-medium">
+                                                        No records match your filters.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -313,10 +313,12 @@ export default function InfographicsAdmin() {
             for (let id of selectedImages) {
                 if (action === 'archive') await archiveInfographic(id);
                 if (action === 'restore') await restoreInfographic(id);
+                if (action === 'delete') await deleteInfographic(id);
             }
             setSelectedImages(new Set());
             // Auto-refresh after bulk action
             await fetchInfographics();
+            alert(`Successfully ${action === 'delete' ? 'deleted' : (action === 'archive' ? 'archived' : 'restored')} selected infographics.`);
         } catch (error) {
             console.error(error);
             alert(`Failed to ${action} infographics. Please try again.`);
@@ -433,15 +435,23 @@ export default function InfographicsAdmin() {
                                     </button>
 
                                     {selectedImages.size > 0 && (
-                                        <button
-                                            onClick={() => handleBulkAction(viewArchived ? 'restore' : 'archive')}
-                                            className={`px-4 py-2 text-white rounded-lg transition ${viewArchived
-                                                ? 'bg-green-500 hover:bg-green-600'
-                                                : 'bg-yellow-500 hover:bg-yellow-600'
-                                                }`}
-                                        >
-                                            {viewArchived ? 'Restore' : 'Archive'} Selected ({selectedImages.size})
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleBulkAction(viewArchived ? 'restore' : 'archive')}
+                                                className={`px-4 py-2 text-white rounded-lg transition ${viewArchived
+                                                    ? 'bg-green-500 hover:bg-green-600'
+                                                    : 'bg-yellow-500 hover:bg-yellow-600'
+                                                    }`}
+                                            >
+                                                {viewArchived ? 'Restore' : 'Archive'} ({selectedImages.size})
+                                            </button>
+                                            <button
+                                                onClick={() => handleBulkAction('delete')}
+                                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+                                            >
+                                                <Trash2 size={16} /> Delete ({selectedImages.size})
+                                            </button>
+                                        </div>
                                     )}
                                 </>
                             )}

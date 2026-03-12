@@ -1046,7 +1046,7 @@ export default function AlbumGalleryManagement() {
       {/* Create Album Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">Create New Album</h2>
@@ -1059,7 +1059,7 @@ export default function AlbumGalleryManagement() {
               </div>
             </div>
 
-            <form onSubmit={handleCreateAlbum} className="p-6">
+            <form onSubmit={handleCreateAlbum} className="p-6 overflow-y-auto flex-1">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -412,7 +412,7 @@ const TicketMessagingSystem = () => {
   const [typingUser, setTypingUser] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('open');
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showIdentityModal, setShowIdentityModal] = useState(false);
@@ -756,7 +756,7 @@ const TicketMessagingSystem = () => {
     const matchSearch = !q || ticket.displayName?.toLowerCase().includes(q) || ticket.ticketNumber?.toLowerCase().includes(q) || ticket.reportId?.ticketNumber?.toLowerCase().includes(q);
     const matchFilter = filterStatus === 'all' ? true
       : filterStatus === 'open' ? ticket.status === 'Open'
-        : filterStatus === 'closed' ? ticket.status === 'Closed'
+        : filterStatus === 'archived' ? (ticket.status === 'Closed' || ticket.reportId?.caseStatus === 'For Referral' || ticket.reportId?.caseStatus === 'Case Closed')
           : filterStatus === 'unread' ? isUnread(ticket.ticketNumber)
             : true;
     return matchSearch && matchFilter;
@@ -791,10 +791,10 @@ const TicketMessagingSystem = () => {
             </div>
 
             <div className="flex gap-2 overflow-x-auto">
-              {['all', 'unread', 'open', 'closed'].map(filter => (
+              {['all', 'unread', 'open', 'archived'].map(filter => (
                 <button key={filter} onClick={() => setFilterStatus(filter)}
                   className={`relative px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === filter ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {filter === 'archived' ? 'Archived' : filter.charAt(0).toUpperCase() + filter.slice(1)}
                   {filter === 'unread' && unreadCount > 0 && (
                     <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full ${filterStatus === 'unread' ? 'bg-white text-blue-600' : 'bg-red-500 text-white'}`}>
                       {unreadCount}
@@ -849,7 +849,9 @@ const TicketMessagingSystem = () => {
                           <div className="flex items-center justify-between">
                             {ticket.reportId?.caseStatus && (
                               <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${ticket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                {ticket.reportId.caseStatus}
+                                {ticket.reportId.caseStatus === 'Case Closed' ? 'Archived (Closed)' : 
+                                 ticket.reportId.caseStatus === 'For Referral' ? 'Archived (Referred)' : 
+                                 ticket.reportId.caseStatus}
                               </span>
                             )}
                             {ticketUnread && !isSelected && (
@@ -894,7 +896,7 @@ const TicketMessagingSystem = () => {
                       <Mail className="w-4 h-4" />
                     </button>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedTicket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                      {selectedTicket.status}
+                      {selectedTicket.status === 'Closed' ? 'Archived' : selectedTicket.status}
                     </span>
                   </div>
                 </div>
