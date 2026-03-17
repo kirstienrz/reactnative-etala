@@ -1877,8 +1877,6 @@ const ReportForm = () => {
                 <option value="Student">Student</option>
                 <option value="Faculty">Faculty</option>
                 <option value="Staff">Staff</option>
-                <option value="Alumni">Alumni</option>
-                <option value="Visitor">Visitor</option>
               </select>
             </div>
           </div>
