@@ -3,6 +3,7 @@ import { Menu, X, ChevronDown, LayoutDashboard, FileText, Inbox, User, LogOut } 
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/authSlice";
+import LogoutModal from "./LogoutModal";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,6 +12,7 @@ const Header = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isLoggedIn, role } = useSelector((state) => state.auth);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   // Reference for dropdown to close when clicking outside
   const userDropdownRef = useRef(null);
@@ -30,7 +32,12 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  const confirmLogout = () => {
     dispatch(logout());
+    setIsLogoutModalOpen(false);
     navigate("/");
   };
 
@@ -72,7 +79,7 @@ const Header = () => {
       ]
     },
     {
-      title: 'Etala',
+      title: 'eTALA',
       path: isLoggedIn ? '/user/report' : '/login',
       submenu: []
     },
@@ -319,6 +326,11 @@ const Header = () => {
           </nav>
         </div>
       )}
+      <LogoutModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={confirmLogout}
+      />
     </header>
   );
 };

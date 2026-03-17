@@ -300,10 +300,10 @@ router.post("/manage/users", auth(), async (req, res) => {
     try {
       await sendEmail({
         to: email,
-        subject: "Your Etala Account Has Been Created",
+        subject: "Your eTALA Account Has Been Created",
         html: `
           <p>Hello ${firstName},</p>
-          <p>Your account has been successfully created in Etala.</p>
+          <p>Your account has been successfully created in eTALA.</p>
           <p><strong>Email:</strong> ${email}<br/>
           <p>Password is your username in capital</p>
           <p>Please log in and change your password immediately.</p>

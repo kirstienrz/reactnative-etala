@@ -426,12 +426,7 @@ export default function ResearchAdmin() {
   // Robust PDF Embed URL generator
   const getEmbedUrl = (url) => {
     if (!url) return "";
-    // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
-    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-    }
-    // For 'image' resource type PDFs, standard URL works
-    return `${url}#toolbar=0`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
   };
 
   // Render loading state
@@ -1244,7 +1239,7 @@ export default function ResearchAdmin() {
 
       {/* PDF Viewer Modal */}
       {selectedPdf && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
               <div>
@@ -1259,19 +1254,11 @@ export default function ResearchAdmin() {
               </button>
             </div>
             <div className="flex-1 bg-gray-100 flex items-center justify-center relative">
-              {selectedPdf.url.toLowerCase().includes('.pdf') || selectedPdf.url.includes('/image/upload/') ? (
-                <iframe
-                  src={getEmbedUrl(selectedPdf.url)}
-                  className="w-full h-full border-none"
-                  title={selectedPdf.title}
-                />
-              ) : (
-                <div className="text-center p-8 bg-white rounded-xl shadow-sm">
-                  <FileText size={48} className="mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-600">Preview not available for this file type.</p>
-                  <a href={selectedPdf.url} className="mt-4 inline-block text-blue-600 underline">Download instead</a>
-                </div>
-              )}
+              <iframe
+                src={getEmbedUrl(selectedPdf.url)}
+                className="w-full h-full border-none"
+                title={selectedPdf.title}
+              />
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Download, Search, Calendar, User, ExternalLink,
   FileText, BookOpen, Filter, ChevronDown, Eye,
-  Tag, ChevronRight, Sparkles, FileArchive, Globe, X
+  Tag, ChevronRight, Sparkles, FileArchive, Globe, X, Link
 } from 'lucide-react';
 import { getAllResearch, getResearchStats, getAvailableYears } from '../../api/research';
 
@@ -17,7 +17,7 @@ const LoadingSpinner = () => (
 );
 
 // Research Card Component
-const ResearchCard = ({ research, onView }) => {
+const ResearchCard = ({ research, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
 
   const formatDate = (dateString) => {
@@ -32,18 +32,8 @@ const ResearchCard = ({ research, onView }) => {
 
   return (
     <div
-      onClick={() => {
-        if (research.researchFile?.url) {
-          onView({
-            url: research.researchFile.url,
-            title: research.title,
-            year: research.year
-          });
-        } else if (research.link) {
-          window.open(research.link, '_blank');
-        }
-      }}
-      className="group flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300 cursor-pointer"
+      onClick={() => onSelect(research)}
+      className="group flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-white border border-slate-200 hover:border-violet-600 hover:shadow-lg transition-all duration-300 cursor-pointer rounded-2xl"
     >
       <div className="flex-1">
         {/* Year Badge */}
@@ -239,16 +229,12 @@ export default function ResearchPublications() {
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [availableYears, setAvailableYears] = useState(['All Years']);
   const [selectedPdf, setSelectedPdf] = useState(null);
+  const [selectedResearch, setSelectedResearch] = useState(null);
 
   // Robust PDF Embed URL generator
   const getEmbedUrl = (url) => {
     if (!url) return "";
-    // If it's a Cloudinary raw URL, use Google Docs Viewer proxy to ensure inline viewing
-    if (url.includes('/raw/upload/') && url.toLowerCase().endsWith('.pdf')) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-    }
-    // For 'image' resource type PDFs, standard URL works
-    return `${url}#toolbar=0`;
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
   };
 
   // Fetch data on component mount
@@ -483,7 +469,7 @@ export default function ResearchPublications() {
                   <ResearchCard
                     key={research._id}
                     research={research}
-                    onView={(pdf) => setSelectedPdf(pdf)}
+                    onSelect={(r) => setSelectedResearch(r)}
                   />
                 ))}
 
@@ -502,9 +488,128 @@ export default function ResearchPublications() {
         </div>
       </section>
 
+      {/* Research Details Modal (Exact Replica of Screenshot/Admin Layout) */}
+      {selectedResearch && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4" onClick={() => setSelectedResearch(null)}>
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b px-8 py-5 flex justify-between items-center z-10">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight text-[#222]">Research Details</h2>
+              <button
+                onClick={() => setSelectedResearch(null)}
+                className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-8">
+              <div className="flex flex-col md:flex-row gap-8 mb-8">
+                {/* Left Side: Title and Authors */}
+                <div className="flex-1">
+                  <h1 className="text-3xl font-black text-slate-900 mb-6 leading-tight">
+                    {selectedResearch.title}
+                  </h1>
+                  <div className="flex items-center gap-2 text-slate-600 mb-4 uppercase tracking-widest text-[11px] font-black text-slate-400">
+                    Lead Researchers / Authors:
+                  </div>
+                  <div className="text-slate-800 font-bold text-lg mb-4">
+                    {selectedResearch.authors}
+                  </div>
+                </div>
+
+                {/* Right Side: Access Cards (Matching Screenshot) */}
+                <div className="w-full md:w-80 space-y-4">
+                  {selectedResearch.link && (
+                    <div className="bg-[#EFF6FF] border border-blue-100 p-4 rounded-xl">
+                      <div className="flex items-center gap-2 text-blue-600 font-bold text-sm mb-2">
+                        <Link size={16} />
+                        <span>External Link</span>
+                      </div>
+                      <a
+                        href={selectedResearch.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 text-xs truncate block hover:underline"
+                        title={selectedResearch.link}
+                      >
+                        {selectedResearch.link}
+                      </a>
+                    </div>
+                  )}
+
+                  {selectedResearch.researchFile?.url && (
+                    <div className="bg-[#F0FDF4] border border-green-100 p-4 rounded-xl">
+                      <div className="flex items-center gap-2 text-green-600 font-bold text-sm mb-2">
+                        <FileText size={16} />
+                        <span>Research File</span>
+                      </div>
+                      <button
+                        onClick={() => setSelectedPdf({
+                          url: selectedResearch.researchFile.url,
+                          title: selectedResearch.title,
+                          year: selectedResearch.year
+                        })}
+                        className="text-green-600 text-xs font-bold hover:underline text-left"
+                      >
+                        View {selectedResearch.researchFile.originalName || 'Research PDF'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Abstract Section */}
+              <div className="mb-10">
+                <h3 className="text-lg font-black text-slate-900 mb-4">Abstract</h3>
+                <p className="text-slate-600 leading-relaxed text-[15px] font-medium whitespace-pre-line">
+                  {selectedResearch.abstract}
+                </p>
+              </div>
+
+              {/* Action Buttons (Matching Screenshot Colors) */}
+              <div className="flex flex-wrap gap-3 pt-6 border-t border-slate-100">
+                {/* For public users, we hide admin buttons but keep the layout consistency */}
+                {selectedResearch.researchFile?.url && (
+                  <button
+                    onClick={() => setSelectedPdf({
+                      url: selectedResearch.researchFile.url,
+                      title: selectedResearch.title,
+                      year: selectedResearch.year
+                    })}
+                    className="px-6 py-2.5 bg-[#2563EB] text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    View Research PDF
+                  </button>
+                )}
+                
+                {selectedResearch.link && (
+                  <a
+                    href={selectedResearch.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-2.5 bg-[#9333EA] text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-colors flex items-center gap-2"
+                  >
+                    <ExternalLink size={16} />
+                    Open Link
+                  </a>
+                )}
+                
+                <button
+                  onClick={() => setSelectedResearch(null)}
+                  className="px-6 py-2.5 bg-gray-50 text-gray-600 border border-gray-100 rounded-lg font-bold text-sm hover:bg-gray-100 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PDF Viewer Modal */}
       {selectedPdf && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10001] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900">
               <div>

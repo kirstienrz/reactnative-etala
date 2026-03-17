@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import {
@@ -58,7 +59,18 @@ const AccountScreen = ({ navigation }) => {
         navigation.navigate("SettingsScreen");
         break;
       case "Logout":
-        handleLogout();
+        Alert.alert(
+          "Logout",
+          "Are you sure you want to logout?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "Logout", 
+              style: "destructive", 
+              onPress: () => handleLogout() 
+            }
+          ]
+        );
         break;
       default:
         console.log("No navigation found for:", page);

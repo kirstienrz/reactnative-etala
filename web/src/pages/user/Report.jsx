@@ -652,7 +652,7 @@ const ReportForm = () => {
   const checkConfidentiality = () => {
     const token = localStorage.getItem('token');
     const acceptedToken = localStorage.getItem('confidentialityAcceptedToken');
-    
+
     if (token && acceptedToken === token) {
       setHasAgreedPersistent(true);
     } else {
@@ -662,7 +662,7 @@ const ReportForm = () => {
 
   const handleAcceptConfidentiality = () => {
     if (!agreedToTerms) return;
-    
+
     const token = localStorage.getItem('token');
     if (token) {
       localStorage.setItem('confidentialityAcceptedToken', token);
@@ -1664,10 +1664,10 @@ const ReportForm = () => {
 
     return (
       <div style={{
-          ...styles.modalOverlay,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 10000
+        ...styles.modalOverlay,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 10000
       }}>
         <div style={{
           ...styles.modalContent,
@@ -1712,7 +1712,7 @@ const ReportForm = () => {
             <p style={{ fontWeight: '600', marginBottom: '16px' }}>
               By proceeding with the submission of this report, you acknowledge and agree to the following confidentiality terms:
             </p>
-            
+
             <p style={{ marginBottom: '16px' }}>
               All information provided in this report will be treated with strict confidentiality and will only be accessed by authorized personnel of the system for the purpose of reviewing, processing, and responding to the concern submitted.
             </p>
@@ -1735,11 +1735,11 @@ const ReportForm = () => {
           </div>
 
           <div style={{ borderTop: `1px solid ${styles.colors.border}`, paddingTop: '24px' }}>
-            <div 
+            <div
               style={{
-                display: 'flex', 
-                alignItems: 'flex-start', 
-                gap: '12px', 
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
                 cursor: 'pointer',
                 marginBottom: '24px'
               }}
@@ -1759,7 +1759,7 @@ const ReportForm = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 style={{
                   ...styles.secondaryButton,
                   flex: 1
@@ -1768,7 +1768,7 @@ const ReportForm = () => {
               >
                 Go Back
               </button>
-              <button 
+              <button
                 style={{
                   ...styles.primaryButton,
                   flex: 2,
@@ -1859,7 +1859,6 @@ const ReportForm = () => {
                 <option value="">Select your role</option>
                 <option value="Victim">Victim</option>
                 <option value="Witness">Witness</option>
-                <option value="Third Party">Third Party (Friend, Family, Colleague)</option>
                 <option value="Mandatory Reporter">Mandatory Reporter</option>
               </select>
             </div>

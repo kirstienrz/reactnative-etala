@@ -27,6 +27,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/authSlice";
 import SidebarItem from './SidebarItem';
+import LogoutModal from './LogoutModal';
 
 const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
   const dispatch = useDispatch();
@@ -36,6 +37,7 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
   const [expandedMenus, setExpandedMenus] = useState({
     knowledgeHub: false,
   });
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const unreadMessageCount = useSelector(state => state.ui.unreadMessageCount);
 
@@ -48,11 +50,13 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
   ].includes(location.pathname);
 
   const handleLogout = () => {
-    if (window.confirm("Are you sure you want to logout?")) {
-      dispatch(logout());
-      alert("Logged out successfully!");
-      navigate("/login");
-    }
+    setIsLogoutModalOpen(true);
+  };
+
+  const confirmLogout = () => {
+    dispatch(logout());
+    setIsLogoutModalOpen(false);
+    navigate("/login");
   };
 
   const toggleMenu = (menu) => {
@@ -258,6 +262,11 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
           </button>
         </div>
       </div>
+      <LogoutModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={confirmLogout}
+      />
     </>
   );
 };

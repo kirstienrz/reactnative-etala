@@ -360,39 +360,172 @@ export default function SexDataAdmin() {
     };
 
     const downloadPDF = async () => {
-        if (!active || !chartRef.current) return;
+        if (!active) return;
 
         try {
             const { jsPDF } = await import('jspdf');
-            const html2canvas = await import('html2canvas');
+            const autoTable = (await import('jspdf-autotable')).default;
+            const html2canvas = (await import('html2canvas')).default;
 
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const purpleTheme = [126, 34, 206]; // Purple 700 (consistent with other reports)
 
-            pdf.setFontSize(18);
-            pdf.text("Data Analysis Report", pageWidth / 2, 20, { align: 'center' });
+            // ===== HEADER =====
+            pdf.setFontSize(22);
+            pdf.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
+            pdf.setFont("helvetica", "bold");
+            pdf.text("SEX DISAGGREGATED DATA REPORT", pageWidth / 2, 20, { align: 'center' });
 
-            pdf.setFontSize(12);
-            pdf.text(`Dataset: ${active.name}`, 20, 40);
-            pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 50);
-            pdf.text(`Total Records: ${getFilteredRows().length}`, 20, 60);
+            pdf.setFontSize(10);
+            pdf.setTextColor(100);
+            pdf.setFont("helvetica", "normal");
+            pdf.text("Technological University of the Philippines - GAD Office", pageWidth / 2, 26, { align: 'center' });
 
-            if (generateChartData()) {
-                const canvas = await html2canvas.default(chartRef.current);
-                const imgData = canvas.toDataURL('image/png');
-                const imgWidth = pageWidth - 40;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                pdf.addImage(imgData, 'PNG', 20, 70, imgWidth, imgHeight);
+            pdf.setDrawColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
+            pdf.setLineWidth(0.5);
+            pdf.line(14, 32, pageWidth - 14, 32);
+
+            let y = 45;
+
+            // ===== DATASET INFO =====
+            pdf.setFontSize(14);
+            pdf.setTextColor(0);
+            pdf.setFont("helvetica", "bold");
+            pdf.text(`Dataset: ${active.name}`, 14, y);
+            y += 8;
+
+            pdf.setFontSize(10);
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(80);
+            pdf.text(`Report Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 14, y);
+            y += 6;
+            pdf.text(`Total Records Analyzed: ${getFilteredRows().length}`, 14, y);
+            y += 12;
+
+            // ===== CHART SECTION =====
+            if (xField && yField && chartRef.current) {
+                try {
+                    pdf.setFontSize(12);
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
+                    pdf.text("Data Visualization", 14, y);
+                    y += 6;
+
+                    const canvas = await html2canvas(chartRef.current);
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgWidth = pageWidth - 40;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                    // Check if chart fits on current page, if not add page
+                    if (y + imgHeight > pageHeight - 30) {
+                        pdf.addPage();
+                        y = 20;
+                    }
+
+                    pdf.addImage(imgData, 'PNG', 20, y, imgWidth, imgHeight);
+                    y += imgHeight + 15;
+                } catch (chartErr) {
+                    console.error("Error capturing chart for PDF:", chartErr);
+                }
             }
 
-            pdf.setFontSize(14);
-            pdf.text("Data Summary", 20, pdf.internal.pageSize.getHeight() - 40);
-            pdf.setFontSize(10);
+            // ===== DATA SUMMARY TABLE =====
+            const filteredRows = getFilteredRows();
+            if (xField && yField && filteredRows.length > 0) {
+                pdf.setFontSize(12);
+                pdf.setFont("helvetica", "bold");
+                pdf.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
+                pdf.text("Statistical Summary", 14, y);
+                y += 6;
 
-            pdf.save(`${active.name}_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+                // Group data by X field and sum Y field
+                const summaryMap = {};
+                let totalY = 0;
+                filteredRows.forEach(row => {
+                    const label = String(row[xField] || "N/A");
+                    const val = Number(row[yField]) || 0;
+                    summaryMap[label] = (summaryMap[label] || 0) + val;
+                    totalY += val;
+                });
+
+                const summaryData = Object.entries(summaryMap).map(([label, val]) => [
+                    label,
+                    val.toLocaleString(),
+                    totalY > 0 ? ((val / totalY) * 100).toFixed(1) + "%" : "0%"
+                ]);
+
+                // Sort by value descending
+                summaryData.sort((a, b) => {
+                    const valA = parseFloat(a[1].replace(/,/g, ''));
+                    const valB = parseFloat(b[1].replace(/,/g, ''));
+                    return valB - valA;
+                });
+
+                autoTable(pdf, {
+                    startY: y,
+                    head: [[xField, yField, "Percentage"]],
+                    body: summaryData,
+                    theme: 'striped',
+                    headStyles: { fillColor: purpleTheme, textColor: 255 },
+                    styles: { fontSize: 9 },
+                    margin: { left: 14, right: 14 }
+                });
+
+                y = pdf.lastAutoTable.finalY + 12;
+
+                // ===== KEY FINDINGS =====
+                if (y > pageHeight - 60) {
+                    pdf.addPage();
+                    y = 25;
+                }
+
+                pdf.setFontSize(12);
+                pdf.setFont("helvetica", "bold");
+                pdf.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
+                pdf.text("Analysis Summary", 14, y);
+                y += 10;
+
+                pdf.setFontSize(10);
+                pdf.setFont("helvetica", "normal");
+                pdf.setTextColor(0);
+
+                const highest = summaryData[0];
+                const lowest = summaryData[summaryData.length - 1];
+                const summaryText = [
+                    `• The dataset "${active.name}" contains a total of ${filteredRows.length} records.`,
+                    `• The total accumulated value for ${yField} across all categories is ${totalY.toLocaleString()}.`,
+                    `• The category with the highest ${yField} is "${highest[0]}" with ${highest[1]} (${highest[2]} of total).`,
+                    `• The category with the lowest ${yField} is "${lowest[0]}" with ${lowest[1]} (${lowest[2]} of total).`,
+                    `• Analysis shows ${Object.keys(summaryMap).length} distinct categories for ${xField}.`
+                ];
+
+                summaryText.forEach(line => {
+                    const splitText = pdf.splitTextToSize(line, pageWidth - 28);
+                    pdf.text(splitText, 14, y);
+                    y += (splitText.length * 5) + 2;
+                });
+            }
+
+            // ===== FOOTER =====
+            const pageCount = pdf.internal.getNumberOfPages();
+            pdf.setFontSize(8);
+            pdf.setTextColor(150);
+            for (let i = 1; i <= pageCount; i++) {
+                pdf.setPage(i);
+                pdf.text(
+                    `TUPT-GAD-DATA-ANALYSIS | Page ${i} of ${pageCount}`,
+                    pageWidth / 2,
+                    pageHeight - 10,
+                    { align: "center" }
+                );
+            }
+
+            pdf.save(`${active.name}_report_${new Date().toISOString().replace(/T/, '_').replace(/:/g, '-').slice(0, 19)}.pdf`);
         } catch (err) {
             console.error("PDF download error:", err);
-            alert("Failed to generate PDF");
+            alert("Failed to generate PDF: " + err.message);
         }
     };
 
@@ -656,52 +789,51 @@ export default function SexDataAdmin() {
                                         </div>
                                     </div>
 
-                                    {viewMode === 'charts' && (
-                                        <div>
-                                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                <BarChart2 size={14} /> Chart Config
-                                            </h3>
-                                            <div className="bg-gray-50 p-5 rounded-2xl space-y-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis</label>
-                                                    <select value={xField} onChange={(e) => setXField(e.target.value)} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                                        <option value="">Select Category</option>
-                                                        {active.headers.map((h) => <option key={h} value={h}>{h}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis</label>
-                                                    <select value={yField} onChange={(e) => setYField(e.target.value)} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                                        <option value="">Select Value</option>
-                                                        {numericFields.map((h) => <option key={h} value={h}>{h}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Chart Style</label>
-                                                    <div className="flex p-1 bg-white border rounded-xl">
-                                                        {['bar', 'line', 'pie'].map(type => (
-                                                            <button key={type} onClick={() => setChartType(type)} className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${chartType === type ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500'}`}>{type}</button>
-                                                        ))}
+                                    {viewMode === 'charts' ? (
+                                        <div className="flex flex-col gap-8">
+                                            <div className="bg-gray-50 rounded-3xl p-6 md:p-8 border border-gray-100 min-h-[450px]">
+                                                <div ref={chartRef} className="w-full h-full flex flex-col">
+                                                    <div className="flex justify-between items-center mb-8">
+                                                        <h3 className="text-lg font-black text-gray-900">{chartType.toUpperCase()} Visualization</h3>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Selected: {yField} vs {xField}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 flex items-center justify-center">
+                                                        {renderChart(chartType)}
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
 
-                                <div className="lg:col-span-8 space-y-8">
-                                    {viewMode === 'charts' ? (
-                                        <div className="bg-gray-50 rounded-3xl p-6 md:p-8 border border-gray-100 min-h-[450px]">
-                                            <div ref={chartRef} className="w-full h-full flex flex-col">
-                                                <div className="flex justify-between items-center mb-8">
-                                                    <h3 className="text-lg font-black text-gray-900">{chartType.toUpperCase()} Visualization</h3>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Selected: {yField} vs {xField}</span>
+                                            {/* Moved Chart Config Here */}
+                                            <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <BarChart2 size={14} /> Chart Configuration
+                                                </h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis</label>
+                                                        <select value={xField} onChange={(e) => setXField(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                                            <option value="">Select Category</option>
+                                                            {active.headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                                                        </select>
                                                     </div>
-                                                </div>
-                                                <div className="flex-1 flex items-center justify-center">
-                                                    {renderChart(chartType)}
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis</label>
+                                                        <select value={yField} onChange={(e) => setYField(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                                            <option value="">Select Value</option>
+                                                            {numericFields.map((h) => <option key={h} value={h}>{h}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Chart Style</label>
+                                                        <div className="flex p-1 bg-gray-50 border rounded-xl">
+                                                            {['bar', 'line', 'pie'].map(type => (
+                                                                <button key={type} onClick={() => setChartType(type)} className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${chartType === type ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-700'}`}>{type}</button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

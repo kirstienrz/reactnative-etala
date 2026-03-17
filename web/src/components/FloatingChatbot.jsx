@@ -22,7 +22,7 @@ export default function FloatingChatbot() {
         setMessages([
           {
             sender: "bot",
-            text: `👋 Kumusta! I'm **Etala**, your Gender and Development (GAD) Support Chatbot from **Technological University of the Philippines - Taguig**.
+            text: `👋 Kumusta! I'm **eTALA**, your Gender and Development (GAD) Support Chatbot from **Technological University of the Philippines - Taguig**.
 
 I'm here to help you with questions about **harassment, abuse, discrimination, or gender-related issues**.
 
@@ -218,7 +218,7 @@ chatContainer: {
         <div style={styles.modalOverlay}>
           <div style={styles.chatContainer}>
             <div style={styles.header}>
-              <span>Etala — GAD Chatbot</span>
+              <span>eTALA — GAD Chatbot</span>
               <button
                 style={styles.closeBtn}
                 onClick={() => setVisible(false)}

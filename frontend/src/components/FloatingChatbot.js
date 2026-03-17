@@ -228,7 +228,7 @@ export default function FloatingChatbot() {
         setMessages([
           {
             sender: "bot",
-            text: `👋 Kumusta! I’m **Etala**, your Gender and Development (GAD) Support Chatbot from **Technological University of the Philippines -Taguig**.  
+            text: `👋 Kumusta! I’m **eTALA**, your Gender and Development (GAD) Support Chatbot from **Technological University of the Philippines -Taguig**.  
 I’m here to help you with questions or concerns about **harassment, abuse, discrimination, or gender-related issues**.
 
 You can ask me things like:

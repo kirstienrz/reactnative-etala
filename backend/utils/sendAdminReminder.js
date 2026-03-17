@@ -19,10 +19,10 @@ cron.schedule("0 8 * * *", async () => {
     for (const admin of inactiveAdmins) {
       await sendEmail({
         to: admin.email,
-        subject: "We miss you at Etala! Login Reminder",
+        subject: "We miss you at eTALA! Login Reminder",
         html: `
           <p>Hello ${admin.firstName},</p>
-          <p>We noticed you haven't logged into Etala for a week.</p>
+          <p>We noticed you haven't logged into eTALA for a week.</p>
           <p>Please log in to check your notifications and tasks.</p>
           <a href="https://etala.vercel.app/login">Login Here</a>
         `,
