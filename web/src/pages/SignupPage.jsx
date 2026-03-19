@@ -30,12 +30,45 @@ const SignupPage = () => {
   const handleTupIdChange = (e) => {
     let value = e.target.value.toUpperCase();
     value = value.replace(/[^A-Z0-9]/g, "");
-    if (!value.startsWith("TUPT")) value = "TUPT" + value.replace(/^TUPT/, "");
-    let rest = value.replace("TUPT", "").slice(0, 6);
-    let formatted = "TUPT";
-    if (rest.length >= 1) formatted += "-" + rest.slice(0, 2);
+    
+    let prefix = "";
+    let rest = "";
+
+    if (value.startsWith("TUPT")) {
+      prefix = "TUPT";
+      rest = value.substring(4);
+    } else if (value.length >= 3) {
+      prefix = value.substring(0, 3);
+      rest = value.substring(3);
+    } else {
+      prefix = value;
+      rest = "";
+    }
+
+    rest = rest.slice(0, 6);
+    let formatted = prefix;
+    if (formatted && rest.length >= 1) formatted += "-" + rest.slice(0, 2);
     if (rest.length >= 3) formatted += "-" + rest.slice(2, 6);
     setTupId(formatted);
+
+    // Auto-detect userType from ID format (XXX-XX-XXXX is usually faculty)
+    if (prefix.length === 3 && prefix !== "") {
+      setUserType("Faculty");
+    } else if (prefix === "TUPT") {
+      setUserType("Student");
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value.trim();
+    setEmail(val);
+
+    // Auto-detect userType from Email format (underscore is usually faculty)
+    if (val.includes("_")) {
+      setUserType("Faculty");
+    } else if (val.includes(".") && !val.includes("_")) {
+      setUserType("Student");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -66,9 +99,9 @@ const SignupPage = () => {
         return;
       }
 
-      const tupIdMatch = tupId.match(/^TUPT-(\d{2})-\d{4}$/);
+      const tupIdMatch = tupId.match(/^[A-Z0-9]{3,4}-\d{2}-\d{4}$/);
       if (!tupIdMatch) {
-        toast.warning("TUPT ID must be in format: TUPT-XX-XXXX");
+        toast.warning("Invalid TUP ID format. Use TUPT-XX-XXXX or XXX-XX-XXXX");
         setLoading(false);
         return;
       }
@@ -177,30 +210,37 @@ const SignupPage = () => {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="email"
-                  placeholder="your.email@tup.edu.ph"
+                  placeholder="username@tup.edu.ph"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value.trim())}
+                  onChange={handleEmailChange}
                   required
                   className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
                 />
               </div>
+              <p className="text-[10px] text-gray-500 mt-1 px-1">
+                {userType === "Student" 
+                  ? "💡 Students: use dot (.) separator" 
+                  : userType === "Faculty" 
+                    ? "💡 Faculty: use underscore (_) separator" 
+                    : ""}
+              </p>
             </div>
 
-            {/* TUPT ID */}
+            {/* TUP ID */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                TUPT ID <span className="text-red-500">*</span>
+                TUP ID <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="TUPT-23-0001"
+                placeholder="e.g., TUPT-23-0001"
                 value={tupId}
                 onChange={handleTupIdChange}
                 required
                 className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
                 maxLength={14}
               />
-              <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX</p>
+              <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
             </div>
 
             {/* Gender & Birthday */}
@@ -262,23 +302,6 @@ const SignupPage = () => {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-            </div>
-
-            {/* User Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                I am a <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={userType}
-                onChange={(e) => setUserType(e.target.value)}
-                required
-                className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-              >
-                <option value="Student">Student</option>
-                <option value="Faculty">Faculty</option>
-                <option value="Staff">Staff</option>
-              </select>
             </div>
 
             {/* Department (conditional) */}

@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    match: /^TUPT-\d{2}-\d{4}$/
+    match: /^[A-Z0-9]{3,4}-\d{2}-\d{4}$/
   },
 
   email: { type: String, required: true, unique: true },
@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
 
   userType: {
     type: String,
-    enum: ["Student", "Faculty", "Staff"],
+    enum: ["Student", "Faculty"],
     default: "Student"
   },
 

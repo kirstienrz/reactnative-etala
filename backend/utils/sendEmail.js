@@ -1,35 +1,59 @@
 const sgMail = require("@sendgrid/mail");
-
-// Set your SendGrid API Key from env
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const nodemailer = require("nodemailer");
 
 /**
- * Send an email using SendGrid
- * @param {Object} param0
- * @param {string} param0.to - recipient email
- * @param {string} param0.subject - email subject
- * @param {string} param0.html - email content in HTML
+ * Send an email using SendGrid (Primary) with Nodemailer/Gmail (Fallback)
  */
 const sendEmail = async ({ to, subject, html, attachments }) => {
-  const msg = {
-    to,
-    from: process.env.SENDGRID_SENDER_EMAIL || "noreply@etala.com", // verified sender
-    subject,
-    html,
-    attachments: attachments || [],
-  };
+  // --- 1. PRIMARY: SendGrid ---
+  if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    const msg = {
+      to,
+      from: process.env.SENDGRID_SENDER_EMAIL || "noreply@etala.com",
+      subject,
+      html,
+      attachments: attachments || [],
+    };
 
-  try {
-    await sgMail.send(msg);
-    console.log("✅ Email sent successfully via SendGrid");
-  } catch (error) {
-    console.error("❌ SendGrid email error:", error.response?.body || error);
-    // Log details of the error if available
-    if (error.response?.body?.errors) {
-      console.error("Errors:", JSON.stringify(error.response.body.errors, null, 2));
+    try {
+      await sgMail.send(msg);
+      console.log("✅ Email sent successfully via SendGrid");
+      return; // Success! exit
+    } catch (error) {
+      console.error("❌ SendGrid email error:", error.response?.body || error.message);
+      console.log("⚠️ Attempting fallback to Gmail...");
     }
-    throw new Error("Could not send email via SendGrid");
   }
+
+  // --- 2. FALLBACK: Nodemailer (Gmail) ---
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS.split("#")[0].trim(), // Remove comments if present
+      },
+    });
+
+    const mailOptions = {
+      from: `GAD Office <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log("✅ Email sent successfully via Gmail (Fallback)");
+      return; // Success! exit
+    } catch (err) {
+      console.error("❌ Gmail fallback error:", err.message);
+    }
+  }
+
+  // If both failed or are not configured
+  throw new Error("Could not send email. Both primary (SendGrid) and fallback (Gmail) services failed.");
 };
 
 module.exports = sendEmail;

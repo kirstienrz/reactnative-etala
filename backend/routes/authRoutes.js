@@ -29,10 +29,18 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ msg: "Please use your official @tup.edu.ph email address." });
     }
 
-    // TUPT ID Format & Year Validation
-    const tupIdMatch = tupId?.match(/^TUPT-(\d{2})-\d{4}$/);
+    // TUP ID Format Validation (Supports TUPT-XX-XXXX for students or XXX-XX-XXXX for faculty)
+    const tupIdMatch = tupId?.match(/^[A-Z0-9]{3,4}-(\d{2})-\d{4}$/);
     if (!tupIdMatch) {
-      return res.status(400).json({ msg: "Invalid TUPT ID format. Use TUPT-XX-XXXX" });
+      return res.status(400).json({ msg: "Invalid TUP ID format. Use TUPT-XX-XXXX or XXX-XX-XXXX" });
+    }
+
+    // Role-based validation
+    if (userType === "Faculty" && !email.includes("_")) {
+      return res.status(400).json({ msg: "Faculty emails must use an underscore (_) separator." });
+    }
+    if (userType === "Student" && email.includes("_")) {
+      return res.status(400).json({ msg: "Student emails usually use a dot (.) separator, not an underscore." });
     }
 
     // TUPT ID Year Validation (Strictly for Students)

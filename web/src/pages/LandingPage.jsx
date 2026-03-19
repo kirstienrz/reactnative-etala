@@ -457,7 +457,7 @@ const LandingPage = () => {
               <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center relative border border-white/20">
                 <div className="bg-gray-50 p-4 rounded-2xl mb-6 shadow-inner">
                   <img
-                    src="/assets/qr.png"
+                    src="/assets/qr.jpg"
                     alt="Scan this QR to download our app"
                     className="w-48 h-48 md:w-56 md:h-56 object-contain"
                   />

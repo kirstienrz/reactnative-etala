@@ -25,7 +25,8 @@ export default function UserManagement() {
     department: '',
     birthday: '',
     age: '',
-    gender: ''
+    gender: '',
+    userType: 'Student'
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -71,7 +72,8 @@ export default function UserManagement() {
         department: user.department || '',
         birthday: user.birthday ? user.birthday.split('T')[0] : '',
         age: user.age || '',
-        gender: user.gender || ''
+        gender: user.gender || '',
+        userType: user.userType || 'Student'
       });
     } else {
       setFormData({
@@ -83,7 +85,8 @@ export default function UserManagement() {
         department: '',
         birthday: '',
         age: '',
-        gender: ''
+        gender: '',
+        userType: 'Student'
       });
     }
     setShowModal(true);
@@ -105,6 +108,24 @@ export default function UserManagement() {
     // Auto-calculate age when birthday changes
     if (name === 'birthday') {
       updatedForm.age = calculateAge(value);
+    }
+
+    // Auto-detect userType in Admin Modal to prevent errors
+    if (name === 'tupId') {
+      const val = value.toUpperCase();
+      if (val.startsWith("TUPT")) {
+        updatedForm.userType = "Student";
+      } else if (val.split('-')[0].length === 3 && val !== "") {
+        updatedForm.userType = "Faculty";
+      }
+    }
+
+    if (name === 'email') {
+      if (value.includes("_")) {
+        updatedForm.userType = "Faculty";
+      } else if (value.includes(".") && !value.includes("_")) {
+        updatedForm.userType = "Student";
+      }
     }
 
     setFormData(updatedForm);
@@ -172,10 +193,10 @@ export default function UserManagement() {
     }
   };
 
-  const getRoleBadgeColor = (role) => {
-    switch(role) {
-      case 'superadmin': return 'bg-red-100 text-red-800';
-      case 'admin': return 'bg-blue-100 text-blue-800';
+  const getUserTypeBadgeColor = (type) => {
+    switch(type) {
+      case 'Faculty': return 'bg-purple-100 text-purple-800';
+      case 'Student': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -273,7 +294,6 @@ export default function UserManagement() {
             <option value="Department Head">Department Head</option>
             {/* <option value="CIT">CIT</option> */}
             <option value="Faculty">Faculty</option>
-            <option value="Staff">Staff</option>
             <option value="Student">Student</option>
           </select>
         </div>
@@ -305,10 +325,10 @@ export default function UserManagement() {
                 Email
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role
+                Department
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Department
+                User Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
@@ -329,13 +349,13 @@ export default function UserManagement() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {user.email}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
-                    {user.role}
-                  </span>
-                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {user.department || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getUserTypeBadgeColor(user.userType)}`}>
+                    {user.userType || 'Student'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   {!user.isArchived ? (
@@ -500,8 +520,23 @@ export default function UserManagement() {
                     <option value="Department Head">Department Head</option>
                     <option value="CIT">CIT</option>
                     <option value="Faculty">Faculty</option>
-                    <option value="Staff">Staff</option>
                     <option value="Student">Student</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    User Type *
+                  </label>
+                  <select
+                    name="userType"
+                    value={formData.userType}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Student">Student</option>
+                    <option value="Faculty">Faculty</option>
                   </select>
                 </div>
               </div>

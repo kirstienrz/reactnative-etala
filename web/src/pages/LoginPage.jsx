@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 const LoginPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [userType, setUserType] = useState("Student");
   const [email, setEmail] = useState("");
   const [tupId, setTupId] = useState("");
   const [password, setPassword] = useState("");
@@ -24,18 +25,26 @@ const LoginPage = () => {
     // alisin lahat ng hindi letter/number
     value = value.replace(/[^A-Z0-9]/g, "");
 
-    // siguraduhin na nagsisimula sa TUPT
-    if (!value.startsWith("TUPT")) {
-      value = "TUPT" + value.replace(/^TUPT/, "");
+    // Detect if it starts with 4 letters (like TUPT) or 3 letters
+    let prefix = "";
+    let rest = "";
+
+    if (value.startsWith("TUPT")) {
+      prefix = "TUPT";
+      rest = value.substring(4);
+    } else if (value.length >= 3) {
+      // If it doesn't start with TUPT but has at least 3 characters
+      prefix = value.substring(0, 3);
+      rest = value.substring(3);
+    } else {
+      prefix = value;
+      rest = "";
     }
 
-    // tanggalin muna ang TUPT para ma-format yung numbers
-    let rest = value.replace("TUPT", "");
-
-    // limit sa 6 characters (XX + XXXX)
+    // limit rest sa 6 characters (XX + XXXX)
     rest = rest.slice(0, 6);
 
-    let formatted = "TUPT";
+    let formatted = prefix;
 
     if (rest.length >= 1) {
       formatted += "-" + rest.slice(0, 2);
@@ -46,6 +55,25 @@ const LoginPage = () => {
     }
 
     setTupId(formatted);
+
+    // Auto-detect userType from ID format (XXX-XX-XXXX is usually faculty)
+    if (prefix.length === 3 && prefix !== "") {
+      setUserType("Faculty");
+    } else if (prefix === "TUPT") {
+      setUserType("Student");
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value.trim();
+    setEmail(val);
+
+    // Auto-detect userType from Email format (underscore is usually faculty)
+    if (val.includes("_")) {
+      setUserType("Faculty");
+    } else if (val.includes(".") && !val.includes("_")) {
+      setUserType("Student");
+    }
   };
 
 
@@ -83,8 +111,8 @@ const LoginPage = () => {
         }
         data = await verifyPin(email, pin);
       } else {
-        if (!tupId.match(/^TUPT-\d{2}-\d{4}$/)) {
-          throw new Error("TUPT ID must be in format: TUPT-XX-XXXX");
+        if (!tupId.match(/^[A-Z0-9]{3,4}-\d{2}-\d{4}$/)) {
+          throw new Error("Invalid TUP ID format. Use TUPT-XX-XXXX or XXX-XX-XXXX");
         }
         data = await login(email, password, tupId);
       }
@@ -152,8 +180,8 @@ const LoginPage = () => {
             Technological University of the Philippines – Taguig
           </p>
 
-          {/* Toggle */}
-          <div className="flex justify-center mb-6">
+          {/* User Type Toggle */}
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
             <button
               type="button"
               onClick={() => {
@@ -176,14 +204,21 @@ const LoginPage = () => {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="email"
-                  placeholder="your.email@etala.com"
+                  placeholder="username@tup.edu.ph"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value.trim())}
+                  onChange={handleEmailChange}
                   required
                   className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
                   autoComplete="email"
                 />
               </div>
+              <p className="text-[10px] text-gray-500 mt-1 px-1">
+                {userType === "Student" 
+                  ? "💡 Students: use dot (.) separator" 
+                  : userType === "Faculty" 
+                    ? "💡 Faculty: use underscore (_) separator" 
+                    : ""}
+              </p>
             </div>
 
             {usePin ? (
@@ -211,14 +246,14 @@ const LoginPage = () => {
               </div>
             ) : (
               <>
-                {/* TUPT ID */}
+                {/* TUP ID */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">TUPT ID</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">TUP ID</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                     <input
                       type="text"
-                      placeholder="TUPT-23-0001"
+                      placeholder="e.g., TUPT-23-0001"
                       value={tupId}
                       onChange={handleTupIdChange}
                       required
@@ -227,7 +262,7 @@ const LoginPage = () => {
                       maxLength={14}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Format: TUPT-XX-XXXX</p>
+                  <p className="text-xs text-gray-500 mt-2">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
                 </div>
 
                 {/* Password */}
