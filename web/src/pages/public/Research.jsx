@@ -374,16 +374,16 @@ export default function ResearchPublications() {
   return (
     <main className="bg-white min-h-screen">
       {/* Hero Section */}
-      <section className="relative py-24 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900">
-        <div className="max-w-4xl mx-auto px-8 text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
-            Research Publications
+      <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
+            Research <span className="text-violet-400">Publications</span>
           </h1>
-          <p className="text-xl text-violet-200 mb-8 max-w-2xl mx-auto">
-            Explore our collection of academic research, studies, and publications from various fields
+          <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
+          <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
+            Explore our collection of academic research, studies, and publications from various fields.
           </p>
-          <div className="w-20 h-1 bg-violet-400 mx-auto mb-12"></div>
-
           {/* Search Bar */}
           <div className="mb-8">
             <SearchBar searchQuery={searchQuery} onSearch={handleSearch} />

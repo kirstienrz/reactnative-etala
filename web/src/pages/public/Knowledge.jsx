@@ -41,11 +41,17 @@ const UserKnowledgeHub = () => {
   return (
     <main className="bg-white min-h-screen">
       {/* Hero Section */}
-      <section className="relative py-32 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 text-center text-white">
-        <h1 className="text-5xl lg:text-6xl font-bold mb-4">Videos</h1>
-        <p className="max-w-3xl mx-auto text-lg">
-          Explore articles, webinars, and resources on gender and development topics.
-        </p>
+      <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
+            Knowledge <span className="text-violet-400">Hub</span>
+          </h1>
+          <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
+          <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
+            Explore articles, webinars, and educational resources on gender and development topics.
+          </p>
+        </div>
       </section>
 
       {/* Tabs */}

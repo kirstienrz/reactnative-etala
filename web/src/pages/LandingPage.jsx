@@ -229,7 +229,8 @@ const LandingPage = () => {
   return (
     <main className="bg-white">
       {/* Hero Section */}
-      <section className="relative h-[400px] sm:h-[500px] md:h-[600px] bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 overflow-hidden">
+      <section className="relative h-[400px] sm:h-[500px] md:h-[600px] bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent z-10"></div>
         {heroSlides.map((slide, idx) => (
           <div
             key={idx}
@@ -302,7 +303,7 @@ const LandingPage = () => {
 
             {/* Right side - Content */}
             <div>
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-6 lg:mb-10 leading-tight">
+              <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-6 lg:mb-10 leading-tight">
                 GAD Agenda
               </h2>
 
@@ -544,7 +545,7 @@ const LandingPage = () => {
 
           {/* Bottom - Report an Issue */}
           <div className="text-center max-w-5xl mx-auto">
-            <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-8 lg:mb-12 leading-tight">
+            <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-8 lg:mb-12 leading-tight">
               Report an Issue
             </h2>
             <div className="space-y-6 lg:space-y-8 text-slate-700 text-lg md:text-2xl leading-relaxed mb-10 lg:mb-16">

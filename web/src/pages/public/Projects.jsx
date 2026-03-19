@@ -522,7 +522,22 @@ export default function SuperAdminCalendarRedux() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 space-y-10">
+    <main className="bg-white min-h-screen">
+      {/* Hero Section */}
+      <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden mb-12">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
+            Programs & <span className="text-violet-400">Activities</span>
+          </h1>
+          <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
+          <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
+            Discover our initiatives, events, and community-driven projects aimed at promoting gender development.
+          </p>
+        </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto p-6 space-y-10">
 
       {/* UPCOMING EVENTS */}
       <section className="bg-white rounded-xl border shadow-sm p-6">
@@ -1199,5 +1214,6 @@ export default function SuperAdminCalendarRedux() {
         </div>
       )}
     </div>
-  );
+  </main>
+);
 }

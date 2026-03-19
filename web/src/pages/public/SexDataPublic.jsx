@@ -135,13 +135,13 @@ export default function SexDataViewer() {
                 {
                     label: yField,
                     data: filteredRows.map((r) => Number(r[yField]) || 0),
-                    backgroundColor: chartType === "pie"
+            backgroundColor: chartType === "pie"
                         ? [
-                            "#3B82F6", "#10B981", "#EF4444", "#F59E0B", "#8B5CF6",
+                            "#8B5CF6", "#10B981", "#EF4444", "#F59E0B", "#3B82F6",
                             "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"
                         ].slice(0, filteredRows.length)
-                        : "rgba(59, 130, 246, 0.6)",
-                    borderColor: "rgba(59, 130, 246, 1)",
+                        : "rgba(139, 92, 246, 0.6)",
+                    borderColor: "rgba(124, 58, 237, 1)",
                     borderWidth: 1
                 }
             ]
@@ -410,7 +410,7 @@ export default function SexDataViewer() {
                     }
                 }
             },
-            height: 700
+            height: 900
         };
 
         switch (type) {
@@ -434,43 +434,40 @@ export default function SexDataViewer() {
 
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-            <div className="max-w-7xl mx-auto">
-                {/* Header - Simplified for Users */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Sex Disaggregated Data</h1>
-                        <p className="text-gray-600 mt-1">View and analyze available datasets</p>
-                    </div>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setShowReportOptions(true)}
-                            disabled={!active}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
-                        >
-                            <Download size={16} /> Export
-                        </button>
-                    </div>
+        <main className="bg-white min-h-screen">
+            {/* Hero Section */}
+            <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden mb-12">
+                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
+                        Sex Disaggregated <span className="text-violet-400">Data</span>
+                    </h1>
+                    <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
+                    <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
+                        View and analyze available datasets for gender-based research and institutional reporting.
+                    </p>
                 </div>
+            </section>
 
+            <div className="max-w-7xl mx-auto px-4 md:px-8">
                 {/* Datasets Grid - View Only */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                     {datasets.map((d) => (
                         <div
                             key={d._id}
                             onClick={() => openDataset(d._id)}
-                            className={`group relative bg-white border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer overflow-hidden ${active?._id === d._id ? 'ring-2 ring-blue-500 border-transparent bg-blue-50/30' : 'hover:border-blue-200'}`}
+                            className={`group relative bg-white border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer overflow-hidden ${active?._id === d._id ? 'ring-2 ring-violet-500 border-transparent bg-violet-50/30' : 'hover:border-violet-200'}`}
                         >
                             <div className="flex flex-col h-full">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className={`p-2 rounded-lg ${active?._id === d._id ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'}`}>
+                                    <div className={`p-2 rounded-lg ${active?._id === d._id ? 'bg-violet-500 text-white' : 'bg-violet-50 text-violet-600 group-hover:bg-violet-100'}`}>
                                         <BarChart2 size={20} />
                                     </div>
-                                    <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{d.name}</h3>
+                                    <h3 className="font-bold text-gray-900 group-hover:text-violet-600 transition-colors truncate">{d.name}</h3>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-gray-500 text-sm flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-violet-400"></span>
                                         {d.rows?.length || 0} Records
                                     </p>
                                     <p className="text-gray-500 text-sm flex items-center gap-2">
@@ -480,7 +477,7 @@ export default function SexDataViewer() {
                                 </div>
                                 <div className="mt-auto pt-4 flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(d.createdAt).toLocaleDateString()}</span>
-                                    <div className={`p-1.5 rounded-full transition-all ${active?._id === d._id ? 'bg-blue-500 text-white' : 'text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                                    <div className={`p-1.5 rounded-full transition-all ${active?._id === d._id ? 'bg-violet-500 text-white' : 'text-gray-400 group-hover:bg-violet-50 group-hover:text-violet-500'}`}>
                                         <Eye size={16} />
                                     </div>
                                 </div>
@@ -511,7 +508,7 @@ export default function SexDataViewer() {
                                         <h2 className="text-2xl font-black text-gray-900 leading-tight">{active.name}</h2>
                                     </div>
                                     <p className="text-gray-500 font-medium ml-12">
-                                        Analyzing <span className="text-blue-600 font-bold">{getFilteredRows().length}</span> entries
+                                        Analyzing <span className="text-violet-600 font-bold">{getFilteredRows().length}</span> entries
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -523,7 +520,7 @@ export default function SexDataViewer() {
                                             <button
                                                 key={mode.id}
                                                 onClick={() => setViewMode(mode.id)}
-                                                className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode.id ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                             >
                                                 <mode.icon size={14} />
                                                 {mode.label}
@@ -561,7 +558,7 @@ export default function SexDataViewer() {
                                                 placeholder={`Search ${header}...`}
                                                 value={filters[header] || ""}
                                                 onChange={(e) => handleFilterChange(header, e.target.value)}
-                                                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all"
                                             />
                                         </div>
                                     ))}
@@ -572,7 +569,7 @@ export default function SexDataViewer() {
                             <div className="w-full flex flex-col gap-6">
                                 {viewMode === 'charts' ? (
                                     <div className="flex flex-col gap-6">
-                                        <div className="bg-gray-50 rounded-3xl p-6 md:p-8 flex-1 border border-gray-100 min-h-[800px]">
+                                        <div className="bg-gray-50 rounded-3xl p-6 md:p-8 flex-1 border border-gray-100 min-h-[1000px]">
                                             <div ref={chartRef} className="w-full h-full flex flex-col">
                                                 <div className="flex justify-between items-center mb-6">
                                                     <h3 className="text-xl font-bold text-gray-900">
@@ -600,7 +597,7 @@ export default function SexDataViewer() {
                                                     <select
                                                         value={xField}
                                                         onChange={(e) => setXField(e.target.value)}
-                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all"
                                                     >
                                                         <option value="">Select Field</option>
                                                         {active.headers.map((h) => (
@@ -614,7 +611,7 @@ export default function SexDataViewer() {
                                                     <select
                                                         value={yField}
                                                         onChange={(e) => setYField(e.target.value)}
-                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all"
                                                     >
                                                         <option value="">Select Numeric Field</option>
                                                         {numericFields.map((h) => (
@@ -754,6 +751,6 @@ export default function SexDataViewer() {
                     </div>
                 )}
             </div>
-        </div>
+        </main>
     );
 }

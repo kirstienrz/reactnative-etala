@@ -99,14 +99,14 @@ const UserDocuments = () => {
     return (
         <main className="bg-white min-h-screen">
             {/* Hero Section */}
-            <section className="relative py-24 bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 overflow-hidden">
+            <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
                 <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
-                    <h1 className="text-5xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
-                        Policies & <span className="text-blue-400">Issuances</span>
+                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
+                        Policies & <span className="text-violet-400">Issuances</span>
                     </h1>
-                    <div className="w-20 h-1.5 bg-blue-500 mx-auto rounded-full mb-8"></div>
-                    <p className="text-xl text-blue-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
+                    <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
+                    <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
                         Access official university guidelines, administrative orders, and academic policies.
                     </p>
                 </div>
@@ -118,19 +118,19 @@ const UserDocuments = () => {
                     {/* Filters */}
                     <div className="bg-white p-4 rounded-[2rem] shadow-xl shadow-slate-200/50 mb-12 flex flex-col md:flex-row gap-4 items-center">
                         <div className="relative flex-1 group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-violet-500 transition-colors" size={20} />
                             <input
                                 type="text"
                                 placeholder="Search by title or keyword..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full pl-14 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all outline-none font-medium"
+                                className="w-full pl-14 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all outline-none font-medium"
                             />
                         </div>
                         <select
                             value={selectedTypeFilter}
                             onChange={e => setSelectedTypeFilter(e.target.value)}
-                            className="w-full md:w-64 px-6 py-4 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all outline-none font-bold text-slate-700 appearance-none cursor-pointer"
+                            className="w-full md:w-64 px-6 py-4 bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all outline-none font-bold text-slate-700 appearance-none cursor-pointer"
                         >
                             <option value="all">All Document Types</option>
                             {DOCUMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -139,7 +139,7 @@ const UserDocuments = () => {
 
                     {loading ? (
                         <div className="flex flex-col items-center py-20">
-                            <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                            <div className="w-12 h-12 border-4 border-violet-100 border-t-violet-600 rounded-full animate-spin"></div>
                             <p className="mt-4 text-slate-400 font-bold uppercase tracking-widest text-xs">Fetching Repository...</p>
                         </div>
                     ) : filteredDocuments.length === 0 ? (
@@ -150,10 +150,10 @@ const UserDocuments = () => {
                     ) : (
                         <div className="grid gap-6">
                             {filteredDocuments.map(doc => (
-                                <div key={doc._id} className="group bg-white border border-slate-100 p-8 rounded-[2.5rem] hover:shadow-2xl hover:shadow-blue-100 transition-all duration-500 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                                <div key={doc._id} className="group bg-white border border-slate-100 p-8 rounded-[2.5rem] hover:shadow-2xl hover:shadow-violet-100 transition-all duration-500 flex flex-col md:flex-row md:items-center justify-between gap-8">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <span className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                            <span className="bg-violet-50 text-violet-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
                                                 {doc.document_type}
                                             </span>
                                             {doc.date_issued && (
@@ -162,7 +162,7 @@ const UserDocuments = () => {
                                                 </span>
                                             )}
                                         </div>
-                                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
+                                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-violet-600 transition-colors leading-tight">
                                             {doc.title}
                                         </h3>
                                         <p className="text-slate-500 font-medium mt-3 line-clamp-2 text-sm leading-relaxed">
@@ -181,7 +181,7 @@ const UserDocuments = () => {
                                             <>
                                                 <button
                                                     onClick={() => handleFileAction(doc.files[0], doc.files)}
-                                                    className="w-full md:w-auto bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-blue-600 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 active:scale-95"
+                                                    className="w-full md:w-auto bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-violet-600 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 active:scale-95"
                                                 >
                                                     View Documents
                                                     <Eye size={20} />
@@ -207,7 +207,7 @@ const UserDocuments = () => {
                     <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[3rem]'} flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300`}>
                         <div className="p-4 sm:px-10 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10">
                             <div className="flex items-center gap-4 overflow-hidden">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center flex-shrink-0">
                                     <FileText size={24} />
                                 </div>
                                 <div className="min-w-0">
