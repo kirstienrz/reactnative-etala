@@ -410,7 +410,7 @@ export default function SexDataViewer() {
                     }
                 }
             },
-            height: 300
+            height: 700
         };
 
         switch (type) {
@@ -547,150 +547,143 @@ export default function SexDataViewer() {
                         </div>
 
                         <div className="p-6 md:p-8 space-y-8">
-                            {/* Controls Grid */}
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                {/* Configuration */}
-                                <div className="lg:col-span-4 space-y-6">
-                                    <div>
-                                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <Filter size={14} /> Filter & Grouping
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div className="bg-gray-50 p-4 rounded-2xl space-y-4">
-                                                {active.headers.slice(0, 2).map((header) => (
-                                                    <div key={header}>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">{header}</label>
-                                                        <input
-                                                            type="text"
-                                                            placeholder={`Search ${header}...`}
-                                                            value={filters[header] || ""}
-                                                            onChange={(e) => handleFilterChange(header, e.target.value)}
-                                                            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                                                        />
+                            {/* Horizontal Filters */}
+                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <Filter size={14} /> Global Filters
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {active.headers.slice(0, 4).map((header) => (
+                                        <div key={header}>
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">{header}</label>
+                                            <input
+                                                type="text"
+                                                placeholder={`Search ${header}...`}
+                                                value={filters[header] || ""}
+                                                onChange={(e) => handleFilterChange(header, e.target.value)}
+                                                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Visualization Area - Full Width */}
+                            <div className="w-full flex flex-col gap-6">
+                                {viewMode === 'charts' ? (
+                                    <div className="flex flex-col gap-6">
+                                        <div className="bg-gray-50 rounded-3xl p-6 md:p-8 flex-1 border border-gray-100 min-h-[800px]">
+                                            <div ref={chartRef} className="w-full h-full flex flex-col">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <h3 className="text-xl font-bold text-gray-900">
+                                                        {yField || "Values"} by {xField || "Categories"}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`w-2 h-2 rounded-full ${generateChartData() ? 'bg-green-500' : 'bg-gray-300 animate-pulse'}`}></span>
+                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Preview</span>
                                                     </div>
-                                                ))}
+                                                </div>
+                                                <div className="flex-1 flex items-center justify-center">
+                                                    {renderChart(chartType)}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Chart Settings */}
+                                        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <BarChart2 size={14} /> Chart Configuration
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis (Label)</label>
+                                                    <select
+                                                        value={xField}
+                                                        onChange={(e) => setXField(e.target.value)}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                    >
+                                                        <option value="">Select Field</option>
+                                                        {active.headers.map((h) => (
+                                                            <option key={h} value={h}>{h}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis (Value)</label>
+                                                    <select
+                                                        value={yField}
+                                                        onChange={(e) => setYField(e.target.value)}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                    >
+                                                        <option value="">Select Numeric Field</option>
+                                                        {numericFields.map((h) => (
+                                                            <option key={h} value={h}>{h}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Visualization</label>
+                                                    <div className="flex p-1 bg-gray-50 border rounded-xl">
+                                                        {['bar', 'line', 'pie'].map(type => (
+                                                            <button
+                                                                key={type}
+                                                                onClick={() => setChartType(type)}
+                                                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${chartType === type ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
+                                                            >
+                                                                {type.toUpperCase()}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Visualization Area */}
-                                <div className="lg:col-span-8 flex flex-col gap-6">
-                                    {viewMode === 'charts' ? (
-                                        <div className="flex flex-col gap-6">
-                                            <div className="bg-gray-50 rounded-3xl p-6 md:p-8 flex-1 border border-gray-100 min-h-[400px]">
-                                                <div ref={chartRef} className="w-full h-full flex flex-col">
-                                                    <div className="flex justify-between items-center mb-6">
-                                                        <h3 className="text-lg font-bold text-gray-900">
-                                                            {yField || "Values"} by {xField || "Categories"}
-                                                        </h3>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`w-2 h-2 rounded-full ${generateChartData() ? 'bg-green-500' : 'bg-gray-300 animate-pulse'}`}></span>
-                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Preview</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex-1 flex items-center justify-center">
-                                                        {renderChart(chartType)}
-                                                    </div>
+                                ) : (
+                                    <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
+                                        <div className="px-6 py-5 border-b bg-gray-50/50 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
+                                                    <Filter size={20} />
                                                 </div>
-                                            </div>
-
-                                            {/* Moved Chart Settings Here */}
-                                            <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-                                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                    <BarChart2 size={14} /> Chart Configuration
-                                                </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis (Label)</label>
-                                                        <select
-                                                            value={xField}
-                                                            onChange={(e) => setXField(e.target.value)}
-                                                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                                        >
-                                                            <option value="">Select Field</option>
-                                                            {active.headers.map((h) => (
-                                                                <option key={h} value={h}>{h}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis (Value)</label>
-                                                        <select
-                                                            value={yField}
-                                                            onChange={(e) => setYField(e.target.value)}
-                                                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                                        >
-                                                            <option value="">Select Numeric Field</option>
-                                                            {numericFields.map((h) => (
-                                                                <option key={h} value={h}>{h}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Visualization</label>
-                                                        <div className="flex p-1 bg-gray-50 border rounded-xl">
-                                                            {['bar', 'line', 'pie'].map(type => (
-                                                                <button
-                                                                    key={type}
-                                                                    onClick={() => setChartType(type)}
-                                                                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${chartType === type ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
-                                                                >
-                                                                    {type.toUpperCase()}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                                <div>
+                                                    <p className="text-lg font-black text-gray-900">Detailed Data Table</p>
+                                                    <p className="text-xs font-medium text-gray-500">View raw records and filtered results</p>
                                                 </div>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
-                                            <div className="px-6 py-5 border-b bg-gray-50/50 flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
-                                                        <Filter size={20} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-lg font-black text-gray-900">Detailed Data Table</p>
-                                                        <p className="text-xs font-medium text-gray-500">View raw records and filtered results</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead className="bg-gray-50/80 backdrop-blur sticky top-0 z-10">
-                                                        <tr>
+                                        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead className="bg-gray-50/80 backdrop-blur sticky top-0 z-10">
+                                                    <tr>
+                                                        {active.headers.map((h) => (
+                                                            <th key={h} className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
+                                                                {h}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {getFilteredRows().map((row, i) => (
+                                                        <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                                                             {active.headers.map((h) => (
-                                                                <th key={h} className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
-                                                                    {h}
-                                                                </th>
+                                                                <td key={`${i}-${h}`} className="px-6 py-4 text-sm font-medium text-gray-600">
+                                                                    {row[h]}
+                                                                </td>
                                                             ))}
                                                         </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-100">
-                                                        {getFilteredRows().map((row, i) => (
-                                                            <tr key={i} className="hover:bg-blue-50/30 transition-colors">
-                                                                {active.headers.map((h) => (
-                                                                    <td key={`${i}-${h}`} className="px-6 py-4 text-sm font-medium text-gray-600">
-                                                                        {row[h]}
-                                                                    </td>
-                                                                ))}
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                                {getFilteredRows().length === 0 && (
-                                                    <div className="py-20 text-center text-gray-400 font-medium">
-                                                        No records match your filters.
-                                                    </div>
-                                                )}
-                                            </div>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            {getFilteredRows().length === 0 && (
+                                                <div className="py-20 text-center text-gray-400 font-medium">
+                                                    No records match your filters.
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
