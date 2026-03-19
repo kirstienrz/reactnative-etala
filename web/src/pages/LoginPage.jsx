@@ -212,13 +212,6 @@ const LoginPage = () => {
                   autoComplete="email"
                 />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1 px-1">
-                {userType === "Student" 
-                  ? "💡 Students: use dot (.) separator" 
-                  : userType === "Faculty" 
-                    ? "💡 Faculty: use underscore (_) separator" 
-                    : ""}
-              </p>
             </div>
 
             {usePin ? (
