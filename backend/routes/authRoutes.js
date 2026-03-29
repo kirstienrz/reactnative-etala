@@ -57,9 +57,16 @@ router.post("/signup", async (req, res) => {
     }
 
     // Check if user exists
-    const existingUser = await User.findOne({ $or: [{ email }, { tupId }] });
+    let existingUser = await User.findOne({ $or: [{ email }, { tupId }] });
     if (existingUser) {
-      return res.status(400).json({ msg: "User already exists" });
+      // If the user is unactivated and their token is expired, remove the record
+      // This allows them to "try again" with the same email/TUP ID
+      if (!existingUser.isActivated && existingUser.activationTokenExpiry && existingUser.activationTokenExpiry < Date.now()) {
+        await User.findByIdAndDelete(existingUser._id);
+        existingUser = null;
+      } else {
+        return res.status(400).json({ msg: "User already exists with this email or TUP ID" });
+      }
     }
 
     // Hash password
@@ -122,11 +129,19 @@ router.get("/activate/:token", async (req, res) => {
   try {
     const user = await User.findOne({
       activationToken: token,
-      activationTokenExpiry: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res.status(400).json({ msg: "Invalid or expired activation link" });
+      return res.status(400).json({ msg: "Invalid activation link" });
+    }
+
+    // Check for expiry
+    if (user.activationTokenExpiry && user.activationTokenExpiry < Date.now()) {
+      return res.status(400).json({ msg: "Activation link has expired. Please sign up again." });
+    }
+
+    if (user.isActivated) {
+      return res.status(400).json({ msg: "Account is already activated. Please login." });
     }
 
     user.isActivated = true;

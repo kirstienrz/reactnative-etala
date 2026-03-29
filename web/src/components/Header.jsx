@@ -84,7 +84,7 @@ const Header = () => {
       submenu: []
     },
     {
-      title: 'Contact',
+      title: 'Contact Us',
       path: '/Contact',
       submenu: []
     }
@@ -115,7 +115,7 @@ const Header = () => {
     <header className="sticky top-0 z-[9999]">
       {/* Top Bar */}
       <div className="bg-purple-900 text-white py-2 text-xs">
-        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <span>Republic of the Philippines</span>
           <div className="hidden md:flex gap-4">
             <a href="#transparency" className="hover:text-purple-200 transition-colors no-underline">Transparency Seal</a>
@@ -126,7 +126,7 @@ const Header = () => {
 
       {/* Main Header */}
       <div className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-4 no-underline group">
             <div className="w-14 h-14 flex-shrink-0 overflow-hidden rounded-full shadow-sm">
@@ -138,10 +138,10 @@ const Header = () => {
               />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-purple-900 group-hover:text-purple-700 transition-colors">
+              <h1 className="text-lg md:text-xl font-bold text-purple-900 group-hover:text-purple-700 transition-colors">
                 Gender and Development Office
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs md:text-sm text-gray-600">
                 Technological University of the Philippines - Taguig
               </p>
             </div>
@@ -326,7 +326,7 @@ const Header = () => {
           </nav>
         </div>
       )}
-      <LogoutModal 
+      <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={confirmLogout}

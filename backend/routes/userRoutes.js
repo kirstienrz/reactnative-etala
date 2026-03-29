@@ -218,20 +218,56 @@ router.get("/all", auth(), async (req, res) => {
 // 👥 USER MANAGEMENT CRUD (SUPERADMIN)
 // ========================================
 
-// 📋 GET all users (for superadmin user management)
+// 📋 GET users with pagination, search, and filtering (for superadmin user management)
 router.get("/manage/users", auth(), async (req, res) => {
   try {
     if (req.user.role !== "superadmin") {
       return res.status(403).json({ message: "Access denied. Superadmin only." });
     }
 
-    const users = await User.find()
-      .select("-password -pin")
-      .sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || "";
+    const role = req.query.role || "all";
+    const department = req.query.department || "all";
+    const isArchived = req.query.isArchived === 'true';
 
-    res.json(users);
+    // Build query
+    const query = { isArchived };
+
+    if (role !== "all") {
+      query.role = role;
+    }
+
+    if (department !== "all") {
+      query.department = department;
+    }
+
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { tupId: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const totalUsers = await User.countDocuments(query);
+    const users = await User.find(query)
+      .select("-password -pin")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      users,
+      currentPage: page,
+      totalPages: Math.ceil(totalUsers / limit),
+      totalUsers
+    });
   } catch (err) {
-    console.error("❌ Error fetching all users:", err);
+    console.error("❌ Error fetching users:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -341,6 +377,7 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
       age,
       gender,
       userType,
+      isActivated,
       newPassword // optional: reset password
     } = req.body;
 
@@ -404,6 +441,7 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
     if (age !== undefined) user.age = age;
     if (gender) user.gender = gender;
     if (userType) user.userType = userType;
+    if (isActivated !== undefined) user.isActivated = isActivated;
 
     // Reset password if provided
     if (newPassword) {
@@ -421,6 +459,47 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
   } catch (err) {
     console.error("❌ Error updating user:", err);
     res.status(500).json({ message: "Failed to update user" });
+  }
+});
+
+// ✉️ RESEND activation link (superadmin only)
+const crypto = require("crypto");
+router.post("/manage/users/:id/resend-activation", auth(), async (req, res) => {
+  try {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Access denied. Superadmin only." });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.isActivated) {
+      return res.status(400).json({ message: "Account is already activated" });
+    }
+
+    // Generate new token
+    const activationToken = crypto.randomBytes(32).toString("hex");
+    user.activationToken = activationToken;
+    user.activationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hrs
+    await user.save();
+
+    const activationLink = `https://etala.vercel.app/activate/${activationToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: "Activate your account",
+      html: `
+        <p>Hello ${user.firstName},</p>
+        <p>An administrator has resent your activation link. Please activate your account by clicking the link below:</p>
+        <a href="${activationLink}">${activationLink}</a>
+        <p>This link expires in 24 hours.</p>
+      `,
+    });
+
+    res.json({ message: "Activation link resent successfully" });
+  } catch (err) {
+    console.error("❌ Error resending activation:", err);
+    res.status(500).json({ message: "Failed to resend activation link" });
   }
 });
 

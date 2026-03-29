@@ -287,7 +287,7 @@ const LandingPage = () => {
 
       {/* GAD Agenda Section */}
       <section className="py-16 md:py-32 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
-        <div className="max-w-7xl mx-auto px-6 md:px-10">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center text-center lg:text-left">
 
             {/* Left side - Logo */}
@@ -328,7 +328,7 @@ const LandingPage = () => {
 
       {/* Press Releases Section */}
       <section className="py-40 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-10">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-12 md:mb-24 border-b-4 border-violet-600 pb-8 gap-4">
             <h2 className="text-4xl md:text-6xl font-black text-slate-800 text-center sm:text-left">Press Releases</h2>
@@ -437,7 +437,7 @@ const LandingPage = () => {
 
       {/* App Download Section */}
       <section className="py-24 bg-violet-900 text-white overflow-hidden relative">
-        <div className="max-w-7xl mx-auto px-10 relative z-10">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-16">
             <div className="flex-1">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-violet-200 mb-6 backdrop-blur-md border border-white/10">
@@ -481,7 +481,7 @@ const LandingPage = () => {
 
       {/* Report Section */}
       <section className="py-20 md:py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
-        <div className="max-w-7xl mx-auto px-6 md:px-10">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Top - Case Handling Process */}
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start mb-12 lg:mb-24">

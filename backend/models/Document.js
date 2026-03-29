@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const fileSchema = new mongoose.Schema({
   fileUrl: { type: String, required: true },
@@ -37,4 +37,4 @@ const documentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Document", documentSchema);
+module.exports = mongoose.model("Document", documentSchema);

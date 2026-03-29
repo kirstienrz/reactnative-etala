@@ -18,9 +18,9 @@ export const updateUserProfile = async (payload) => {
 // 👥 USER MANAGEMENT CRUD (SUPERADMIN)
 // ========================================
 
-// 📋 GET all users for management
-export const getAllUsersForManagement = async () => {
-  const res = await API.get("/user/manage/users");
+// 📋 GET users for management with pagination & filters
+export const getAllUsersForManagement = async (params = {}) => {
+  const res = await API.get("/user/manage/users", { params });
   return res.data;
 };
 
@@ -57,6 +57,12 @@ export const archiveUser = async (userId) => {
 // 🔄 UNARCHIVE/RESTORE user
 export const unarchiveUser = async (userId) => {
   const res = await API.put(`/user/manage/users/${userId}/unarchive`);
+  return res.data;
+};
+
+// ✉️ RESEND activation link
+export const resendActivationLink = async (userId) => {
+  const res = await API.post(`/user/manage/users/${userId}/resend-activation`);
   return res.data;
 };
 

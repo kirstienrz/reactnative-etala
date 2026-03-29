@@ -101,7 +101,7 @@ const UserDocuments = () => {
             {/* Hero Section */}
             <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-                <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
                     <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
                         Policies & <span className="text-violet-400">Issuances</span>
                     </h1>
@@ -114,7 +114,7 @@ const UserDocuments = () => {
 
             {/* Content Section */}
             <section className="py-16 bg-slate-50 min-h-[60vh]">
-                <div className="max-w-5xl mx-auto px-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Filters */}
                     <div className="bg-white p-4 rounded-[2rem] shadow-xl shadow-slate-200/50 mb-12 flex flex-col md:flex-row gap-4 items-center">
                         <div className="relative flex-1 group">

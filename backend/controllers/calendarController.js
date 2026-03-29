@@ -516,6 +516,7 @@
 const CalendarEvent = require('../models/CalendarEvent');
 const Program = require('../models/Program');
 const User = require('../models/User');
+const Report = require('../models/report');
 const sendEmail = require('../utils/sendEmail');
 const crypto = require('crypto');
 
@@ -943,7 +944,7 @@ const createCalendarEvent = async (req, res) => {
       allDayType: typeof eventData.allDay
     });
 
-    if (type === 'consultation' && userId) {
+    if (type === 'consultation') {
       if (!reportTicketNumber) {
         return res.status(400).json({
           success: false,
@@ -951,10 +952,22 @@ const createCalendarEvent = async (req, res) => {
         });
       }
 
+      // Automatically assign the user based on the ticket
+      const report = await Report.findOne({ ticketNumber: reportTicketNumber });
+      if (!report) {
+        return res.status(404).json({
+          success: false,
+          message: 'Report ticket not found'
+        });
+      }
+
+      const verifiedUserId = report.createdBy;
+      eventData.userId = verifiedUserId;
+
       // ✅ Check if user has an active booking for THIS specific report
       const existingActiveBooking = await CalendarEvent.findOne({
         type: 'consultation',
-        userId,
+        userId: verifiedUserId,
         reportTicketNumber,
         status: { $in: ['scheduled', 'ongoing'] }
       });
@@ -971,7 +984,7 @@ const createCalendarEvent = async (req, res) => {
       let finalUserEmail = userEmail;
 
       if (!finalUserName || !finalUserEmail) {
-        const user = await User.findById(userId);
+        const user = await User.findById(verifiedUserId);
         if (user) {
           finalUserName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User';
           finalUserEmail = user.email || 'N/A';
@@ -998,7 +1011,7 @@ const createCalendarEvent = async (req, res) => {
       eventData.status = status === 'upcoming' ? 'scheduled' : status || 'scheduled';
 
       // Mark booking access as used for this specific report
-      await markBookingAsUsed(userId, reportTicketNumber);
+      await markBookingAsUsed(verifiedUserId, reportTicketNumber);
     }
 
     // Handle file uploads
@@ -1066,19 +1079,52 @@ const createCalendarEvent = async (req, res) => {
 
 const updateCalendarEvent = async (req, res) => {
   try {
-    let updateData = { ...req.body };
+    // ✅ Convert form data strings directly
+    let updateData = {
+      ...req.body,
+      // Convert boolean strings
+      allDay: req.body.allDay === 'true' || req.body.allDay === true,
+    };
+
+    // Dates need parsing
+    if (req.body.start) updateData.start = new Date(req.body.start);
+    if (req.body.end) updateData.end = new Date(req.body.end);
 
     // Map frontend status to valid root-level status
     if (updateData.status) {
       if (updateData.status === 'upcoming') {
         updateData.status = 'scheduled';
-      } else if (updateData.status === 'completed') {
-        updateData.status = 'completed';
-      } else if (updateData.status === 'cancelled') {
-        updateData.status = 'cancelled';
-      } else if (updateData.status === 'ongoing') {
-        updateData.status = 'ongoing';
       }
+    }
+
+    // Refresh extendedProps if needed (especially for consultations)
+    if (updateData.type === 'consultation') {
+      const ticketNum = req.body.reportTicketNumber || updateData.reportTicketNumber;
+      if (ticketNum) {
+        const report = await Report.findOne({ ticketNumber: ticketNum });
+        if (report) {
+          updateData.userId = report.createdBy;
+        }
+      }
+
+      let finalUserName = req.body.userName;
+      let finalUserEmail = req.body.userEmail;
+
+      if ((!finalUserName || !finalUserEmail) && updateData.userId) {
+        const user = await User.findById(updateData.userId);
+        if (user) {
+          finalUserName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          finalUserEmail = user.email;
+        }
+      }
+
+      updateData.extendedProps = {
+        userName: finalUserName || 'Unknown User',
+        userEmail: finalUserEmail || 'N/A',
+        mode: req.body.mode || 'online',
+        status: updateData.status || 'scheduled',
+        reportTicketNumber: req.body.reportTicketNumber || ''
+      };
     }
 
     // Handle file uploads
@@ -1152,7 +1198,7 @@ const deleteCalendarEvent = async (req, res) => {
 // Secure: Get only the authenticated user's consultations
 const getMyConsultations = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.id || req.user._id;
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
