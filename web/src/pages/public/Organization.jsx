@@ -33,7 +33,7 @@ const Organizational = () => {
       {/* Hero Section */}
       <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
             Our <span className="text-violet-400">Team</span>
           </h1>
@@ -46,7 +46,7 @@ const Organizational = () => {
 
       {/* Organizational Chart Section */}
       <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
 
           {/* Loading */}

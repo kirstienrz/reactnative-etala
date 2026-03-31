@@ -564,29 +564,6 @@ export default function UserConsultations() {
                     </div>
                   </section>
 
-                  {/* User Information Section */}
-                  {(selectedConsultation.extendedProps?.userName || selectedConsultation.extendedProps?.userEmail) && (
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-green-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">User Information</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {selectedConsultation.extendedProps?.userName && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Name</label>
-                            <p className="text-gray-900">{selectedConsultation.extendedProps?.userName}</p>
-                          </div>
-                        )}
-                        {selectedConsultation.extendedProps?.userEmail && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Email</label>
-                            <p className="text-gray-900">{selectedConsultation.extendedProps?.userEmail}</p>
-                          </div>
-                        )}
-                      </div>
-                    </section>
-                  )}
                 </div>
               </div>
 

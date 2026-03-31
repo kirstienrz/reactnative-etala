@@ -195,13 +195,32 @@ const deleteDoc = async (req, res) => {
 
 // ✅ ARCHIVE DOC
 const archiveDoc = async (req, res) => {
-  const doc = await Documentation.findById(req.params.id);
-  if (!doc) return res.status(404).json({ success: false, message: "Not found" });
+  try {
+    const doc = await Documentation.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
-  doc.isArchived = true;
-  await doc.save();
+    doc.isArchived = true;
+    await doc.save();
 
-  res.json({ success: true, message: "Archived" });
+    res.json({ success: true, message: "Archived" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Archive failed", error: err.message });
+  }
+};
+
+// ✅ RESTORE DOC
+const restoreDoc = async (req, res) => {
+  try {
+    const doc = await Documentation.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
+
+    doc.isArchived = false;
+    await doc.save();
+
+    res.json({ success: true, message: "Restored" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Restore failed", error: err.message });
+  }
 };
 
 // ✅ GET ARCHIVED DOCS
@@ -233,5 +252,6 @@ module.exports = {
   uploadFiles,
   deleteFile,
   deleteDoc,        // new function for deleting the entire collection
-  archiveDoc
+  archiveDoc,
+  restoreDoc
 };

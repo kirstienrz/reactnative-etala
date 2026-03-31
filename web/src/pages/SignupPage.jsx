@@ -30,7 +30,7 @@ const SignupPage = () => {
   const handleTupIdChange = (e) => {
     let value = e.target.value.toUpperCase();
     value = value.replace(/[^A-Z0-9]/g, "");
-    
+
     let prefix = "";
     let rest = "";
 
@@ -218,10 +218,10 @@ const SignupPage = () => {
                 />
               </div>
               <p className="text-[10px] text-gray-500 mt-1 px-1">
-                {userType === "Student" 
-                  ? "💡 Students: use dot (.) separator" 
-                  : userType === "Faculty" 
-                    ? "💡 Faculty: use underscore (_) separator" 
+                {userType === "Student"
+                  ? "💡 Students: use dot (.) separator"
+                  : userType === "Faculty"
+                    ? "💡 Faculty: use underscore (_) separator"
                     : ""}
               </p>
             </div>

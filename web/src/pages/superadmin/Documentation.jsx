@@ -11,6 +11,7 @@ import {
     getArchivedDocs,  // <-- MAKE SURE THIS IS IMPORTED
     uploadFiles,
     archiveDoc,
+    restoreDoc,
     deleteFile,
     createDoc,
     deleteDoc
@@ -201,14 +202,24 @@ export default function DocumentationAdmin() {
 
         try {
             await archiveDoc(docId);
-
-            // I-refetch para ma-update ang list
             await fetchDocs();
-
             alert('Document archived successfully!');
         } catch (err) {
             console.error('Archive error:', err);
             alert(`Failed to archive: ${err.message}`);
+        }
+    };
+
+    const handleRestoreDoc = async (docId) => {
+        if (!window.confirm('Restore this document?')) return;
+
+        try {
+            await restoreDoc(docId);
+            await fetchDocs();
+            alert('Document restored successfully!');
+        } catch (err) {
+            console.error('Restore error:', err);
+            alert(`Failed to restore: ${err.message}`);
         }
     };
 
@@ -584,6 +595,7 @@ export default function DocumentationAdmin() {
                                                             >
                                                                 <Eye size={18} />
                                                             </button>
+                                                            
                                                             {!viewArchived && (
                                                                 <button
                                                                     onClick={() => {
@@ -598,16 +610,39 @@ export default function DocumentationAdmin() {
                                                                     <Upload size={18} />
                                                                 </button>
                                                             )}
-                                                            {!viewArchived && (
+
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteDoc(doc._id || doc.id);
+                                                                }}
+                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                title="Delete Collection"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+
+                                                            {!viewArchived ? (
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        handleDeleteDoc(doc._id || doc.id);
+                                                                        handleArchive(doc._id || doc.id);
                                                                     }}
-                                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                                    title="Delete Collection"
+                                                                    className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                                                                    title="Archive Collection"
                                                                 >
-                                                                    <Trash2 size={18} />
+                                                                    <Archive size={18} />
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleRestoreDoc(doc._id || doc.id);
+                                                                    }}
+                                                                    className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                                    title="Restore Collection"
+                                                                >
+                                                                    <RefreshCw size={18} />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -680,33 +715,56 @@ export default function DocumentationAdmin() {
 
                                                         <div className="flex gap-2">
                                                             {!viewArchived && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleDeleteDoc(doc._id || doc.id);
-                                                                        }}
-                                                                        className="p-2.5 text-red-500 hover:bg-red-100 rounded-xl transition-all shadow-sm bg-red-50"
-                                                                        title="Delete Entire Collection"
-                                                                    >
-                                                                        <Trash2 size={18} />
-                                                                    </button>
-
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setCurrentDoc(doc);
-                                                                            setFileUploads([]);
-                                                                            setCaptions([]);
-                                                                            setShowModal(true);
-                                                                        }}
-                                                                        className="p-2.5 text-blue-600 hover:bg-blue-100 rounded-xl transition-all shadow-sm bg-blue-50"
-                                                                        title="Add More Files"
-                                                                    >
-                                                                        <Upload size={18} />
-                                                                    </button>
-                                                                </>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setCurrentDoc(doc);
+                                                                        setFileUploads([]);
+                                                                        setCaptions([]);
+                                                                        setShowModal(true);
+                                                                    }}
+                                                                    className="p-2.5 text-blue-600 hover:bg-blue-100 rounded-xl transition-all shadow-sm bg-blue-50"
+                                                                    title="Add More Files"
+                                                                >
+                                                                    <Upload size={18} />
+                                                                </button>
                                                             )}
+
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteDoc(doc._id || doc.id);
+                                                                }}
+                                                                className="p-2.5 text-red-500 hover:bg-red-100 rounded-xl transition-all shadow-sm bg-red-50"
+                                                                title="Delete Entire Collection"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+
+                                                            {!viewArchived ? (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleArchive(doc._id || doc.id);
+                                                                    }}
+                                                                    className="p-2.5 text-amber-600 hover:bg-amber-100 rounded-xl transition-all shadow-sm bg-amber-50"
+                                                                    title="Archive Collection"
+                                                                >
+                                                                    <Archive size={18} />
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleRestoreDoc(doc._id || doc.id);
+                                                                    }}
+                                                                    className="p-2.5 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all shadow-sm bg-emerald-50"
+                                                                    title="Restore Collection"
+                                                                >
+                                                                    <RefreshCw size={18} />
+                                                                </button>
+                                                            )}
+
                                                             <div className={`p-2.5 rounded-xl transition-all ${isExpanded ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-500'}`}>
                                                                 {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                                             </div>
@@ -744,17 +802,15 @@ export default function DocumentationAdmin() {
                                                                             <p className="text-[12px] font-bold text-gray-800 truncate w-full px-1" title={fileName}>{fileName}</p>
                                                                             <p className="text-[10px] text-gray-400 font-medium mt-1">{formatFileSize(file.size || 0)}</p>
 
-                                                                            {!viewArchived && (
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        handleDeleteFile(doc._id || doc.id, file._id || file.id);
-                                                                                    }}
-                                                                                    className="absolute top-2 right-2 p-2 bg-red-50/80 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all shadow-md backdrop-blur-sm"
-                                                                                >
-                                                                                    <Trash2 size={12} />
-                                                                                </button>
-                                                                            )}
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleDeleteFile(doc._id || doc.id, file._id || file.id);
+                                                                                }}
+                                                                                className="absolute top-2 right-2 p-2 bg-red-50/80 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all shadow-md backdrop-blur-sm"
+                                                                            >
+                                                                                <Trash2 size={12} />
+                                                                            </button>
                                                                         </div>
                                                                     );
                                                                 })}

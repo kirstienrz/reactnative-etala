@@ -176,7 +176,7 @@ const SuperAdminDashboard = () => {
   const peakMonthCount = performance.peakMonthCount || 0;
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="content-container py-6 space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
         <div className="flex justify-between items-center">

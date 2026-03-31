@@ -39,8 +39,10 @@ import { deleteEvent as deleteProgramEvent } from "../../api/program";
 import API from '../../api/config';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router-dom";
 
 export default function SuperAdminCalendarUI() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -48,15 +50,19 @@ export default function SuperAdminCalendarUI() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
-    type: "consultation",
+    type: "program_event",
     start: "",
     end: "",
+    startTime: "09:00",
+    endTime: "10:00",
     location: "",
     description: "",
     notes: "",
     allDay: true,
     color: "",
-    status: "upcoming"
+    status: "upcoming",
+    reportTicketNumber: "",
+    mode: "online"
   });
   const [isDragging, setIsDragging] = useState(false);
   const [selectedEvents, setSelectedEvents] = useState(new Set());
@@ -215,8 +221,8 @@ export default function SuperAdminCalendarUI() {
   // Format events for calendar
   const formatEventsForCalendar = (apiEvents) => {
     return apiEvents.map(event => {
-      const eventType = event.extendedProps?.type || event.type || 'consultation';
-      const color = event.color || getEventColor(eventType);
+      const eventType = event.extendedProps?.type || event.type || 'program_event';
+      const color = getEventColor(eventType);
 
       // Map 'scheduled' to 'upcoming' for display consistency
       const displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
@@ -249,13 +255,24 @@ export default function SuperAdminCalendarUI() {
         };
       });
 
+      // FullCalendar expects exclusive end dates for allDay events.
+      // If an event spans 1 day (start == end), we add 1 day solely for rendering to fix visual collapsing.
+      let originalEnd = event.end || event.start;
+      let renderEnd = originalEnd;
+      if (event.allDay || event.allDay === undefined) {
+        const d = new Date(originalEnd);
+        d.setDate(d.getDate() + 1);
+        renderEnd = d.toISOString().split('T')[0];
+      }
+
       return {
         id: event._id || event.id,
         title: event.title || "Untitled Event",
         start: event.start,
-        end: event.end || event.start,
-        allDay: event.allDay || false,
+        end: renderEnd,
+        allDay: event.allDay !== undefined ? event.allDay : true,
         extendedProps: {
+          originalEnd: originalEnd,
           type: eventType,
           description: event.description || event.extendedProps?.description || "",
           location: event.location || event.extendedProps?.location || "",
@@ -265,6 +282,7 @@ export default function SuperAdminCalendarUI() {
           userEmail: event.extendedProps?.userEmail || event.userEmail || event.email || "admin@example.com",
           mode: event.extendedProps?.mode || event.mode || "N/A",
           userId: event.userId || event.extendedProps?.userId,
+          reportTicketNumber: event.reportTicketNumber || event.extendedProps?.reportTicketNumber || "",
           programId: event.programId || event.extendedProps?.programId,
           projectId: event.projectId || event.extendedProps?.projectId,
           attachments: formattedAttachments,
@@ -334,15 +352,19 @@ export default function SuperAdminCalendarUI() {
     setSelectedEvent(null);
     setFormData({
       title: "",
-      type: "consultation",
+      type: "program_event",
       start: info.dateStr,
       end: info.dateStr,
+      startTime: "09:00",
+      endTime: "10:00",
       location: "",
       description: "",
       notes: "",
       allDay: true,
-      color: getEventColor("consultation"),
-      status: "upcoming"
+      color: getEventColor("program_event"),
+      status: "upcoming",
+      reportTicketNumber: "",
+      mode: "online"
     });
     setShowModal(true);
   };
@@ -367,17 +389,35 @@ export default function SuperAdminCalendarUI() {
   const handleEditEvent = (event) => {
     setModalMode("edit");
     setSelectedEvent(event);
+    const eventType = event.type || "program_event";
+    // Parse time from existing event dates
+    let startTime = "09:00";
+    let endTime = "10:00";
+    if (event.start && !event.allDay) {
+      const sDate = new Date(event.start);
+      startTime = `${String(sDate.getHours()).padStart(2, '0')}:${String(sDate.getMinutes()).padStart(2, '0')}`;
+    }
+    if (event.end && !event.allDay) {
+      const eDate = new Date(event.end);
+      endTime = `${String(eDate.getHours()).padStart(2, '0')}:${String(eDate.getMinutes()).padStart(2, '0')}`;
+    }
     setFormData({
       title: event.title,
-      type: event.type || "consultation",
-      start: event.start.split('T')[0],
-      end: event.end ? event.end.split('T')[0] : event.start.split('T')[0],
+      type: eventType,
+      start: (event.start || "").split('T')[0],
+      end: event.originalEnd 
+             ? event.originalEnd.split('T')[0] 
+             : (event.end ? event.end.split('T')[0] : (event.start || "").split('T')[0]),
+      startTime,
+      endTime,
       location: event.location || "",
       description: event.description || "",
       notes: event.notes || "",
       allDay: event.allDay !== undefined ? event.allDay : true,
-      color: event.color || getEventColor(event.type),
-      status: event.status || "upcoming"
+      color: getEventColor(eventType),
+      status: event.status || "upcoming",
+      reportTicketNumber: event.reportTicketNumber || "",
+      mode: event.mode || "online"
     });
     setShowModal(true);
     setShowDetailsModal(false);
@@ -510,6 +550,10 @@ export default function SuperAdminCalendarUI() {
       toast.error("Please select event type");
       return;
     }
+    if (formData.type === 'consultation' && !formData.reportTicketNumber?.trim()) {
+      toast.error("Please enter report ticket number for consultation");
+      return;
+    }
 
     // Get current user for userId
     const userStr = localStorage.getItem('user');
@@ -525,19 +569,27 @@ export default function SuperAdminCalendarUI() {
 
     // Use FormData for file uploads
     const form = new FormData();
-    Object.entries({
+    const eventPayload = {
       title: formData.title.trim(),
       type: formData.type.trim(),
-      start: formData.allDay ? formData.start : `${formData.start}T09:00:00`,
-      end: formData.allDay ? (formData.end || formData.start) : `${formData.end || formData.start}T17:00:00`,
+      start: formData.allDay ? formData.start : `${formData.start}T${formData.startTime || '09:00'}:00`,
+      end: formData.allDay ? (formData.end || formData.start) : `${formData.end || formData.start}T${formData.endTime || '10:00'}:00`,
       location: formData.location.trim() || undefined,
       description: formData.description.trim() || undefined,
       notes: formData.notes.trim() || undefined,
       allDay: formData.allDay,
-      color: formData.color || getEventColor(formData.type),
+      color: getEventColor(formData.type),
       status: formData.status,
       userId: userId
-    }).forEach(([key, value]) => {
+    };
+
+    // Add consultation-specific fields
+    if (formData.type === 'consultation') {
+      eventPayload.reportTicketNumber = formData.reportTicketNumber?.trim() || '';
+      eventPayload.mode = formData.mode || 'online';
+    }
+
+    Object.entries(eventPayload).forEach(([key, value]) => {
       if (value !== undefined) form.append(key, value);
     });
     eventFiles.forEach(file => form.append('attachments', file));
@@ -620,15 +672,19 @@ export default function SuperAdminCalendarUI() {
   const resetForm = () => {
     setFormData({
       title: "",
-      type: "consultation",
+      type: "program_event",
       start: new Date().toISOString().split('T')[0],
       end: new Date().toISOString().split('T')[0],
+      startTime: "09:00",
+      endTime: "10:00",
       location: "",
       description: "",
       notes: "",
       allDay: true,
-      color: getEventColor("consultation"),
-      status: "upcoming"
+      color: getEventColor("program_event"),
+      status: "upcoming",
+      reportTicketNumber: "",
+      mode: "online"
     });
   };
 
@@ -1313,40 +1369,38 @@ export default function SuperAdminCalendarUI() {
                 </div>
               )}
 
-              {/* User Info */}
-              <div className="border-t border-gray-200 pt-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-xs text-gray-500">Booked by</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {selectedEvent.userName || 'Super Admin'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {selectedEvent.userEmail || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedEvent.mode && (
-                  <div className="flex items-center gap-3">
-                    <CalendarIcon className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-xs text-gray-500">Mode</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {selectedEvent.mode}
-                      </p>
+              {/* Consultation Link / Mode */}
+              {(selectedEvent.type === 'consultation' || selectedEvent.mode) && (
+                <div className="border-t border-gray-200 pt-4 space-y-3">
+                  {selectedEvent.reportTicketNumber && (
+                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-100 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-purple-800 uppercase tracking-wider mb-1">Associated Report</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedEvent.reportTicketNumber}</p>
+                      </div>
+                      <button
+                        onClick={() => navigate(`/superadmin/reports?ticket=${selectedEvent.reportTicketNumber}`)}
+                        className="flex items-center gap-1 bg-white border border-purple-200 text-purple-700 px-3 py-1.5 rounded text-sm font-medium hover:bg-purple-100 transition-colors shadow-sm"
+                      >
+                        <ExternalLink size={16} />
+                        View Report
+                      </button>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+
+                  {selectedEvent.mode && (
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-xs text-gray-500">Mode</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedEvent.mode}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {/* Sticky footer for actions */}
             <div className="border-t border-gray-200 p-4 flex space-x-3 sticky bottom-0 bg-white z-10">
@@ -1555,14 +1609,18 @@ export default function SuperAdminCalendarUI() {
                         setFormData({
                           ...formData,
                           type: newType,
-                          color: getEventColor(newType)
+                          color: getEventColor(newType),
+                          // Consultation: force allDay off so time fields show. Other types: restore allDay.
+                          allDay: newType === 'consultation' ? false : true,
+                          // Reset consultation fields when switching away
+                          ...(newType !== 'consultation' ? { reportTicketNumber: '', mode: 'online' } : {})
                         });
                       }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
                       required
                     >
-                      <option value="consultation">Consultation</option>
                       <option value="program_event">Program Event</option>
+                      {/* <option value="consultation">Consultation</option> */}
                       <option value="holiday">Holiday</option>
                       <option value="not_available">Not Available</option>
                     </select>
@@ -1584,110 +1642,201 @@ export default function SuperAdminCalendarUI() {
                   </div>
                 </div>
 
-                {/* Date Fields */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Start Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.start}
-                      onChange={(e) => setFormData({ ...formData, start: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.end}
-                      onChange={(e) => setFormData({ ...formData, end: e.target.value })}
-                      min={formData.start}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter location (optional)"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    placeholder="Enter description (optional)"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
-                    rows="3"
-                  />
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    placeholder="Enter notes (optional)"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
-                    rows="2"
-                  />
-                </div>
-
-                {/* All Day Checkbox */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="allDay"
-                    checked={formData.allDay}
-                    onChange={(e) => setFormData({ ...formData, allDay: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor="allDay" className="text-sm text-gray-700">
-                    All Day Event
-                  </label>
-                </div>
-
-                {/* Color Selection */}
+                {/* Auto Color Indicator */}
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium text-gray-700">Color:</span>
                   <div
                     className="w-6 h-6 rounded-full border border-gray-300"
-                    style={{ backgroundColor: formData.color || getEventColor(formData.type) }}
+                    style={{ backgroundColor: getEventColor(formData.type) }}
                   ></div>
-                  <select
-                    value={formData.color || getEventColor(formData.type)}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="#8b5cf6">Purple (Consultation)</option>
-                    <option value="#ef4444">Red (Holiday)</option>
-                    <option value="#3b82f6">Blue (Program)</option>
-                    <option value="#6b7280">Gray (Not Available)</option>
-                    <option value="#10b981">Green (Default)</option>
-                  </select>
+                  <span className="text-sm text-gray-500 capitalize">
+                    Auto-assigned ({formData.type?.replace('_', ' ')})
+                  </span>
                 </div>
+
+                {/* Restructured Date, Time & All Day Section */}
+                <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+                    <h4 className="text-sm font-bold text-gray-800">Date & Time</h4>
+                    {formData.type !== 'consultation' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="allDay"
+                          checked={formData.allDay}
+                          onChange={(e) => setFormData({ ...formData, allDay: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        />
+                        <label htmlFor="allDay" className="text-sm font-medium text-gray-700 cursor-pointer">
+                          All Day Event
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Start Selection */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          Start Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.start}
+                          onChange={(e) => {
+                            const newStart = e.target.value;
+                            setFormData({ 
+                              ...formData, 
+                              start: newStart,
+                              // Automatically set End Date if it's empty or behind the new Start Date
+                              end: (!formData.end || formData.end < newStart) ? newStart : formData.end 
+                            });
+                          }}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
+                          required
+                        />
+                      </div>
+                      {(!formData.allDay || formData.type === 'consultation') && (
+                        <div className="animate-fadeIn">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Start Time *
+                          </label>
+                          <input
+                            type="time"
+                            value={formData.startTime}
+                            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* End Selection */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          End Date
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.end}
+                          onChange={(e) => setFormData({ ...formData, end: e.target.value })}
+                          min={formData.start}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
+                        />
+                      </div>
+                      {(!formData.allDay || formData.type === 'consultation') && (
+                        <div className="animate-fadeIn">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            End Time *
+                          </label>
+                          <input
+                            type="time"
+                            value={formData.endTime}
+                            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Consultation-specific fields */}
+                {formData.type === 'consultation' && (
+                  <div className="space-y-4 p-5 bg-purple-50 rounded-xl border border-purple-200">
+                    <p className="text-sm font-bold text-purple-800 border-b border-purple-200 pb-2">Consultation Details</p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Report Ticket Number *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. RPT-2026-0001"
+                        value={formData.reportTicketNumber}
+                        onChange={(e) => setFormData({ ...formData, reportTicketNumber: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition bg-white text-gray-900"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Consultation Mode
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, mode: 'online' })}
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${formData.mode === 'online'
+                              ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
+                              : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
+                            }`}
+                        >
+                          <span className="text-xl mb-1 block">💻</span>
+                          <span className="text-sm font-medium">Online</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, mode: 'face_to_face' })}
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${formData.mode === 'face_to_face'
+                              ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
+                              : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
+                            }`}
+                        >
+                          <span className="text-xl mb-1 block">🏢</span>
+                          <span className="text-sm font-medium">Face-to-Face</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Details (Location, Description, Notes) */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter location (optional)"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      placeholder="Enter description (optional)"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900"
+                      rows="3"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notes
+                    </label>
+                    <textarea
+                      placeholder="Enter notes (optional)"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900"
+                      rows="2"
+                    />
+                  </div>
+                </div>
+
+
 
                 {/* File Upload */}
                 <div>

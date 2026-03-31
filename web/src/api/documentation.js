@@ -54,6 +54,12 @@ export const archiveDoc = async (docId) => {
   return res.data;
 };
 
+// ♻️ RESTORE a documentation set
+export const restoreDoc = async (docId) => {
+  const res = await API.patch(`/documentation/${docId}/restore`);
+  return res.data;
+};
+
 // 🗑️ DELETE whole documentation set
 export const deleteDoc = async (docId) => {
   const res = await API.delete(`/documentation/${docId}`);

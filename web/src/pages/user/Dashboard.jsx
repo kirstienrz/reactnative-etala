@@ -64,14 +64,7 @@ export default function Dashboard() {
         }}>
           
             {/* Main Content */}
-            <div style={{ 
-                maxWidth: 1200, 
-                margin: "0 auto", 
-                padding: "32px 20px",
-                minHeight: "calc(100vh - 80px)",
-                display: "flex",
-                flexDirection: "column"
-            }}>
+            <div className="content-container py-8 min-h-[calc(100vh-80px)] flex flex-col">
                 
                 {/* Welcome Banner - More Professional */}
                 <div style={{

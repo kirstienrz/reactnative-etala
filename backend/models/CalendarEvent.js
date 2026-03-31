@@ -359,10 +359,10 @@ calendarEventSchema.methods.getSummary = function() {
   };
 };
 
-// Pre-save middleware to validate end date is after start date
+// Pre-save middleware to validate end date is after or equal to start date
 calendarEventSchema.pre('save', function(next) {
-  if (this.start && this.end && this.end <= this.start) {
-    next(new Error('End date must be after start date'));
+  if (this.start && this.end && this.end < this.start) {
+    next(new Error('End date cannot be earlier than start date'));
   } else {
     next();
   }

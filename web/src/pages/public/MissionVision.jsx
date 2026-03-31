@@ -7,7 +7,7 @@ const MissionVisionPage = () => {
       {/* Hero Section */}
       <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
             Mission & <span className="text-violet-400">Vision</span>
           </h1>
@@ -20,7 +20,7 @@ const MissionVisionPage = () => {
 
       {/* Mission Section */}
       <section className="py-28 bg-white">
-        <div className="max-w-6xl mx-auto px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1">
               <div className="inline-flex items-center gap-3 mb-6 bg-violet-50 px-6 py-3 rounded-full">
@@ -72,7 +72,7 @@ const MissionVisionPage = () => {
 
       {/* Vision Section */}
       <section className="py-28 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-6xl mx-auto px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <div className="relative">

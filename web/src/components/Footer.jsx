@@ -4,7 +4,7 @@ import { Mail, Phone, MapPin, Globe } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <footer className="bg-gradient-to-r from-violet-950 via-violet-900 mx-auto px-6 md:px-16 py-8 md:py-10 to-violet-950 text-white relative overflow-hidden flex flex-col">
+    <footer className="bg-gradient-to-r from-violet-950 via-violet-900 to-violet-950 text-white relative overflow-hidden flex flex-col py-8 md:py-10">
       {/* Background decoration matching header exactly */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-violet-500 rounded-full blur-3xl"></div>
@@ -12,8 +12,7 @@ const Footer = () => {
       </div>
 
       <div className="relative z-10 flex-1 flex flex-col">
-        {/* Main content */}
-        <div className="w-full px-6 md:px-12 lg:px-20 py-8 flex-1 border-b border-white/10">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 border-b border-white/10">
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
               {/* Resources Section */}
@@ -130,10 +129,12 @@ const Footer = () => {
         </div>
 
         {/* Copyright Section */}
-        <div className="w-full px-6 py-6 text-center border-t border-white/5 bg-black/10">
-          <p className="text-sm text-violet-200/80 font-medium">
-            &copy; {new Date().getFullYear()} eTALA. All Rights Reserved.
-          </p>
+        <div className="w-full border-t border-white/5 bg-black/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">
+            <p className="text-sm text-violet-200/80 font-medium">
+              &copy; {new Date().getFullYear()} eTALA. All Rights Reserved.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

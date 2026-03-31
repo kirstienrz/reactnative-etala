@@ -45,6 +45,9 @@ router.delete("/:docId/files/:fileId", ctrl.deleteFile);
 // Archive a documentation
 router.patch("/:id/archive", ctrl.archiveDoc);
 
+// Restore a documentation
+router.patch("/:id/restore", ctrl.restoreDoc);
+
 // Delete the documentation set itself
 router.delete("/:id", ctrl.deleteDoc);
 

@@ -114,7 +114,7 @@ const PlanAndBudget = () => {
       {/* Hero Section */}
       <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
             Plan and <span className="text-violet-400">Budget</span>
           </h1>
@@ -127,7 +127,7 @@ const PlanAndBudget = () => {
 
       {/* Overview Section */}
       <section className="py-20 bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-slate-900 mb-6">About GAD Plans and Budgets</h2>
           <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed space-y-4">
             <p>
@@ -142,7 +142,7 @@ const PlanAndBudget = () => {
 
       {/* Documents Section */}
       <section className="py-20 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader className="w-12 h-12 text-violet-600 animate-spin mb-4" />
