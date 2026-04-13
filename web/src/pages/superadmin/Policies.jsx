@@ -276,11 +276,13 @@ const AdminDocuments = () => {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Policies & Issuances</h1>
-                    <p className="text-gray-600">Official documentation and university policies</p>
+                <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Policies & Issuances</h1>
+                        <p className="text-sm md:text-base text-gray-600">Official documentation and university policies</p>
+                    </div>
                 </div>
 
                 <div className="flex gap-4 mb-6 border-b">
@@ -288,18 +290,18 @@ const AdminDocuments = () => {
                     <button onClick={() => setViewArchived(true)} className={`pb-3 px-4 font-medium transition ${viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}>Archived</button>
                 </div>
 
-                <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="relative w-full md:w-96">
+                <div className="bg-white border border-gray-100 rounded-2xl p-4 md:p-6 mb-6 shadow-sm flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+                    <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input type="text" placeholder="Search policies..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all" />
+                        <input type="text" placeholder="Search policies..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all font-medium" />
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto">
-                        <select value={selectedTypeFilter} onChange={e => setSelectedTypeFilter(e.target.value)} className="px-4 py-2 bg-white border rounded-lg outline-none focus:border-blue-500">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <select value={selectedTypeFilter} onChange={e => setSelectedTypeFilter(e.target.value)} className="flex-1 sm:w-40 px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm">
                             <option value="all">All Types</option>
                             {DOCUMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
                         {!viewArchived && (
-                            <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                            <button onClick={() => { resetForm(); setShowModal(true); }} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition font-bold shadow-sm">
                                 <Plus size={18} /> Add Policy
                             </button>
                         )}
@@ -315,21 +317,21 @@ const AdminDocuments = () => {
                     </div>
                 )}
 
-                <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
                     {fetching ? (
                         <div className="p-20 flex flex-col items-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>
                     ) : filteredDocs.length === 0 ? (
                         <div className="p-20 text-center text-gray-400"><p>No documents found.</p></div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 text-gray-600 text-xs font-black uppercase">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50 border-b border-gray-100">
                                     <tr>
-                                        <th className="px-6 py-4 text-left">Title</th>
-                                        <th className="px-6 py-4 text-left">Type</th>
-                                        <th className="px-6 py-4 text-left">Issued By</th>
-                                        <th className="px-6 py-4 text-left">Files</th>
-                                        <th className="px-6 py-4 text-center">Actions</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest">Title</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest">Type</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest">Issued By</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest">Files</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">

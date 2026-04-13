@@ -426,94 +426,98 @@ export default function DocumentationAdmin() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4">
-            {/* Compact Header */}
-            <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900"> Documentation Drive</h1>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {viewArchived ? ' Archived' : ' Active'} • {filteredDocs.length} docs • {docs.reduce((sum, doc) => sum + (doc.files?.length || 0), 0)} files
-                        </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                        <div className="relative flex-1 min-w-[200px]">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search documents..."
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                            />
+        <div className="min-h-screen bg-gray-50 p-3 md:p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto">
+                {/* Compact Header */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 mb-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <h1 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2">
+                                <Folder className="text-blue-600" size={24} />
+                                Documentation Drive
+                            </h1>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                {viewArchived ? 'Archive Vault' : 'Active Repository'} • {filteredDocs.length} Collections
+                            </p>
                         </div>
 
-                        <button
-                            onClick={fetchDocs}
-                            disabled={isLoading}
-                            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-                            title="Refresh"
-                        >
-                            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-                        </button>
+                        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-64 lg:w-80">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search folders or descriptions..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm transition-all"
+                                />
+                            </div>
 
-                        <button
-                            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-                            title={`Switch to ${viewMode === 'grid' ? 'list' : 'grid'} view`}
-                        >
-                            {viewMode === 'grid' ? (
-                                <div className="text-xs font-medium">List</div>
-                            ) : (
-                                <div className="text-xs font-medium">Grid</div>
-                            )}
-                        </button>
+                            <div className="flex gap-2 w-full md:w-auto">
+                                <button
+                                    onClick={fetchDocs}
+                                    disabled={isLoading}
+                                    className="flex-1 md:flex-none p-2.5 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition shadow-sm"
+                                    title="Refresh"
+                                >
+                                    <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+                                </button>
 
-                        <button
-                            onClick={() => setViewArchived(!viewArchived)}
-                            className="px-3 py-2 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition flex items-center gap-2"
-                        >
-                            <Archive size={14} />
-                            <span>{viewArchived ? 'Active' : 'Archived'}</span>
-                        </button>
+                                <button
+                                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                                    className="flex-1 md:flex-none p-2.5 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition shadow-sm"
+                                    title={`Switch to ${viewMode === 'grid' ? 'list' : 'grid'} view`}
+                                >
+                                    {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
+                                </button>
 
-                        {!viewArchived && (
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2"
-                            >
-                                <Plus size={14} />
-                                <span>New</span>
-                            </button>
-                        )}
+                                <button
+                                    onClick={() => setViewArchived(!viewArchived)}
+                                    className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-sm transition shadow-sm flex items-center justify-center gap-2 ${viewArchived ? 'bg-amber-100 text-amber-700' : 'bg-gray-800 text-white hover:bg-black'}`}
+                                >
+                                    <Archive size={18} />
+                                    <span>{viewArchived ? 'Vault' : 'Active'}</span>
+                                </button>
+
+                                {!viewArchived && (
+                                    <button
+                                        onClick={() => setShowCreateModal(true)}
+                                        className="flex-1 md:flex-none px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                                    >
+                                        <Plus size={18} />
+                                        <span>New</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             {/* Documents Area */}
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 {/* Header Actions */}
-                <div className="p-3 border-b flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="px-4 py-4 md:px-6 md:py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={toggleAllExpand}
-                            className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                            className="text-xs font-black text-blue-600 uppercase tracking-widest hover:text-blue-800 flex items-center gap-2 transition-colors"
                         >
                             {Object.keys(expandedDocs).length === filteredDocs.length ? (
                                 <>
-                                    <ChevronUp size={12} />
-                                    Collapse All
+                                    <ChevronUp size={16} />
+                                    Collapse Folders
                                 </>
                             ) : (
                                 <>
-                                    <ChevronDown size={12} />
-                                    Expand All
+                                    <ChevronDown size={16} />
+                                    Expand Folders
                                 </>
                             )}
                         </button>
-                        <span className="text-xs text-gray-500">
-                            Showing {filteredDocs.length} documents
+                    </div>
+                    <div className="hidden sm:block">
+                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                            {filteredDocs.length} Total Collections
                         </span>
                     </div>
                 </div>
@@ -1179,6 +1183,7 @@ export default function DocumentationAdmin() {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

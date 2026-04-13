@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Menu, X, ChevronDown, LayoutDashboard, FileText, Inbox, User, LogOut, ChevronRight } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,7 +32,53 @@ const Header = () => {
   // Close mobile menu on route change
   useEffect(() => {
     setIsMenuOpen(false);
+    setOpenDropdown("");
   }, [location.pathname]);
+
+  // Prevent background scroll when mobile menu is open (and preserve scroll position)
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const scrollY = window.scrollY || 0;
+    const bodyStyle = document.body.style;
+    const previous = {
+      position: bodyStyle.position,
+      top: bodyStyle.top,
+      left: bodyStyle.left,
+      right: bodyStyle.right,
+      width: bodyStyle.width,
+      overflow: bodyStyle.overflow,
+    };
+
+    bodyStyle.position = "fixed";
+    bodyStyle.top = `-${scrollY}px`;
+    bodyStyle.left = "0";
+    bodyStyle.right = "0";
+    bodyStyle.width = "100%";
+    bodyStyle.overflow = "hidden";
+
+    return () => {
+      bodyStyle.position = previous.position;
+      bodyStyle.top = previous.top;
+      bodyStyle.left = previous.left;
+      bodyStyle.right = previous.right;
+      bodyStyle.width = previous.width;
+      bodyStyle.overflow = previous.overflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isMenuOpen]);
+
+  // Close mobile menu on Escape
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMenuOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -118,7 +165,122 @@ const Header = () => {
     setOpenDropdown(openDropdown === title ? "" : title);
   };
 
+  const mobileMenu = (
+    <>
+      {/* Mobile Drawer Overlay */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] transition-opacity duration-300 xl:hidden ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
+        onClick={() => setIsMenuOpen(false)}
+      />
+
+      {/* Mobile Drawer Content */}
+      <div
+        className={`fixed top-0 right-0 h-[100dvh] w-[280px] max-w-[85vw] bg-white z-[10001] shadow-2xl transition-transform duration-300 transform xl:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile menu"
+      >
+        <div className="flex flex-col h-full bg-white">
+          <div className="p-5 flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
+            <span className="font-bold text-lg">Menu</span>
+            <button
+              onClick={() => setIsMenuOpen(false)}
+              className="p-1.5 hover:bg-white/20 rounded-full transition-colors"
+              aria-label="Close menu"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <nav className="flex-1 overflow-y-auto overscroll-contain py-5 px-4 custom-scrollbar">
+            <div className="space-y-1">
+              {menuItems.map((item, index) => (
+                <div key={index} className="mb-1">
+                  {item.submenu.length > 0 ? (
+                    <div>
+                      <button
+                        onClick={() => toggleMobileDropdown(item.title)}
+                        className={`flex items-center justify-between w-full px-4 py-3.5 rounded-2xl transition-all font-bold ${openDropdown === item.title ? "bg-purple-50 text-purple-900" : "bg-white text-gray-700 hover:bg-gray-50 border border-transparent"}`}
+                      >
+                        <span className="text-[15px]">{item.title}</span>
+                        <ChevronDown size={18} className={`transition-transform duration-300 ${openDropdown === item.title ? "rotate-180" : ""}`} />
+                      </button>
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ${openDropdown === item.title ? "max-h-[500px] mt-1" : "max-h-0"}`}
+                      >
+                        {item.submenu.map((sub, subIndex) => (
+                          <Link
+                            key={subIndex}
+                            to={sub.path || "#"}
+                            className="flex items-center gap-2 pl-8 pr-4 py-2.5 text-gray-600 hover:text-purple-700 transition-all text-sm font-medium border-l-2 border-purple-100 ml-4 mb-1 no-underline"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <div className="w-1 h-1 bg-purple-300 rounded-full"></div>
+                            {sub.title}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <Link
+                      to={item.path || "#"}
+                      className={`block px-4 py-3.5 rounded-2xl transition-all font-bold no-underline ${location.pathname === item.path ? "bg-purple-50 text-purple-900" : "bg-white text-gray-700 hover:bg-gray-50 border border-transparent"}`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <span className="text-[15px]">{item.title}</span>
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Account Section in Mobile */}
+            <div className="mt-8 pt-8 border-t border-gray-100">
+              {isLoggedIn ? (
+                <div className="space-y-2">
+                  <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Account</div>
+                  {loggedInItems.map((item, idx) => (
+                    <Link
+                      key={idx}
+                      to={item.path}
+                      className="flex items-center gap-3 px-4 py-3.5 bg-gray-50 text-gray-900 rounded-2xl transition-all font-bold no-underline"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <div className="text-purple-600">
+                        {item.icon}
+                      </div>
+                      <span className="text-[15px]">{item.title}</span>
+                    </Link>
+                  ))}
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3.5 bg-red-50 text-red-600 rounded-2xl transition-all font-bold mt-2"
+                  >
+                    <LogOut size={18} />
+                    <span className="text-[15px]">Logout</span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </nav>
+
+          {/* Mobile Footer Area */}
+          <div className="p-6 bg-gray-50 text-center flex-shrink-0">
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+              &copy; 2024 Gender and Development Office<br />
+              TUP-Taguig Campus
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
+    <>
     <header className={`sticky top-0 z-[9999] transition-all duration-300 ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
       {/* Top Bar */}
       <div className="bg-gradient-to-r from-purple-900 to-purple-800 text-white py-1.5 text-xs">
@@ -246,112 +408,6 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer Overlay */}
-      <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] transition-opacity duration-300 xl:hidden ${isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
-        onClick={() => setIsMenuOpen(false)}
-      />
-
-      {/* Mobile Drawer Content */}
-      <div
-        className={`fixed top-0 right-0 h-full w-[280px] max-w-[85vw] bg-white z-[10001] shadow-2xl transition-transform duration-300 transform xl:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex flex-col h-full bg-white">
-          <div className="p-5 flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
-            <span className="font-bold text-lg">Menu</span>
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="p-1.5 hover:bg-white/20 rounded-full transition-colors"
-            >
-              <X size={24} />
-            </button>
-          </div>
-
-          <nav className="flex-1 overflow-y-auto py-5 px-4 custom-scrollbar">
-            <div className="space-y-1">
-              {menuItems.map((item, index) => (
-                <div key={index} className="mb-1">
-                  {item.submenu.length > 0 ? (
-                    <div>
-                      <button
-                        onClick={() => toggleMobileDropdown(item.title)}
-                        className={`flex items-center justify-between w-full px-4 py-3.5 rounded-2xl transition-all font-bold ${openDropdown === item.title ? "bg-purple-50 text-purple-900" : "bg-white text-gray-700 hover:bg-gray-50 border border-transparent"}`}
-                      >
-                        <span className="text-[15px]">{item.title}</span>
-                        <ChevronDown size={18} className={`transition-transform duration-300 ${openDropdown === item.title ? "rotate-180" : ""}`} />
-                      </button>
-                      <div
-                        className={`overflow-hidden transition-all duration-300 ${openDropdown === item.title ? "max-h-[500px] mt-1" : "max-h-0"}`}
-                      >
-                        {item.submenu.map((sub, subIndex) => (
-                          <Link
-                            key={subIndex}
-                            to={sub.path || "#"}
-                            className="flex items-center gap-2 pl-8 pr-4 py-2.5 text-gray-600 hover:text-purple-700 transition-all text-sm font-medium border-l-2 border-purple-100 ml-4 mb-1 no-underline"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            <div className="w-1 h-1 bg-purple-300 rounded-full"></div>
-                            {sub.title}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <Link
-                      to={item.path || "#"}
-                      className={`block px-4 py-3.5 rounded-2xl transition-all font-bold no-underline ${location.pathname === item.path ? "bg-purple-50 text-purple-900" : "bg-white text-gray-700 hover:bg-gray-50 border border-transparent"}`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <span className="text-[15px]">{item.title}</span>
-                    </Link>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Account Section in Mobile */}
-            <div className="mt-8 pt-8 border-t border-gray-100">
-              {isLoggedIn ? (
-                <div className="space-y-2">
-                  <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Account</div>
-                  {loggedInItems.map((item, idx) => (
-                    <Link
-                      key={idx}
-                      to={item.path}
-                      className="flex items-center gap-3 px-4 py-3.5 bg-gray-50 text-gray-900 rounded-2xl transition-all font-bold no-underline"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <div className="text-purple-600">
-                        {item.icon}
-                      </div>
-                      <span className="text-[15px]">{item.title}</span>
-                    </Link>
-                  ))}
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3.5 bg-red-50 text-red-600 rounded-2xl transition-all font-bold mt-2"
-                  >
-                    <LogOut size={18} />
-                    <span className="text-[15px]">Logout</span>
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </nav>
-
-          {/* Mobile Footer Area */}
-          <div className="p-6 bg-gray-50 text-center flex-shrink-0">
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
-              &copy; 2024 Gender and Development Office<br />
-              TUP-Taguig Campus
-            </p>
-          </div>
-        </div>
-      </div>
-
       <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
@@ -375,6 +431,9 @@ const Header = () => {
         }
       `}} />
     </header>
+
+    {typeof document !== "undefined" ? createPortal(mobileMenu, document.body) : null}
+    </>
   );
 };
 

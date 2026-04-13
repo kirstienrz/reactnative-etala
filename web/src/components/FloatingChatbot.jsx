@@ -11,10 +11,38 @@ export default function FloatingChatbot() {
   const [input, setInput] = useState("");
   const [visible, setVisible] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 640 : false);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Lock body scroll when chat is visible
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    if (visible) {
+      const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+      if (scrollBarWidth > 0) document.body.style.paddingRight = `${scrollBarWidth}px`;
+      document.body.style.overflow = 'hidden';
+      // autofocus input when opened
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      document.body.style.overflow = originalOverflow || '';
+      document.body.style.paddingRight = originalPaddingRight || '';
+    }
+    return () => {
+      document.body.style.overflow = originalOverflow || '';
+      document.body.style.paddingRight = originalPaddingRight || '';
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (visible && messages.length === 0) {
@@ -74,45 +102,45 @@ All conversations are **confidential**. How can I help you today? 💜`,
   const styles = {
     floatingBtn: {
       position: "fixed",
-      bottom: "24px",
-      right: "24px",
-      width: "60px",
-      height: "60px",
+      bottom: isMobile ? "18px" : "24px",
+      right: isMobile ? "16px" : "24px",
+      width: isMobile ? "52px" : "60px",
+      height: isMobile ? "52px" : "60px",
       borderRadius: "50%",
-      background: "linear-gradient(135deg, #8B5CF6, #A78BFA)",
+      background: "linear-gradient(135deg, #6D28D9, #8B5CF6)",
       color: "#fff",
       border: "none",
-      fontSize: "26px",
+      fontSize: "22px",
       cursor: "pointer",
-      boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       zIndex: 2000,
-      transition: "transform 0.2s",
+      transition: "transform 0.18s",
     },
-  modalOverlay: {
-  position: "fixed",
-  inset: 0,
-  backgroundColor: "rgba(0,0,0,0.25)", // softer overlay
-  display: "flex",
-  justifyContent: "flex-end",
-  alignItems: "flex-end", // aligns chat to bottom right
-  padding: "16px", // minimal padding
-  zIndex: 2001,
-},
-chatContainer: {
-  backgroundColor: "#fff",
-  width: "360px", // slightly smaller
-  maxWidth: "95vw",
-  height: "70vh", // reduce height
-  borderRadius: "24px",
-  boxShadow: "0 12px 35px rgba(0,0,0,0.2)",
-  display: "flex",
-  flexDirection: "column",
-  overflow: "hidden",
-  fontFamily: "'Inter', sans-serif",
-},
+    modalOverlay: {
+      position: "fixed",
+      inset: 0,
+      backgroundColor: "rgba(0,0,0,0.22)",
+      display: "flex",
+      justifyContent: "flex-end",
+      alignItems: isMobile ? "flex-end" : "flex-end",
+      padding: isMobile ? "8px" : "16px",
+      zIndex: 2001,
+    },
+    chatContainer: {
+      backgroundColor: "#fff",
+      width: isMobile ? "100%" : "360px",
+      maxWidth: isMobile ? "100%" : "95vw",
+      height: isMobile ? "72vh" : "70vh",
+      borderRadius: isMobile ? "16px 16px 0 0" : "24px",
+      boxShadow: "0 12px 35px rgba(0,0,0,0.2)",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      fontFamily: "'Inter', sans-serif",
+    },
     header: {
       backgroundColor: "#8B5CF6",
       padding: "16px 20px",
@@ -210,70 +238,78 @@ chatContainer: {
       <button
         style={styles.floatingBtn}
         onClick={() => setVisible(true)}
+        aria-label="Open chat"
       >
-        💬
+        {/* Chat SVG Icon */}
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" fill="white" opacity="0.06"/>
+          <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" stroke="rgba(255,255,255,0.9)" strokeWidth="1.2" strokeLinejoin="round"/>
+          <path d="M8 10h8M8 14h5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </button>
 
       {visible && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.chatContainer}>
-            <div style={styles.header}>
-              <span>eTALA — GAD Chatbot</span>
-              <button
-                style={styles.closeBtn}
-                onClick={() => setVisible(false)}
-              >
-                ✖
-              </button>
-            </div>
+        <div style={styles.modalOverlay} onClick={() => setVisible(false)}>
+          {/* stopPropagation on container so clicks inside don't close */}
+          <div style={styles.chatContainer} onClick={(e) => e.stopPropagation()}>
+             <div style={styles.header}>
+               <span>eTALA — GAD Chatbot</span>
+               <button
+                 style={styles.closeBtn}
+                 onClick={() => setVisible(false)}
+               >
+                 ✖
+               </button>
+             </div>
 
-            {/* Messages */}
-            <div style={styles.messagesContainer}>
-              {messages.map((msg, i) => (
-                <div
-                  key={i}
-                  style={{
-                    ...styles.bubble,
-                    ...(msg.sender === "user" ? styles.userMsg : styles.botMsg),
-                  }}
-                >
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+             {/* Messages */}
+             <div style={styles.messagesContainer}>
+               {messages.map((msg, i) => (
+                 <div
+                   key={i}
+                   style={{
+                     ...styles.bubble,
+                     ...(msg.sender === "user" ? styles.userMsg : styles.botMsg),
+                   }}
+                 >
+                   <ReactMarkdown>{msg.text}</ReactMarkdown>
 
-                  {msg.choices && (
-                    <div style={styles.choicesContainer}>
-                      {msg.choices.map((c, idx) => (
-                        <button
-                          key={idx}
-                          style={styles.choiceBtn}
-                          onClick={() => handleChoiceClick(c)}
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+                   {msg.choices && (
+                     <div style={styles.choicesContainer}>
+                       {msg.choices.map((c, idx) => (
+                         <button
+                           key={idx}
+                           style={styles.choiceBtn}
+                           onClick={() => handleChoiceClick(c)}
+                         >
+                           {c}
+                         </button>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+               ))}
+               <div ref={messagesEndRef} />
+             </div>
 
-            {/* Input Box */}
-            <div style={styles.inputArea}>
-              <input
-                style={styles.chatInput}
-                className="bg-white text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all px-4 py-2"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type a message..."
-              />
-              <button style={styles.sendBtn} onClick={() => sendMessage()}>
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
+             {/* Input Box */}
+             <div style={styles.inputArea}>
+               <input
+                 ref={inputRef}
+                 style={styles.chatInput}
+                 className="bg-white text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all px-4 py-2"
+                 value={input}
+                 onChange={(e) => setInput(e.target.value)}
+                 onKeyPress={handleKeyPress}
+                 placeholder="Type a message..."
+               />
+               <button style={styles.sendBtn} onClick={() => sendMessage()}>
+                 Send
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </>
+   );
+ }

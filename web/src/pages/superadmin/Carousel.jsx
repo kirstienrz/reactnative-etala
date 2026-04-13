@@ -246,21 +246,22 @@ export default function CarouselManagement() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             Highlights Management
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-500 text-sm md:text-base mt-1">
             {viewArchived
-              ? "View and restore archived Hightlights images"
-              : "Upload and manage active hightlights images"}
+              ? "View and restore archived Highlights images"
+              : "Upload and manage active highlights images"}
           </p>
         </div>
         <button
           onClick={() => setViewArchived(!viewArchived)}
-          className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition shadow-sm"
+          className="w-full sm:w-auto px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition shadow-sm font-semibold flex items-center justify-center gap-2"
         >
+          {viewArchived ? <Eye size={18} /> : <Archive size={18} />}
           {viewArchived ? "View Active Images" : "View Archived Images"}
         </button>
       </div>
@@ -410,23 +411,23 @@ export default function CarouselManagement() {
                 </button>
 
                 {selectedImages.size > 0 && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 w-full md:w-auto">
                     <button
                       onClick={() => handleBulkAction(viewArchived ? "restore" : "archive")}
-                      className={`px-4 py-2 text-white rounded-lg transition flex items-center gap-2 ${viewArchived
+                      className={`flex-1 md:flex-none px-4 py-2 text-white rounded-lg transition flex items-center justify-center gap-2 ${viewArchived
                         ? "bg-emerald-500 hover:bg-emerald-600"
                         : "bg-amber-500 hover:bg-amber-600"
                         }`}
                     >
                       {viewArchived ? <RefreshCcw size={16} /> : <Archive size={16} />}
-                      {viewArchived ? "Restore" : "Archive"} Selected ({selectedImages.size})
+                      {viewArchived ? "Restore" : "Archive"} ({selectedImages.size})
                     </button>
                     <button
                       onClick={() => handleBulkAction("delete")}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+                      className="flex-1 md:flex-none px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-2"
                     >
                       <Trash2 size={16} />
-                      Delete Selected ({selectedImages.size})
+                      Delete ({selectedImages.size})
                     </button>
                   </div>
                 )}

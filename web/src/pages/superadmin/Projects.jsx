@@ -960,9 +960,21 @@ const GADProgramsHybrid = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="h-screen bg-gray-50 flex overflow-hidden relative">
+      {/* Sidebar Overlay for Mobile */}
+      {!sidebarCollapsed && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-0' : 'w-80'}`}>
+      <div className={`
+        fixed inset-y-0 left-0 z-50 md:relative md:z-auto
+        bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-xl md:shadow-none
+        ${sidebarCollapsed ? '-translate-x-full md:translate-x-0 md:w-0' : 'translate-x-0 w-80'}
+      `}>
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
@@ -972,7 +984,7 @@ const GADProgramsHybrid = () => {
             </div>
             <button
               onClick={() => setSidebarCollapsed(true)}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -1097,394 +1109,405 @@ const GADProgramsHybrid = () => {
         {/* Top Bar */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {sidebarCollapsed && (
-                <button
-                  onClick={() => setSidebarCollapsed(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <Menu className="w-5 h-5 text-gray-600" />
-                </button>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {selectedProgram?.name || 'Select a Program'}
-                </h1>
-                {selectedProgram && (
-                  <p className="text-sm text-gray-500">{selectedProgram.description}</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                {(sidebarCollapsed || true) && (
+                  <button
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${!sidebarCollapsed ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
                 )}
+                <div className="min-w-0">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
+                    {selectedProgram?.name || 'Select a Program'}
+                  </h1>
+                  {selectedProgram && (
+                    <p className="text-xs md:text-sm text-gray-500 truncate">{selectedProgram.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+                  title="Card View"
+                >
+                  <BarChart3 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('timeline')}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'timeline' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+                  title="Timeline View"
+                >
+                  <List className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+                  title="Kanban View"
+                >
+                  <Kanban className="w-5 h-5" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                title="Card View"
-              >
-                <BarChart3 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('timeline')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'timeline' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                title="Timeline View"
-              >
-                <List className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                title="Kanban View"
-              >
-                <Kanban className="w-5 h-5" />
-              </button>
-            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {!selectedProgram ? (
+              <div className="h-full flex items-center justify-center p-6 text-gray-500">
+                <div className="text-center max-w-sm">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Target className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No Program Selected</h3>
+                  <p className="text-sm">Explore and manage your programs by selecting one from the catalog sidebar.</p>
+                  <button
+                    onClick={() => setSidebarCollapsed(false)}
+                    className="mt-6 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm md:hidden"
+                  >
+                    Open Catalog
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Stats Cards */}
+                {stats && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Year</div>
+                      <div className="text-2xl font-bold text-gray-900">{selectedProgram.year}</div>
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex justify-between">
+                        <span>Projects</span>
+                        <span className="text-blue-600">{Math.round((stats.completedProjects / stats.totalProjects) * 100 || 0)}%</span>
+                      </div>
+                      <ProgressBar completed={stats.completedProjects} total={stats.totalProjects} />
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex justify-between">
+                        <span>Events</span>
+                        <span className="text-blue-600">{Math.round((stats.completedEvents / stats.totalEvents) * 100 || 0)}%</span>
+                      </div>
+                      <ProgressBar completed={stats.completedEvents} total={stats.totalEvents} />
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</div>
+                      <div className="mt-1">
+                        <StatusBadge status={selectedProgram.status || 'ongoing'} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Projects Section */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-900">Projects</h2>
+                    <button
+                      onClick={() => {
+                        setShowModal(true);
+                        setModalType('project');
+                        setFormData({ status: 'ongoing', year: selectedProgram?.year || new Date().getFullYear() });
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Project</span>
+                    </button>
+                  </div>
+
+                  {!selectedProgram.projects || selectedProgram.projects.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No projects yet. Add your first project to get started.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {selectedProgram.projects.map(project => (
+                        <div key={project._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div
+                            className="bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() => toggleProject(project._id)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start space-x-3 flex-1">
+                                {expandedProjects[project._id] ?
+                                  <ChevronDown className="w-5 h-5 text-gray-600 mt-0.5" /> :
+                                  <ChevronRight className="w-5 h-5 text-gray-600 mt-0.5" />
+                                }
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-3 mb-2">
+                                    <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                                    <span className="text-xs text-gray-500">{project.year}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                    <span>{project.events?.length || 0} events</span>
+                                    <span>{project.events?.filter(e => e.status === 'completed').length || 0} completed</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowModal(true);
+                                    setModalType('project');
+                                    setFormData({ ...project });
+                                  }}
+                                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                >
+                                  <Edit2 className="w-4 h-4 text-gray-600" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteProject(project._id);
+                                  }}
+                                  disabled={deleting[project._id]}
+                                  className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                  title="Delete Project"
+                                >
+                                  {deleting[project._id] ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {expandedProjects[project._id] && (
+                            <div className="p-4 bg-white border-t border-gray-200">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-gray-900">Events</h4>
+                                <button
+                                  onClick={() => {
+                                    setShowModal(true);
+                                    setModalType('event');
+                                    setFormData({ status: 'upcoming', projectId: project._id });
+                                  }}
+                                  className="text-blue-600 text-sm font-medium flex items-center space-x-1 hover:text-blue-700"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  <span>Add Event</span>
+                                </button>
+                              </div>
+
+                              {!project.events || project.events.length === 0 ? (
+                                <div className="text-center py-6 text-gray-500 text-sm">
+                                  <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                  <p>No events scheduled</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {project.events.map(event => (
+                                    <div key={event._id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                      <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                          <h5 className="font-medium text-gray-900">{event.title}</h5>
+                                        </div>
+                                        <div className="text-sm text-gray-600 space-y-1">
+                                          <p className="flex items-center">
+                                            <Calendar className="w-4 h-4 mr-2 text-blue-600" />
+                                            {event.date}
+                                          </p>
+                                          <p className="flex items-center">
+                                            <Users className="w-4 h-4 mr-2 text-blue-600" />
+                                            {event.participants} participants
+                                          </p>
+                                          <p className="text-gray-600">📍 {event.venue}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-1">
+                                        <button
+                                          onClick={() => {
+                                            setShowModal(true);
+                                            setModalType('event');
+
+                                            // Parse existing date (YYYY-MM-DD) into month and day
+                                            let eventData = { ...event, projectId: project._id };
+                                            if (event.date) {
+                                              const dateParts = event.date.split('-');
+                                              if (dateParts.length === 3) {
+                                                eventData.month = dateParts[1];
+                                                eventData.day = dateParts[2];
+                                              }
+                                            }
+
+                                            setFormData(eventData);
+                                          }}
+                                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                        >
+                                          <Edit2 className="w-4 h-4 text-gray-600" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteEvent(project._id, event._id);
+                                          }}
+                                          disabled={deleting[event._id]}
+                                          className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                          title="Delete Event"
+                                        >
+                                          {deleting[event._id] ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                          ) : (
+                                            <Trash2 className="w-4 h-4" />
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {!selectedProgram ? (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <Target className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">No Program Selected</h3>
-                <p>Select a program from the sidebar to view details</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Stats Cards */}
-              {stats && (
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  <div className="bg-white p-4 rounded-lg border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">Year</div>
-                    <div className="text-2xl font-bold text-gray-900">{selectedProgram.year}</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">Projects</div>
-                    <div className="text-2xl font-bold text-gray-900 mb-2">
-                      {stats.completedProjects}/{stats.totalProjects}
-                    </div>
-                    <ProgressBar completed={stats.completedProjects} total={stats.totalProjects} />
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">Events</div>
-                    <div className="text-2xl font-bold text-gray-900 mb-2">
-                      {stats.completedEvents}/{stats.totalEvents}
-                    </div>
-                    <ProgressBar completed={stats.completedEvents} total={stats.totalEvents} />
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-gray-200">
-                    <div className="text-sm text-gray-500 mb-1">Overall Progress</div>
-                    <div className="text-2xl font-bold text-gray-900">
-                      {stats.totalProjects > 0 ? Math.round((stats.completedProjects / stats.totalProjects) * 100) : 0}%
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Projects Section */}
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+              <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Projects</h2>
-                  <button
-                    onClick={() => {
-                      setShowModal(true);
-                      setModalType('project');
-                      setFormData({ status: 'ongoing', year: selectedProgram?.year || new Date().getFullYear() });
-                    }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Project</span>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {formData._id ? 'Edit' : 'Add'} {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
+                  </h3>
+                  <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
+                    <X className="w-6 h-6" />
                   </button>
                 </div>
-
-                {!selectedProgram.projects || selectedProgram.projects.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No projects yet. Add your first project to get started.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {selectedProgram.projects.map(project => (
-                      <div key={project._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                        <div
-                          className="bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors"
-                          onClick={() => toggleProject(project._id)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3 flex-1">
-                              {expandedProjects[project._id] ?
-                                <ChevronDown className="w-5 h-5 text-gray-600 mt-0.5" /> :
-                                <ChevronRight className="w-5 h-5 text-gray-600 mt-0.5" />
-                              }
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-3 mb-2">
-                                  <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                                  <span className="text-xs text-gray-500">{project.year}</span>
-                                </div>
-                                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                  <span>{project.events?.length || 0} events</span>
-                                  <span>{project.events?.filter(e => e.status === 'completed').length || 0} completed</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setShowModal(true);
-                                  setModalType('project');
-                                  setFormData({ ...project });
-                                }}
-                                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                              >
-                                <Edit2 className="w-4 h-4 text-gray-600" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteProject(project._id);
-                                }}
-                                disabled={deleting[project._id]}
-                                className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                title="Delete Project"
-                              >
-                                {deleting[project._id] ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {expandedProjects[project._id] && (
-                          <div className="p-4 bg-white border-t border-gray-200">
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="font-semibold text-gray-900">Events</h4>
-                              <button
-                                onClick={() => {
-                                  setShowModal(true);
-                                  setModalType('event');
-                                  setFormData({ status: 'upcoming', projectId: project._id });
-                                }}
-                                className="text-blue-600 text-sm font-medium flex items-center space-x-1 hover:text-blue-700"
-                              >
-                                <Plus className="w-4 h-4" />
-                                <span>Add Event</span>
-                              </button>
-                            </div>
-
-                            {!project.events || project.events.length === 0 ? (
-                              <div className="text-center py-6 text-gray-500 text-sm">
-                                <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                <p>No events scheduled</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {project.events.map(event => (
-                                  <div key={event._id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div className="flex-1">
-                                      <div className="flex items-center space-x-2 mb-2">
-                                        <h5 className="font-medium text-gray-900">{event.title}</h5>
-                                      </div>
-                                      <div className="text-sm text-gray-600 space-y-1">
-                                        <p className="flex items-center">
-                                          <Calendar className="w-4 h-4 mr-2 text-blue-600" />
-                                          {event.date}
-                                        </p>
-                                        <p className="flex items-center">
-                                          <Users className="w-4 h-4 mr-2 text-blue-600" />
-                                          {event.participants} participants
-                                        </p>
-                                        <p className="text-gray-600">📍 {event.venue}</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center space-x-1">
-                                      <button
-                                        onClick={() => {
-                                          setShowModal(true);
-                                          setModalType('event');
-
-                                          // Parse existing date (YYYY-MM-DD) into month and day
-                                          let eventData = { ...event, projectId: project._id };
-                                          if (event.date) {
-                                            const dateParts = event.date.split('-');
-                                            if (dateParts.length === 3) {
-                                              eventData.month = dateParts[1];
-                                              eventData.day = dateParts[2];
-                                            }
-                                          }
-
-                                          setFormData(eventData);
-                                        }}
-                                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                      >
-                                        <Edit2 className="w-4 h-4 text-gray-600" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteEvent(project._id, event._id);
-                                        }}
-                                        disabled={deleting[event._id]}
-                                        className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                        title="Delete Event"
-                                      >
-                                        {deleting[event._id] ? (
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                          <Trash2 className="w-4 h-4" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {formData._id ? 'Edit' : 'Add'} {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
-                </h3>
-                <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                {modalType === 'program' && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Program Name"
-                      value={formData.name || ''}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <textarea
-                      placeholder="Description"
-                      value={formData.description || ''}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      rows="3"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Year"
-                      value={formData.year || ''}
-                      onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </>
-                )}
-
-                {modalType === 'project' && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Project Name"
-                      value={formData.name || ''}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </>
-                )}
-
-                {modalType === 'event' && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Event Title"
-                      value={formData.title || ''}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                      <select
-                        value={formData.month || ''}
-                        onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="">Month</option>
-                        <option value="01">January</option>
-                        <option value="02">February</option>
-                        <option value="03">March</option>
-                        <option value="04">April</option>
-                        <option value="05">May</option>
-                        <option value="06">June</option>
-                        <option value="07">July</option>
-                        <option value="08">August</option>
-                        <option value="09">September</option>
-                        <option value="10">October</option>
-                        <option value="11">November</option>
-                        <option value="12">December</option>
-                      </select>
+                <div className="space-y-4">
+                  {modalType === 'program' && (
+                    <>
                       <input
-                        type="number"
-                        placeholder="Day"
-                        min="1"
-                        max="31"
-                        value={formData.day || ''}
-                        onChange={(e) => setFormData({ ...formData, day: e.target.value })}
+                        type="text"
+                        placeholder="Program Name"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
-                    </div>
-                    <input
-                      type="number"
-                      placeholder="Participants"
-                      value={formData.participants || ''}
-                      onChange={(e) => setFormData({ ...formData, participants: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Venue"
-                      value={formData.venue || ''}
-                      onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </>
-                )}
+                      <textarea
+                        placeholder="Description"
+                        value={formData.description || ''}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        rows="3"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Year"
+                        value={formData.year || ''}
+                        onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </>
+                  )}
 
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Save</span>
-                  </button>
+                  {modalType === 'project' && (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="Project Name"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </>
+                  )}
+
+                  {modalType === 'event' && (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="Event Title"
+                        value={formData.title || ''}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <select
+                          value={formData.month || ''}
+                          onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        >
+                          <option value="">Month</option>
+                          <option value="01">January</option>
+                          <option value="02">February</option>
+                          <option value="03">March</option>
+                          <option value="04">April</option>
+                          <option value="05">May</option>
+                          <option value="06">June</option>
+                          <option value="07">July</option>
+                          <option value="08">August</option>
+                          <option value="09">September</option>
+                          <option value="10">October</option>
+                          <option value="11">November</option>
+                          <option value="12">December</option>
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="Day"
+                          min="1"
+                          max="31"
+                          value={formData.day || ''}
+                          onChange={(e) => setFormData({ ...formData, day: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+                      <input
+                        type="number"
+                        placeholder="Participants"
+                        value={formData.participants || ''}
+                        onChange={(e) => setFormData({ ...formData, participants: parseInt(e.target.value) })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Venue"
+                        value={formData.venue || ''}
+                        onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </>
+                  )}
+
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Save</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
     </div>
   );
 };

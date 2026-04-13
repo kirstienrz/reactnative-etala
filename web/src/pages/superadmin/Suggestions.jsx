@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Archive, Eye, Filter, Search, Calendar, User, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
 import { getSuggestions, updateSuggestion, toggleArchive } from "../../api/suggestion";
 
@@ -19,7 +19,7 @@ const AdminGADSuggestionBox = () => {
   // Suggestions from backend
   const [suggestions, setSuggestions] = useState([]);
 
-  const [recentlyViewed, setRecentlyViewed] = useState([]);
+  const [_recentlyViewed, setRecentlyViewed] = useState([]);
 
   // Fetch suggestions from backend on component mount
   useEffect(() => {
@@ -253,7 +253,7 @@ const AdminGADSuggestionBox = () => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
       {/* Loading State */}
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -287,7 +287,7 @@ const AdminGADSuggestionBox = () => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto flex gap-6">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
 
         {/* Main Content */}
         <div className="flex-1">
@@ -302,7 +302,7 @@ const AdminGADSuggestionBox = () => {
                   <Menu size={20} />
                 </button>
               )}
-              <h1 className="text-4xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">
                 GAD Suggestion Box
               </h1>
             </div>
@@ -361,22 +361,22 @@ const AdminGADSuggestionBox = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2 mb-4 print:hidden">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 mb-4 print:hidden">
             <button
               onClick={() => setShowAnalytics(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
             >
               <BarChart3 size={18} /> Analytics
             </button>
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
             >
               <Download size={18} /> Export CSV
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
             >
               <Printer size={18} /> Print
             </button>
@@ -384,7 +384,7 @@ const AdminGADSuggestionBox = () => {
               <>
                 <button
                   onClick={handleBulkArchive}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                 >
                   <Archive size={18} /> Archive ({selectedItems.length})
                 </button>
@@ -395,7 +395,7 @@ const AdminGADSuggestionBox = () => {
                       e.target.value = '';
                     }
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   <option value="">Bulk Status Change</option>
                   <option value="pending">Pending</option>
@@ -409,7 +409,7 @@ const AdminGADSuggestionBox = () => {
           </div>
 
           {/* View Toggle */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <button
               onClick={() => setViewMode("active")}
               className={`px-4 py-2 rounded-lg font-medium transition ${
@@ -486,8 +486,8 @@ const AdminGADSuggestionBox = () => {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+          {/* Table (md+) */}
+          <div className="hidden md:block print:block bg-white border rounded-lg shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-100 text-gray-700 border-b">
@@ -615,6 +615,124 @@ const AdminGADSuggestionBox = () => {
             </div>
           </div>
 
+          {/* Mobile Cards (smaller screens) */}
+          <div className="md:hidden print:hidden space-y-3">
+            <div className="bg-white border rounded-lg shadow-sm p-4 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 select-none">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.length === filteredSuggestions.length && filteredSuggestions.length > 0}
+                  onChange={handleSelectAll}
+                  className="rounded"
+                />
+                Select all
+              </label>
+              <div className="text-xs text-gray-500">{filteredSuggestions.length} shown</div>
+            </div>
+
+            {filteredSuggestions.length > 0 ? (
+              filteredSuggestions.map((s) => (
+                <div
+                  key={s.id}
+                  className={`bg-white border rounded-lg shadow-sm p-4 transition ${selectedItems.includes(s.id) ? 'ring-2 ring-blue-200 border-blue-200' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <label className="flex items-center gap-2 select-none">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(s.id)}
+                        onChange={() => handleSelectItem(s.id)}
+                        className="rounded mt-0.5"
+                      />
+                      <span className="font-semibold text-gray-900">#{s.id}</span>
+                    </label>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openDetailModal(s)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                        title="View Details"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      {!s.archived ? (
+                        <button
+                          onClick={() => handleArchive(s.id)}
+                          className="p-2 text-gray-600 hover:bg-gray-50 rounded transition"
+                          title="Archive"
+                        >
+                          <Archive size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUnarchive(s.id)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded transition"
+                          title="Unarchive"
+                        >
+                          <ArchiveX size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-sm text-gray-800">
+                    <p className="line-clamp-3">{s.text}</p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <User size={14} />
+                      <span className="font-medium">{s.submittedBy}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Calendar size={14} />
+                      <span>{new Date(s.submittedDate).toLocaleDateString()}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Priority</div>
+                        <select
+                          value={s.priority}
+                          onChange={(e) => handlePriorityChange(s.id, e.target.value)}
+                          className={`w-full px-3 py-2 rounded border text-sm font-medium ${getPriorityColor(s.priority)}`}
+                        >
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Status</div>
+                        <select
+                          value={s.status}
+                          onChange={(e) => handleStatusChange(s.id, e.target.value)}
+                          className={`w-full px-3 py-2 rounded border text-sm font-medium ${getStatusColor(s.status)}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="under-review">Under Review</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                          <option value="implemented">Implemented</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-white border rounded-lg shadow-sm p-8 text-center text-gray-500">
+                <div className="flex flex-col items-center gap-2">
+                  <Search size={48} className="text-gray-300" />
+                  <p className="text-lg font-medium">No suggestions found</p>
+                  <p className="text-sm">Try adjusting your filters or search query</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Results Summary */}
           <div className="mt-4 text-sm text-gray-600">
             Showing {filteredSuggestions.length} of {displayedSuggestions.length} suggestions
@@ -715,7 +833,7 @@ const AdminGADSuggestionBox = () => {
                 <h3 className="text-lg font-semibold mb-4">Monthly Submissions Trend</h3>
                 <div className="relative h-64 border-b border-l border-gray-300">
                   <div className="absolute inset-0 flex items-end justify-around p-4">
-                    {monthlyData.map((month, idx) => {
+                    {monthlyData.map((month) => {
                       const maxValue = Math.max(...monthlyData.map(m => m.submissions));
                       const height = maxValue > 0 ? (month.submissions / maxValue) * 100 : 0;
                       return (
@@ -962,3 +1080,4 @@ const AdminGADSuggestionBox = () => {
 };
 
 export default AdminGADSuggestionBox;
+

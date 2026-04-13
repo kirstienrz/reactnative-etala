@@ -851,20 +851,21 @@ const AdminReports = () => {
 
       {/* Header Section */}
       <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Report Management</h1>
-            <p className="text-gray-600">Monitor and manage incident reports with AI-powered severity analysis</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Report Management</h1>
+            <p className="text-gray-600 text-sm md:text-base">Monitor and manage incident reports with AI-powered severity analysis</p>
           </div>
           <button
             onClick={() => setShowSentimentModal(true)}
-            className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md"
+            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md group"
           >
-            <Brain size={20} />
-            Severity Analysis
+            <Brain size={20} className="group-hover:rotate-12 transition-transform" />
+            <span className="font-bold">Severity Analysis</span>
             <BarChart size={20} />
           </button>
         </div>
+
 
         {/* Severity Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -1090,39 +1091,40 @@ const AdminReports = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {/* Tabs and Summary */}
         <div className="border-b border-gray-200">
-          <div className="flex items-center justify-between p-6">
-            <div className="flex gap-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between p-4 md:p-6 gap-4">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => {
                   setActiveTab("active");
                   setCurrentPage(1);
                 }}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === "active"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "active"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                   }`}
               >
-                Active Reports ({reports.length})
+                Active <span className="hidden sm:inline">Reports</span> ({reports.length})
               </button>
               <button
                 onClick={() => {
                   setActiveTab("archived");
                   setCurrentPage(1);
                 }}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === "archived"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "archived"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                   }`}
               >
                 Archived ({archivedReports.length})
               </button>
             </div>
-            <div className="text-sm text-gray-600">
-              Showing <span className="font-semibold">{startIndex + 1}-{Math.min(endIndex, filteredReports.length)}</span> of{" "}
-              <span className="font-semibold">{filteredReports.length}</span> reports
+            <div className="text-sm text-gray-500 font-medium bg-gray-50 px-4 py-2 rounded-lg">
+              Showing <span className="text-gray-900 font-bold">{startIndex + 1}-{Math.min(endIndex, filteredReports.length)}</span> of{" "}
+              <span className="text-gray-900 font-bold">{filteredReports.length}</span> reports
             </div>
           </div>
         </div>
+
 
         {/* Reports Table */}
         <div className="p-6">

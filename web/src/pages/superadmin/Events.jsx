@@ -26,7 +26,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
-  Minimize2
+  Minimize2,
+  ChevronDown
+
 } from "lucide-react";
 import {
   getAllCalendarEvents,
@@ -112,7 +114,18 @@ export default function SuperAdminCalendarUI() {
   const [previewFiles, setPreviewFiles] = useState([]);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const eventTypes = getEventTypes();
+
+  // Window resize handler for responsiveness
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth < 1024;
 
   // Get event color based on type
   const getEventColor = (type) => {
@@ -405,9 +418,9 @@ export default function SuperAdminCalendarUI() {
       title: event.title,
       type: eventType,
       start: (event.start || "").split('T')[0],
-      end: event.originalEnd 
-             ? event.originalEnd.split('T')[0] 
-             : (event.end ? event.end.split('T')[0] : (event.start || "").split('T')[0]),
+      end: event.originalEnd
+        ? event.originalEnd.split('T')[0]
+        : (event.end ? event.end.split('T')[0] : (event.start || "").split('T')[0]),
       startTime,
       endTime,
       location: event.location || "",
@@ -739,13 +752,16 @@ export default function SuperAdminCalendarUI() {
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-items-center gap-2">
-            <CalendarIcon className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-xl">
+              <CalendarIcon className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+            </div>
             Superadmin Calendar
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-gray-500 text-sm md:text-base mt-1 ml-1">
             Manage Programs, Projects, Events, Holidays & Consultations
           </p>
         </div>
@@ -754,10 +770,10 @@ export default function SuperAdminCalendarUI() {
           <button
             onClick={fetchEvents}
             disabled={loading}
-            className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-200 font-bold disabled:opacity-50"
           >
             <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
-            {loading ? "Refreshing..." : "Refresh"}
+            <span className="md:inline">{loading ? "Refreshing..." : "Refresh"}</span>
           </button>
 
           <button
@@ -767,53 +783,49 @@ export default function SuperAdminCalendarUI() {
               resetForm();
               setShowModal(true);
             }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all duration-200 font-medium shadow-sm"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl transition-all duration-200 font-bold shadow-sm"
           >
-            <Plus size={18} /> New Event
+            <Plus size={18} />
+            <span className="md:inline">New Event</span>
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {Object.entries(stats).map(([key, value]) => (
-          <div key={key} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 capitalize">
-                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                </p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {value}
-                </p>
-              </div>
-              <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${key === 'total' ? 'bg-blue-100' :
-                key === 'thisMonth' ? 'bg-green-100' :
-                  key === 'upcoming' ? 'bg-orange-100' :
-                    'bg-gray-100'
-                }`}>
-                <CalendarIcon className={`h-5 w-5 ${key === 'total' ? 'text-blue-600' :
-                  key === 'thisMonth' ? 'text-green-600' :
-                    key === 'upcoming' ? 'text-orange-600' :
-                      'text-gray-600'
-                  }`} />
-              </div>
+          <div key={key} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-colors">
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                {key.replace(/([A-Z])/g, ' $1').trim()}
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {value}
+              </p>
+            </div>
+            <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${key === 'total' ? 'bg-blue-50 text-blue-600' :
+              key === 'thisMonth' ? 'bg-green-50 text-green-600' :
+                key === 'upcoming' ? 'bg-orange-50 text-orange-600' :
+                  'bg-gray-50 text-gray-600'
+              }`}>
+              <CalendarIcon size={24} />
             </div>
           </div>
         ))}
       </div>
 
       {/* Legend for Color Coding */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Event Types:</h3>
-        <div className="flex flex-wrap gap-4">
+      <div className="bg-white p-4 md:p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
+        <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Event Color Legend</h3>
+        <div className="flex flex-wrap gap-4 md:gap-6">
           {eventTypes.map((type) => (
-            <div key={type.value} className="flex items-center gap-2">
+            <div key={type.value} className="flex items-center gap-2 group cursor-default">
               <div
-                className="w-4 h-4 rounded"
+                className="w-4 h-4 rounded-md shadow-sm transition-transform group-hover:scale-110"
                 style={{ backgroundColor: type.color }}
               ></div>
-              <span className="text-sm text-gray-600 capitalize">
+              <span className="text-xs font-bold text-gray-600 capitalize">
                 {type.label}
               </span>
             </div>
@@ -822,68 +834,130 @@ export default function SuperAdminCalendarUI() {
       </div>
 
       {/* Filters Section */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4 flex flex-wrap gap-3 items-center">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <Search size={20} className="text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search events..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      <div className="bg-white p-4 md:p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
+        <div className="flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
+          <div className="flex-1 w-full relative">
+            <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by title, location, or user..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium transition-all"
+            />
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Filter size={20} className="text-gray-400" />
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Types</option>
-            {eventTypes.map(type => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+            <div className="flex-1 xl:flex-none relative">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
+              >
+                <option value="all">All Types</option>
+                {eventTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+            </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Status</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+            <div className="flex-1 xl:flex-none relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
+              >
+                <option value="all">All Status</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <ChevronDown size={16} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Calendar Container */}
-      <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-200 mb-6">
+      <style>{`
+        .fc .fc-toolbar {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+          justify-content: space-between;
+          align-items: center;
+        }
+        @media (max-width: 768px) {
+          .fc .fc-toolbar {
+            flex-direction: column;
+            justify-content: center;
+          }
+          .fc .fc-toolbar-chunk {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+          }
+          .fc .fc-toolbar-title {
+            font-size: 1.2rem !important;
+            text-align: center;
+          }
+          .fc .fc-button {
+            padding: 0.4rem 0.6rem !important;
+            font-size: 0.85rem !important;
+          }
+        }
+        /* Fix for scrollbar hiding in table */
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        /* Mobile specific table adjustments */
+        @media (max-width: 640px) {
+          .mobile-hide {
+            display: none;
+          }
+        }
+      `}</style>
+      
+      <div className="bg-white p-2 md:p-6 rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          headerToolbar={{
+          initialView={isMobile ? "dayGridMonth" : "dayGridMonth"}
+          headerToolbar={isMobile ? {
+            left: 'prev,next today',
+            center: 'title',
+            right: ''
+          } : {
             left: "prev,next today",
             center: "title",
             right: "dayGridMonth,timeGridWeek,timeGridDay",
           }}
-          height="70vh"
+          footerToolbar={isMobile ? {
+            center: 'dayGridMonth,timeGridWeek,timeGridDay'
+          } : null}
+          height={isMobile ? "auto" : "70vh"}
+          contentHeight={isMobile ? "auto" : "auto"}
+          aspectRatio={isMobile ? 0.8 : 1.35}
+          handleWindowResize={true}
           events={events}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          dayMaxEvents={true}
+          dayMaxEvents={isMobile ? 2 : true}
           slotMinTime="06:00:00"
           slotMaxTime="22:00:00"
           allDaySlot={true}
           nowIndicator={true}
           editable={true}
           selectable={true}
-          dayHeaderClassNames="text-gray-700 font-semibold"
+          dayHeaderClassNames="text-gray-700 font-semibold text-[10px] md:text-sm"
           dayCellClassNames="hover:bg-blue-50 transition-colors"
           buttonText={{
             today: "Today",
@@ -894,21 +968,27 @@ export default function SuperAdminCalendarUI() {
           views={{
             timeGrid: {
               dayHeaderFormat: { weekday: 'short', day: 'numeric' }
+            },
+            dayGridMonth: {
+              titleFormat: { year: 'numeric', month: 'long' }
             }
           }}
-          eventClassNames="cursor-pointer hover:opacity-90"
+          eventClassNames="cursor-pointer hover:opacity-90 text-[10px] md:text-xs"
         />
       </div>
 
-      {/* Events Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      {/* Events Table Section */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-8">
+        <div className="px-6 py-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              All Events ({filteredEvents.length})
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              Event Catalog
+              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 text-xs font-black rounded-full">
+                {filteredEvents.length}
+              </span>
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Showing {filteredEvents.length} of {events.length} events
+            <p className="text-sm text-gray-500 mt-1 font-medium">
+              View and manage all registered events
             </p>
           </div>
           {selectedEvents.size > 0 && (
@@ -921,36 +1001,24 @@ export default function SuperAdminCalendarUI() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto scrollbar-hide">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left">
+                <th className="px-6 py-5">
                   <input
                     type="checkbox"
                     checked={selectedEvents.size === filteredEvents.length && filteredEvents.length > 0}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="w-4 h-4 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Event
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Files
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest">Event Information</th>
+                <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest mobile-hide">Schedule</th>
+                <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest mobile-hide">Category</th>
+                <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest mobile-hide">Media</th>
+                <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
 
@@ -1005,7 +1073,7 @@ export default function SuperAdminCalendarUI() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap mobile-hide">
                       <div className="flex flex-col">
                         <div className="text-sm text-gray-900">
                           {formatDate(event.start)}
@@ -1022,7 +1090,7 @@ export default function SuperAdminCalendarUI() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap mobile-hide">
                       <div className="flex items-center">
                         <div
                           className="w-2 h-2 rounded-full mr-2"
@@ -1035,17 +1103,22 @@ export default function SuperAdminCalendarUI() {
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${event.extendedProps?.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : event.extendedProps?.status === 'cancelled'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                        {event.extendedProps?.status || 'upcoming'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${event.extendedProps?.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : event.extendedProps?.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                          {event.extendedProps?.status || 'upcoming'}
+                        </span>
+                        <div className="sm:hidden text-[10px] text-gray-500">
+                          {formatDate(event.start)}
+                        </div>
+                      </div>
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap mobile-hide">
                       {event.extendedProps?.attachments?.length > 0 ? (
                         <div className="flex items-center gap-1">
                           <div className="flex -space-x-2">
@@ -1156,11 +1229,11 @@ export default function SuperAdminCalendarUI() {
 
         {/* Pagination */}
         {filteredEvents.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+          <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-700 order-2 sm:order-1">
               Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredEvents.length)} of {filteredEvents.length} events
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 order-1 sm:order-2">
               <button
                 onClick={() => paginate(currentPage - 1)}
                 disabled={currentPage === 1}
@@ -1686,11 +1759,11 @@ export default function SuperAdminCalendarUI() {
                           value={formData.start}
                           onChange={(e) => {
                             const newStart = e.target.value;
-                            setFormData({ 
-                              ...formData, 
+                            setFormData({
+                              ...formData,
                               start: newStart,
                               // Automatically set End Date if it's empty or behind the new Start Date
-                              end: (!formData.end || formData.end < newStart) ? newStart : formData.end 
+                              end: (!formData.end || formData.end < newStart) ? newStart : formData.end
                             });
                           }}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
@@ -1771,8 +1844,8 @@ export default function SuperAdminCalendarUI() {
                           type="button"
                           onClick={() => setFormData({ ...formData, mode: 'online' })}
                           className={`p-3 rounded-xl border-2 text-center transition-all ${formData.mode === 'online'
-                              ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
-                              : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
+                            ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
+                            : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
                             }`}
                         >
                           <span className="text-xl mb-1 block">💻</span>
@@ -1782,8 +1855,8 @@ export default function SuperAdminCalendarUI() {
                           type="button"
                           onClick={() => setFormData({ ...formData, mode: 'face_to_face' })}
                           className={`p-3 rounded-xl border-2 text-center transition-all ${formData.mode === 'face_to_face'
-                              ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
-                              : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
+                            ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
+                            : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
                             }`}
                         >
                           <span className="text-xl mb-1 block">🏢</span>

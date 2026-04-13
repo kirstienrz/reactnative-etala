@@ -61,7 +61,17 @@ export default function SexDataAdmin() {
     const [editingRow, setEditingRow] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [viewMode, setViewMode] = useState("charts"); // "charts" or "table"
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const chartRef = useRef(null);
+
+    // Responsive listener
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const isMobile = windowWidth < 768;
 
     const handleDragEnter = (e) => {
         e.preventDefault();
@@ -791,18 +801,34 @@ export default function SexDataAdmin() {
 
                                     {viewMode === 'charts' ? (
                                         <div className="flex flex-col gap-8">
-                                            <div className="bg-gray-50 rounded-3xl p-6 md:p-8 border border-gray-100 min-h-[450px]">
+                                            <style>{`
+                                                .scrollbar-hide::-webkit-scrollbar { display: none; }
+                                                .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+                                            `}</style>
+                                            <div className="bg-gray-50 rounded-3xl p-4 md:p-8 border border-gray-100 min-h-[450px]">
                                                 <div ref={chartRef} className="w-full h-full flex flex-col">
-                                                    <div className="flex justify-between items-center mb-8">
+                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                                                         <h3 className="text-lg font-black text-gray-900">{chartType.toUpperCase()} Visualization</h3>
                                                         <div className="flex items-center gap-2">
                                                             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Selected: {yField} vs {xField}</span>
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-relaxed">
+                                                                SELECTED: {yField} <br className="sm:hidden" /> VS {xField}
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex-1 flex items-center justify-center">
-                                                        {renderChart(chartType)}
+                                                    <div className="flex-1 overflow-x-auto scrollbar-hide pb-2">
+                                                        <div style={{ 
+                                                            minWidth: isMobile ? '600px' : 'auto',
+                                                            height: '350px'
+                                                        }}>
+                                                            {renderChart(chartType)}
+                                                        </div>
                                                     </div>
+                                                    {isMobile && (
+                                                        <div className="mt-2 text-center">
+                                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">← Swipe to scroll graph →</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
 

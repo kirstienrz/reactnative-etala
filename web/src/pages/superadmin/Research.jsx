@@ -450,85 +450,85 @@ export default function ResearchAdmin() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex justify-between items-center">
+      <div className="bg-white border-b sticky top-0 z-10 shadow-sm md:shadow-none">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Research Publications</h1>
-              <p className="text-gray-600 mt-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Research Publications</h1>
+              <p className="text-sm md:text-base text-gray-600 mt-1">
                 {viewArchived
                   ? 'Viewing archived research'
                   : 'Manage active research publications'
                 }
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full md:w-auto">
               <button
                 onClick={fetchResearchData}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center gap-2"
+                className="flex-1 md:flex-none justify-center px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition flex items-center gap-2"
                 title="Refresh"
               >
                 <RefreshCw size={20} />
+                <span className="md:hidden">Refresh</span>
               </button>
               <button
                 onClick={() => setViewArchived(!viewArchived)}
-                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition shadow-sm flex items-center gap-2"
+                className="flex-[2] md:flex-none justify-center px-4 py-2.5 bg-gray-800 text-white rounded-xl hover:bg-black transition shadow-sm flex items-center gap-2 text-sm md:text-base"
               >
-                {viewArchived ? 'View Active Research' : 'View Archived Research'}
+                <Archive size={18} />
+                {viewArchived ? 'Active Research' : 'Archived Research'}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Statistics Cards - Active/Archived */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-blue-600 mb-1">Total Research</div>
-            <div className="text-2xl font-bold text-blue-900">{stats.total}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <div className="text-xs font-black text-blue-600 uppercase tracking-widest mb-2">Total Research</div>
+            <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-green-600 mb-1">Active Research</div>
-            <div className="text-2xl font-bold text-green-900">
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <div className="text-xs font-black text-green-600 uppercase tracking-widest mb-2">Active Research</div>
+            <div className="text-3xl font-bold text-gray-900">
               {viewArchived ? '—' : stats.active}
             </div>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-yellow-600 mb-1">Archived Research</div>
-            <div className="text-2xl font-bold text-yellow-900">
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <div className="text-xs font-black text-amber-600 uppercase tracking-widest mb-2">Archived Research</div>
+            <div className="text-3xl font-bold text-gray-900">
               {viewArchived ? stats.archived : '—'}
             </div>
           </div>
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-purple-600 mb-1">With Links</div>
-            <div className="text-2xl font-bold text-purple-900">
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <div className="text-xs font-black text-purple-600 uppercase tracking-widest mb-2">With PDF Links</div>
+            <div className="text-3xl font-bold text-gray-900">
               {stats.withLinks}
             </div>
           </div>
         </div>
 
         {/* Controls Section */}
-        <div className="mb-6 bg-white border rounded-lg p-4 shadow-sm">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="flex-1 w-full">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder={`Search ${viewArchived ? 'archived' : 'active'} research...`}
-                  value={searchQuery}
-                  onChange={handleSearch}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+        <div className="mb-6 bg-white border border-gray-100 rounded-2xl p-4 md:p-6 shadow-sm">
+          <div className="flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
+            <div className="flex-1 w-full relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder={`Search ${viewArchived ? 'archived' : 'active'} research...`}
+                value={searchQuery}
+                onChange={handleSearch}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+              />
             </div>
 
-            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+            <div className="flex flex-wrap gap-2 w-full xl:w-auto">
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 xl:flex-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm"
               >
                 {availableYears.map(year => (
                   <option key={year} value={year}>{year}</option>
@@ -538,7 +538,7 @@ export default function ResearchAdmin() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 xl:flex-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -548,17 +548,17 @@ export default function ResearchAdmin() {
               {!viewArchived && (
                 <button
                   onClick={() => setShowModal(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                  className="w-full xl:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 font-bold shadow-sm"
                 >
                   <Plus size={20} />
-                  Add New Research
+                  Add Research
                 </button>
               )}
 
               {researchData.length > 0 && (
                 <button
                   onClick={toggleSelectAll}
-                  className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="flex-1 xl:flex-none px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all text-sm"
                 >
                   {selectedItems.size === researchData.length && researchData.length > 0 ?
                     'Deselect All' : 'Select All'

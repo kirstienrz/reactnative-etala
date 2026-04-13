@@ -340,12 +340,12 @@ export default function InfographicsAdmin() {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <div className="bg-white border-b">
-                <div className="max-w-7xl mx-auto px-6 py-6">
-                    <div className="flex justify-between items-center">
+            <div className="bg-white border-b sticky top-0 md:relative z-30">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Infographics</h1>
-                            <p className="text-gray-600 mt-1">
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Infographics</h1>
+                            <p className="text-gray-600 text-sm md:text-base mt-1">
                                 {viewArchived
                                     ? 'View and restore archived infographics'
                                     : 'Upload and manage infographics by academic year'}
@@ -353,13 +353,14 @@ export default function InfographicsAdmin() {
                         </div>
                         <button
                             onClick={() => setViewArchived(!viewArchived)}
-                            className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition shadow-sm"
+                            className="w-full md:w-auto px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-black transition shadow-lg font-bold text-sm"
                         >
                             {viewArchived ? 'View Active Images' : 'View Archived Images'}
                         </button>
                     </div>
                 </div>
             </div>
+
 
             <div className="max-w-7xl mx-auto px-6 py-8">
                 {/* Statistics Cards */}
@@ -385,23 +386,26 @@ export default function InfographicsAdmin() {
                 </div>
 
                 {/* Controls Section */}
-                <div className="mb-6 bg-white border rounded-lg p-4 shadow-sm">
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                        <div className="flex-1 w-full md:w-auto">
-                            <input
-                                type="text"
-                                placeholder="Search by title or year..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                <div className="mb-6 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                    <div className="flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
+                        <div className="flex-1 w-full">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search by title or year..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium"
+                                />
+                            </div>
                         </div>
 
-                        <div className="flex gap-2 flex-wrap w-full md:w-auto">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full sm:w-40 px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium text-sm"
                             >
                                 <option value="newest">Newest First</option>
                                 <option value="oldest">Oldest First</option>
@@ -410,54 +414,56 @@ export default function InfographicsAdmin() {
                             {!viewArchived && (
                                 <button
                                     onClick={() => setShowYearModal(true)}
-                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition whitespace-nowrap"
+                                    className="w-full sm:w-auto px-6 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition shadow-lg shadow-purple-100 font-bold text-sm flex items-center justify-center gap-2"
                                 >
-                                    <Plus size={16} className="inline mr-1" />
-                                    New Academic Year
+                                    <Plus size={18} />
+                                    New Year
                                 </button>
                             )}
 
                             <button
                                 onClick={() => setShowModal(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap"
+                                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-100 font-bold text-sm flex items-center justify-center gap-2"
                             >
-                                <Upload size={16} className="inline mr-1" />
-                                Add Infographics
+                                <Upload size={18} />
+                                Add Graphics
                             </button>
 
                             {filteredAndSortedImages.length > 0 && (
-                                <>
+                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-100">
                                     <button
                                         onClick={toggleSelectAll}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                                        className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-bold text-sm"
                                     >
-                                        {selectedImages.size === filteredAndSortedImages.length ? 'Deselect All' : 'Select All'}
+                                        {selectedImages.size === filteredAndSortedImages.length ? 'Deselect' : 'Select All'}
                                     </button>
 
                                     {selectedImages.size > 0 && (
-                                        <div className="flex gap-2">
+                                        <>
                                             <button
                                                 onClick={() => handleBulkAction(viewArchived ? 'restore' : 'archive')}
-                                                className={`px-4 py-2 text-white rounded-lg transition ${viewArchived
-                                                    ? 'bg-green-500 hover:bg-green-600'
-                                                    : 'bg-yellow-500 hover:bg-yellow-600'
+                                                className={`flex-1 sm:flex-none px-4 py-2.5 text-white rounded-xl transition font-bold text-sm ${viewArchived
+                                                    ? 'bg-green-600 hover:bg-green-700'
+                                                    : 'bg-yellow-600 hover:bg-yellow-700'
                                                     }`}
                                             >
                                                 {viewArchived ? 'Restore' : 'Archive'} ({selectedImages.size})
                                             </button>
                                             <button
                                                 onClick={() => handleBulkAction('delete')}
-                                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+                                                className="px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold text-sm flex items-center gap-2"
+                                                title="Delete Selected"
                                             >
-                                                <Trash2 size={16} /> Delete ({selectedImages.size})
+                                                <Trash2 size={18} />
                                             </button>
-                                        </div>
+                                        </>
                                     )}
-                                </>
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
+
 
                 {/* Infographics Grid by Year */}
                 <div className="space-y-8">
@@ -702,8 +708,8 @@ export default function InfographicsAdmin() {
                                         onDragLeave={handleDragLeave}
                                         onDrop={handleDrop}
                                         className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isDragging
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
                                             }`}
                                     >
                                         <input

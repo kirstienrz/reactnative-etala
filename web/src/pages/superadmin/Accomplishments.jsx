@@ -235,32 +235,42 @@ const Accomplishments = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-transparent p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Accomplishment Reports</h1>
-          <p className="text-gray-600">Official documentation of achievements and milestones</p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Accomplishment Reports</h1>
+            <p className="text-gray-600">Official documentation of achievements and milestones</p>
+          </div>
+          {!viewArchived && (
+            <button
+              onClick={() => { resetForm(); setShowAddModal(true); }}
+              className="w-full md:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 font-bold"
+            >
+              <Plus size={18} /> Add New Report
+            </button>
+          )}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-6 border-b">
+        <div className="flex gap-4 mb-6 border-b overflow-x-auto no-scrollbar">
           <button
             onClick={() => setViewArchived(false)}
-            className={`pb-3 px-4 font-medium transition ${!viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"}`}
+            className={`pb-3 px-4 font-bold transition whitespace-nowrap ${!viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-900"}`}
           >
             Active Reports
           </button>
           <button
             onClick={() => setViewArchived(true)}
-            className={`pb-3 px-4 font-medium transition ${viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"}`}
+            className={`pb-3 px-4 font-bold transition whitespace-nowrap ${viewArchived ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-900"}`}
           >
             Archived
           </button>
         </div>
 
         {/* Action Bar */}
-        <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="bg-white border rounded-2xl p-4 mb-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -268,18 +278,15 @@ const Accomplishments = () => {
               placeholder="Search reports..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium"
             />
           </div>
-          {!viewArchived && (
-            <button
-              onClick={() => { resetForm(); setShowAddModal(true); }}
-              className="w-full md:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              <Plus size={18} /> Add New Report
-            </button>
-          )}
+          <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+            <Filter size={16} />
+            Showing {filteredReports.length} results
+          </div>
         </div>
+
 
         {/* Messaging */}
         {(error || success) && (
