@@ -781,17 +781,52 @@ const sendReportPDF = async (req, res) => {
 
     console.log(`✅ Referral PDF sent to Chat for ticket ${ticketNumber}`);
 
+    // 7. Send Email to User (Official Receipt)
+    try {
+      if (sender && sender.email) {
+        await sendEmail({
+          to: sender.email,
+          subject: `Official Incident Report Copy - ${ticketNumber}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <h2 style="color: #7e22ce;">TUP GAD Incident Report</h2>
+              <p>Hello ${sender.firstName},</p>
+              <p>Thank you for submitting your incident report. Your ticket number is <strong>${ticketNumber}</strong>.</p>
+              <p>Attached to this email is an official copy of your submitted report in PDF format for your personal records.</p>
+              <p>You can also track the status of your report and communicate with GAD administrators through the <strong>ETALA Mobile App</strong>.</p>
+              <p>If you have any further questions, you may use the in-app chat system to speak with our counselors.</p>
+              <br/>
+              <p>Best regards,</p>
+              <p><strong>TUP GAD Office</strong></p>
+            </div>
+          `,
+          attachments: [
+            {
+              filename: pdfFile.originalname || `Report_${ticketNumber}.pdf`,
+              content: pdfFile.buffer,
+              contentType: 'application/pdf'
+            }
+          ]
+
+        });
+        console.log(`📧 Official PDF report sent to ${sender.email}`);
+      }
+    } catch (emailErr) {
+      console.error("❌ Email sending failed (Report PDF):", emailErr);
+      // We don't fail the whole request because chat message was already saved
+    }
+
     res.json({
       success: true,
-      message: "Referral PDF has been sent to the chat system",
-      fileUrl: pdfBase64.substring(0, 100) + "..." // Return a snippet or just omit
+      message: "Referral PDF has been sent to the chat system and your registered email",
+      fileUrl: pdfBase64.substring(0, 100) + "..."
     });
 
   } catch (error) {
     console.error("❌ SendReportPDF Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to send PDF to chat",
+      message: "Failed to send PDF to system",
       error: error.message
     });
   }

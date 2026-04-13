@@ -25,23 +25,26 @@ const colors = {
 
 const styles = {
   colors,
-  container: {
+  container: (isMobile) => ({
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: '40px 32px',
+    padding: isMobile ? '20px 16px' : '40px 32px',
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     backgroundColor: colors.background,
     minHeight: '100vh',
     color: colors.textPrimary
-  },
-  header: {
+  }),
+  header: (isMobile) => ({
     display: 'flex',
-    alignItems: 'center',
+    flexDirection: isMobile ? 'column' : 'row',
+    alignItems: isMobile ? 'flex-start' : 'center',
     justifyContent: 'space-between',
-    marginBottom: '48px',
+    gap: isMobile ? '16px' : '0',
+    marginBottom: isMobile ? '32px' : '48px',
     paddingBottom: '24px',
     borderBottom: `1px solid ${colors.border}`
-  },
+  }),
+
   backButton: {
     background: 'none',
     border: 'none',
@@ -129,13 +132,14 @@ const styles = {
     backgroundColor: colors.background,
     borderRadius: '12px'
   },
-  sectionCard: {
+  sectionCard: (isMobile) => ({
     backgroundColor: colors.white,
     borderRadius: '12px',
-    padding: '32px',
+    padding: isMobile ? '20px' : '32px',
     border: `1px solid ${colors.border}`,
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)'
-  },
+  }),
+
   sectionHeader: {
     marginBottom: '24px',
     paddingBottom: '16px',
@@ -206,10 +210,12 @@ const styles = {
     backgroundColor: colors.white,
     cursor: 'pointer'
   },
-  optionGroup: {
+  optionGroup: (isMobile) => ({
     display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
     gap: '12px'
-  },
+  }),
+
   optionButton: {
     flex: 1,
     padding: '14px 16px',
@@ -572,7 +578,30 @@ const styles = {
 // ============ END OF STYLES ============
 
 const ReportForm = () => {
+  const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth <= 768;
+
+  const currentStyles = React.useMemo(() => ({
+    ...styles,
+    container: styles.container(isMobile),
+    header: styles.header(isMobile),
+    sectionCard: styles.sectionCard(isMobile),
+    optionGroup: styles.optionGroup(isMobile),
+  }), [isMobile]);
+
   const [currentStep, setCurrentStep] = useState(1);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
   const [loading, setLoading] = useState(false);
   const [savedProgress, setSavedProgress] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -1239,10 +1268,11 @@ const ReportForm = () => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '24px 32px',
+            padding: isMobile ? '16px 20px' : '24px 32px',
             borderBottom: '1px solid #E5E7EB',
             backgroundColor: '#FFFFFF'
           }}>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div style={{
                 width: '40px',
@@ -1300,7 +1330,8 @@ const ReportForm = () => {
           </div>
 
           {/* MODAL CONTENT */}
-          <div style={{ padding: '32px' }}>
+          <div style={{ padding: isMobile ? '20px' : '32px' }}>
+
 
             {/* VALIDATION STATUS */}
             <div style={{
@@ -1503,10 +1534,11 @@ const ReportForm = () => {
 
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '20px',
                 marginBottom: '24px'
               }}>
+
                 <div>
                   <p style={{
                     fontSize: '13px',
@@ -1664,19 +1696,20 @@ const ReportForm = () => {
 
     return (
       <div style={{
-        ...styles.modalOverlay,
+        ...currentStyles.modalOverlay,
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         backdropFilter: 'blur(4px)',
         zIndex: 10000
       }}>
         <div style={{
-          ...styles.modalContent,
+          ...currentStyles.modalContent,
           maxWidth: '600px',
-          padding: '40px',
+          padding: isMobile ? '20px' : '40px',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column'
         }}>
+
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <div style={{
               width: '64px',
@@ -1689,12 +1722,12 @@ const ReportForm = () => {
               margin: '0 auto 20px',
               border: `1px solid #dbeafe`,
             }}>
-              <Shield size={32} color={styles.colors.primary} />
+              <Shield size={32} color={currentStyles.colors.primary} />
             </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '700', color: styles.colors.textPrimary, margin: '0 0 8px 0' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: currentStyles.colors.textPrimary, margin: '0 0 8px 0' }}>
               Terms of Confidentiality
             </h2>
-            <p style={{ fontSize: '14px', color: styles.colors.textSecondary, margin: 0 }}>
+            <p style={{ fontSize: '14px', color: currentStyles.colors.textSecondary, margin: 0 }}>
               Please review and agree to our confidentiality terms to proceed.
             </p>
           </div>
@@ -1706,7 +1739,7 @@ const ReportForm = () => {
             marginBottom: '32px',
             fontSize: '14px',
             lineHeight: '1.6',
-            color: styles.colors.textPrimary,
+            color: currentStyles.colors.textPrimary,
             textAlign: 'justify'
           }}>
             <p style={{ fontWeight: '600', marginBottom: '16px' }}>
@@ -1729,12 +1762,12 @@ const ReportForm = () => {
               By submitting this report, you confirm that the information you are providing is true and accurate to the best of your knowledge, and you understand that the report will be handled according to the confidentiality and data protection policies of the system.
             </p>
 
-            <p style={{ fontStyle: 'italic', color: styles.colors.textSecondary }}>
+            <p style={{ fontStyle: 'italic', color: currentStyles.colors.textSecondary }}>
               If you do not agree with these terms, you may choose not to proceed with the submission of your report.
             </p>
           </div>
 
-          <div style={{ borderTop: `1px solid ${styles.colors.border}`, paddingTop: '24px' }}>
+          <div style={{ borderTop: `1px solid ${currentStyles.colors.border}`, paddingTop: '24px' }}>
             <div
               style={{
                 display: 'flex',
@@ -1746,14 +1779,14 @@ const ReportForm = () => {
               onClick={() => setAgreedToTerms(!agreedToTerms)}
             >
               <div style={{
-                ...styles.checkbox,
-                backgroundColor: agreedToTerms ? styles.colors.primary : 'white',
-                borderColor: agreedToTerms ? styles.colors.primary : styles.colors.border,
+                ...currentStyles.checkbox,
+                backgroundColor: agreedToTerms ? currentStyles.colors.primary : 'white',
+                borderColor: agreedToTerms ? currentStyles.colors.primary : currentStyles.colors.border,
                 marginTop: '2px'
               }}>
                 {agreedToTerms && <Check size={14} color="white" />}
               </div>
-              <span style={{ fontSize: '14px', fontWeight: '500', color: styles.colors.textPrimary, lineHeight: '1.4' }}>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: currentStyles.colors.textPrimary, lineHeight: '1.4' }}>
                 I have read and agree to the terms of confidentiality and confirm that all information provided is true and accurate.
               </span>
             </div>
@@ -1761,7 +1794,7 @@ const ReportForm = () => {
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 style={{
-                  ...styles.secondaryButton,
+                  ...currentStyles.secondaryButton,
                   flex: 1
                 }}
                 onClick={() => window.history.back()}
@@ -1770,9 +1803,9 @@ const ReportForm = () => {
               </button>
               <button
                 style={{
-                  ...styles.primaryButton,
+                  ...currentStyles.primaryButton,
                   flex: 2,
-                  backgroundColor: agreedToTerms ? styles.colors.primary : styles.colors.border,
+                  backgroundColor: agreedToTerms ? currentStyles.colors.primary : currentStyles.colors.border,
                   cursor: agreedToTerms ? 'pointer' : 'not-allowed',
                   boxShadow: agreedToTerms ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none'
                 }}
@@ -1789,28 +1822,28 @@ const ReportForm = () => {
   };
 
   const renderProgressBar = () => (
-    <div style={styles.progressContainer}>
+    <div style={currentStyles.progressContainer}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={styles.progressText}>
+        <div style={currentStyles.progressText}>
           Step {currentStep} of {totalSteps}
         </div>
-        <div style={styles.stepIndicator}>
+        <div style={currentStyles.stepIndicator}>
           {Array.from({ length: totalSteps }).map((_, index) => (
             <div key={index} style={{
-              ...styles.stepDot,
-              backgroundColor: currentStep > index ? styles.colors.primary : styles.colors.border,
-              borderColor: currentStep > index ? styles.colors.primary : styles.colors.border,
+              ...currentStyles.stepDot,
+              backgroundColor: currentStep > index ? currentStyles.colors.primary : currentStyles.colors.border,
+              borderColor: currentStep > index ? currentStyles.colors.primary : currentStyles.colors.border,
             }}>
               {currentStep > index ? <Check size={12} color="white" /> : null}
             </div>
           ))}
         </div>
       </div>
-      <h2 style={styles.stepTitle}>{getStepTitle()}</h2>
-      <div style={styles.progressBar}>
+      <h2 style={currentStyles.stepTitle}>{getStepTitle()}</h2>
+      <div style={currentStyles.progressBar}>
         <div
           style={{
-            ...styles.progressFill,
+            ...currentStyles.progressFill,
             width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%`
           }}
         />
@@ -1819,40 +1852,41 @@ const ReportForm = () => {
   );
 
   const renderReporterInfo = () => (
-    <div style={styles.stepContainer}>
-      <div style={styles.sectionCard}>
-        <div style={styles.sectionHeader}>
+    <div style={currentStyles.stepContainer}>
+      <div style={currentStyles.sectionCard}>
+        <div style={currentStyles.sectionHeader}>
           <div style={{
             width: '64px',
             height: '64px',
             borderRadius: '32px',
-            backgroundColor: styles.colors.ultraLightBackground,
+            backgroundColor: currentStyles.colors.ultraLightBackground,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 20px',
-            border: `1px solid ${styles.colors.border}`,
+            border: `1px solid ${currentStyles.colors.border}`,
           }}>
-            <Shield size={32} color={styles.colors.primary} />
+            <Shield size={32} color={currentStyles.colors.primary} />
           </div>
-          <h3 style={{ ...styles.sectionTitle, textAlign: 'center', fontSize: '24px' }}>Your Information</h3>
-          <p style={{ ...styles.sectionDescription, textAlign: 'center', marginBottom: '32px' }}>
+          <h3 style={{ ...currentStyles.sectionTitle, textAlign: 'center', fontSize: '24px' }}>Your Information</h3>
+          <p style={{ ...currentStyles.sectionDescription, textAlign: 'center', marginBottom: '32px' }}>
             Help us understand your situation better. All fields are optional except your role.
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '32px', marginBottom: '32px' }}>
+
           <div>
-            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: styles.colors.textPrimary }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: currentStyles.colors.textPrimary }}>
               Required Context
             </h4>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>
                 Are you reporting as
-                <span style={styles.requiredStar}> *</span>
+                <span style={currentStyles.requiredStar}> *</span>
               </label>
               <select
-                style={styles.selectInput}
+                style={currentStyles.selectInput}
                 value={formData.reporterRole}
                 onChange={(e) => setFormData(prev => ({ ...prev, reporterRole: e.target.value }))}
               >
@@ -1863,13 +1897,13 @@ const ReportForm = () => {
               </select>
             </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>
                 TUP Affiliation
-                <span style={styles.requiredStar}> *</span>
+                <span style={currentStyles.requiredStar}> *</span>
               </label>
               <select
-                style={styles.selectInput}
+                style={currentStyles.selectInput}
                 value={formData.tupRole}
                 onChange={(e) => setFormData(prev => ({ ...prev, tupRole: e.target.value }))}
               >
@@ -1882,13 +1916,13 @@ const ReportForm = () => {
           </div>
 
           <div>
-            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: styles.colors.textPrimary }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: currentStyles.colors.textPrimary }}>
               Optional Details
             </h4>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Gender</label>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>Gender</label>
               <select
-                style={styles.selectInput}
+                style={currentStyles.selectInput}
                 value={formData.reporterGender}
                 onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
               >
@@ -1897,12 +1931,12 @@ const ReportForm = () => {
                 <option value="Male">Male</option>
               </select>
             </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Department
-                <span style={styles.requiredStar}> *</span>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>Department
+                <span style={currentStyles.requiredStar}> *</span>
               </label>
               <select
-                style={styles.input}
+                style={currentStyles.input}
                 value={formData.reporterDepartment}
                 onChange={(e) => setFormData(prev => ({ ...prev, reporterDepartment: e.target.value }))}
                 required
@@ -1921,14 +1955,14 @@ const ReportForm = () => {
 
       </div>
 
-      <div style={styles.importantNote}>
+      <div style={currentStyles.importantNote}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-          <Info size={18} color={styles.colors.textSecondary} />
+          <Info size={18} color={currentStyles.colors.textSecondary} />
           <div>
-            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: currentStyles.colors.textPrimary, fontWeight: '500' }}>
               Privacy & Confidentiality
             </p>
-            <p style={{ margin: 0, fontSize: '13px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: currentStyles.colors.textSecondary, lineHeight: '1.5' }}>
               All reports are handled with strict confidentiality by the TUP GAD Office.
               Whether you choose to remain anonymous or provide your details, your privacy is our priority.
             </p>
@@ -1939,34 +1973,34 @@ const ReportForm = () => {
   );
 
   const renderIncidentDetails = () => (
-    <div style={styles.stepContainer}>
+    <div style={currentStyles.stepContainer}>
       <div style={{ display: 'grid' }}>
         <div>
-          <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Incident Details</h3>
-              <p style={styles.sectionDescription}>Tell us what happened</p>
+          <div style={{ ...currentStyles.sectionCard, marginBottom: '24px' }}>
+            <div style={currentStyles.sectionHeader}>
+              <h3 style={currentStyles.sectionTitle}>Incident Details</h3>
+              <p style={currentStyles.sectionDescription}>Tell us what happened</p>
             </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>
                 Date of Latest Incident
-                <span style={styles.requiredStar}> *</span>
+                <span style={currentStyles.requiredStar}> *</span>
               </label>
-              <div style={styles.dateInput} onClick={() => showDatePickerModal('latestIncidentDate')}>
-                <span style={{ color: !formData.latestIncidentDate ? styles.colors.textSecondary : styles.colors.textPrimary }}>
+              <div style={currentStyles.dateInput} onClick={() => showDatePickerModal('latestIncidentDate')}>
+                <span style={{ color: !formData.latestIncidentDate ? currentStyles.colors.textSecondary : currentStyles.colors.textPrimary }}>
                   {formData.latestIncidentDate || 'Select date'}
                 </span>
-                <Calendar size={20} color={styles.colors.textSecondary} />
+                <Calendar size={20} color={currentStyles.colors.textSecondary} />
               </div>
             </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>
                 Description of Incident
-                <span style={styles.requiredStar}> *</span>
+                <span style={currentStyles.requiredStar}> *</span>
               </label>
               <textarea
-                style={{ ...styles.input, minHeight: '200px', resize: 'vertical' }}
+                style={{ ...currentStyles.input, minHeight: '200px', resize: 'vertical' }}
                 placeholder="Provide a detailed description of what happened, including dates, times, locations, and any other relevant information..."
                 value={formData.incidentDescription}
                 onChange={(e) => setFormData(prev => ({ ...prev, incidentDescription: e.target.value }))}
@@ -1974,30 +2008,30 @@ const ReportForm = () => {
             </div>
           </div>
 
-          <div style={styles.sectionCard}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Location Details</h3>
-              <p style={styles.sectionDescription}>Where the incident occurred</p>
+          <div style={currentStyles.sectionCard}>
+            <div style={currentStyles.sectionHeader}>
+              <h3 style={currentStyles.sectionTitle}>Location Details</h3>
+              <p style={currentStyles.sectionDescription}>Where the incident occurred</p>
             </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>
                 Place of Incident
-                <span style={styles.requiredStar}> *</span>
+                <span style={currentStyles.requiredStar}> *</span>
               </label>
-              <div style={styles.dropdownInput} onClick={() => showDropdown('placeOfIncident', places)}>
-                <span style={{ color: !formData.placeOfIncident ? styles.colors.textSecondary : styles.colors.textPrimary }}>
+              <div style={currentStyles.dropdownInput} onClick={() => showDropdown('placeOfIncident', places)}>
+                <span style={{ color: !formData.placeOfIncident ? currentStyles.colors.textSecondary : currentStyles.colors.textPrimary }}>
                   {formData.placeOfIncident || 'Select place'}
                 </span>
-                <ChevronDown size={20} color={styles.colors.textSecondary} />
+                <ChevronDown size={20} color={currentStyles.colors.textSecondary} />
               </div>
             </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>
                 Address Details
-                <span style={styles.requiredStar}> *</span>
+                <span style={currentStyles.requiredStar}> *</span>
               </label>
               <input
-                style={styles.input}
+                style={currentStyles.input}
                 placeholder="Specific location details..."
                 value={formData.incidentBarangay}
                 onChange={(e) => setFormData(prev => ({ ...prev, incidentBarangay: e.target.value }))}
@@ -2010,46 +2044,49 @@ const ReportForm = () => {
   );
 
   const renderPerpetratorInfo = () => (
-    <div style={styles.stepContainer}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-        <div style={styles.sectionCard}>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>Perpetrator Information</h3>
-            <p style={styles.sectionDescription}>Details about the alleged perpetrator (if known)</p>
+    <div style={currentStyles.stepContainer}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '24px' : '32px' }}>
+
+        <div style={currentStyles.sectionCard}>
+          <div style={currentStyles.sectionHeader}>
+            <h3 style={currentStyles.sectionTitle}>Perpetrator Information</h3>
+            <p style={currentStyles.sectionDescription}>Details about the alleged perpetrator (if known)</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Last Name</label>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
+
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>Last Name</label>
               <input
-                style={styles.input}
+                style={currentStyles.input}
                 placeholder="Enter last name"
                 value={formData.perpLastName}
                 onChange={(e) => setFormData(prev => ({ ...prev, perpLastName: e.target.value }))}
               />
             </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>First Name</label>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>First Name</label>
               <input
-                style={styles.input}
+                style={currentStyles.input}
                 placeholder="Enter first name"
                 value={formData.perpFirstName}
                 onChange={(e) => setFormData(prev => ({ ...prev, perpFirstName: e.target.value }))}
               />
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Sex</label>
-              <div style={styles.optionGroup}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
+
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>Sex</label>
+              <div style={currentStyles.optionGroup}>
                 {['Male', 'Female'].map(sex => (
                   <button
                     key={sex}
                     type="button"
                     style={{
-                      ...styles.optionButton,
-                      backgroundColor: formData.perpSex === sex ? styles.colors.primary : 'white',
-                      color: formData.perpSex === sex ? 'white' : styles.colors.textPrimary,
-                      borderColor: formData.perpSex === sex ? styles.colors.primary : styles.colors.border,
+                      ...currentStyles.optionButton,
+                      backgroundColor: formData.perpSex === sex ? currentStyles.colors.primary : 'white',
+                      color: formData.perpSex === sex ? 'white' : currentStyles.colors.textPrimary,
+                      borderColor: formData.perpSex === sex ? currentStyles.colors.primary : currentStyles.colors.border,
                     }}
                     onClick={() => setFormData(prev => ({ ...prev, perpSex: sex }))}
                   >
@@ -2058,10 +2095,10 @@ const ReportForm = () => {
                 ))}
               </div>
             </div>
-            <div style={styles.inputGroup}>
-              <label style={styles.inputLabel}>Age (approx.)</label>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>Age (approx.)</label>
               <input
-                style={styles.input}
+                style={currentStyles.input}
                 placeholder="Approximate age"
                 type="number"
                 value={formData.perpAge}
@@ -2069,19 +2106,19 @@ const ReportForm = () => {
               />
             </div>
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Relationship to You</label>
-            <div style={styles.dropdownInput} onClick={() => showDropdown('perpRelationship', relationships)}>
-              <span style={{ color: !formData.perpRelationship ? styles.colors.textSecondary : styles.colors.textPrimary }}>
+          <div style={currentStyles.inputGroup}>
+            <label style={currentStyles.inputLabel}>Relationship to You</label>
+            <div style={currentStyles.dropdownInput} onClick={() => showDropdown('perpRelationship', relationships)}>
+              <span style={{ color: !formData.perpRelationship ? currentStyles.colors.textSecondary : currentStyles.colors.textPrimary }}>
                 {formData.perpRelationship || 'Select relationship'}
               </span>
-              <ChevronDown size={20} color={styles.colors.textSecondary} />
+              <ChevronDown size={20} color={currentStyles.colors.textSecondary} />
             </div>
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Occupation (if known)</label>
+          <div style={currentStyles.inputGroup}>
+            <label style={currentStyles.inputLabel}>Occupation (if known)</label>
             <input
-              style={styles.input}
+              style={currentStyles.input}
               placeholder="Enter occupation"
               value={formData.perpOccupation}
               onChange={(e) => setFormData(prev => ({ ...prev, perpOccupation: e.target.value }))}
@@ -2089,33 +2126,33 @@ const ReportForm = () => {
           </div>
         </div>
 
-        <div style={styles.sectionCard}>
-          <div style={styles.sectionHeader}>
-            <h3 style={styles.sectionTitle}>Witness Information</h3>
-            <p style={styles.sectionDescription}>Details of any witnesses (if applicable)</p>
+        <div style={currentStyles.sectionCard}>
+          <div style={currentStyles.sectionHeader}>
+            <h3 style={currentStyles.sectionTitle}>Witness Information</h3>
+            <p style={currentStyles.sectionDescription}>Details of any witnesses (if applicable)</p>
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Witness Name</label>
+          <div style={currentStyles.inputGroup}>
+            <label style={currentStyles.inputLabel}>Witness Name</label>
             <input
-              style={styles.input}
+              style={currentStyles.input}
               placeholder="Enter witness name"
               value={formData.witnessName}
               onChange={(e) => setFormData(prev => ({ ...prev, witnessName: e.target.value }))}
             />
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Witness Contact</label>
+          <div style={currentStyles.inputGroup}>
+            <label style={currentStyles.inputLabel}>Witness Contact</label>
             <input
-              style={styles.input}
+              style={currentStyles.input}
               placeholder="Contact information"
               value={formData.witnessContact}
               onChange={(e) => setFormData(prev => ({ ...prev, witnessContact: e.target.value }))}
             />
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.inputLabel}>Witness Statement</label>
+          <div style={currentStyles.inputGroup}>
+            <label style={currentStyles.inputLabel}>Witness Statement</label>
             <textarea
-              style={{ ...styles.input, minHeight: '150px', resize: 'vertical' }}
+              style={{ ...currentStyles.input, minHeight: '150px', resize: 'vertical' }}
               placeholder="Brief statement from witness (if available)..."
               value={formData.witnessAccount}
               onChange={(e) => setFormData(prev => ({ ...prev, witnessAccount: e.target.value }))}
@@ -2130,35 +2167,37 @@ const ReportForm = () => {
     const isAnonymous = !formData.firstName && !formData.lastName;
 
     return (
-      <div style={styles.stepContainer}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
+      <div style={currentStyles.stepContainer}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: isMobile ? '24px' : '32px' }}>
+
           <div>
-            <div style={{ ...styles.sectionCard, marginBottom: '24px' }}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitle}>Report Summary</h3>
-                <p style={styles.sectionDescription}>Review your report details</p>
+            <div style={{ ...currentStyles.sectionCard, marginBottom: '24px' }}>
+              <div style={currentStyles.sectionHeader}>
+                <h3 style={currentStyles.sectionTitle}>Report Summary</h3>
+                <p style={currentStyles.sectionDescription}>Review your report details</p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '24px', marginBottom: '24px' }}>
+
                 {/* <div>
-                  <p style={styles.summaryLabel}>Reporting Mode</p>
-                  <p style={styles.summaryValue}>{isAnonymous ? 'Anonymous' : 'Identified'}</p>
+                  <p style={currentStyles.summaryLabel}>Reporting Mode</p>
+                  <p style={currentStyles.summaryValue}>{isAnonymous ? 'Anonymous' : 'Identified'}</p>
                 </div> */}
 
                 {!isAnonymous && (
                   <div>
-                    <p style={styles.summaryLabel}>Reporter</p>
-                    <p style={styles.summaryValue}>{formData.firstName} {formData.lastName}</p>
+                    <p style={currentStyles.summaryLabel}>Reporter</p>
+                    <p style={currentStyles.summaryValue}>{formData.firstName} {formData.lastName}</p>
                   </div>
                 )}
 
                 <div>
-                  <p style={styles.summaryLabel}>Incident Date</p>
-                  <p style={styles.summaryValue}>{formData.latestIncidentDate || 'Not provided'}</p>
+                  <p style={currentStyles.summaryLabel}>Incident Date</p>
+                  <p style={currentStyles.summaryValue}>{formData.latestIncidentDate || 'Not provided'}</p>
                 </div>
 
                 <div>
-                  <p style={styles.summaryLabel}>Incident Types</p>
-                  <p style={styles.summaryValue}>
+                  <p style={currentStyles.summaryLabel}>Incident Types</p>
+                  <p style={currentStyles.summaryValue}>
                     {formData.incidentTypes.length > 0
                       ? formData.incidentTypes.slice(0, 2).join(', ') + (formData.incidentTypes.length > 2 ? `, +${formData.incidentTypes.length - 2} more` : '')
                       : 'Not specified'}
@@ -2166,10 +2205,10 @@ const ReportForm = () => {
                 </div>
               </div>
 
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Additional Notes</label>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Additional Notes</label>
                 <textarea
-                  style={{ ...styles.input, minHeight: '120px', resize: 'vertical' }}
+                  style={{ ...currentStyles.input, minHeight: '120px', resize: 'vertical' }}
                   placeholder="Any additional information or context..."
                   value={formData.additionalNotes}
                   onChange={(e) => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
@@ -2177,35 +2216,35 @@ const ReportForm = () => {
               </div>
             </div>
 
-            <div style={styles.sectionCard}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitle}>Attachments</h3>
-                <p style={styles.sectionDescription}>Supporting documents and evidence</p>
+            <div style={currentStyles.sectionCard}>
+              <div style={currentStyles.sectionHeader}>
+                <h3 style={currentStyles.sectionTitle}>Attachments</h3>
+                <p style={currentStyles.sectionDescription}>Supporting documents and evidence</p>
               </div>
               {formData.attachments.length === 0 ? (
-                <div style={styles.emptyAttachments}>
-                  <FileText size={24} color={styles.colors.textSecondary} />
-                  <p style={{ margin: '12px 0 0 0', color: styles.colors.textSecondary, fontSize: '14px' }}>
+                <div style={currentStyles.emptyAttachments}>
+                  <FileText size={24} color={currentStyles.colors.textSecondary} />
+                  <p style={{ margin: '12px 0 0 0', color: currentStyles.colors.textSecondary, fontSize: '14px' }}>
                     No attachments added
                   </p>
                 </div>
               ) : (
                 <div>
                   {formData.attachments.map((attachment, index) => (
-                    <div key={index} style={styles.attachmentItem}>
+                    <div key={index} style={currentStyles.attachmentItem}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {attachment.type === 'image' && <ImageIcon size={16} color={styles.colors.textSecondary} />}
-                        {attachment.type === 'video' && <Video size={16} color={styles.colors.textSecondary} />}
-                        {attachment.type === 'pdf' && <FileText size={16} color={styles.colors.textSecondary} />}
-                        <span style={{ fontSize: '14px', color: styles.colors.textPrimary }}>
+                        {attachment.type === 'image' && <ImageIcon size={16} color={currentStyles.colors.textSecondary} />}
+                        {attachment.type === 'video' && <Video size={16} color={currentStyles.colors.textSecondary} />}
+                        {attachment.type === 'pdf' && <FileText size={16} color={currentStyles.colors.textSecondary} />}
+                        <span style={{ fontSize: '14px', color: currentStyles.colors.textPrimary }}>
                           {attachment.name}
                         </span>
                       </div>
                       <button
                         onClick={() => removeAttachment(index)}
-                        style={styles.removeAttachmentButton}
+                        style={currentStyles.removeAttachmentButton}
                       >
-                        <X size={16} color={styles.colors.textSecondary} />
+                        <X size={16} color={currentStyles.colors.textSecondary} />
                       </button>
                     </div>
                   ))}
@@ -2213,9 +2252,9 @@ const ReportForm = () => {
               )}
               <div
                 style={{
-                  ...styles.addAttachmentButton,
-                  borderColor: isDragging ? styles.colors.primary : styles.colors.border,
-                  backgroundColor: isDragging ? '#eff6ff' : styles.colors.white,
+                  ...currentStyles.addAttachmentButton,
+                  borderColor: isDragging ? currentStyles.colors.primary : currentStyles.colors.border,
+                  backgroundColor: isDragging ? '#eff6ff' : currentStyles.colors.white,
                   borderStyle: 'dashed',
                   borderWidth: '2px',
                   flexDirection: 'column',
@@ -2233,21 +2272,21 @@ const ReportForm = () => {
                   width: '48px',
                   height: '48px',
                   borderRadius: '24px',
-                  backgroundColor: isDragging ? styles.colors.primary : '#f1f5f9',
+                  backgroundColor: isDragging ? currentStyles.colors.primary : '#f1f5f9',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: '16px',
                   transition: 'all 0.2s ease'
                 }}>
-                  <Upload size={24} color={isDragging ? 'white' : styles.colors.primary} />
+                  <Upload size={24} color={isDragging ? 'white' : currentStyles.colors.primary} />
                 </div>
 
-                <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: styles.colors.textPrimary }}>
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: currentStyles.colors.textPrimary }}>
                   {isDragging ? 'Drop your images here' : 'Drop & Drag images here'}
                 </h4>
 
-                <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: styles.colors.textSecondary }}>
+                <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: currentStyles.colors.textSecondary }}>
                   or click to browse from your device
                 </p>
 
@@ -2271,54 +2310,54 @@ const ReportForm = () => {
           </div>
 
           <div>
-            <div style={styles.sectionCard}>
-              <div style={styles.sectionHeader}>
-                <h3 style={styles.sectionTitle}>Final Verification</h3>
-                <p style={styles.sectionDescription}>Confirm before submission</p>
+            <div style={currentStyles.sectionCard}>
+              <div style={currentStyles.sectionHeader}>
+                <h3 style={currentStyles.sectionTitle}>Final Verification</h3>
+                <p style={currentStyles.sectionDescription}>Confirm before submission</p>
               </div>
-              <div style={styles.verificationBox}>
+              <div style={currentStyles.verificationBox}>
                 <div
-                  style={styles.checkboxContainer}
+                  style={currentStyles.checkboxContainer}
                   onClick={() => setFormData(prev => ({ ...prev, confirmAccuracy: !prev.confirmAccuracy }))}
                 >
                   <div style={{
-                    ...styles.checkbox,
-                    backgroundColor: formData.confirmAccuracy ? styles.colors.primary : 'white',
-                    borderColor: formData.confirmAccuracy ? styles.colors.primary : styles.colors.border
+                    ...currentStyles.checkbox,
+                    backgroundColor: formData.confirmAccuracy ? currentStyles.colors.primary : 'white',
+                    borderColor: formData.confirmAccuracy ? currentStyles.colors.primary : currentStyles.colors.border
                   }}>
                     {formData.confirmAccuracy && <Check size={16} color="white" />}
                   </div>
-                  <span style={styles.checkboxLabel}>
+                  <span style={currentStyles.checkboxLabel}>
                     I confirm that all information provided is accurate to the best of my knowledge
                   </span>
-                  <span style={styles.requiredStar}> *</span>
+                  <span style={currentStyles.requiredStar}> *</span>
                 </div>
 
                 <div
-                  style={{ ...styles.checkboxContainer, marginTop: '16px' }}
+                  style={{ ...currentStyles.checkboxContainer, marginTop: '16px' }}
                   onClick={() => setFormData(prev => ({ ...prev, confirmConfidentiality: !prev.confirmConfidentiality }))}
                 >
                   <div style={{
-                    ...styles.checkbox,
-                    backgroundColor: formData.confirmConfidentiality ? styles.colors.primary : 'white',
-                    borderColor: formData.confirmConfidentiality ? styles.colors.primary : styles.colors.border
+                    ...currentStyles.checkbox,
+                    backgroundColor: formData.confirmConfidentiality ? currentStyles.colors.primary : 'white',
+                    borderColor: formData.confirmConfidentiality ? currentStyles.colors.primary : currentStyles.colors.border
                   }}>
                     {formData.confirmConfidentiality && <Check size={16} color="white" />}
                   </div>
-                  <span style={styles.checkboxLabel}>
+                  <span style={currentStyles.checkboxLabel}>
                     I understand this report will be handled confidentially by the TUP GAD Office
                   </span>
-                  <span style={styles.requiredStar}> *</span>
+                  <span style={currentStyles.requiredStar}> *</span>
                 </div>
               </div>
 
-              <div style={styles.warningBox}>
-                <AlertCircle size={18} color={styles.colors.warning} />
+              <div style={currentStyles.warningBox}>
+                <AlertCircle size={18} color={currentStyles.colors.warning} />
                 <div>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: styles.colors.textPrimary, fontWeight: '500' }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: currentStyles.colors.textPrimary, fontWeight: '500' }}>
                     Important: Report Submission
                   </p>
-                  <p style={{ margin: 0, fontSize: '12px', color: styles.colors.textSecondary, lineHeight: '1.5' }}>
+                  <p style={{ margin: 0, fontSize: '12px', color: currentStyles.colors.textSecondary, lineHeight: '1.5' }}>
                     Upon submission, you will receive a unique ticket number to track your report status.
                     Please save this number for future reference.
                   </p>
@@ -2327,10 +2366,10 @@ const ReportForm = () => {
 
               <button
                 style={{
-                  ...styles.submitButton,
+                  ...currentStyles.submitButton,
                   backgroundColor: !formData.confirmAccuracy || !formData.confirmConfidentiality
-                    ? styles.colors.border
-                    : styles.colors.primary,
+                    ? currentStyles.colors.border
+                    : currentStyles.colors.primary,
                   cursor: !formData.confirmAccuracy || !formData.confirmConfidentiality
                     ? 'not-allowed'
                     : 'pointer',
@@ -2343,7 +2382,7 @@ const ReportForm = () => {
               >
                 {loading ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={styles.spinner}></div>
+                    <div style={currentStyles.spinner}></div>
                     <span style={{ marginLeft: '8px' }}>Submitting...</span>
                   </div>
                 ) : (
@@ -2370,23 +2409,23 @@ const ReportForm = () => {
   const isLastStep = currentStep === totalSteps;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
+    <div style={currentStyles.container}>
+      <div style={currentStyles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {currentStep > 1 && (
-            <button style={styles.backButton} onClick={handleBack}>
-              <ArrowLeft size={24} color={styles.colors.textPrimary} />
+            <button style={currentStyles.backButton} onClick={handleBack}>
+              <ArrowLeft size={24} color={currentStyles.colors.textPrimary} />
             </button>
           )}
           <div>
-            <h1 style={styles.mainTitle}>TUP GAD Incident Report</h1>
-            <p style={styles.mainSubtitle}>Secure • Confidential • Professional</p>
+            <h1 style={currentStyles.mainTitle}>TUP GAD Incident Report</h1>
+            <p style={currentStyles.mainSubtitle}>Secure • Confidential • Professional</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {currentStep > 1 && currentStep < totalSteps && (
-            <button style={styles.saveButton} onClick={saveProgress}>
-              <Save size={18} color={styles.colors.primary} />
+            <button style={currentStyles.saveButton} onClick={saveProgress}>
+              <Save size={18} color={currentStyles.colors.primary} />
               <span style={{ marginLeft: '8px', fontSize: '14px', fontWeight: '600' }}>Save Draft</span>
             </button>
           )}
@@ -2395,20 +2434,20 @@ const ReportForm = () => {
 
       {renderProgressBar()}
 
-      <div style={styles.content}>
+      <div style={currentStyles.content}>
         {renderStepContent()}
       </div>
 
-      <div style={styles.navigation}>
+      <div style={currentStyles.navigation}>
         {currentStep > 1 && !isLastStep && (
-          <button style={styles.secondaryButton} onClick={handleBack}>
+          <button style={currentStyles.secondaryButton} onClick={handleBack}>
             Back
           </button>
         )}
 
         {!isLastStep && (
           <button
-            style={styles.primaryButton}
+            style={currentStyles.primaryButton}
             onClick={handleNext}
           >
             Continue
@@ -2420,11 +2459,11 @@ const ReportForm = () => {
       {renderConfidentialityModal()}
 
       {showDatePicker && (
-        <div style={styles.modalOverlay} onClick={() => setShowDatePicker(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: styles.colors.textPrimary }}>Select Date</h3>
-              <button onClick={() => setShowDatePicker(false)} style={styles.modalDoneButton}>
+        <div style={currentStyles.modalOverlay} onClick={() => setShowDatePicker(false)}>
+          <div style={currentStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={currentStyles.modalHeader}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: currentStyles.colors.textPrimary }}>Select Date</h3>
+              <button onClick={() => setShowDatePicker(false)} style={currentStyles.modalDoneButton}>
                 Done
               </button>
             </div>
@@ -2435,25 +2474,25 @@ const ReportForm = () => {
                 new Date().toISOString().split('T')[0]}
               onChange={handleDateChange}
               max={new Date().toISOString().split('T')[0]}
-              style={styles.datePickerInput}
+              style={currentStyles.datePickerInput}
             />
           </div>
         </div>
       )}
 
       {dropdownVisible && (
-        <div style={styles.modalOverlay} onClick={() => setDropdownVisible(false)}>
-          <div style={styles.dropdownModal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.dropdownTitle}>Select Option</h3>
-            <div style={styles.dropdownList}>
+        <div style={currentStyles.modalOverlay} onClick={() => setDropdownVisible(false)}>
+          <div style={currentStyles.dropdownModal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={currentStyles.dropdownTitle}>Select Option</h3>
+            <div style={currentStyles.dropdownList}>
               {dropdownOptions.map((option, index) => (
                 <button
                   key={index}
-                  style={styles.dropdownOption}
+                  style={currentStyles.dropdownOption}
                   onClick={() => selectDropdownOption(option)}
                 >
-                  <span style={styles.dropdownOptionText}>{option}</span>
-                  {formData[dropdownField] === option && <Check size={20} color={styles.colors.primary} />}
+                  <span style={currentStyles.dropdownOptionText}>{option}</span>
+                  {formData[dropdownField] === option && <Check size={20} color={currentStyles.colors.primary} />}
                 </button>
               ))}
             </div>

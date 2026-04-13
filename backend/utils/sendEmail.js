@@ -13,7 +13,12 @@ const sendEmail = async ({ to, subject, html, attachments }) => {
       from: process.env.SENDGRID_SENDER_EMAIL || "noreply@etala.com",
       subject,
       html,
-      attachments: attachments || [],
+      attachments: (attachments || []).map(att => ({
+        content: Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content,
+        filename: att.filename,
+        type: att.type || att.contentType,
+        disposition: att.disposition || 'attachment'
+      })),
     };
 
     try {
@@ -41,6 +46,7 @@ const sendEmail = async ({ to, subject, html, attachments }) => {
       to,
       subject,
       html,
+      attachments: attachments || [],
     };
 
     try {
