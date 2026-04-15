@@ -415,7 +415,6 @@ const TicketMessagingSystem = () => {
   const [filterStatus, setFilterStatus] = useState('open');
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showIdentityModal, setShowIdentityModal] = useState(false);
   const [showCalendarReminder, setShowCalendarReminder] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', message: '', type: 'info', onConfirm: () => { } });
@@ -678,18 +677,8 @@ const TicketMessagingSystem = () => {
   const showModal = (config) => { setModalConfig(config); setShowConfirmModal(true); };
 
   const handleSendAppointmentLink = () => {
-    const report = selectedTicket.reportId;
-    // Check kung anonymous at hindi pa nag-disclose
-    const isAnonymous = report?.isAnonymous === true;
-    const hasDisclosed = report?.personalInfo?.firstName &&
-      report?.personalInfo?.lastName &&
-      report?.personalInfo?.email;
-    if (isAnonymous && !hasDisclosed) {
-      setShowIdentityModal(true);
-      return;
-    }
-    setShowAvailabilityModal(true);
-  };
+     setShowAvailabilityModal(true);
+   };
 
   const handleCalendarConfirmed = () => {
     setShowCalendarReminder(false);
@@ -703,27 +692,28 @@ const TicketMessagingSystem = () => {
   };
 
   const handleConfirmSendLink = async () => {
-    try {
-      setIsSending(true);
-      const ticket = selectedTicket;
-      if (!ticket) { alert("❌ No ticket selected"); return; }
-      const userId = ticket.userId?._id || ticket.userId;
-      const userEmail = ticket.userId?.email || ticket.reportId?.email || ticket.email;
-      const userName = ticket.displayName && ticket.displayName !== "Anonymous User" ? ticket.displayName
-        : ticket.userId?.firstName ? `${ticket.userId.firstName} ${ticket.userId.lastName}`
-          : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}` : "User";
-      const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
-      if (!userId || !userEmail || !ticketNumber) { alert("❌ Missing required info."); return; }
-      const response = await sendBookingLinkEmail({ userId, userEmail, userName, ticketNumber });
-      if (response.success) {
-        alert(`✅ Booking link sent!\nLink expires in 24 hours.`);
-        setShowConfirmModal(false);
-        try { await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been sent to your email.\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } }); }
-        catch { console.error("⚠️ Failed to send chat message"); }
-      } else { alert(`❌ ${response.message || "Failed to send booking link"}`); }
-    } catch (error) { alert(`❌ Error: ${error.message || "Failed to send booking link"}`); }
-    finally { setIsSending(false); }
-  };
+     try {
+       setIsSending(true);
+       const ticket = selectedTicket;
+       if (!ticket) { alert("❌ No ticket selected"); return; }
+       const userId = ticket.userId?._id || ticket.userId;
+       const userEmail = ticket.userId?.email || ticket.reportId?.email || ticket.email;
+       const userName = ticket.displayName && ticket.displayName !== "Anonymous User" ? ticket.displayName
+         : ticket.userId?.firstName ? `${ticket.userId.firstName} ${ticket.userId.lastName}`
+           : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}`
+             : "Anonymous User";
+       const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
+       if (!userId || !userEmail || !ticketNumber) { alert("❌ Missing required info."); return; }
+       const response = await sendBookingLinkEmail({ userId, userEmail, userName, ticketNumber });
+       if (response.success) {
+         alert(`✅ Booking link sent!\nLink expires in 24 hours.`);
+         setShowConfirmModal(false);
+         try { await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been sent to your email.\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } }); }
+         catch { console.error("⚠️ Failed to send chat message"); }
+       } else { alert(`❌ ${response.message || "Failed to send booking link"}`); }
+     } catch (error) { alert(`❌ Error: ${error.message || "Failed to send booking link"}`); }
+     finally { setIsSending(false); }
+   };
 
   useEffect(() => {
     dispatch(setUnreadMessageCount(unreadCount));
@@ -765,9 +755,8 @@ const TicketMessagingSystem = () => {
   return (
     <>
       <ConfirmationModal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} confirmText={modalConfig.confirmText} cancelText={modalConfig.cancelText} isLoading={sending} />
-      <IdentityDisclosureModal isOpen={showIdentityModal} onClose={() => setShowIdentityModal(false)} ticketNumber={selectedTicket?.reportId?.ticketNumber || selectedTicket?.ticketNumber} />
-      <CalendarReminderModal isOpen={showCalendarReminder} onClose={() => setShowCalendarReminder(false)} onConfirm={handleCalendarConfirmed} />
-      <AvailabilityPickerModal isOpen={showAvailabilityModal} onClose={() => setShowAvailabilityModal(false)} onConfirm={handleCalendarConfirmed} adminId={selectedTicket?.adminId || 'me'} />
+       <CalendarReminderModal isOpen={showCalendarReminder} onClose={() => setShowCalendarReminder(false)} onConfirm={handleCalendarConfirmed} />
+       <AvailabilityPickerModal isOpen={showAvailabilityModal} onClose={() => setShowAvailabilityModal(false)} onConfirm={handleCalendarConfirmed} adminId={selectedTicket?.adminId || 'me'} />
 
       <div className="flex bg-white" style={{ height: '100%', overflow: 'hidden' }}>
 

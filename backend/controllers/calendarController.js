@@ -801,6 +801,19 @@ const getAllCalendarEvents = async (req, res) => {
     const calendarEvents = await CalendarEvent.find(query)
       .populate('userId', 'firstName lastName email');
 
+    const consultationReportTickets = calendarEvents
+      .filter(event => event.type === 'consultation' && event.reportTicketNumber)
+      .map(event => event.reportTicketNumber);
+    
+    const reportMap = {};
+    if (consultationReportTickets.length > 0) {
+      const reports = await Report.find({ ticketNumber: { $in: consultationReportTickets } })
+        .select('ticketNumber isAnonymous');
+      reports.forEach((report) => {
+        reportMap[report.ticketNumber] = report;
+      });
+    }
+
     const programs = await Program.find({ archived: false });
     const programEvents = [];
 
@@ -837,24 +850,15 @@ const getAllCalendarEvents = async (req, res) => {
     const formattedCalendarEvents = calendarEvents.map(event => {
       // ✅ FIXED: Extract user data from populated userId
       const user = event.userId;
-      const userName = user
-        ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      const userName = user 
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
         : event.extendedProps?.userName || 'Unknown User';
       const userEmail = user?.email || event.extendedProps?.userEmail || 'N/A';
 
+      const eventAttachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+
       // ✅ Map 'scheduled' to 'upcoming' for frontend display
-      let displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
-
-      // 🟢 Auto-update status to 'completed' if event end date has passed
-      const now = new Date();
-      // Use end date if available, otherwise start date
-      const eventDate = event.end ? new Date(event.end) : new Date(event.start);
-      if ((displayStatus === 'upcoming' || displayStatus === 'scheduled') && eventDate < now) {
-        displayStatus = 'completed';
-      }
-
-      // 🟣 Ensure attachments are always available in extendedProps
-      const attachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+      const displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
 
       return {
         _id: event._id, // Use _id for frontend compatibility
@@ -866,21 +870,24 @@ const getAllCalendarEvents = async (req, res) => {
         userId: event.userId?._id, // Keep the ID reference
         reportTicketNumber: event.reportTicketNumber, // <-- Ensure this is sent to frontend
         extendedProps: {
-          type: event.type,
-          description: event.description,
-          location: event.location,
-          notes: event.notes,
-          userName: userName,
-          userEmail: userEmail,
-          mode: event.extendedProps?.mode || 'N/A',
-          status: displayStatus || 'upcoming',
-          attachments,
-          programId: event.programEventRef?.programId,
-          projectId: event.programEventRef?.projectId,
-          source: 'calendar'
-        }
-      };
-    });
+          isAnonymous: !!reportMap[event.reportTicketNumber]?.isAnonymous,
+          userName: reportMap[event.reportTicketNumber]?.isAnonymous
+            ? 'Anonymous User'
+            : user
+              ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || event.extendedProps?.userName || 'Unknown User'
+              : event.extendedProps?.userName || 'Unknown User',
+          userEmail: reportMap[event.reportTicketNumber]?.isAnonymous
+            ? 'Private'
+            : user?.email || event.extendedProps?.userEmail || 'N/A',
+           mode: event.extendedProps?.mode || 'N/A',
+           status: displayStatus || 'upcoming',
+           attachments: eventAttachments,
+           programId: event.programEventRef?.programId,
+           projectId: event.programEventRef?.projectId,
+           source: 'calendar'
+         }
+       };
+     });
 
     const allEvents = [...formattedCalendarEvents, ...programEvents];
 
@@ -989,6 +996,12 @@ const createCalendarEvent = async (req, res) => {
           finalUserName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User';
           finalUserEmail = user.email || 'N/A';
         }
+      }
+
+      const hidePersonalInfo = report.isAnonymous === true;
+      if (hidePersonalInfo) {
+        finalUserName = 'Anonymous User';
+        finalUserEmail = 'Private';
       }
 
       console.log('👤 User info for event:', {
@@ -1221,7 +1234,7 @@ const getMyConsultations = async (req, res) => {
       if ((displayStatus === 'upcoming' || displayStatus === 'scheduled') && eventDate < now) {
         displayStatus = 'completed';
       }
-      const attachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+      const eventAttachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
       return {
         _id: event._id,
         title: event.title,
@@ -1240,7 +1253,7 @@ const getMyConsultations = async (req, res) => {
           userEmail,
           mode: event.extendedProps?.mode || 'N/A',
           status: displayStatus || 'upcoming',
-          attachments
+          attachments: eventAttachments
         }
       };
     });
@@ -1282,7 +1295,7 @@ const getUserConsultationsForReport = async (req, res) => {
       if ((displayStatus === 'upcoming' || displayStatus === 'scheduled') && eventDate < now) {
         displayStatus = 'completed';
       }
-      const attachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+      const eventAttachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
       return {
         _id: event._id,
         title: event.title,
@@ -1301,7 +1314,7 @@ const getUserConsultationsForReport = async (req, res) => {
           userEmail,
           mode: event.extendedProps?.mode || 'N/A',
           status: displayStatus || 'upcoming',
-          attachments
+          attachments: eventAttachments
         }
       };
     });

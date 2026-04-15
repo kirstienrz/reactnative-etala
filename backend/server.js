@@ -1,5 +1,3 @@
-
-
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -78,7 +76,7 @@ const authLimiter = rateLimit({
 app.use("/api/auth", authLimiter);
 
 // Body parser
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Fix for Express 5 compatibility with express-mongo-sanitize
 app.use((req, res, next) => {
