@@ -553,7 +553,10 @@ const LandingPage = () => {
                 If you've experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and resolved properly.
               </p>
             </div>
-            <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 md:px-16 py-4 md:py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-lg md:text-2xl inline-flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/login')}
+              className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 md:px-16 py-4 md:py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-lg md:text-2xl inline-flex items-center gap-4"
+            >
               Report Now
               <ArrowRight className="w-6 h-6 md:w-7 md:h-7" />
             </button>
