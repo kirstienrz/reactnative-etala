@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from "react";
-import { Archive, Eye, Filter, Search, Calendar, User, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Archive, Eye, Filter, Search, Calendar, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
 import { getSuggestions, updateSuggestion, toggleArchive } from "../../api/suggestion";
 
 const AdminGADSuggestionBox = () => {
@@ -145,11 +145,10 @@ const AdminGADSuggestionBox = () => {
 
   const handleExportCSV = () => {
     const csvContent = [
-      ['ID', 'Suggestion', 'Submitted By', 'Date', 'Status', 'Priority'],
+      ['ID', 'Suggestion', 'Date', 'Status', 'Priority'],
       ...filteredSuggestions.map(s => [
         s.id,
         `"${s.text.replace(/"/g, '""')}"`,
-        s.submittedBy,
         s.submittedDate,
         s.status,
         s.priority
@@ -182,8 +181,7 @@ const AdminGADSuggestionBox = () => {
 
   let filteredSuggestions = displayedSuggestions.filter((s) => {
     const matchesSearch = 
-      s.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.submittedBy.toLowerCase().includes(searchQuery.toLowerCase());
+      s.text.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
     
@@ -504,7 +502,6 @@ const AdminGADSuggestionBox = () => {
                       ID {sortConfig.key === 'id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th className="p-4 font-semibold">Suggestion</th>
-                    <th className="p-4 font-semibold">Submitted By</th>
                     <th className="p-4 font-semibold cursor-pointer hover:bg-gray-200" onClick={() => handleSort('submittedDate')}>
                       Date {sortConfig.key === 'submittedDate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
@@ -532,12 +529,6 @@ const AdminGADSuggestionBox = () => {
                         <td className="p-4 font-medium text-gray-900">#{s.id}</td>
                         <td className="p-4 text-gray-800 max-w-xs">
                           <div className="line-clamp-2">{s.text}</div>
-                        </td>
-                        <td className="p-4 text-gray-600 text-sm">
-                          <div className="flex items-center gap-2">
-                            <User size={14} />
-                            {s.submittedBy}
-                          </div>
                         </td>
                         <td className="p-4 text-gray-600 text-sm">
                           <div className="flex items-center gap-2">
@@ -679,12 +670,6 @@ const AdminGADSuggestionBox = () => {
                     <p className="line-clamp-3">{s.text}</p>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-3 text-sm">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <User size={14} />
-                      <span className="font-medium">{s.submittedBy}</span>
-                    </div>
-
                     <div className="flex items-center gap-2 text-gray-600">
                       <Calendar size={14} />
                       <span>{new Date(s.submittedDate).toLocaleDateString()}</span>
@@ -717,7 +702,6 @@ const AdminGADSuggestionBox = () => {
                           <option value="rejected">Rejected</option>
                           <option value="implemented">Implemented</option>
                         </select>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -960,15 +944,8 @@ const AdminGADSuggestionBox = () => {
                     </div>
                   </div>
 
-                  {/* Category and Submitter */}
+                  {/* Category */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Submitted By</label>
-                      <div className="flex items-center gap-2 text-gray-900">
-                        <User size={16} className="text-gray-500" />
-                        {selectedSuggestion.submittedBy}
-                      </div>
-                    </div>
                   </div>
 
                   {/* Suggestion Text */}

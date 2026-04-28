@@ -666,6 +666,7 @@
 
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Calendar, Users, Target, Plus, Edit2, Archive, X, Save, CheckCircle, Clock, Play, Search, BarChart3, Filter, Menu, Kanban, List, Trash2, Loader2 } from 'lucide-react';
 import {
   getAllPrograms,
@@ -679,8 +680,10 @@ import {
   updateEvent,
   deleteEvent
 } from '../../api/program';
+import { getAllCalendarEvents, deleteCalendarEvent } from '../../api/calendar';
 
 const GADProgramsHybrid = () => {
+  const navigate = useNavigate();
   // All state declarations first
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -696,6 +699,8 @@ const GADProgramsHybrid = () => {
   const [modalType, setModalType] = useState('');
   const [formData, setFormData] = useState({});
   const [deleting, setDeleting] = useState({});
+  const [dateError, setDateError] = useState('');
+  const [calendarEvents, setCalendarEvents] = useState([]);
 
   // Fetch on mount
   useEffect(() => {
@@ -705,17 +710,29 @@ const GADProgramsHybrid = () => {
   // ✅ FIXED: Fetch programs with optional filters
   const fetchPrograms = async (applyFilters = true) => {
     try {
-      setLoading(true);
-      const response = await getAllPrograms(applyFilters ? {
-        year: yearFilter !== 'all' ? yearFilter : undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        search: searchTerm || undefined
-      } : {});
+      const [response, calendarRes] = await Promise.all([
+        getAllPrograms(applyFilters ? {
+          year: yearFilter !== 'all' ? yearFilter : undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          search: searchTerm || undefined
+        } : {}),
+        getAllCalendarEvents()
+      ]);
+      
+      if (calendarRes.success) {
+        setCalendarEvents(calendarRes.data);
+      }
 
       if (response.success) {
         setPrograms(response.data);
-        if (response.data.length > 0 && !selectedProgram) {
-          setSelectedProgram(response.data[0]);
+        if (response.data.length > 0) {
+          // If we have a selected program, update it from the new data
+          if (selectedProgram) {
+            const updated = response.data.find(p => p._id === selectedProgram._id);
+            if (updated) setSelectedProgram(updated);
+          } else {
+            setSelectedProgram(response.data[0]);
+          }
         }
       }
     } catch (err) {
@@ -759,6 +776,16 @@ const GADProgramsHybrid = () => {
           date: `${eventYear}-${formData.month}-${formData.day.toString().padStart(2, '0')}`
         };
 
+        // ✅ Validate: event date must not be in the past
+        const eventDate = new Date(`${eventYear}-${formData.month}-${formData.day.toString().padStart(2, '0')}`);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (eventDate < today) {
+          setDateError('Event date cannot be in the past. Please select a future date.');
+          return;
+        }
+        setDateError('');
+
         // Remove month and day fields as they're now in date
         delete eventData.month;
         delete eventData.day;
@@ -784,6 +811,7 @@ const GADProgramsHybrid = () => {
 
       setShowModal(false);
       setFormData({});
+      setDateError('');
     } catch (err) {
       console.error('Error saving:', err);
     }
@@ -829,20 +857,18 @@ const GADProgramsHybrid = () => {
     }
   };
 
-  const handleDeleteEvent = async (projectId, eventId) => {
+  const handleDeleteEvent = async (projectId, eventId, source = 'program') => {
     if (!window.confirm("Are you sure you want to permanently delete this event? This action cannot be undone.")) return;
     try {
       setDeleting(prev => ({ ...prev, [eventId]: true }));
-      await deleteEvent(selectedProgram._id, projectId, eventId);
-
-      const response = await getAllPrograms({});
-      if (response.success) {
-        setPrograms(response.data);
-        const updatedProgram = response.data.find(p => p._id === selectedProgram._id);
-        if (updatedProgram) {
-          setSelectedProgram(updatedProgram);
-        }
+      
+      if (source === 'calendar') {
+        await deleteCalendarEvent(eventId);
+      } else {
+        await deleteEvent(selectedProgram._id, projectId, eventId);
       }
+
+      await fetchPrograms(); // Refresh everything
     } catch (err) {
       console.error('Error deleting event:', err);
     } finally {
@@ -906,8 +932,12 @@ const GADProgramsHybrid = () => {
     const completedProjects = projects.filter(p => p.status === 'completed').length;
 
     const events = projects.flatMap(p => p.events || []);
-    const totalEvents = events.length;
-    const completedEvents = events.filter(e => e.status === 'completed').length;
+    
+    // Add linked calendar events
+    const linkedCalendarEvents = calendarEvents.filter(e => e.extendedProps?.programId === program._id);
+    const totalEvents = events.length + linkedCalendarEvents.length;
+    const completedEvents = events.filter(e => e.status === 'completed').length + 
+                            linkedCalendarEvents.filter(e => e.extendedProps?.status === 'completed').length;
 
     return { totalProjects, completedProjects, totalEvents, completedEvents };
   };
@@ -1128,34 +1158,12 @@ const GADProgramsHybrid = () => {
                   )}
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                  title="Card View"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('timeline')}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === 'timeline' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                  title="Timeline View"
-                >
-                  <List className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('kanban')}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
-                  title="Kanban View"
-                >
-                  <Kanban className="w-5 h-5" />
-                </button>
-              </div>
             </div>
           </div>
+        </div>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6">
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6">
             {!selectedProgram ? (
               <div className="h-full flex items-center justify-center p-6 text-gray-500">
                 <div className="text-center max-w-sm">
@@ -1176,30 +1184,10 @@ const GADProgramsHybrid = () => {
               <>
                 {/* Stats Cards */}
                 {stats && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  <div className="grid grid-cols-1 gap-4 mb-8">
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                       <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Year</div>
                       <div className="text-2xl font-bold text-gray-900">{selectedProgram.year}</div>
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex justify-between">
-                        <span>Projects</span>
-                        <span className="text-blue-600">{Math.round((stats.completedProjects / stats.totalProjects) * 100 || 0)}%</span>
-                      </div>
-                      <ProgressBar completed={stats.completedProjects} total={stats.totalProjects} />
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex justify-between">
-                        <span>Events</span>
-                        <span className="text-blue-600">{Math.round((stats.completedEvents / stats.totalEvents) * 100 || 0)}%</span>
-                      </div>
-                      <ProgressBar completed={stats.completedEvents} total={stats.totalEvents} />
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</div>
-                      <div className="mt-1">
-                        <StatusBadge status={selectedProgram.status || 'ongoing'} />
-                      </div>
                     </div>
                   </div>
                 )}
@@ -1290,7 +1278,21 @@ const GADProgramsHybrid = () => {
                                   onClick={() => {
                                     setShowModal(true);
                                     setModalType('event');
-                                    setFormData({ status: 'upcoming', projectId: project._id });
+                                    const today = new Date();
+                                    const currentYear = today.getFullYear();
+                                    const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+                                    const currentDay = today.getDate().toString();
+
+                                    // Use current month/day only if project year is current or future
+                                    const projectYear = project?.year || selectedProgram?.year || currentYear;
+                                    const isCurrentOrFutureYear = parseInt(projectYear) >= currentYear;
+
+                                    setFormData({
+                                      status: 'upcoming',
+                                      projectId: project._id,
+                                      month: isCurrentOrFutureYear ? currentMonth : '01',
+                                      day: isCurrentOrFutureYear ? currentDay : '1'
+                                    });
                                   }}
                                   className="text-blue-600 text-sm font-medium flex items-center space-x-1 hover:text-blue-700"
                                 >
@@ -1299,19 +1301,44 @@ const GADProgramsHybrid = () => {
                                 </button>
                               </div>
 
-                              {!project.events || project.events.length === 0 ? (
-                                <div className="text-center py-6 text-gray-500 text-sm">
-                                  <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                  <p>No events scheduled</p>
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {project.events.map(event => (
-                                    <div key={event._id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                      <div className="flex-1">
-                                        <div className="flex items-center space-x-2 mb-2">
-                                          <h5 className="font-medium text-gray-900">{event.title}</h5>
-                                        </div>
+                              {(() => {
+                                const projectCalendarEvents = calendarEvents.filter(e => e.extendedProps?.projectId === project._id);
+                                const allProjectEvents = [
+                                  ...(project.events || []).map(e => ({ ...e, source: 'program' })),
+                                  ...projectCalendarEvents.map(e => ({
+                                    _id: e.id,
+                                    title: e.title,
+                                    date: (e.start || "").split('T')[0],
+                                    participants: 'N/A',
+                                    venue: e.extendedProps?.location || 'N/A',
+                                    status: e.extendedProps?.status || 'upcoming',
+                                    source: 'calendar',
+                                    originalEvent: e
+                                  }))
+                                ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                                if (allProjectEvents.length === 0) {
+                                  return (
+                                    <div className="text-center py-6 text-gray-500 text-sm">
+                                      <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                      <p>No events scheduled</p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div className="space-y-2">
+                                    {allProjectEvents.map(event => (
+                                      <div key={event._id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                        <div className="flex-1">
+                                          <div className="flex items-center space-x-2 mb-2">
+                                            <h5 className="font-medium text-gray-900">{event.title}</h5>
+                                            {event.source === 'calendar' && (
+                                              <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                                                Calendar
+                                              </span>
+                                            )}
+                                          </div>
                                         <div className="text-sm text-gray-600 space-y-1">
                                           <p className="flex items-center">
                                             <Calendar className="w-4 h-4 mr-2 text-blue-600" />
@@ -1324,48 +1351,60 @@ const GADProgramsHybrid = () => {
                                           <p className="text-gray-600">📍 {event.venue}</p>
                                         </div>
                                       </div>
-                                      <div className="flex items-center space-x-1">
-                                        <button
-                                          onClick={() => {
-                                            setShowModal(true);
-                                            setModalType('event');
+                                        <div className="flex items-center space-x-1">
+                                          {event.source === 'program' ? (
+                                            <button
+                                              onClick={() => {
+                                                setShowModal(true);
+                                                setModalType('event');
 
-                                            // Parse existing date (YYYY-MM-DD) into month and day
-                                            let eventData = { ...event, projectId: project._id };
-                                            if (event.date) {
-                                              const dateParts = event.date.split('-');
-                                              if (dateParts.length === 3) {
-                                                eventData.month = dateParts[1];
-                                                eventData.day = dateParts[2];
-                                              }
-                                            }
+                                                // Parse existing date (YYYY-MM-DD) into month and day
+                                                let eventData = { ...event, projectId: project._id };
+                                                if (event.date) {
+                                                  const dateParts = event.date.split('-');
+                                                  if (dateParts.length === 3) {
+                                                    eventData.month = dateParts[1];
+                                                    eventData.day = dateParts[2];
+                                                  }
+                                                }
 
-                                            setFormData(eventData);
-                                          }}
-                                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                        >
-                                          <Edit2 className="w-4 h-4 text-gray-600" />
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteEvent(project._id, event._id);
-                                          }}
-                                          disabled={deleting[event._id]}
-                                          className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                                          title="Delete Event"
-                                        >
-                                          {deleting[event._id] ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                setFormData(eventData);
+                                              }}
+                                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                              title="Edit Event"
+                                            >
+                                              <Edit2 className="w-4 h-4 text-gray-600" />
+                                            </button>
                                           ) : (
-                                            <Trash2 className="w-4 h-4" />
+                                            <button
+                                              onClick={() => navigate('/superadmin/events')}
+                                              className="p-2 hover:bg-purple-50 text-purple-600 rounded-lg transition-colors"
+                                              title="Manage in Calendar"
+                                            >
+                                              <Calendar className="w-4 h-4" />
+                                            </button>
                                           )}
-                                        </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteEvent(project._id, event._id, event.source);
+                                            }}
+                                            disabled={deleting[event._id]}
+                                            className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                            title="Delete Event"
+                                          >
+                                            {deleting[event._id] ? (
+                                              <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                              <Trash2 className="w-4 h-4" />
+                                            )}
+                                          </button>
+                                        </div>
                                       </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
@@ -1442,33 +1481,111 @@ const GADProgramsHybrid = () => {
                       <div className="grid grid-cols-2 gap-3">
                         <select
                           value={formData.month || ''}
-                          onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                          onChange={(e) => {
+                            const newMonth = e.target.value;
+                            const today = new Date();
+                            const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+                            const currentDay = today.getDate().toString();
+                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                            const eventYear = project?.year || selectedProgram?.year || today.getFullYear();
+
+                            let newDay = formData.day;
+                            // If switching to current month/year, ensure day isn't in the past
+                            if (parseInt(eventYear) === today.getFullYear() && newMonth === currentMonth) {
+                              if (!formData.day || parseInt(formData.day) < today.getDate()) {
+                                newDay = currentDay;
+                              }
+                            }
+
+                            setFormData({ ...formData, month: newMonth, day: newDay });
+                            setDateError('');
+                          }}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         >
                           <option value="">Month</option>
-                          <option value="01">January</option>
-                          <option value="02">February</option>
-                          <option value="03">March</option>
-                          <option value="04">April</option>
-                          <option value="05">May</option>
-                          <option value="06">June</option>
-                          <option value="07">July</option>
-                          <option value="08">August</option>
-                          <option value="09">September</option>
-                          <option value="10">October</option>
-                          <option value="11">November</option>
-                          <option value="12">December</option>
+                          {(() => {
+                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                            const today = new Date();
+                            const currentYear = today.getFullYear();
+                            const currentMonth = today.getMonth() + 1; // 1-based
+                            const months = [
+                              { value: '01', label: 'January' },
+                              { value: '02', label: 'February' },
+                              { value: '03', label: 'March' },
+                              { value: '04', label: 'April' },
+                              { value: '05', label: 'May' },
+                              { value: '06', label: 'June' },
+                              { value: '07', label: 'July' },
+                              { value: '08', label: 'August' },
+                              { value: '09', label: 'September' },
+                              { value: '10', label: 'October' },
+                              { value: '11', label: 'November' },
+                              { value: '12', label: 'December' },
+                            ];
+                            return months.map(m => {
+                              const isPast = parseInt(eventYear) < currentYear ||
+                                (parseInt(eventYear) === currentYear && parseInt(m.value) < currentMonth);
+                              return (
+                                <option key={m.value} value={m.value} disabled={isPast}>
+                                  {m.label}{isPast ? ' (past)' : ''}
+                                </option>
+                              );
+                            });
+                          })()}
                         </select>
                         <input
                           type="number"
                           placeholder="Day"
-                          min="1"
-                          max="31"
+                          min={(() => {
+                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                            const today = new Date();
+                            if (
+                              parseInt(eventYear) === today.getFullYear() &&
+                              parseInt(formData.month) === today.getMonth() + 1
+                            ) {
+                              return today.getDate();
+                            }
+                            return 1;
+                          })()}
+                          max={(() => {
+                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                            return new Date(parseInt(eventYear), parseInt(formData.month), 0).getDate() || 31;
+                          })()}
                           value={formData.day || ''}
-                          onChange={(e) => setFormData({ ...formData, day: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData({ ...formData, day: val });
+
+                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                            const today = new Date();
+                            const minDay = (
+                              parseInt(eventYear) === today.getFullYear() &&
+                              parseInt(formData.month) === today.getMonth() + 1
+                            ) ? today.getDate() : 1;
+
+                            // Calculate max days in selected month
+                            const maxDays = new Date(parseInt(eventYear), parseInt(formData.month), 0).getDate();
+
+                            if (val && parseInt(val) < minDay) {
+                              setDateError(`Day cannot be earlier than ${minDay} for this month.`);
+                            } else if (val && parseInt(val) > maxDays) {
+                              setDateError(`Day cannot be greater than ${maxDays} for this month.`);
+                            } else {
+                              setDateError('');
+                            }
+                          }}
+                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none ${dateError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                         />
                       </div>
+                      {dateError && (
+                        <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                          {dateError}
+                        </p>
+                      )}
                       <input
                         type="number"
                         placeholder="Participants"
@@ -1507,7 +1624,6 @@ const GADProgramsHybrid = () => {
           </div>
         )}
 
-      </div>
     </div>
   );
 };

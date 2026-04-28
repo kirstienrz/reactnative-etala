@@ -293,7 +293,7 @@ const SuperAdminDashboard = () => {
               <h3 className="text-lg font-semibold mb-4">Report Trends (Last 6 Months)</h3>
               <div className="h-64">
                 {monthlyTrendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={monthlyTrendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" />
@@ -330,7 +330,7 @@ const SuperAdminDashboard = () => {
               <h3 className="text-lg font-semibold mb-4">Case Status Distribution</h3>
               <div className="h-64">
                 {statusData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={statusData}
@@ -423,7 +423,7 @@ const SuperAdminDashboard = () => {
               </div>
               <div className="h-80">
                 {topDeptData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={topDeptData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis
@@ -459,7 +459,7 @@ const SuperAdminDashboard = () => {
               </div>
               <div className="h-80">
                 {topIncidentData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={topIncidentData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis
@@ -493,7 +493,7 @@ const SuperAdminDashboard = () => {
             <h3 className="text-lg font-semibold mb-4">Severity Level Analysis</h3>
             <div className="h-64">
               {severityData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={severityData}
@@ -532,7 +532,7 @@ const SuperAdminDashboard = () => {
               <h3 className="text-lg font-semibold mb-4">User Registration Trend</h3>
               <div className="h-64">
                 {userTrendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <LineChart data={userTrendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" />
@@ -562,7 +562,7 @@ const SuperAdminDashboard = () => {
               <h3 className="text-lg font-semibold mb-4">User Type Distribution</h3>
               <div className="h-64">
                 {userTypeData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={userTypeData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="name" />

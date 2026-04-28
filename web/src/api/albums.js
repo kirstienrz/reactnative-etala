@@ -74,9 +74,17 @@ export const bulkRestoreAlbums = async (albumIds) => {
 // ========================================
 
 // 📤 UPLOAD images to album
-export const uploadImages = async (albumId, formData) => {
+export const uploadImages = async (albumId, formData, onUploadProgress) => {
   const res = await API.post(`/albums/${albumId}/images`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: onUploadProgress
+      ? (progressEvent) => {
+          const percent = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          onUploadProgress(percent);
+        }
+      : undefined,
   });
   return res.data;
 };

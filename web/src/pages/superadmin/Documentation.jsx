@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Upload, Edit2, Trash2, Plus, X, Archive, RefreshCw, FileText,
     File, FileVideo, Eye, Download, Maximize2, Minimize2, ChevronDown, ChevronUp,
-    ChevronLeft, ChevronRight, Image as ImageIcon, Folder, FolderOpen, Search, Filter, MoreVertical
+    ChevronLeft, ChevronRight, Image as ImageIcon, Folder, FolderOpen, Search, Filter, MoreVertical,
+    List, Grid
 } from 'lucide-react';
 import {
     getAllDocs,

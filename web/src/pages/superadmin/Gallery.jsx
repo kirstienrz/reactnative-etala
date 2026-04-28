@@ -46,6 +46,7 @@ export default function AlbumGalleryManagement() {
   const [viewArchived, setViewArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [processing, setProcessing] = useState({});
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [error, setError] = useState("");
@@ -100,10 +101,10 @@ export default function AlbumGalleryManagement() {
     previews: []
   });
 
-  // Fetch albums on component mount
+  // Fetch albums on component mount and when viewArchived changes
   useEffect(() => {
     fetchAlbums();
-  }, []);
+  }, [viewArchived]);
 
   // Fetch albums based on view (active/archived)
   const fetchAlbums = async () => {
@@ -223,10 +224,14 @@ export default function AlbumGalleryManagement() {
         formData.append("captions", JSON.stringify(uploadData.captions));
       }
 
-      const response = await uploadImages(uploadData.albumId, formData);
+      setUploadProgress(0);
+      const response = await uploadImages(uploadData.albumId, formData, (percent) => {
+        setUploadProgress(percent);
+      });
 
       setSuccess(`${uploadData.files.length} image(s) uploaded successfully!`);
       setShowUploadModal(false);
+      setUploadProgress(0);
 
       // Reset upload data
       setUploadData({
@@ -248,6 +253,7 @@ export default function AlbumGalleryManagement() {
       console.error("Error uploading images:", err);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -561,7 +567,6 @@ export default function AlbumGalleryManagement() {
               <button
                 onClick={() => {
                   setViewArchived(!viewArchived);
-                  fetchAlbums();
                 }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all"
               >
@@ -909,58 +914,60 @@ export default function AlbumGalleryManagement() {
 
       {/* Album Detail Modal */}
       {selectedAlbum && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1100] flex items-center justify-center p-2">
+          <div className="bg-white rounded-2xl shadow-2xl w-full h-full max-w-[98vw] max-h-[96vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedAlbum.title}</h2>
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Calendar className="w-4 h-4" />
+            <div className="px-8 py-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1 truncate">{selectedAlbum.title}</h2>
+                  <div className="flex items-center gap-6 mb-1">
+                    <div className="flex items-center gap-2 text-gray-600 text-sm">
+                      <Calendar className="w-4 h-4 flex-shrink-0" />
                       <span>{formatDate(selectedAlbum.date)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <ImageIcon className="w-4 h-4" />
-                      <span>{selectedAlbum.totalPhotos || 0} photos</span>
+                    <div className="flex items-center gap-2 text-gray-600 text-sm">
+                      <ImageIcon className="w-4 h-4 flex-shrink-0" />
+                      <span>{selectedAlbum.images?.length || 0} photos</span>
                     </div>
                   </div>
-                  <p className="text-gray-600">{selectedAlbum.description || "No description"}</p>
+                  {selectedAlbum.description && (
+                    <p className="text-gray-500 text-sm line-clamp-2">{selectedAlbum.description}</p>
+                  )}
                 </div>
                 <button
                   onClick={() => setSelectedAlbum(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="px-8 py-6 overflow-y-auto flex-1">
               {(!selectedAlbum.images || selectedAlbum.images.length === 0) ? (
-                <div className="text-center py-12">
-                  <div className="mx-auto w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mb-4">
-                    <ImageIcon className="w-10 h-10 text-gray-400" />
+                <div className="text-center py-24">
+                  <div className="mx-auto w-24 h-24 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mb-6">
+                    <ImageIcon className="w-12 h-12 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No photos yet</h3>
-                  <p className="text-gray-500 mb-4">Upload photos to this album</p>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No photos yet</h3>
+                  <p className="text-gray-500 mb-6">Upload photos to this album</p>
                   <button
                     onClick={() => {
                       setUploadData(prev => ({ ...prev, albumId: selectedAlbum._id }));
                       setShowUploadModal(true);
                     }}
-                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all flex items-center gap-3 mx-auto"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all flex items-center gap-3 mx-auto text-base font-medium"
                   >
-                    <Upload className="w-4 h-4" />
+                    <Upload className="w-5 h-5" />
                     Upload Photos
                   </button>
                 </div>
               ) : (
                 <div>
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-xl font-semibold text-gray-900">
                       Photos ({selectedAlbum.images.length})
                     </h3>
                     <button
@@ -968,22 +975,22 @@ export default function AlbumGalleryManagement() {
                         setUploadData(prev => ({ ...prev, albumId: selectedAlbum._id }));
                         setShowUploadModal(true);
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 font-medium"
                     >
                       <Plus className="w-4 h-4" />
                       Add More Photos
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     {selectedAlbum.images.map((image, index) => (
                       <div key={index} className="relative group">
                         <img
                           src={image.imageUrl}
                           alt={image.caption || `Photo ${index + 1}`}
-                          className="w-full h-48 object-cover rounded-lg"
+                          className="w-full h-52 object-cover rounded-xl"
                         />
                         {image.caption && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 text-white text-sm rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 text-white text-xs rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity">
                             {image.caption}
                           </div>
                         )}
@@ -1004,9 +1011,9 @@ export default function AlbumGalleryManagement() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
+            <div className="px-8 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-500">
                   {selectedAlbum.images?.length || 0} photo{(selectedAlbum.images?.length || 0) !== 1 ? 's' : ''} in this album
                 </div>
                 <div className="flex gap-3">
@@ -1019,7 +1026,7 @@ export default function AlbumGalleryManagement() {
                       }
                       setSelectedAlbum(null);
                     }}
-                    className={`px-4 py-2.5 rounded-xl transition-all ${selectedAlbum.isArchived
+                    className={`px-5 py-2.5 rounded-xl transition-all font-medium ${selectedAlbum.isArchived
                       ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700'
                       : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700'
                       }`}
@@ -1032,7 +1039,7 @@ export default function AlbumGalleryManagement() {
                       setAlbumToDelete(selectedAlbum._id);
                       setShowDeleteModal(true);
                     }}
-                    className="px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all"
+                    className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all font-medium"
                   >
                     Delete Album
                   </button>
@@ -1045,7 +1052,7 @@ export default function AlbumGalleryManagement() {
 
       {/* Create Album Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
@@ -1180,7 +1187,7 @@ export default function AlbumGalleryManagement() {
 
       {/* Upload Photos Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
@@ -1285,13 +1292,18 @@ export default function AlbumGalleryManagement() {
                 <button
                   type="submit"
                   disabled={uploading || uploadData.files.length === 0}
-                  className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-medium flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-medium flex items-center justify-center gap-2 overflow-hidden relative"
                 >
                   {uploading ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      Uploading...
-                    </>
+                    <div className="w-full flex flex-col items-center gap-1 px-2">
+                      <span className="text-sm font-bold">{uploadProgress}%</span>
+                      <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
                   ) : (
                     `Upload ${uploadData.files.length} Photo${uploadData.files.length !== 1 ? 's' : ''}`
                   )}
@@ -1304,7 +1316,7 @@ export default function AlbumGalleryManagement() {
 
       {/* Delete Album Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <div className="p-8 text-center">
               <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -1347,7 +1359,7 @@ export default function AlbumGalleryManagement() {
 
       {/* Delete Image Confirmation Modal */}
       {showImageDeleteModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <div className="p-8 text-center">
               <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">

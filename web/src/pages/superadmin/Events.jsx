@@ -27,17 +27,11 @@ import {
   ChevronRight,
   Maximize2,
   Minimize2,
-  ChevronDown
-
+  ChevronDown,
+  Layers
 } from "lucide-react";
-import {
-  getAllCalendarEvents,
-  createCalendarEvent,
-  updateCalendarEvent,
-  deleteCalendarEvent,
-  getEventTypes
-} from "../../api/calendar";
-import { deleteEvent as deleteProgramEvent } from "../../api/program";
+import { getAllCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEventTypes } from "../../api/calendar";
+import { deleteEvent as deleteProgramEvent, getAllPrograms } from "../../api/program";
 import API from '../../api/config';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -64,10 +58,13 @@ export default function SuperAdminCalendarUI() {
     color: "",
     status: "upcoming",
     reportTicketNumber: "",
-    mode: "online"
+    mode: "online",
+    programId: "",
+    projectId: ""
   });
+  const [programs, setPrograms] = useState([]);
+  const [eventFiles, setEventFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedEvents, setSelectedEvents] = useState(new Set());
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -105,10 +102,10 @@ export default function SuperAdminCalendarUI() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedEvents, setSelectedEvents] = useState(new Set());
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [eventFiles, setEventFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [showFilePreview, setShowFilePreview] = useState(false);
   const [previewFiles, setPreviewFiles] = useState([]);
@@ -206,7 +203,19 @@ export default function SuperAdminCalendarUI() {
   // Fetch events on mount
   useEffect(() => {
     fetchEvents();
+    fetchPrograms();
   }, []);
+
+  const fetchPrograms = async () => {
+    try {
+      const res = await getAllPrograms();
+      if (res.success) {
+        setPrograms(res.data);
+      }
+    } catch (err) {
+      console.error("Error fetching programs:", err);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -377,7 +386,9 @@ export default function SuperAdminCalendarUI() {
       color: getEventColor("program_event"),
       status: "upcoming",
       reportTicketNumber: "",
-      mode: "online"
+      mode: "online",
+      programId: "",
+      projectId: ""
     });
     setShowModal(true);
   };
@@ -430,7 +441,9 @@ export default function SuperAdminCalendarUI() {
       color: getEventColor(eventType),
       status: event.status || "upcoming",
       reportTicketNumber: event.reportTicketNumber || "",
-      mode: event.mode || "online"
+      mode: event.mode || "online",
+      programId: event.programId || "",
+      projectId: event.projectId || ""
     });
     setShowModal(true);
     setShowDetailsModal(false);
@@ -593,7 +606,9 @@ export default function SuperAdminCalendarUI() {
       allDay: formData.allDay,
       color: getEventColor(formData.type),
       status: formData.status,
-      userId: userId
+      userId: userId,
+      programId: formData.programId || undefined,
+      projectId: formData.projectId || undefined
     };
 
     // Add consultation-specific fields
@@ -697,7 +712,9 @@ export default function SuperAdminCalendarUI() {
       color: getEventColor("program_event"),
       status: "upcoming",
       reportTicketNumber: "",
-      mode: "online"
+      mode: "online",
+      programId: "",
+      projectId: ""
     });
   };
 
@@ -1909,7 +1926,52 @@ export default function SuperAdminCalendarUI() {
                   </div>
                 </div>
 
+                {/* Program & Project Linking */}
+                <div className="bg-blue-50 p-5 rounded-xl border border-blue-200 space-y-4">
+                  <div className="flex items-center gap-2 border-b border-blue-200 pb-2">
+                    <Layers className="w-4 h-4 text-blue-600" />
+                    <p className="text-sm font-bold text-blue-800">Link to Project (Optional)</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        GAD Program
+                      </label>
+                      <select
+                        value={formData.programId}
+                        onChange={(e) => {
+                          const progId = e.target.value;
+                          setFormData({ ...formData, programId: progId, projectId: "" });
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white"
+                      >
+                        <option value="">-- No Program --</option>
+                        {programs.map(p => (
+                          <option key={p._id} value={p._id}>{p.name} ({p.year})</option>
+                        ))}
+                      </select>
+                    </div>
 
+                    {formData.programId && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          Specific Project
+                        </label>
+                        <select
+                          value={formData.projectId}
+                          onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white"
+                        >
+                          <option value="">-- No Project --</option>
+                          {programs.find(p => p._id === formData.programId)?.projects?.map(proj => (
+                            <option key={proj._id} value={proj._id}>{proj.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* File Upload */}
                 <div>
