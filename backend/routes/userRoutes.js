@@ -393,10 +393,16 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
 
     // TUPT ID Year Validation (if being updated and user is a Student)
     if (tupId) {
-      const tupIdMatch = tupId.match(/^TUPT-(\d{2})-\d{4}$/);
+      const tupIdUpper = tupId.toUpperCase();
+      const tupIdMatch = tupIdUpper.match(/^TUPT-(\d{2})-\d{4}$/);
+      const generalIdMatch = tupIdUpper.match(/^[A-Z0-9]{2,6}-\d{2}-\d{4}$/);
+
+      if (!generalIdMatch) {
+        return res.status(400).json({ message: "Invalid TUP ID format. Use TUPT-XX-XXXX for students or e.g. AP4-10-2019 for faculty." });
+      }
+
+      // Only validate year range for student TUPT IDs
       if (tupIdMatch) {
-        // Only check year limit if the user is a Student
-        // Check both the existing userType or the one being updated
         const targetUserType = userType || user.userType;
         if (targetUserType === "Student") {
           const idYear = parseInt(tupIdMatch[1]);
@@ -408,8 +414,6 @@ router.put("/manage/users/:id", auth(), async (req, res) => {
             });
           }
         }
-      } else {
-        return res.status(400).json({ message: "Invalid TUPT ID format. Use TUPT-XX-XXXX" });
       }
     }
 

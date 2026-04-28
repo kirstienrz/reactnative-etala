@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    match: /^[A-Z0-9]{3,4}-\d{2}-\d{4}$/
+    match: [/^[A-Z0-9]{2,6}-\d{2}-\d{4}$/i, "Invalid TUP ID format"]
   },
 
   email: { type: String, required: true, unique: true },

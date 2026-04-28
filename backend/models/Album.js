@@ -74,6 +74,10 @@ albumSchema.virtual('totalPhotos').get(function() {
   return this.images.length;
 });
 
+// Include virtuals in JSON output
+albumSchema.set('toJSON', { virtuals: true });
+albumSchema.set('toObject', { virtuals: true });
+
 // Add index for better performance
 albumSchema.index({ isArchived: 1, date: -1 });
 

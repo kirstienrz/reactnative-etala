@@ -81,25 +81,11 @@ const createAlbum = async (req, res) => {
     }
 
     // Upload cover image to Cloudinary
-    const coverResult = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { 
-          folder: "gad-portal/albums/covers",
-          resource_type: 'image' 
-        },
-        (error, result) => {
-          if (error) {
-            console.error('Cloudinary cover upload error:', error);
-            reject(error);
-          } else {
-            console.log('Cover uploaded successfully:', result.secure_url);
-            resolve(result);
-          }
-        }
-      );
-      
-      uploadStream.end(req.file.buffer);
-    });
+    const coverResult = await uploadStreamWithRetry(
+      req.file.buffer,
+      { folder: "gad-portal/albums/covers", resource_type: 'image' }
+    );
+    console.log('Cover uploaded successfully:', coverResult.secure_url);
 
     // Create album with cover image
     const newAlbum = await Album.create({
@@ -136,6 +122,35 @@ const createAlbum = async (req, res) => {
   }
 };
 
+// Helper: upload a single buffer to Cloudinary with retry on ECONNRESET
+const uploadStreamWithRetry = (buffer, options, maxRetries = 3) => {
+  return new Promise((resolve, reject) => {
+    let attempt = 0;
+
+    const tryUpload = () => {
+      attempt++;
+      const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+        if (error) {
+          const isRetryable = error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED';
+          if (isRetryable && attempt < maxRetries) {
+            const delay = attempt * 1000; // 1s, 2s, 3s backoff
+            console.warn(`Cloudinary upload attempt ${attempt} failed (${error.code}), retrying in ${delay}ms...`);
+            setTimeout(tryUpload, delay);
+          } else {
+            console.error('Cloudinary upload error:', error);
+            reject(error);
+          }
+        } else {
+          resolve(result);
+        }
+      });
+      uploadStream.end(buffer);
+    };
+
+    tryUpload();
+  });
+};
+
 // ✅ UPLOAD IMAGES TO ALBUM
 const uploadImages = async (req, res) => {
   try {
@@ -169,25 +184,11 @@ const uploadImages = async (req, res) => {
       const file = files[i];
       const caption = captions[i] || "";
 
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { 
-            folder: `gad-portal/albums/${id}`,
-            resource_type: 'image' 
-          },
-          (error, result) => {
-            if (error) {
-              console.error('Cloudinary image upload error:', error);
-              reject(error);
-            } else {
-              console.log(`Image ${i+1} uploaded:`, result.secure_url);
-              resolve(result);
-            }
-          }
-        );
-        
-        uploadStream.end(file.buffer);
-      });
+      const result = await uploadStreamWithRetry(
+        file.buffer,
+        { folder: `gad-portal/albums/${id}`, resource_type: 'image' }
+      );
+      console.log(`Image ${i+1} uploaded:`, result.secure_url);
 
       const newImage = {
         imageUrl: result.secure_url,
@@ -268,23 +269,10 @@ const updateAlbum = async (req, res) => {
       }
 
       // Upload new cover
-      const coverResult = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { 
-            folder: "gad-portal/albums/covers",
-            resource_type: 'image' 
-          },
-          (error, result) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(result);
-            }
-          }
-        );
-        
-        uploadStream.end(req.file.buffer);
-      });
+      const coverResult = await uploadStreamWithRetry(
+        req.file.buffer,
+        { folder: "gad-portal/albums/covers", resource_type: 'image' }
+      );
 
       album.coverImage = {
         imageUrl: coverResult.secure_url,
