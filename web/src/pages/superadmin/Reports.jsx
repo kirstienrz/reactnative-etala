@@ -1,6 +1,6 @@
 // DEBUG: Triggering HMR
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   MessageSquare, Send, Share2, X, Eye, Archive, RefreshCw,
   Search, Filter, Calendar, FileText, AlertCircle, CheckCircle,
@@ -22,6 +22,7 @@ import { sendTicketMessage } from "../../api/tickets";
 
 const AdminReports = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("active");
   const [reports, setReports] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
@@ -113,6 +114,7 @@ const AdminReports = () => {
   const [selectedReferral, setSelectedReferral] = useState(null);
   const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  const [autoOpenReportTicket, setAutoOpenReportTicket] = useState(null);
   useEffect(() => {
     if (newCaseStatus === "For Referral" && newReferralType === "External") {
       setShowExternalReferralForm(true);
@@ -120,6 +122,28 @@ const AdminReports = () => {
       setShowExternalReferralForm(false);
     }
   }, [newCaseStatus, newReferralType]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ticketParam = params.get("ticket");
+    if (ticketParam) {
+      setAutoOpenReportTicket(ticketParam);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!autoOpenReportTicket || loading) return;
+
+    const combinedReports = [...reports, ...archivedReports];
+    const matchedReport = combinedReports.find(r =>
+      r.ticketNumber === autoOpenReportTicket || r._id === autoOpenReportTicket
+    );
+
+    if (matchedReport) {
+      handleViewDetails(matchedReport._id);
+      setAutoOpenReportTicket(null);
+    }
+  }, [autoOpenReportTicket, reports, archivedReports, loading]);
 
   const dropdownRefs = useRef({});
 
@@ -1734,6 +1758,7 @@ const AdminReports = () => {
               className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
             >
               <Archive size={16} />
+             
               Archive
             </button>
           ) : (
@@ -2142,7 +2167,7 @@ const AdminReports = () => {
                         timestamp: selectedReport.submittedAt
                       })}
                       disabled={analyzing}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <Brain size={18} />
                       {analyzing ? "Analyzing..." : "AI Analyze Severity"}
@@ -2286,7 +2311,7 @@ const AdminReports = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">Referral Details</h2>
-                  <p className="text-white/80 text-xs font-medium uppercase tracking-wider">
+                  <p className="text-white/80 text-sm font-medium uppercase tracking-wider">
                     {selectedReferral.referralType} Referral Tracking
                   </p>
                 </div>
@@ -2366,7 +2391,7 @@ const AdminReports = () => {
                             href={file.uri}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl hover:border-indigo-400 hover:shadow-md transition-all group"
+                            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl hover:border-indigo-400 hover:shadow-md transition-colors group"
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
@@ -2374,7 +2399,7 @@ const AdminReports = () => {
                               </div>
                               <div className="text-left">
                                 <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{file.fileName}</p>
-                                <p className="text-[10px] text-gray-400 font-medium">Click to view file</p>
+                                <p className="text-[10px] text-gray-500 font-medium">Click to view file</p>
                               </div>
                             </div>
                             <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center text-gray-400 transition-colors group-hover:bg-gray-50">
@@ -2551,10 +2576,11 @@ const AdminReports = () => {
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-1">REASON FOR REFERRAL <span className="text-red-500">*</span></label>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">REASON FOR REFERRAL <span className="text-red-500">*</span></label>
                         <textarea
                           rows={3}
                           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 resize-none"
+                          placeholder="Briefly explain the reason for referral..."
                           value={externalReferralData.reason}
                           onChange={(e) => setExternalReferralData({ ...externalReferralData, reason: e.target.value })}
                         />

@@ -295,11 +295,11 @@ export default function SexDataAdmin() {
                     data: filteredRows.map((r) => Number(r[yField]) || 0),
                     backgroundColor: chartType === "pie"
                         ? [
-                            "#3B82F6", "#10B981", "#EF4444", "#F59E0B", "#8B5CF6",
+                            "#8B5CF6", "#10B981", "#EF4444", "#F59E0B", "#3B82F6",
                             "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"
                         ].slice(0, filteredRows.length)
-                        : "rgba(59, 130, 246, 0.6)",
-                    borderColor: "rgba(59, 130, 246, 1)",
+                        : "rgba(139, 92, 246, 0.6)",
+                    borderColor: "rgba(124, 58, 237, 1)",
                     borderWidth: 1
                 }
             ]
@@ -571,7 +571,7 @@ export default function SexDataAdmin() {
                     }
                 }
             },
-            height: 300
+            height: 900
         };
 
         switch (type) {
@@ -656,18 +656,18 @@ export default function SexDataAdmin() {
                     {currentDatasets.map((d) => (
                         <div
                             key={d._id}
-                            className={`group relative bg-white border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer overflow-hidden ${active?._id === d._id ? 'ring-2 ring-blue-500 border-transparent bg-blue-50/30' : 'hover:border-blue-200'} ${activeTab === "archived" ? "opacity-75" : ""}`}
+                            className={`group relative bg-white border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer overflow-hidden ${active?._id === d._id ? 'ring-2 ring-violet-500 border-transparent bg-violet-50/30' : 'hover:border-violet-200'} ${activeTab === "archived" ? "opacity-75" : ""}`}
                         >
                             <div className="flex flex-col h-full" onClick={() => openDataset(d._id, activeTab === "archived")}>
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className={`p-2 rounded-lg ${active?._id === d._id ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'}`}>
-                                        <Folder size={20} />
+                                    <div className={`p-2 rounded-lg ${active?._id === d._id ? 'bg-violet-500 text-white' : 'bg-violet-50 text-violet-600 group-hover:bg-violet-100'}`}>
+                                        <BarChart2 size={20} />
                                     </div>
-                                    <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{d.name}</h3>
+                                    <h3 className="font-bold text-gray-900 group-hover:text-violet-600 transition-colors truncate">{d.name}</h3>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-gray-500 text-sm flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-violet-400"></span>
                                         {d.rows?.length || 0} Records
                                     </p>
                                     <p className="text-gray-500 text-sm flex items-center gap-2">
@@ -715,8 +715,8 @@ export default function SexDataAdmin() {
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-200">
-                                            <Folder size={24} />
+                                        <div className="bg-violet-600 text-white p-2 rounded-xl shadow-lg shadow-violet-200">
+                                            <BarChart2 size={24} />
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isEditing ? (
@@ -725,7 +725,7 @@ export default function SexDataAdmin() {
                                                         type="text"
                                                         value={editName}
                                                         onChange={(e) => setEditName(e.target.value)}
-                                                        className="px-3 py-1 border-2 border-blue-500 rounded-xl text-xl font-black outline-none"
+                                                        className="px-3 py-1 border-2 border-violet-500 rounded-xl text-xl font-black outline-none"
                                                         autoFocus
                                                     />
                                                     <button onClick={handleUpdateName} disabled={isSaving} className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition"><Check size={18} /></button>
@@ -734,13 +734,13 @@ export default function SexDataAdmin() {
                                             ) : (
                                                 <>
                                                     <h2 className="text-2xl font-black text-gray-900 leading-tight">{active.name}</h2>
-                                                    <button onClick={() => { setEditName(active.name); setIsEditing(true); }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition"><Edit2 size={18} /></button>
+                                                    <button onClick={() => { setEditName(active.name); setIsEditing(true); }} className="p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-full transition"><Edit2 size={18} /></button>
                                                 </>
                                             )}
                                         </div>
                                     </div>
                                     <p className="text-gray-500 font-medium ml-12">
-                                        Total Records: <span className="text-blue-600 font-bold">{active.rows?.length || 0}</span>
+                                        Analyzing <span className="text-violet-600 font-bold">{getFilteredRows().length}</span> entries
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -752,7 +752,7 @@ export default function SexDataAdmin() {
                                             <button
                                                 key={mode.id}
                                                 onClick={() => setViewMode(mode.id)}
-                                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode.id ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                             >
                                                 <mode.icon size={14} />
                                                 {mode.label}
@@ -775,149 +775,166 @@ export default function SexDataAdmin() {
                             </div>
                         </div>
 
-                        <div className="p-6 md:p-8">
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                {/* Configuration Sidebar */}
-                                <div className="lg:col-span-4 space-y-8">
-                                    <div>
-                                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <Filter size={14} /> Filter Data
-                                        </h3>
-                                        <div className="bg-gray-50 p-5 rounded-2xl space-y-4">
-                                            {active.headers.slice(0, 3).map((header) => (
-                                                <div key={header}>
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">{header}</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder={`Search ${header}...`}
-                                                        value={filters[header] || ""}
-                                                        onChange={(e) => handleFilterChange(header, e.target.value)}
-                                                        className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                                    />
+                        <div className="p-6 md:p-8 space-y-8">
+                            {/* Horizontal Filters */}
+                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <Filter size={14} /> Global Filters
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {active.headers.slice(0, 4).map((header) => (
+                                        <div key={header}>
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">{header}</label>
+                                            <input
+                                                type="text"
+                                                placeholder={`Search ${header}...`}
+                                                value={filters[header] || ""}
+                                                onChange={(e) => handleFilterChange(header, e.target.value)}
+                                                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Visualization Area - Full Width */}
+                            <div className="w-full flex flex-col gap-6">
+                                {viewMode === 'charts' ? (
+                                    <div className="flex flex-col gap-6">
+                                        <div className="bg-gray-50 rounded-3xl p-6 md:p-8 flex-1 border border-gray-100 min-h-[1000px]">
+                                            <div ref={chartRef} className="w-full h-full flex flex-col">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <h3 className="text-xl font-bold text-gray-900">
+                                                        {yField || "Values"} by {xField || "Categories"}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`w-2 h-2 rounded-full ${generateChartData() ? 'bg-green-500' : 'bg-gray-300 animate-pulse'}`}></span>
+                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Preview</span>
+                                                    </div>
                                                 </div>
-                                            ))}
+                                                <div className="flex-1 flex items-center justify-center">
+                                                    {renderChart(chartType)}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Chart Settings */}
+                                        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <BarChart2 size={14} /> Chart Configuration
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis (Label)</label>
+                                                    <select
+                                                        value={xField}
+                                                        onChange={(e) => setXField(e.target.value)}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all"
+                                                    >
+                                                        <option value="">Select Field</option>
+                                                        {active.headers.map((h) => (
+                                                            <option key={h} value={h}>{h}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis (Value)</label>
+                                                    <select
+                                                        value={yField}
+                                                        onChange={(e) => setYField(e.target.value)}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all"
+                                                    >
+                                                        <option value="">Select Numeric Field</option>
+                                                        {numericFields.map((h) => (
+                                                            <option key={h} value={h}>{h}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Visualization</label>
+                                                    <div className="flex p-1 bg-gray-50 border rounded-xl">
+                                                        {['bar', 'line', 'pie'].map(type => (
+                                                            <button
+                                                                key={type}
+                                                                onClick={() => setChartType(type)}
+                                                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${chartType === type ? 'bg-violet-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
+                                                            >
+                                                                {type.toUpperCase()}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    {viewMode === 'charts' ? (
-                                        <div className="flex flex-col gap-8">
-                                            <style>{`
-                                                .scrollbar-hide::-webkit-scrollbar { display: none; }
-                                                .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-                                            `}</style>
-                                            <div className="bg-gray-50 rounded-3xl p-4 md:p-8 border border-gray-100 min-h-[450px]">
-                                                <div ref={chartRef} className="w-full h-full flex flex-col">
-                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                                                        <h3 className="text-lg font-black text-gray-900">{chartType.toUpperCase()} Visualization</h3>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-relaxed">
-                                                                SELECTED: {yField} <br className="sm:hidden" /> VS {xField}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex-1 overflow-x-auto scrollbar-hide pb-2">
-                                                        <div style={{ 
-                                                            minWidth: isMobile ? '600px' : 'auto',
-                                                            height: '350px'
-                                                        }}>
-                                                            {renderChart(chartType)}
-                                                        </div>
-                                                    </div>
-                                                    {isMobile && (
-                                                        <div className="mt-2 text-center">
-                                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">← Swipe to scroll graph →</p>
-                                                        </div>
-                                                    )}
+                                ) : (
+                                    <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
+                                        <div className="px-6 py-5 border-b bg-gray-50/50 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-violet-600 text-white rounded-xl shadow-lg shadow-violet-200">
+                                                    <Filter size={20} />
                                                 </div>
-                                            </div>
-
-                                            {/* Moved Chart Config Here */}
-                                            <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-                                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                    <BarChart2 size={14} /> Chart Configuration
-                                                </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis</label>
-                                                        <select value={xField} onChange={(e) => setXField(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                                            <option value="">Select Category</option>
-                                                            {active.headers.map((h) => <option key={h} value={h}>{h}</option>)}
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis</label>
-                                                        <select value={yField} onChange={(e) => setYField(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                                            <option value="">Select Value</option>
-                                                            {numericFields.map((h) => <option key={h} value={h}>{h}</option>)}
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Chart Style</label>
-                                                        <div className="flex p-1 bg-gray-50 border rounded-xl">
-                                                            {['bar', 'line', 'pie'].map(type => (
-                                                                <button key={type} onClick={() => setChartType(type)} className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${chartType === type ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-700'}`}>{type}</button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                                <div>
+                                                    <p className="text-lg font-black text-gray-900">Detailed Data Table</p>
+                                                    <p className="text-xs font-medium text-gray-500">View and edit records for {active.name}</p>
                                                 </div>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
-                                            <div className="px-6 py-5 border-b bg-gray-50/50 flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200">
-                                                        <Filter size={20} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-lg font-black text-gray-900">Dataset Records</p>
-                                                        <p className="text-xs font-medium text-gray-500">Raw data entries for {active.name}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead className="bg-gray-50/80 backdrop-blur sticky top-0 z-10">
-                                                        <tr>
-                                                            {active.headers.map((h) => (
-                                                                <th key={h} className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">{h}</th>
-                                                            ))}
-                                                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b text-right">Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-100">
-                                                        {getFilteredRows().slice(0, 100).map((row, i) => {
-                                                            const originalIndex = active.rows.findIndex(r => r === row);
-                                                            const isThisRowEditing = editingRow && editingRow._index === originalIndex;
-                                                            return (
-                                                                <tr key={i} className="hover:bg-blue-50/30 transition-colors group">
-                                                                    {active.headers.map((h) => (
-                                                                        <td key={`${i}-${h}`} className="px-6 py-4 text-sm font-medium text-gray-600">
-                                                                            {isThisRowEditing ? (
-                                                                                <input type="text" value={editingRow[h] || ""} onChange={(e) => setEditingRow({ ...editingRow, [h]: e.target.value })} className="w-full px-2 py-1 border-2 border-blue-500 rounded-lg outline-none" />
-                                                                            ) : row[h]}
-                                                                        </td>
-                                                                    ))}
-                                                                    <td className="px-6 py-4 text-right">
+                                        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead className="bg-gray-50/80 backdrop-blur sticky top-0 z-10">
+                                                    <tr>
+                                                        {active.headers.map((h) => (
+                                                            <th key={h} className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
+                                                                {h}
+                                                            </th>
+                                                        ))}
+                                                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {getFilteredRows().map((row, i) => {
+                                                        const originalIndex = active.rows.findIndex(r => r === row);
+                                                        const isThisRowEditing = editingRow && editingRow._index === originalIndex;
+                                                        return (
+                                                            <tr key={i} className="hover:bg-violet-50/30 transition-colors group">
+                                                                {active.headers.map((h) => (
+                                                                    <td key={`${i}-${h}`} className="px-6 py-4 text-sm font-medium text-gray-600">
                                                                         {isThisRowEditing ? (
-                                                                            <div className="flex justify-end gap-1">
-                                                                                <button onClick={() => handleUpdateRow(originalIndex)} disabled={isSaving} className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-md shadow-green-100"><Check size={14} /></button>
-                                                                                <button onClick={() => setEditingRow(null)} className="p-1.5 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 transition"><X size={14} /></button>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <button onClick={() => setEditingRow({ ...row, _index: originalIndex })} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-transparent hover:border-blue-100"><Edit2 size={14} /></button>
-                                                                        )}
+                                                                            <input
+                                                                                type="text"
+                                                                                value={editingRow[h] || ""}
+                                                                                onChange={(e) => setEditingRow({ ...editingRow, [h]: e.target.value })}
+                                                                                className="w-full px-2 py-1 border-2 border-violet-500 rounded-lg outline-none"
+                                                                            />
+                                                                        ) : row[h]}
                                                                     </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                                ))}
+                                                                <td className="px-6 py-4 text-right">
+                                                                    {isThisRowEditing ? (
+                                                                        <div className="flex justify-end gap-1">
+                                                                            <button onClick={() => handleUpdateRow(originalIndex)} disabled={isSaving} className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-md shadow-green-100"><Check size={14} /></button>
+                                                                            <button onClick={() => setEditingRow(null)} className="p-1.5 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 transition"><X size={14} /></button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button onClick={() => setEditingRow({ ...row, _index: originalIndex })} className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-transparent hover:border-violet-100"><Edit2 size={14} /></button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                            {getFilteredRows().length === 0 && (
+                                                <div className="py-20 text-center text-gray-400 font-medium">
+                                                    No records match your filters.
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
