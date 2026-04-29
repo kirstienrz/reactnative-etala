@@ -203,7 +203,7 @@ const UserDocuments = () => {
 
             {/* Viewer Modal */}
             {showViewer && selectedFile && (
-                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in transition-all">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in transition-all">
                     <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[3rem]'} flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300`}>
                         <div className="p-4 sm:px-10 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10">
                             <div className="flex items-center gap-4 overflow-hidden">
@@ -216,9 +216,7 @@ const UserDocuments = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
-                                <a href={selectedFile.fileUrl} download={selectedFile.originalName} target="_blank" rel="noreferrer" className="p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all" title="Download">
-                                    <Download size={24} />
-                                </a>
+
                                 <button onClick={() => setIsFullscreen(!isFullscreen)} className="hidden sm:block p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
                                     {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
                                 </button>

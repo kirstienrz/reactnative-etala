@@ -51,9 +51,7 @@ const Announcement = () => {
     setFiltered(filteredData);
   };
 
-  const handleDownload = (fileUrl) => {
-    if (fileUrl) window.open(fileUrl, "_blank");
-  };
+
 
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
@@ -208,15 +206,7 @@ const Announcement = () => {
                       </div>
                     </div>
 
-                    {item.fileUrl && (
-                      <button
-                        onClick={() => handleDownload(item.fileUrl)}
-                        className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors dark:bg-white dark:text-violet-700 dark:hover:bg-violet-100"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download
-                      </button>
-                    )}
+
                   </div>
                 </div>
               ))}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Eye, Calendar, Loader, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Eye, Calendar, Loader, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getActiveBudgets } from '../../api/budget';
 
 const PlanAndBudget = () => {
@@ -166,54 +166,59 @@ const PlanAndBudget = () => {
                     className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-violet-400 hover:shadow-lg transition-all duration-300"
                   >
                     <div className="p-8">
-                      <div className="flex items-start gap-6">
-                        <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
-                          <FileText className="w-8 h-8 text-white" />
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                        <div className="flex items-start gap-6 flex-1">
+                          <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-violet-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-violet-200">
+                            <FileText className="w-8 h-8 text-white" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-3">
+                              <span className="inline-block px-3 py-1 bg-violet-50 text-violet-700 text-[10px] font-black uppercase tracking-widest rounded-full">
+                                {doc.year}
+                              </span>
+                              <span className={`inline-block px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${getStatusColor(doc.status)}`}>
+                                {doc.status}
+                              </span>
+                            </div>
+
+                            <h2 className="text-2xl font-black text-slate-900 mb-2 leading-tight group-hover:text-violet-600 transition-colors">
+                              {doc.title}
+                            </h2>
+
+                            {doc.description && (
+                              <p className="text-slate-500 font-medium text-sm leading-relaxed mb-4 line-clamp-2">
+                                {doc.description}
+                              </p>
+                            )}
+
+                            <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              {doc.dateApproved && (
+                                <span className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  Approved: {new Date(doc.dateApproved).toLocaleDateString("en-US", {
+                                    year: "numeric", month: "short", day: "numeric"
+                                  })}
+                                </span>
+                              )}
+                              {doc.file.page_count > 0 && (
+                                <span className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4" />
+                                  {doc.file.page_count} {doc.file.page_count === 1 ? 'page' : 'pages'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-3">
-                            <span className="inline-block px-3 py-1 bg-violet-100 text-violet-700 text-sm font-semibold rounded-full">
-                              {doc.year}
-                            </span>
-                            <span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(doc.status)}`}>
-                              {doc.status}
-                            </span>
-                          </div>
-
-                          <h2 className="text-2xl font-bold text-slate-900 mb-3 leading-snug">
-                            {doc.title}
-                          </h2>
-
-                          {doc.description && (
-                            <p className="text-slate-600 leading-relaxed mb-4">
-                              {doc.description}
-                            </p>
-                          )}
-
-                          <div className="flex items-center gap-6 text-sm text-slate-500 mb-6">
-                            {doc.dateApproved && (
-                              <span className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
-                                Approved: {new Date(doc.dateApproved).toLocaleDateString("en-US", {
-                                  year: "numeric", month: "long", day: "numeric"
-                                })}
-                              </span>
-                            )}
-                            {doc.file.page_count > 0 && (
-                              <span>{doc.file.page_count} {doc.file.page_count === 1 ? 'page' : 'pages'}</span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <button
-                              onClick={() => handleView(doc)}
-                              className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors"
-                            >
-                              <Eye className="w-5 h-5" />
-                              View Document
-                            </button>
-                          </div>
+                        <div className="flex-shrink-0">
+                          <button
+                            onClick={() => handleView(doc)}
+                            className="w-full md:w-auto bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-violet-600 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 active:scale-95 group/btn"
+                          >
+                            View Document
+                            <Eye size={20} className="group-hover/btn:scale-110 transition-transform" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -260,8 +265,8 @@ const PlanAndBudget = () => {
                           key={index}
                           onClick={() => goToPage(pageNumber)}
                           className={`min-w-[40px] px-3 py-2 rounded-lg font-medium transition-colors ${currentListPage === pageNumber
-                              ? 'bg-violet-600 text-white'
-                              : 'border border-slate-300 hover:bg-slate-100'
+                            ? 'bg-violet-600 text-white'
+                            : 'border border-slate-300 hover:bg-slate-100'
                             }`}
                         >
                           {pageNumber}
@@ -291,153 +296,115 @@ const PlanAndBudget = () => {
         </div>
       </section>
 
-      {/* Preview Modal */}
+      {/* Preview Modal (Updated to match premium document viewer style) */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4">
-          <div className="bg-white w-full max-w-6xl h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
-
-            {/* Header */}
-            <div className="bg-gradient-to-br from-violet-600 to-purple-600 px-6 py-4 flex items-start justify-between flex-shrink-0">
-              <div className="flex-1 pr-4">
-                <h3 className="font-bold text-white text-xl mb-2">{previewDoc.title}</h3>
-
-                {previewDoc.description && (
-                  <p className="text-violet-100 text-sm mb-3 leading-relaxed">
-                    {previewDoc.description}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full font-semibold text-white">
-                    Year: {previewDoc.year}
-                  </span>
-                  <span className={`px-2.5 py-1 rounded-full font-semibold ${getStatusColor(previewDoc.status)}`}>
-                    {previewDoc.status}
-                  </span>
-                  {previewDoc.dateApproved && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-white/10 backdrop-blur-sm rounded-full text-white">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(previewDoc.dateApproved).toLocaleDateString("en-US", {
-                        month: "short", day: "numeric", year: "numeric"
-                      })}
-                    </span>
-                  )}
-                  {previewDoc.file.page_count > 1 && (
-                    <span className="px-2.5 py-1 bg-white/10 backdrop-blur-sm rounded-full font-semibold text-white">
-                      {previewDoc.file.page_count} pages
-                    </span>
-                  )}
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={closePreview}>
+          <div
+            className="bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[3rem] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:px-10 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10">
+              <div className="flex items-center gap-4 overflow-hidden">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText size={24} />
                 </div>
-
-                {previewDoc.file.page_count > 1 && (
-                  <p className="text-violet-100 text-sm mt-2 font-medium">
-                    Viewing Page {currentPage + 1} of {previewDoc.file.page_count}
-                  </p>
-                )}
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-xl font-black truncate leading-tight uppercase tracking-tight">{previewDoc.title}</h3>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest">Plan & Budget Material • {previewDoc.year}</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${getStatusColor(previewDoc.status)}`}>
+                      {previewDoc.status}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={closePreview}
-                className="text-violet-200 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-colors flex-shrink-0">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Zoom Controls */}
-            <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="hidden sm:flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                  <button
+                    onClick={zoomOut}
+                    disabled={zoomLevel <= 50}
+                    className="p-2 text-slate-500 hover:bg-white hover:shadow-sm rounded-lg disabled:opacity-30 transition-all"
+                  >
+                    <ZoomOut size={20} />
+                  </button>
+                  <span className="text-xs font-black text-slate-600 min-w-[45px] text-center">{zoomLevel}%</span>
+                  <button
+                    onClick={zoomIn}
+                    disabled={zoomLevel >= 200}
+                    className="p-2 text-slate-500 hover:bg-white hover:shadow-sm rounded-lg disabled:opacity-30 transition-all"
+                  >
+                    <ZoomIn size={20} />
+                  </button>
+                </div>
                 <button
-                  onClick={zoomOut}
-                  disabled={zoomLevel <= 50}
-                  className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Zoom Out"
+                  onClick={closePreview}
+                  className="p-3 bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm"
                 >
-                  <ZoomOut className="w-5 h-5" />
-                </button>
-                <span className="px-3 py-1 bg-slate-100 text-slate-700 font-semibold rounded-lg text-sm min-w-[70px] text-center">
-                  {zoomLevel}%
-                </span>
-                <button
-                  onClick={zoomIn}
-                  disabled={zoomLevel >= 200}
-                  className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={resetZoom}
-                  className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 transition-colors ml-2"
-                  title="Reset Zoom"
-                >
-                  <Maximize2 className="w-5 h-5" />
+                  <X size={24} />
                 </button>
               </div>
             </div>
 
-            {/* Image Display */}
-            <div className="flex-1 bg-slate-100 overflow-auto min-h-0">
-              <div className="w-full h-full flex items-start justify-center p-6">
+            {/* Document Viewer Area */}
+            <div className="flex-1 bg-slate-900 flex flex-col items-center justify-center relative overflow-hidden group">
+              <div className="w-full h-full overflow-auto custom-scrollbar p-4 sm:p-10 flex items-start justify-center">
                 {imageError ? (
-                  <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md">
-                    <div className="inline-flex p-4 bg-yellow-100 rounded-full mb-4">
-                      <svg className="w-10 h-10 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
+                  <div className="text-center p-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[3rem] max-w-md my-auto">
+                    <div className="inline-flex p-5 bg-amber-500/10 text-amber-500 rounded-full mb-6">
+                      <FileText size={48} />
                     </div>
-                    <p className="text-slate-800 font-semibold text-lg mb-2">Unable to load preview</p>
-                    <p className="text-sm text-slate-600 mb-4">This page may not be available yet</p>
+                    <h3 className="text-white text-xl font-black mb-2 uppercase tracking-tight">Preview Unavailable</h3>
+                    <p className="text-white/50 text-sm font-medium mb-8">This document page is still being processed or is currently offline.</p>
                     <button
                       onClick={() => setImageError(false)}
-                      className="px-5 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm font-medium transition-colors">
-                      Try Again
+                      className="w-full px-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-violet-400 hover:text-white transition-all"
+                    >
+                      Attempt Reconnect
                     </button>
                   </div>
                 ) : (
-                  <img
-                    src={previewDoc.file.image_urls[currentPage]}
-                    style={{
-                      width: `${zoomLevel}%`,
-                      maxWidth: 'none',
-                      height: 'auto'
-                    }}
-                    className="rounded-lg shadow-2xl object-contain"
-                    alt={`Page ${currentPage + 1}`}
-                    onError={() => setImageError(true)}
-                  />
+                  <div className="relative">
+                    <img
+                      src={previewDoc.file.image_urls[currentPage]}
+                      style={{
+                        width: `${zoomLevel}%`,
+                        maxWidth: 'none',
+                        height: 'auto'
+                      }}
+                      className="rounded-lg shadow-2xl transition-all duration-300"
+                      alt={`Page ${currentPage + 1}`}
+                      onError={() => setImageError(true)}
+                    />
+                  </div>
                 )}
               </div>
+
+              {/* Navigation Overlays */}
+              {!imageError && previewDoc.file.page_count > 1 && (
+                <>
+                  <button
+                    onClick={prevPage}
+                    disabled={currentPage === 0}
+                    className="absolute left-6 z-20 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100 disabled:hidden"
+                  >
+                    <ChevronLeft size={32} />
+                  </button>
+                  <button
+                    onClick={nextPage}
+                    disabled={currentPage === previewDoc.file.page_count - 1}
+                    className="absolute right-6 z-20 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100 disabled:hidden"
+                  >
+                    <ChevronRight size={32} />
+                  </button>
+
+                  {/* Page Indicator Bubble */}
+                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-3 rounded-full text-xs font-black tracking-[0.2em] transition-all group-hover:scale-110">
+                    {currentPage + 1} / {previewDoc.file.page_count}
+                  </div>
+                </>
+              )}
             </div>
-
-            {/* Navigation Footer */}
-            {previewDoc.file.page_count > 1 && !imageError && (
-              <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-                <button
-                  onClick={prevPage}
-                  disabled={currentPage === 0}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-slate-100 text-slate-700 hover:bg-slate-200">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Previous
-                </button>
-
-                <span className="px-4 py-2 bg-violet-100 text-violet-700 font-bold rounded-lg text-sm">
-                  {currentPage + 1} / {previewDoc.file.page_count}
-                </span>
-
-                <button
-                  onClick={nextPage}
-                  disabled={currentPage === previewDoc.file.page_count - 1}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-slate-100 text-slate-700 hover:bg-slate-200">
-                  Next
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}

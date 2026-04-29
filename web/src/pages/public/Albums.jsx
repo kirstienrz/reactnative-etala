@@ -8,6 +8,7 @@ const AlbumModal = ({ album, onClose }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [fullAlbumData, setFullAlbumData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   useEffect(() => {
     // Fetch full album data when modal opens
@@ -88,7 +89,16 @@ const AlbumModal = ({ album, onClose }) => {
       className="fixed inset-0 bg-black bg-opacity-90 z-[10000] flex items-center justify-center p-4"
       onClick={onClose}
     >
-      <div className="relative max-w-6xl w-full max-h-[90vh] bg-white rounded-2xl overflow-hidden">
+      <div 
+        className="relative max-w-6xl w-full max-h-[95vh] bg-white rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <style>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        `}</style>
         {/* Header */}
         <div className="p-6 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 text-white">
           <div className="flex justify-between items-start">
@@ -109,7 +119,19 @@ const AlbumModal = ({ album, onClose }) => {
                 </div>
               </div>
               {currentAlbum.description && (
-                <p className="mt-3 text-violet-200">{currentAlbum.description}</p>
+                <div className="mt-3 text-violet-100/90 pr-4 text-sm leading-relaxed font-medium">
+                  <div className={`${!isDescExpanded ? 'line-clamp-1' : ''} transition-all duration-300`}>
+                    {currentAlbum.description}
+                  </div>
+                  {currentAlbum.description.length > 60 && (
+                    <button
+                      onClick={() => setIsDescExpanded(!isDescExpanded)}
+                      className="mt-2 text-violet-300 hover:text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
+                    >
+                      {isDescExpanded ? 'See Less' : 'See More'}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             <button
@@ -121,8 +143,8 @@ const AlbumModal = ({ album, onClose }) => {
           </div>
         </div>
 
-        {/* Image Display */}
-        <div className="relative p-6">
+        {/* Image Display & Gallery Section */}
+        <div className="relative p-6 overflow-y-auto flex-1 custom-scrollbar bg-slate-50">
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600"></div>
@@ -212,20 +234,7 @@ const AlbumModal = ({ album, onClose }) => {
                     Previous
                   </button>
                   
-                  <button
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = currentImage.imageUrl;
-                      link.download = `photo_${selectedImageIndex + 1}.jpg`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg hover:from-emerald-700 hover:to-green-700 transition-all shadow-lg"
-                  >
-                    <Download className="w-5 h-5" />
-                    Download
-                  </button>
+
                   
                   <button
                     onClick={goToNext}
@@ -415,23 +424,7 @@ const Gallery = () => {
                         <Eye className="w-4 h-4" /> View Album
                       </button>
                       
-                      {album.coverImage?.imageUrl && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const link = document.createElement('a');
-                            link.href = album.coverImage.imageUrl;
-                            link.download = `${album.title.replace(/\s+/g, '_')}_cover.jpg`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }}
-                          className="px-4 py-2 border-2 border-slate-300 text-slate-700 text-sm font-semibold rounded-lg hover:border-violet-600 hover:text-violet-600 transition-colors"
-                          title="Download Cover"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                      )}
+
                     </div>
                   </div>
                 </div>

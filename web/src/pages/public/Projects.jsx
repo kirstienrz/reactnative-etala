@@ -239,15 +239,7 @@ export default function GADProjectsArchive() {
     setSelectedFile(previewFiles[prevIndex]);
   };
 
-  const handleFileDownload = (file) => {
-    const link = document.createElement('a');
-    link.href = file.url;
-    link.download = file.originalname || 'download';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+
 
   if (loading) {
     return (
@@ -554,7 +546,7 @@ export default function GADProjectsArchive() {
 
       {/* DETAILS MODAL */}
       {showDetailsModal && selectedProject && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setShowDetailsModal(false)}
@@ -638,12 +630,7 @@ export default function GADProjectsArchive() {
                                    >
                                       <Eye size={18} />
                                    </button>
-                                   <button 
-                                    onClick={() => handleFileDownload(file)}
-                                    className="p-2 text-slate-400 hover:text-green-600 transition-colors"
-                                   >
-                                      <Download size={18} />
-                                   </button>
+
                                 </div>
                               ))}
                            </div>
@@ -708,7 +695,7 @@ export default function GADProjectsArchive() {
 
       {/* FILE PREVIEW MODAL */}
       {showFilePreview && selectedFile && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
           <button 
             onClick={() => setShowFilePreview(false)}
             className="absolute top-8 right-8 z-50 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all"
@@ -739,10 +726,10 @@ export default function GADProjectsArchive() {
                   <h3 className="text-2xl font-black text-white mb-2">{selectedFile.originalname}</h3>
                   <p className="text-white/40 mb-8 font-medium">This file type cannot be previewed in the browser.</p>
                   <button 
-                    onClick={() => handleFileDownload(selectedFile)}
+                    onClick={() => setShowFilePreview(false)}
                     className="px-8 py-3 bg-white text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-violet-400 hover:text-white transition-all"
                   >
-                    Download to View
+                    Back to Project
                   </button>
                 </div>
               )}

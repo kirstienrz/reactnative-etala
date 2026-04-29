@@ -915,7 +915,7 @@ export default function AlbumGalleryManagement() {
       {/* Album Detail Modal */}
       {selectedAlbum && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1100] flex items-center justify-center p-2">
-          <div className="bg-white rounded-2xl shadow-2xl w-full h-full max-w-[98vw] max-h-[96vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[98vw] max-h-[96vh] flex flex-col overflow-hidden relative">
             {/* Modal Header */}
             <div className="px-8 py-4 border-b border-gray-200 flex-shrink-0">
               <div className="flex justify-between items-start gap-4">
@@ -945,7 +945,7 @@ export default function AlbumGalleryManagement() {
             </div>
 
             {/* Modal Content */}
-            <div className="px-8 py-6 overflow-y-auto flex-1">
+            <div className="px-8 py-6 overflow-y-auto flex-1 custom-scrollbar">
               {(!selectedAlbum.images || selectedAlbum.images.length === 0) ? (
                 <div className="text-center py-24">
                   <div className="mx-auto w-24 h-24 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mb-6">
@@ -1188,7 +1188,7 @@ export default function AlbumGalleryManagement() {
       {/* Upload Photos Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden relative">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">Upload Photos to Album</h2>
@@ -1201,7 +1201,7 @@ export default function AlbumGalleryManagement() {
               </div>
             </div>
 
-            <form onSubmit={handleUploadImages} className="p-6 overflow-y-auto max-h-[70vh]">
+            <form onSubmit={handleUploadImages} className="p-6 overflow-y-auto flex-1 custom-scrollbar">
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
