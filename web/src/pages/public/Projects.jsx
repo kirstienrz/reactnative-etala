@@ -542,7 +542,7 @@ export default function GADProjectsArchive() {
 
       {/* DETAILS MODAL */}
       {showDetailsModal && selectedProject && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setShowDetailsModal(false)}
