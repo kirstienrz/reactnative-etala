@@ -943,7 +943,7 @@ export default function SuperAdminCalendarUI() {
           }
         }
       `}</style>
-      
+
       <div className="bg-white p-2 md:p-6 rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -1932,7 +1932,7 @@ export default function SuperAdminCalendarUI() {
                     <Layers className="w-4 h-4 text-blue-600" />
                     <p className="text-sm font-bold text-blue-800">Link to Project (Optional)</p>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">

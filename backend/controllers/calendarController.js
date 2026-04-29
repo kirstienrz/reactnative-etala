@@ -870,6 +870,7 @@ const getAllCalendarEvents = async (req, res) => {
         userId: event.userId?._id, // Keep the ID reference
         reportTicketNumber: event.reportTicketNumber, // <-- Ensure this is sent to frontend
         extendedProps: {
+          type: event.type,
           isAnonymous: !!reportMap[event.reportTicketNumber]?.isAnonymous,
           userName: reportMap[event.reportTicketNumber]?.isAnonymous
             ? 'Anonymous User'
