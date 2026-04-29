@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, Calendar, AlertCircle, CheckCircle, Mail, Search, Trash2, PlusCircle, Copy, Undo2 } from 'lucide-react';
+import { Send, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, Calendar, AlertCircle, CheckCircle, Mail, Search, Trash2, PlusCircle, Copy, Undo2, Archive, RefreshCw, Info } from 'lucide-react';
 import {
   getAllTickets,
   getTicketMessages,
   sendTicketMessage,
   markMessagesAsRead,
   markTicketAsUnread,
+  closeTicket,
+  reopenTicket,
 } from '../../api/tickets';
 import socketService from '../../api/socket';
 import { sendBookingLinkEmail } from '../../api/calendar';
@@ -133,6 +135,7 @@ const AvailabilityPickerModal = ({ isOpen, onClose, onConfirm, adminId }) => {
   const [newSlotStart, setNewSlotStart] = useState('');
   const [newSlotEnd, setNewSlotEnd] = useState('');
   const [copyUndoSnapshot, setCopyUndoSnapshot] = useState(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   const durationPresets = [{ label: '30m', value: 30 }, { label: '1h', value: 60 }, { label: '1.5h', value: 90 }, { label: '2h', value: 120 }];
   const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
@@ -255,9 +258,27 @@ const AvailabilityPickerModal = ({ isOpen, onClose, onConfirm, adminId }) => {
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col animate-fadeIn">
         <div className="flex-shrink-0 p-5 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-bold text-gray-900">Set Your Availability</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900">Set Your Availability</h2>
+              <button onClick={() => setShowInfo(!showInfo)} className="p-1 hover:bg-blue-50 rounded-full transition-colors text-blue-500" title="Instructions">
+                <Info className="w-5 h-5" />
+              </button>
+            </div>
             <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
           </div>
+
+          {showInfo && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-fadeIn">
+              <h3 className="text-sm font-bold text-blue-900 mb-2">How it works:</h3>
+              <ul className="text-xs text-blue-800 space-y-1.5 list-disc list-inside">
+                <li>Set your standard work hours and slot duration above, then click <strong>Apply</strong> to regenerate the month.</li>
+                <li><strong>Available slots (Green)</strong> will be sent to the user via a booking link.</li>
+                <li><strong>Booked slots (Red)</strong> are consultations already scheduled by users.</li>
+                <li><strong>Events (Purple)</strong> are imported from your calendar (e.g. meetings) and automatically block slots.</li>
+                <li>You can manually toggle slots for specific days by clicking them on the calendar.</li>
+              </ul>
+            </div>
+          )}
           <div className="flex flex-wrap items-end gap-3 bg-gray-50 rounded-lg p-3">
             {[['Work Start', workStart, setWorkStart], ['Work End', workEnd, setWorkEnd], ['Lunch Start', lunchStart, setLunchStart], ['Lunch End', lunchEnd, setLunchEnd]].map(([label, val, setter]) => (
               <div key={label}>
@@ -297,16 +318,23 @@ const AvailabilityPickerModal = ({ isOpen, onClose, onConfirm, adminId }) => {
                   {Array.from({ length: startDayOfWeek }).map((_, i) => <div key={i} />)}
                   {daysInMonth.map(day => {
                     const dateStr = format(day, 'yyyy-MM-dd'), isPast = isBefore(day, today) && !isToday(day), isSelected = selectedDay === dateStr, summary = getSlotSummary(dateStr), isWeekend = getDay(day) === 0 || getDay(day) === 6;
+                    const isFullyBooked = summary.booked > 0 && summary.available === 0 && summary.events === 0;
                     return (
                       <button key={dateStr} onClick={() => { if (!isPast) { setSelectedDay(isSelected ? null : dateStr); setEditingSlot(null); setShowAddSlot(false); } }} disabled={isPast}
-                        className={`relative p-1.5 rounded-lg text-center transition-all min-h-[64px] flex flex-col items-center justify-start ${isPast ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : isSelected ? 'bg-blue-500 text-white ring-2 ring-blue-300' : isWeekend ? 'bg-orange-50 hover:bg-orange-100 text-gray-700' : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'}`}>
+                        className={`relative p-1.5 rounded-lg text-center transition-all min-h-[64px] flex flex-col items-center justify-start ${isPast ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : isSelected ? 'bg-blue-500 text-white ring-2 ring-blue-300' : isFullyBooked ? 'bg-red-50 hover:bg-red-100 border border-red-200' : isWeekend ? 'bg-orange-50 hover:bg-orange-100 text-gray-700' : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'}`}>
                         <span className={`text-sm font-semibold ${isToday(day) && !isSelected ? 'text-blue-600' : ''}`}>{format(day, 'd')}</span>
                         {!isPast && (
                           <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
                             {summary.custom && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-blue-100 text-blue-600'}`}>✏️</span>}
-                            {summary.available > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-green-100 text-green-700'}`}>{summary.available}</span>}
-                            {summary.booked > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-red-100 text-red-600'}`}>{summary.booked}</span>}
-                            {summary.events > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-purple-100 text-purple-600'}`}>{summary.events}📅</span>}
+                            {isFullyBooked ? (
+                              <span className={`text-[9px] font-bold px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-red-500 text-white'}`}>FULL</span>
+                            ) : (
+                              <>
+                                {summary.available > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-green-100 text-green-700'}`}>{summary.available}</span>}
+                                {summary.booked > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-red-100 text-red-600'}`}>{summary.booked}</span>}
+                                {summary.events > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-purple-100 text-purple-600'}`}>{summary.events}📅</span>}
+                              </>
+                            )}
                           </div>
                         )}
                       </button>
@@ -674,6 +702,32 @@ const TicketMessagingSystem = () => {
     } finally { setSending(false); }
   };
 
+  const handleToggleStatus = async () => {
+    if (!selectedTicket) return;
+    const isClosing = selectedTicket.status === 'Open';
+    
+    showModal({
+      title: isClosing ? 'Archive Conversation?' : 'Reopen Conversation?',
+      message: isClosing 
+        ? 'This will mark the ticket as closed/archived. You can still view it later in the Archived filter.'
+        : 'This will reopen the ticket for active messaging.',
+      type: isClosing ? 'warning' : 'info',
+      confirmText: isClosing ? 'Archive' : 'Reopen',
+      onConfirm: async () => {
+        try {
+          if (isClosing) {
+            await closeTicket(selectedTicket.ticketNumber, 'Closed by superadmin');
+          } else {
+            await reopenTicket(selectedTicket.ticketNumber);
+          }
+          setShowConfirmModal(false);
+        } catch (error) {
+          alert('Failed to update status');
+        }
+      }
+    });
+  };
+
   const showModal = (config) => { setModalConfig(config); setShowConfirmModal(true); };
 
   const handleSendAppointmentLink = () => {
@@ -695,7 +749,10 @@ const TicketMessagingSystem = () => {
      try {
        setIsSending(true);
        const ticket = selectedTicket;
-       if (!ticket) { alert("❌ No ticket selected"); return; }
+       if (!ticket) {
+         showModal({ title: 'Error', message: 'No ticket selected.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
+         return;
+       }
        const userId = ticket.userId?._id || ticket.userId;
        const userEmail = ticket.userId?.email || ticket.reportId?.email || ticket.email;
        const userName = ticket.displayName && ticket.displayName !== "Anonymous User" ? ticket.displayName
@@ -703,16 +760,31 @@ const TicketMessagingSystem = () => {
            : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}`
              : "Anonymous User";
        const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
-       if (!userId || !userEmail || !ticketNumber) { alert("❌ Missing required info."); return; }
+
+       if (!userId || !userEmail || !ticketNumber) {
+         showModal({ title: 'Error', message: 'Missing required information to send the link.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
+         return;
+       }
+
        const response = await sendBookingLinkEmail({ userId, userEmail, userName, ticketNumber });
        if (response.success) {
-         alert(`✅ Booking link sent!\nLink expires in 24 hours.`);
-         setShowConfirmModal(false);
+         showModal({
+           title: 'Link Sent Successfully',
+           message: '✅ Booking link sent!\n\nThe user has been notified via email. The link expires in 24 hours.',
+           type: 'success',
+           confirmText: 'Great',
+           onConfirm: () => setShowConfirmModal(false)
+         });
          try { await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been sent to your email.\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } }); }
          catch { console.error("⚠️ Failed to send chat message"); }
-       } else { alert(`❌ ${response.message || "Failed to send booking link"}`); }
-     } catch (error) { alert(`❌ Error: ${error.message || "Failed to send booking link"}`); }
-     finally { setIsSending(false); }
+       } else {
+         showModal({ title: 'Failed to Send', message: response.message || "Failed to send booking link. Please try again.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
+       }
+     } catch (error) {
+       showModal({ title: 'Error', message: error.message || "An unexpected error occurred while sending the link.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
+     } finally {
+       setIsSending(false);
+     }
    };
 
   useEffect(() => {
@@ -761,7 +833,7 @@ const TicketMessagingSystem = () => {
       <div className="flex bg-white" style={{ height: '100%', overflow: 'hidden' }}>
 
         {/* ── Sidebar ── */}
-        <div className={`${showTicketList ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-96 border-r border-gray-200 bg-white`} style={{ height: '100%', minHeight: 0 }}>
+        <div className={`${showTicketList ? 'flex' : 'hidden'} flex-col w-full md:w-96 border-r border-gray-200 bg-white transition-all duration-300 ease-in-out`} style={{ height: '100%', minHeight: 0 }}>
           <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
             <div className="flex items-center justify-between mb-4">
               {/* ── Header: pulsing badge REMOVED, plain unread count text lang ── */}
@@ -867,7 +939,9 @@ const TicketMessagingSystem = () => {
               <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <button onClick={() => setShowTicketList(true)} className="md:hidden p-2 hover:bg-gray-100 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
+                    <button onClick={() => setShowTicketList(!showTicketList)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={showTicketList ? "Hide Sidebar" : "Show Sidebar"}>
+                      {showTicketList ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                    </button>
                     <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
                       {selectedTicket.displayName?.charAt(0).toUpperCase() || 'U'}
                     </div>
@@ -884,9 +958,10 @@ const TicketMessagingSystem = () => {
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700">
                       <Mail className="w-4 h-4" />
                     </button>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedTicket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                    <button onClick={handleToggleStatus} title={selectedTicket.status === 'Open' ? 'Archive Ticket' : 'Reopen Ticket'}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${selectedTicket.status === 'Open' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                       {selectedTicket.status === 'Closed' ? 'Archived' : selectedTicket.status}
-                    </span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1017,7 +1092,7 @@ const TicketMessagingSystem = () => {
               <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6"><Mail className="w-12 h-12 text-gray-400" /></div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No Conversation Selected</h3>
               <p className="text-sm text-gray-500 mb-6">Choose a ticket to start messaging</p>
-              <button onClick={() => setShowTicketList(true)} className="md:hidden px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600">View Tickets</button>
+              <button onClick={() => setShowTicketList(true)} className={`${showTicketList ? 'hidden' : 'block'} px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all transform hover:scale-105`}>View Tickets</button>
             </div>
           )}
         </div>
