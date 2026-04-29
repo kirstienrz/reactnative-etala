@@ -239,15 +239,7 @@ export default function GADProjectsArchive() {
     setSelectedFile(previewFiles[prevIndex]);
   };
 
-  const handleFileDownload = (file) => {
-    const link = document.createElement('a');
-    link.href = file.url;
-    link.download = file.originalname || 'download';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+
 
   if (loading) {
     return (
@@ -738,7 +730,7 @@ export default function GADProjectsArchive() {
                     onClick={() => handleFileDownload(selectedFile)}
                     className="px-8 py-3 bg-white text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-violet-400 hover:text-white transition-all"
                   >
-                    Download to View
+                    Back to Project
                   </button>
                 </div>
               )}

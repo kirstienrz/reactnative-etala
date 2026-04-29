@@ -60,21 +60,7 @@ const Infographics = () => {
   });
 
   const handleView = (imageUrl) => setFullscreenImage(imageUrl);
-  const handleDownload = async (imageUrl, title) => {
-    try {
-      const response = await fetch(imageUrl, { mode: 'cors' });
-      const blob = await response.blob();
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = title.replace(/\s+/g, '_') + '.jpg';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    } catch (err) {
-      console.error('Failed to download image:', err);
-    }
-  };
+
 
   return (
     <main className="bg-white min-h-screen relative">
@@ -159,12 +145,7 @@ const Infographics = () => {
                       >
                         <Eye className="w-4 h-4" /> View
                       </button>
-                      <button
-                        onClick={() => handleDownload(info.imageUrl, info.title)}
-                        className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors flex-1 flex items-center justify-center gap-2"
-                      >
-                        <Download className="w-4 h-4" /> Download
-                      </button>
+
                     </div>
                   </div>
                 </div>

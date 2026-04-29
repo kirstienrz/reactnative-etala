@@ -173,7 +173,7 @@ const Accomplishment = () => {
 
       {/* VIEW MODAL (Same robust viewer as admin) */}
       {showViewer && selectedFile && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300">
           <div className={isFullscreen ? "w-screen h-screen" : "bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"}>
 
             {/* Header */}
@@ -189,16 +189,7 @@ const Accomplishment = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <a
-                  href={selectedFile.fileUrl}
-                  download={selectedFile.originalName}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-2 sm:p-3 hover:bg-slate-50 text-slate-500 rounded-xl transition-all"
-                  title="Download"
-                >
-                  <Download size={22} />
-                </a>
+
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
                   className="hidden sm:flex p-2 sm:p-3 hover:bg-slate-50 text-slate-500 rounded-xl transition-all"

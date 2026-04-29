@@ -609,7 +609,7 @@ export default function ResearchPublications() {
 
       {/* PDF Viewer Modal */}
       {selectedPdf && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10001] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[11000] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900">
               <div>
@@ -631,17 +631,7 @@ export default function ResearchPublications() {
                 title={selectedPdf.title}
               />
 
-              <div className="absolute bottom-6 right-6 flex gap-3">
-                <a
-                  href={selectedPdf.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-white/90 backdrop-blur-md text-slate-700 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-white transition shadow-lg flex items-center gap-2"
-                >
-                  <Download size={16} />
-                  Download Research PDF
-                </a>
-              </div>
+
             </div>
           </div>
         </div>

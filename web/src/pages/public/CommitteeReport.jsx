@@ -65,9 +65,7 @@ const CommitteeReports = () => {
     alert(`Viewing: ${reportTitle}\n\nThis would open the report in a preview window.`);
   };
 
-  const handleDownload = (reportTitle) => {
-    alert(`Downloading: ${reportTitle}\n\nThis would initiate the report download.`);
-  };
+
 
   return (
     <main className="bg-white min-h-screen">
@@ -159,14 +157,7 @@ const CommitteeReports = () => {
                     <Eye className="w-4 h-4" />
                     <span className="text-sm font-medium">View</span>
                   </button>
-                  <button
-                    onClick={() => handleDownload(report.title)}
-                    className="bg-white text-slate-600 border border-slate-300 rounded-lg px-4 py-2 shadow hover:bg-slate-100 transition-colors dark:bg-white dark:text-slate-600 dark:hover:bg-slate-200"
-                    title="Download Report"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-sm font-medium">Download</span>
-                  </button>
+
                 </div>
               </div>
             ))}
