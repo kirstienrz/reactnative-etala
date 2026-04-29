@@ -160,7 +160,7 @@ const AllNews = () => {
 
       {/* Modal View for Full News Content */}
       {selectedNews && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedNews(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" onClick={() => setSelectedNews(null)}>
           <div
             className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
