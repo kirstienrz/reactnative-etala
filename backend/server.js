@@ -59,15 +59,9 @@ app.set("trust proxy", 1);
 
 // Global: 100 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
-<<<<<<< HEAD
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { success: false, message: "Too many requests from this IP, please try again in 15 minutes." },
-=======
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again in 10 minutes",
->>>>>>> d1266ef7f54b6d54680b448643980f72d063da62
   standardHeaders: true,
   legacyHeaders: false,
 });
