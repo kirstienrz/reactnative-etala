@@ -55,25 +55,80 @@ app.use(cors({
 // Correct IP detection behind proxies (Must be before rate limiters)
 app.set("trust proxy", 1);
 
-// Global Rate Limiting
+// ================= RATE LIMITERS =================
+
+// Global: 100 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: "Too many requests from this IP, please try again in 15 minutes",
+  message: { success: false, message: "Too many requests from this IP, please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api", globalLimiter);
 
-// Auth Rate Limiting
+// Auth: 15 attempts per 15 minutes (login, register, forgot password)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
-  message: "Too many auth attempts, please try again later.",
+  message: { success: false, message: "Too many authentication attempts, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api/auth", authLimiter);
+
+// Chatbot: 30 messages per minute per IP (prevent AI abuse)
+const chatbotLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { success: false, message: "Too many chatbot requests, please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/chatbot", chatbotLimiter);
+
+// AI moderation: 20 requests per minute
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { success: false, message: "Too many AI requests, please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/ai", aiLimiter);
+
+// Suggestions/Contact: 10 submissions per hour (prevent spam)
+const submissionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: "Too many submissions, please try again in an hour." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/suggestions", submissionLimiter);
+app.use("/api/contact", submissionLimiter);
+
+// Reports: 20 submissions per hour
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { success: false, message: "Too many report submissions, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/reports", reportLimiter);
+
+// File uploads: 30 uploads per 15 minutes
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: "Too many file uploads, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/albums", uploadLimiter);
+app.use("/api/documents", uploadLimiter);
+app.use("/api/carousel", uploadLimiter);
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
