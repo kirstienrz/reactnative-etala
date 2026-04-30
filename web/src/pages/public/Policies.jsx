@@ -14,7 +14,8 @@ import {
     Maximize2,
     Minimize2,
     ImageIcon,
-    FileVideo
+    FileVideo,
+    ExternalLink
 } from "lucide-react";
 import { getDocuments } from "../../api/documents";
 
@@ -39,6 +40,10 @@ const UserDocuments = () => {
     const [previewFiles, setPreviewFiles] = useState([]);
     const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 8;
 
     useEffect(() => {
         fetchDocuments();
@@ -96,6 +101,15 @@ const UserDocuments = () => {
         return matchesSearch && matchesType;
     });
 
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const currentDocuments = filteredDocuments.slice(startIndex, startIndex + itemsPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedTypeFilter]);
+
     return (
         <main className="bg-white min-h-screen">
             {/* Hero Section */}
@@ -149,7 +163,7 @@ const UserDocuments = () => {
                         </div>
                     ) : (
                         <div className="grid gap-6">
-                            {filteredDocuments.map(doc => (
+                            {currentDocuments.map(doc => (
                                 <div key={doc._id} className="group bg-white border border-slate-100 p-8 rounded-[2.5rem] hover:shadow-2xl hover:shadow-violet-100 transition-all duration-500 flex flex-col md:flex-row md:items-center justify-between gap-8">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-4">
@@ -181,7 +195,7 @@ const UserDocuments = () => {
                                             <>
                                                 <button
                                                     onClick={() => handleFileAction(doc.files[0], doc.files)}
-                                                    className="w-full md:w-auto bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-violet-600 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 active:scale-95"
+                                                    className="w-full md:w-auto bg-violet-600 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-violet-700 transition-all shadow-xl shadow-violet-200 flex items-center justify-center gap-3 active:scale-95"
                                                 >
                                                     View Documents
                                                     <Eye size={20} />
@@ -198,14 +212,40 @@ const UserDocuments = () => {
                             ))}
                         </div>
                     )}
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-4 mt-16 pb-12">
+                            <button
+                                onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                disabled={currentPage === 1}
+                                className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                            <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
+                                <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
+                                <span className="font-black text-slate-900 text-lg">{currentPage}</span>
+                                <span className="text-slate-300 font-bold">/</span>
+                                <span className="font-black text-slate-400 text-lg">{totalPages}</span>
+                            </div>
+                            <button
+                                onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                disabled={currentPage === totalPages}
+                                className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                            >
+                                <ChevronRight size={24} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </section>
 
             {/* Viewer Modal */}
             {showViewer && selectedFile && (
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in transition-all">
-                    <div className={`${isFullscreen ? 'w-screen h-screen' : 'bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[3rem]'} flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300`}>
-                        <div className="p-4 sm:px-10 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10">
+                    <div className={`${isFullscreen ? 'fixed inset-0 w-screen h-screen bg-white z-[10001]' : 'bg-white w-full sm:max-w-6xl h-[90vh] sm:rounded-[3rem]'} flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300`}>
+                        <div className="p-4 sm:px-10 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10 flex-shrink-0">
                             <div className="flex items-center gap-4 overflow-hidden">
                                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center flex-shrink-0">
                                     <FileText size={24} />
@@ -215,8 +255,16 @@ const UserDocuments = () => {
                                     <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Policy Document Resource</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4">
-
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <a 
+                                    href={selectedFile.fileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
+                                    title="Open in new tab"
+                                >
+                                    <ExternalLink size={24} />
+                                </a>
                                 <button onClick={() => setIsFullscreen(!isFullscreen)} className="hidden sm:block p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
                                     {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
                                 </button>
@@ -226,14 +274,14 @@ const UserDocuments = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 bg-slate-900 flex items-center justify-center relative group overflow-hidden">
+                        <div className="flex-1 bg-slate-900 relative group overflow-hidden min-h-0">
                             {previewFiles.length > 1 && (
                                 <>
                                     <button onClick={() => { const i = (currentPreviewIndex - 1 + previewFiles.length) % previewFiles.length; setCurrentPreviewIndex(i); setSelectedFile(previewFiles[i]); }} className="absolute left-6 z-20 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"><ChevronLeft size={32} /></button>
                                     <button onClick={() => { const i = (currentPreviewIndex + 1) % previewFiles.length; setCurrentPreviewIndex(i); setSelectedFile(previewFiles[i]); }} className="absolute right-6 z-20 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"><ChevronRight size={32} /></button>
                                 </>
                             )}
-                            <div className="w-full h-full flex items-center justify-center p-4 sm:p-10">
+                            <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-10">
                                 {isImageFile(selectedFile) ? (
                                     <img src={selectedFile.fileUrl} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onContextMenu={e => e.preventDefault()} />
                                 ) : isVideoFile(selectedFile) ? (

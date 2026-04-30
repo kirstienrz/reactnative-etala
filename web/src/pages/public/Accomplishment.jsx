@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Download, FileText, X, Maximize2, Minimize2, ChevronLeft, ChevronRight, Eye, Image as ImageIcon, FileVideo, File } from "lucide-react";
+import { Download, FileText, X, Maximize2, Minimize2, ChevronLeft, ChevronRight, Eye, Image as ImageIcon, FileVideo, File, ExternalLink } from "lucide-react";
 import { getAccomplishments } from "../../api/accomplishments"; // Axios API call
 
 const Accomplishment = () => {
@@ -14,9 +14,18 @@ const Accomplishment = () => {
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   useEffect(() => {
     fetchReports();
   }, []);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(reports.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentReports = reports.slice(startIndex, startIndex + itemsPerPage);
 
   const fetchReports = async () => {
     try {
@@ -98,7 +107,7 @@ const Accomplishment = () => {
       </section>
 
       {/* Reports Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-slate-50 min-h-[60vh]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {loading && (
             <div className="flex flex-col items-center py-12">
@@ -108,7 +117,7 @@ const Accomplishment = () => {
           )}
           {error && <p className="text-center text-red-500 font-bold bg-red-50 p-4 rounded-2xl border border-red-100">{error}</p>}
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {!loading && !error && reports.length === 0 && (
               <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-100">
                 <FileText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
@@ -116,7 +125,7 @@ const Accomplishment = () => {
               </div>
             )}
 
-            {reports.map((report) => (
+            {currentReports.map((report) => (
               <div
                 key={report._id}
                 className="group bg-white border border-slate-200 hover:border-violet-600 hover:shadow-2xl hover:shadow-violet-100 p-8 rounded-[2.5rem] transition-all duration-500"
@@ -168,13 +177,39 @@ const Accomplishment = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-20 pb-12">
+              <button
+                onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                disabled={currentPage === 1}
+                className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
+                <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
+                <span className="font-black text-slate-900 text-lg">{currentPage}</span>
+                <span className="text-slate-300 font-bold">/</span>
+                <span className="font-black text-slate-400 text-lg">{totalPages}</span>
+              </div>
+              <button
+                onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                disabled={currentPage === totalPages}
+                className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
       {/* VIEW MODAL (Same robust viewer as admin) */}
       {showViewer && selectedFile && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className={isFullscreen ? "w-screen h-screen" : "bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"}>
+          <div className={isFullscreen ? "fixed inset-0 w-screen h-screen bg-white z-[10001] flex flex-col overflow-hidden" : "bg-white w-full sm:max-w-6xl h-[90vh] sm:min-h-[80vh] sm:rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"}>
 
             {/* Header */}
             <div className="p-4 sm:px-8 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10 flex-shrink-0">
@@ -189,7 +224,15 @@ const Accomplishment = () => {
               </div>
 
               <div className="flex items-center gap-3">
-
+                <a 
+                  href={selectedFile.fileUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={24} />
+                </a>
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
                   className="hidden sm:flex p-2 sm:p-3 hover:bg-slate-50 text-slate-500 rounded-xl transition-all"
@@ -203,7 +246,7 @@ const Accomplishment = () => {
             </div>
 
             {/* Content */}
-            <div className="flex-1 bg-slate-900 flex items-center justify-center relative group overflow-hidden">
+            <div className="flex-1 bg-slate-900 relative group overflow-hidden min-h-0">
               {/* Navigation */}
               {previewFiles.length > 1 && (
                 <>
@@ -230,7 +273,7 @@ const Accomplishment = () => {
                 </>
               )}
 
-              <div className="w-full h-full flex items-center justify-center p-2 sm:p-8">
+              <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-8">
                 {isImageFile(selectedFile) ? (
                   <img src={selectedFile.fileUrl} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onContextMenu={e => e.preventDefault()} />
                 ) : isVideoFile(selectedFile) ? (

@@ -288,6 +288,10 @@ const Gallery = () => {
   const [loading, setLoading] = useState(true);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
+
   useEffect(() => {
     const fetchAlbums = async () => {
       try {
@@ -302,6 +306,15 @@ const Gallery = () => {
     };
     fetchAlbums();
   }, []);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAlbums.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentAlbums = filteredAlbums.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Filter albums based on search
   const filteredAlbums = albums.filter(album => {
@@ -358,7 +371,7 @@ const Gallery = () => {
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600"></div>
               <p className="mt-4 text-slate-600">Loading albums...</p>
             </div>
-          ) : filteredAlbums.length === 0 ? (
+          ) : currentAlbums.length === 0 ? (
             <div className="text-center py-12">
               <div className="mx-auto w-24 h-24 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center mb-6">
                 <ImageIcon className="w-12 h-12 text-slate-400" />
@@ -371,21 +384,20 @@ const Gallery = () => {
               </p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAlbums.map(album => (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {currentAlbums.map(album => (
                 <div
                   key={album._id}
-                  className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-violet-400 hover:shadow-xl transition-all duration-300 flex flex-col"
+                  onClick={() => handleViewAlbum(album)}
+                  className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-violet-400 hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer group/card hover:-translate-y-1"
                 >
                   {/* Album Cover */}
-                  <div 
-                    className="h-64 overflow-hidden relative cursor-pointer group"
-                    onClick={() => handleViewAlbum(album)}
-                  >
+                  <div className="h-64 overflow-hidden relative group">
                     <img
                       src={album.coverImage?.imageUrl || "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=300&fit=crop"}
                       alt={album.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
                       <div className="p-4 text-white">
@@ -409,27 +421,45 @@ const Gallery = () => {
                   
                   {/* Album Info */}
                   <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1">
+                    <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1 group-hover/card:text-violet-600 transition-colors">
                       {album.title}
                     </h3>
                     <p className="text-sm text-slate-600 mb-4 flex-1 line-clamp-2">
                       {album.description || "No description available"}
                     </p>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleViewAlbum(album)}
-                        className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors dark:bg-white dark:text-violet-700 dark:hover:bg-violet-100"
-                      >
-                        <Eye className="w-4 h-4" /> View Album
-                      </button>
-                      
 
-                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-20 pb-12">
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === 1}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
+                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
+                    <span className="font-black text-slate-900 text-lg">{currentPage}</span>
+                    <span className="text-slate-300 font-bold">/</span>
+                    <span className="font-black text-slate-400 text-lg">{totalPages}</span>
+                  </div>
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === totalPages}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

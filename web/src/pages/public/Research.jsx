@@ -229,6 +229,10 @@ export default function ResearchPublications() {
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [availableYears, setAvailableYears] = useState(['All Years']);
   const [selectedPdf, setSelectedPdf] = useState(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [selectedResearch, setSelectedResearch] = useState(null);
 
   // Robust PDF Embed URL generator
@@ -241,6 +245,15 @@ export default function ResearchPublications() {
   useEffect(() => {
     fetchResearchData();
   }, []);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredResearch.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentResearch = filteredResearch.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedYear]);
 
   // Filter research when search or year changes
   useEffect(() => {
@@ -408,7 +421,7 @@ export default function ResearchPublications() {
       </section>
 
       {/* Main Content */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-slate-50 min-h-[60vh]">
         <div className="max-w-6xl mx-auto px-8">
           {/* Statistics Bar */}
           <StatisticsBar stats={stats} />
@@ -439,7 +452,7 @@ export default function ResearchPublications() {
 
           {/* Research List */}
           <div className="space-y-4">
-            {filteredResearch.length === 0 ? (
+            {currentResearch.length === 0 ? (
               <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
                 <BookOpen className="mx-auto text-slate-300 mb-4" size={80} />
                 <h3 className="text-2xl font-bold text-slate-600 mb-2">
@@ -465,7 +478,7 @@ export default function ResearchPublications() {
               </div>
             ) : (
               <>
-                {filteredResearch.map(research => (
+                {currentResearch.map(research => (
                   <ResearchCard
                     key={research._id}
                     research={research}
@@ -473,10 +486,36 @@ export default function ResearchPublications() {
                   />
                 ))}
 
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-4 mt-16 pb-12">
+                    <button
+                      onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      disabled={currentPage === 1}
+                      className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                    >
+                      <ChevronLeft size={24} />
+                    </button>
+                    <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
+                      <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
+                      <span className="font-black text-slate-900 text-lg">{currentPage}</span>
+                      <span className="text-slate-300 font-bold">/</span>
+                      <span className="font-black text-slate-400 text-lg">{totalPages}</span>
+                    </div>
+                    <button
+                      onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      disabled={currentPage === totalPages}
+                      className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                    >
+                      <ChevronRight size={24} />
+                    </button>
+                  </div>
+                )}
+
                 {/* Footer Note */}
                 <div className="mt-12 pt-8 border-t border-slate-200 text-center">
                   <p className="text-slate-600 mb-2">
-                    Showing {filteredResearch.length} of {stats.total} research publications
+                    Showing {currentResearch.length} of {filteredResearch.length} results
                   </p>
                   <p className="text-sm text-slate-500">
                     For more information or to submit research, please contact the research department.
@@ -611,25 +650,38 @@ export default function ResearchPublications() {
       {selectedPdf && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[11000] flex items-center justify-center p-4" onClick={() => setSelectedPdf(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 text-slate-900 flex-shrink-0">
               <div>
                 <h3 className="text-xl font-bold truncate max-w-xl">{selectedPdf.title}</h3>
                 <p className="text-sm text-slate-500">Research Publication • {selectedPdf.year}</p>
               </div>
-              <button
-                onClick={() => setSelectedPdf(null)}
-                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-                title="Close"
-              >
-                <X size={24} />
-              </button>
+              <div className="flex items-center gap-2">
+                <a 
+                  href={selectedPdf.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-2.5 text-slate-500 hover:bg-slate-200 rounded-full transition-all"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={24} />
+                </a>
+                <button
+                  onClick={() => setSelectedPdf(null)}
+                  className="p-2.5 hover:bg-slate-200 rounded-full transition-colors"
+                  title="Close"
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
-            <div className="flex-1 bg-slate-100 flex items-center justify-center relative">
-              <iframe
-                src={getEmbedUrl(selectedPdf.url)}
-                className="w-full h-full border-none"
-                title={selectedPdf.title}
-              />
+            <div className="flex-1 bg-slate-100 relative min-h-0">
+              <div className="absolute inset-0">
+                <iframe
+                  src={getEmbedUrl(selectedPdf.url)}
+                  className="w-full h-full border-none"
+                  title={selectedPdf.title}
+                />
+              </div>
 
 
             </div>

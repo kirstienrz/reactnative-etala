@@ -542,7 +542,7 @@ export default function GADProjectsArchive() {
 
       {/* DETAILS MODAL */}
       {showDetailsModal && selectedProject && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setShowDetailsModal(false)}
@@ -626,12 +626,6 @@ export default function GADProjectsArchive() {
                             >
                               <Eye size={18} />
                             </button>
-                            <button
-                              onClick={() => handleFileDownload(file)}
-                              className="p-2 text-slate-400 hover:text-green-600 transition-colors"
-                            >
-                              <Download size={18} />
-                            </button>
                           </div>
                         ))}
                       </div>
@@ -694,70 +688,63 @@ export default function GADProjectsArchive() {
         </div>
       )}
 
-      {/* FILE PREVIEW MODAL */}
+      {/* FILE PREVIEW MODAL (Simplified Lightbox Style) */}
       {showFilePreview && selectedFile && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-          <button
-            onClick={() => setShowFilePreview(false)}
-            className="absolute top-8 right-8 z-50 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all"
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <button 
+            onClick={() => setShowFilePreview(false)} 
+            className="absolute top-8 right-8 z-50 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md shadow-2xl"
           >
-            <X size={24} />
+            <X size={32} />
           </button>
 
-          <div className="w-full h-full flex flex-col items-center justify-center p-12">
-            <div className="relative w-full max-w-5xl h-full flex items-center justify-center">
+          <div className="relative w-full h-full flex items-center justify-center group" onClick={() => setShowFilePreview(false)}>
+            <div className="relative max-w-7xl max-h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
               {isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) ? (
-                <img
-                  src={selectedFile.url}
+                <img 
+                  src={selectedFile.url} 
                   alt={selectedFile.originalname}
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-500"
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-500"
                 />
               ) : isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) ? (
-                <video
-                  src={selectedFile.url}
-                  controls
+                <video 
+                  src={selectedFile.url} 
+                  controls 
                   autoPlay
-                  className="max-w-full max-h-full rounded-lg shadow-2xl"
+                  className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
                 />
               ) : (
-                <div className="bg-white/5 p-16 rounded-[3rem] border border-white/10 text-center animate-in slide-in-from-bottom-10 duration-500">
-                  <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="text-center p-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[3rem] max-w-md">
+                  <div className="inline-flex p-5 bg-violet-500/10 text-violet-500 rounded-full mb-6">
                     {getFileIcon(selectedFile.originalname, selectedFile.type, selectedFile.mimetype, 'large')}
                   </div>
-                  <h3 className="text-2xl font-black text-white mb-2">{selectedFile.originalname}</h3>
-                  <p className="text-white/40 mb-8 font-medium">This file type cannot be previewed in the browser.</p>
-                  <button
-                    onClick={() => handleFileDownload(selectedFile)}
-                    className="px-8 py-3 bg-white text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-violet-400 hover:text-white transition-all"
-                  >
-                    Back to Project
-                  </button>
+                  <h3 className="text-white text-xl font-black mb-2 uppercase tracking-tight">Preview Unavailable</h3>
+                  <p className="text-white/50 text-sm font-medium">{selectedFile.originalname}</p>
                 </div>
               )}
 
-              {/* Navigation Arrows for Preview */}
+              {/* Navigation Overlays */}
               {previewFiles.length > 1 && (
                 <>
-                  <button
-                    onClick={handlePrevPreview}
-                    className="absolute left-[-4rem] top-1/2 -translate-y-1/2 p-4 bg-white/5 hover:bg-white/10 rounded-full text-white transition-all"
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handlePrevPreview(); }}
+                    className="absolute left-[-4rem] lg:left-[-6rem] top-1/2 -translate-y-1/2 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"
                   >
-                    <ChevronLeft size={32} />
+                    <ChevronLeft size={40} />
                   </button>
-                  <button
-                    onClick={handleNextPreview}
-                    className="absolute right-[-4rem] top-1/2 -translate-y-1/2 p-4 bg-white/5 hover:bg-white/10 rounded-full text-white transition-all"
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleNextPreview(); }}
+                    className="absolute right-[-4rem] lg:right-[-6rem] top-1/2 -translate-y-1/2 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"
                   >
-                    <ChevronRight size={32} />
+                    <ChevronRight size={40} />
                   </button>
+                  
+                  {/* Counter Bubble */}
+                  <div className="absolute bottom-[-4rem] left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-3 rounded-full text-xs font-black tracking-[0.2em] transition-all">
+                    {currentPreviewIndex + 1} / {previewFiles.length}
+                  </div>
                 </>
               )}
-            </div>
-
-            <div className="mt-8 px-6 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-              <p className="text-white font-bold text-sm">
-                Asset <span className="text-violet-400">{currentPreviewIndex + 1}</span> of <span className="text-violet-400">{previewFiles.length}</span> — {selectedFile.originalname}
-              </p>
             </div>
           </div>
         </div>

@@ -22,6 +22,9 @@ export default function CarouselManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [isDragging, setIsDragging] = useState(false);
+  const [highlightTitle, setHighlightTitle] = useState("");
+  const [highlightDescription, setHighlightDescription] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -87,22 +90,26 @@ export default function CarouselManagement() {
       setPreviews([]);
     }
   };
-
   const handleUpload = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
+    if (!highlightTitle.trim()) {
+      setError("Please provide a title for this highlight album");
+      return;
+    }
+
     if (selectedFiles.length === 0) {
-      setError("Please select at least one file first");
+      setError("Please select at least one media file first");
       return;
     }
 
     // Validation
-    const maxSize = 50 * 1024 * 1024; // 50MB for video/multiple
+    const maxSize = 100 * 1024 * 1024; // 100MB for multiple files
     for (const file of selectedFiles) {
       if (file.size > maxSize) {
-        setError(`File ${file.name} must be less than 50MB`);
+        setError(`File ${file.name} must be less than 100MB`);
         return;
       }
 
@@ -114,18 +121,26 @@ export default function CarouselManagement() {
     }
 
     try {
+      setIsUploading(true);
       const formData = new FormData();
+      formData.append("title", highlightTitle);
+      formData.append("description", highlightDescription);
+      
       selectedFiles.forEach((file) => {
         formData.append("media", file);
       });
 
       await uploadCarouselImage(formData);
-      setSuccess("Media uploaded successfully!");
+      setSuccess("Highlight album created successfully!");
       setSelectedFiles([]);
       setPreviews([]);
+      setHighlightTitle("");
+      setHighlightDescription("");
       fetchImages();
     } catch (err) {
-      setError("Failed to upload media");
+      setError(err.response?.data?.message || "Failed to upload highlight album");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -304,75 +319,111 @@ export default function CarouselManagement() {
 
       {/* Upload Section */}
       {!viewArchived && (
-        <div className="mb-6 bg-white border rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload New Media (Multiple Supported)</h2>
-          <form onSubmit={handleUpload} className="space-y-4">
-            <div
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${isDragging
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                }`}
-            >
-              <input
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
-              />
-              <div className="pointer-events-none flex flex-col items-center justify-center">
-                <div className={`inline-flex p-3 rounded-full mb-3 ${isDragging ? 'bg-blue-200' : 'bg-gray-100'}`}>
-                  <Upload className={`w-6 h-6 ${isDragging ? 'text-blue-600' : 'text-gray-500'}`} />
-                </div>
-                <p className="text-gray-600 font-medium mb-1">Click to browse or drag and drop files here</p>
-                <div className="text-xs text-gray-500">
-                  Maximum file size: 50MB per file • Recommended dimensions: <b>1080x1080 (1:1 ratio, Square for FB Post)</b> • Supported formats: JPG, PNG, WebP, MP4, WebM
-                </div>
+        <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm mb-10">
+          <div className="flex flex-col xl:flex-row items-center gap-6">
+            {/* Action Icon & Title (Hidden on Mobile) */}
+            <div className="hidden xl:flex items-center gap-4 pr-6 border-r border-slate-100">
+              <div className="p-3 bg-violet-100 rounded-2xl text-violet-600">
+                <Plus size={24} />
+              </div>
+              <div className="whitespace-nowrap">
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-tighter">New Highlight</h2>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Create Album</p>
               </div>
             </div>
-            {selectedFiles.length > 0 && (
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={selectedFiles.length === 0}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  Upload ({selectedFiles.length})
-                </button>
-              </div>
-            )}
-          </form>
 
-          {/* Media Previews with Metadata */}
-          {previews.length > 0 && (
-            <div className="mt-4 p-4 border-2 border-blue-200 rounded-lg bg-blue-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {previews.map((preview, idx) => (
-                <div key={idx} className="bg-white p-3 rounded shadow-sm flex flex-col items-center">
-                  {preview.type === "video" ? (
-                    <video
-                      src={preview.url}
-                      className="w-full h-32 object-cover rounded shadow-sm mb-3 cursor-pointer"
-                      controls
-                    />
-                  ) : (
-                    <img
-                      src={preview.url}
-                      alt="Preview"
-                      className="w-full h-32 object-cover rounded shadow-sm mb-3 cursor-pointer hover:opacity-90 transition"
-                      onClick={() => setModalMedia({ url: preview.url, type: 'image' })}
-                    />
-                  )}
-                  <div className="w-full text-xs text-gray-600 space-y-1">
-                    <p className="truncate font-semibold text-gray-700" title={preview.name}>{preview.name}</p>
-                    <p>Format: {preview.mimeType.split('/')[1]?.toUpperCase() || "N/A"}</p>
-                    <p>Size: {preview.size} KB</p>
+            {/* Inputs Section */}
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Album Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Summit 2024"
+                  value={highlightTitle}
+                  onChange={(e) => setHighlightTitle(e.target.value)}
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet-100 focus:border-violet-500 transition-all text-sm font-medium"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Short Description</label>
+                <input
+                  type="text"
+                  placeholder="Brief story about this highlight..."
+                  value={highlightDescription}
+                  onChange={(e) => setHighlightDescription(e.target.value)}
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet-100 focus:border-violet-500 transition-all text-sm font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Upload Zone & Action Button */}
+            <div className="flex items-end gap-3 w-full xl:w-auto">
+              <div
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`relative group border-2 border-dashed rounded-2xl px-6 h-[54px] flex items-center transition-all duration-300 text-center flex-1 xl:flex-none ${
+                  isDragging
+                    ? "border-violet-500 bg-violet-50"
+                    : "border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-slate-100/50"
+                }`}
+              >
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  id="file-upload"
+                />
+                <div className="flex items-center gap-3">
+                  <Upload size={20} className="text-violet-600" />
+                  <div className="text-left">
+                    <p className="text-[11px] font-bold text-slate-900 leading-tight whitespace-nowrap">
+                      {previews.length > 0 ? `${previews.length} Files Selected` : "Select Media"}
+                    </p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">JPG, MP4, WEBM</p>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              <button
+                onClick={handleUpload}
+                disabled={isUploading}
+                className="px-10 h-[54px] bg-violet-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-violet-700 transition-all shadow-xl shadow-violet-100 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {isUploading ? (
+                  <RefreshCcw className="animate-spin" size={18} />
+                ) : (
+                  <CheckCircle size={18} />
+                )}
+                {isUploading ? "..." : "Create Album"}
+              </button>
+            </div>
+          </div>
+
+          {/* Previews Row */}
+          {previews.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-slate-100 flex items-center gap-4">
+              <div className="flex-1 flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                {previews.map((preview, i) => (
+                  <div key={i} className="flex-shrink-0 w-14 h-14 relative rounded-xl overflow-hidden border border-slate-200 shadow-sm transition-transform hover:scale-105">
+                    {preview.type === "video" ? (
+                      <div className="w-full h-full bg-slate-900 flex items-center justify-center">
+                        <Eye size={12} className="text-white opacity-50" />
+                      </div>
+                    ) : (
+                      <img src={preview.url} className="w-full h-full object-cover" alt="" />
+                    )}
+                    {i === 0 && (
+                      <div className="absolute inset-0 border-2 border-violet-500 rounded-xl pointer-events-none" />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={() => {setSelectedFiles([]); setPreviews([]);}} className="px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest transition-colors">
+                Clear Selection
+              </button>
             </div>
           )}
         </div>
@@ -438,89 +489,112 @@ export default function CarouselManagement() {
       </div>
 
       {/* Image Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
         {filteredAndSortedImages.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-gray-500 mt-4">
+          <div className="col-span-full text-center py-24 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+            <Info className="mx-auto h-16 w-16 text-slate-300 mb-4" />
+            <p className="text-slate-500 font-bold text-xl">
               {searchQuery
-                ? "No images found matching your search"
+                ? "No highlight albums found matching your search"
                 : viewArchived
-                  ? "No archived images found"
-                  : "No images found"}
+                  ? "No archived highlight albums"
+                  : "No highlight albums created yet"}
             </p>
           </div>
         ) : (
           filteredAndSortedImages.map((img) => (
             <div
               key={img._id}
-              className={`relative border rounded-lg overflow-hidden shadow hover:shadow-lg transition ${selectedImages.has(img._id) ? "ring-2 ring-blue-500" : ""
-                }`}
+              className={`group relative bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-slate-200 transition-all duration-500 ${
+                selectedImages.has(img._id) ? "ring-4 ring-violet-500 border-transparent" : ""
+              }`}
             >
               {/* Selection Checkbox */}
-              <div className="absolute top-2 left-2 z-10">
+              <div className="absolute top-4 left-4 z-20">
                 <input
                   type="checkbox"
                   checked={selectedImages.has(img._id)}
                   onChange={() => toggleImageSelection(img._id)}
-                  className="w-5 h-5 cursor-pointer"
+                  className="w-6 h-6 rounded-lg border-2 border-white cursor-pointer accent-violet-600 transition-transform hover:scale-110"
                 />
               </div>
 
-              {/* Individual Delete Button - top-right */}
+              {/* Individual Delete Button */}
               <button
                 onClick={() => handleDelete(img._id)}
-                className="absolute top-2 right-2 z-10 bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-full transition-all shadow-md backdrop-blur-sm"
+                className="absolute top-4 right-4 z-20 bg-white/90 hover:bg-red-500 hover:text-white text-slate-400 p-3 rounded-2xl transition-all shadow-lg backdrop-blur-md"
                 title="Delete Permanently"
               >
-                <Trash2 size={16} />
+                <Trash2 size={18} />
               </button>
 
-              {/* Media Render */}
-              <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
-                {img.type === "video" || img.imageUrl.endsWith(".mp4") || img.imageUrl.endsWith(".webm") ? (
+              {/* Compact Card Render */}
+              <div className="aspect-video bg-slate-100 relative overflow-hidden group/card">
+                {img.coverImage?.type === 'video' || (img.items && img.items[0]?.type === 'video') ? (
                   <video
-                    src={img.imageUrl}
-                    onClick={() => setModalMedia({ url: img.imageUrl, type: 'video' })}
-                    className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
+                    src={img.coverImage?.imageUrl || (img.items && img.items[0]?.imageUrl)}
+                    className="w-full h-full object-cover cursor-pointer group-hover:scale-110 transition-transform duration-700"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    onClick={() => setModalMedia({ url: img.coverImage?.imageUrl || (img.items && img.items[0]?.imageUrl), type: 'video' })}
                   />
                 ) : (
                   <img
-                    src={img.imageUrl}
-                    alt="Carousel Media"
-                    onClick={() => setModalMedia({ url: img.imageUrl, type: 'image' })}
-                    className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
+                    src={img.coverImage?.imageUrl || (img.items && img.items[0]?.imageUrl) || img.imageUrl}
+                    alt={img.title}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/assets/about/logo.png";
+                      e.target.className = "w-full h-full object-contain p-8 bg-slate-50 opacity-20";
+                    }}
+                    onClick={() => setModalMedia({ url: img.coverImage?.imageUrl || (img.items && img.items[0]?.imageUrl) || img.imageUrl, type: 'image' })}
+                    className="w-full h-full object-cover cursor-pointer group-hover:scale-110 transition-transform duration-700"
+                    crossOrigin="anonymous"
                   />
                 )}
-              </div>
+                
+                {/* Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+                
+                {/* Content Overlay */}
+                <div className="absolute inset-x-0 bottom-0 p-4">
+                  <div className="flex items-end justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-black text-sm truncate leading-none mb-1">
+                        {img.title || "Untitled"}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">
+                          {img.items?.length || 1} items
+                        </span>
+                        <span className="text-[8px] font-black text-white/40 uppercase tracking-widest border-l border-white/20 pl-2">
+                          {new Date(img.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
 
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black to-transparent text-white p-3">
-                <div className="flex justify-between items-end">
-                  <div className="text-xs">
-                    <div className="font-medium">{new Date(img.createdAt).toLocaleDateString()}</div>
-                    <div className="text-gray-300">{new Date(img.createdAt).toLocaleTimeString()}</div>
+                    <div className="flex gap-1">
+                      {viewArchived ? (
+                        <button
+                          onClick={() => handleRestore(img._id)}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-lg transition-all shadow-lg active:scale-95"
+                          title="Restore Highlight"
+                        >
+                          <RefreshCcw size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleArchive(img._id)}
+                          className="bg-white/20 hover:bg-white/40 text-white p-2 rounded-lg transition-all backdrop-blur-md active:scale-95"
+                          title="Archive Highlight"
+                        >
+                          <Archive size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {viewArchived ? (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleRestore(img._id)}
-                        className="bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-1"
-                      >
-                        <RefreshCcw size={12} /> Restore
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleArchive(img._id)}
-                        className="bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-1"
-                      >
-                        <Archive size={12} /> Archive
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

@@ -52,8 +52,10 @@ async function callOpenRouter(message, modelName) {
         messages: [
           {
             role: "system",
-            content: `You are a Philippine-focused chatbot for Gender and Development (GAD) issues. 
-            Always include these emergency hotlines when relevant:
+            content: `You are eTALA, a specialized Gender and Development (GAD) Support Chatbot for TUP-Taguig. 
+            STRICT RULE: Answer ONLY GAD-related questions (harassment, abuse, discrimination, etc.). 
+            Politely refuse ALL unrelated topics.
+            Always include these emergency hotlines:
             - PNP Women & Children Protection: (02) 8532-6690 / 8535-3279
             - DSWD Hotline: 8-931-8101
             - DSWD Crisis Intervention: 1343
@@ -95,9 +97,9 @@ async function callHuggingFace(message, modelName) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          inputs: message,
+          inputs: `[INST] <<SYS>> You are eTALA, a Philippine GAD chatbot. Answer ONLY about GAD, harassment, and abuse. Refuse other topics. <</SYS>> ${message} [/INST]`,
           parameters: {
-            max_length: 500,
+            max_new_tokens: 500,
             temperature: 0.7,
             top_p: 0.95,
             do_sample: true
@@ -111,7 +113,7 @@ async function callHuggingFace(message, modelName) {
     }
 
     const data = await response.json();
-    
+
     // Handle different response formats
     if (Array.isArray(data) && data[0]?.generated_text) {
       return data[0].generated_text;
@@ -134,7 +136,7 @@ async function callPollinations(message) {
     // Pollinations accepts prompt as part of URL
     const encodedMessage = encodeURIComponent(message);
     const response = await fetch(`${POLLINATIONS_URL}${encodedMessage}?model=openai&system=${encodeURIComponent(
-      "You are a Philippine-focused GAD chatbot. Be helpful and concise."
+      "You are eTALA, a GAD Support Chatbot. STRICT RULE: Only answer GAD-related topics. Refuse everything else."
     )}`);
 
     if (!response.ok) {
@@ -177,7 +179,7 @@ async function handleFreeAIFallback(message) {
       try {
         console.log(`📡 Trying Hugging Face: ${modelName}`);
         const reply = await callHuggingFace(message, modelName);
-        
+
         // Add hotlines if not present
         if (!reply.includes("hotline") && !reply.includes("emergency")) {
           const hotlines = "\n\n📞 **Emergency Hotlines:**\n" +
@@ -190,7 +192,7 @@ async function handleFreeAIFallback(message) {
             fallbackLevel: 2
           };
         }
-        
+
         return {
           reply,
           modelUsed: `huggingface-${modelName}`,
@@ -234,7 +236,7 @@ router.post("/", async (req, res) => {
 
     // 🔹 STEP 1: Hardcoded flows (Fastest, no API calls)
     console.log("🔍 Checking hardcoded flows...");
-    
+
     // Report flow
     if (
       lowerMsg.includes("pano magreport") ||
@@ -284,10 +286,10 @@ Your report will be treated with **confidentiality** and handled by the **TUP-Ta
     // 🔹 STEP 2: Try Gemini AI (Primary)
     console.log("🔍 Trying Gemini AI...");
     const instruction = `
-      You are a Philippine-focused chatbot.
-      Answer ONLY based on Philippine context, especially Gender and Development (GAD),
-      local laws, and hotlines for harassment, abuse, and domestic violence.
-
+      You are eTALA, a specialized Gender and Development (GAD) Support Chatbot for TUP-Taguig.
+      STRICT RULE: You must ONLY answer questions related to Gender and Development (GAD), harassment, abuse, discrimination, domestic violence, and women's/children's rights in the Philippines.
+      If the user asks about unrelated topics (e.g., math, programming, general history, sports, entertainment), politely refuse and state that your purpose is to assist with GAD-related concerns.
+      
       Always include these emergency hotlines:
       - PNP Women & Children Protection: (02) 8532-6690 / 8535-3279
       - DSWD Hotline: 8-931-8101
@@ -301,18 +303,18 @@ Your report will be treated with **confidentiality** and handled by the **TUP-Ta
       const result = await model.generateContent(`${instruction}\nUser: ${message}`);
       const reply = result.response.text();
 
-      return res.json({ 
-        reply, 
+      return res.json({
+        reply,
         modelUsed: "gemini-2.5-flash",
         step: "gemini-primary"
       });
     } catch (geminiError) {
       console.error("❌ Gemini AI failed:", geminiError.message);
-      
+
       // 🔹 STEP 3: Try Free AI Fallbacks
       console.log("🔍 Trying free AI fallbacks...");
       const fallbackResult = await handleFreeAIFallback(message);
-      
+
       if (fallbackResult) {
         return res.json({
           reply: fallbackResult.reply,
@@ -326,14 +328,14 @@ Your report will be treated with **confidentiality** and handled by the **TUP-Ta
       console.log("🔍 Using emergency static response...");
       return res.json({
         reply: "I'm currently experiencing technical difficulties. Here are emergency contacts that can help immediately:\n\n" +
-               "🚨 **EMERGENCY HOTLINES** 🚨\n" +
-               "• PNP Women & Children Protection: (02) 8532-6690 / 8535-3279\n" +
-               "• DSWD Crisis Intervention: 1343\n" +
-               "• Emergency: 911\n\n" +
-               "📧 **TUP-Taguig Support**\n" +
-               "• GAD Office: gad@tup-taguig.edu.ph\n" +
-               "• Guidance Office: guidance@tup-taguig.edu.ph\n\n" +
-               "Please try again in a few minutes or contact the GAD Office directly.",
+          "🚨 **EMERGENCY HOTLINES** 🚨\n" +
+          "• PNP Women & Children Protection: (02) 8532-6690 / 8535-3279\n" +
+          "• DSWD Crisis Intervention: 1343\n" +
+          "• Emergency: 911\n\n" +
+          "📧 **TUP-Taguig Support**\n" +
+          "• GAD Office: gad@tup-taguig.edu.ph\n" +
+          "• Guidance Office: guidance@tup-taguig.edu.ph\n\n" +
+          "Please try again in a few minutes or contact the GAD Office directly.",
         modelUsed: "emergency-static",
         step: "emergency",
         fallback: true
@@ -342,7 +344,7 @@ Your report will be treated with **confidentiality** and handled by the **TUP-Ta
 
   } catch (err) {
     console.error("❌ Server Error:", err);
-    
+
     // Final safety net
     return res.status(200).json({
       reply: "We're experiencing technical issues. Please contact the GAD Office directly at gad@tup-taguig.edu.ph or call (02) 8532-6690 for assistance.",

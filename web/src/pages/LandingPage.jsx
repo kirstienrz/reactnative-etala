@@ -258,7 +258,7 @@ const LandingPage = () => {
         </div>
 
         {/* Carousel Controls */}
-        <button
+        {/* <button
           onClick={prevSlide}
           className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 md:p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
         >
@@ -269,11 +269,11 @@ const LandingPage = () => {
           className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 md:p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
         >
           <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-violet-700 group-hover:scale-110 transition-transform" />
-        </button>
+        </button> */}
 
 
         {/* Carousel Indicators */}
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-3">
+        {/* <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-3">
           {heroSlides.map((_, idx) => (
             <button
               key={idx}
@@ -281,7 +281,7 @@ const LandingPage = () => {
               className={`h-2 transition-all duration-500 ${idx === currentSlide ? 'bg-violet-700 w-12' : 'bg-violet-300 w-6 hover:bg-violet-400'} rounded-full`}
             />
           ))}
-        </div>
+        </div> */}
       </section>
 
 
@@ -553,7 +553,7 @@ const LandingPage = () => {
                 If you've experienced any harm, issue, or unfair treatment, we encourage you to report it confidentially so it can be addressed and resolved properly.
               </p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/login')}
               className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 md:px-16 py-4 md:py-6 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl hover:scale-105 text-lg md:text-2xl inline-flex items-center gap-4"
             >

@@ -4,6 +4,8 @@ import { useLocation } from "react-router-dom";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useDispatch } from "react-redux";
+import { logout } from "../store/authSlice";
 import useUnreadMessages from "../hooks/useUnreadMessages";
 
 const Layout = ({ children }) => {
@@ -23,13 +25,52 @@ const Layout = ({ children }) => {
   // Call useUnreadMessages only for superadmin routes
   useUnreadMessages(isSuperAdmin || isSuperAdminRoute);
 
+  const dispatch = useDispatch();
+  
   // Close sidebar on route change
   React.useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
+  // ================= IDLE TIMEOUT LOGIC =================
+  React.useEffect(() => {
+    if (!user) return; // Only track if logged in
+
+    // Set timeout based on role: 1 hour for superadmin, 15 minutes for others
+    const TIMEOUT_MS = isSuperAdmin ? 60 * 60 * 1000 : 15 * 60 * 1000;
+    let idleTimer;
+
+    const resetTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        console.log(`🕒 Idle timeout reached (${TIMEOUT_MS/60000} mins). Logging out...`);
+        dispatch(logout());
+        window.location.href = "/login"; // Force redirect to login
+      }, TIMEOUT_MS);
+    };
+
+    // Events to monitor for activity
+    const activityEvents = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
+    
+    // Add event listeners
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Initialize timer
+    resetTimer();
+
+    // Cleanup
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user, isSuperAdmin, dispatch]);
+
   // ================= SUPER ADMIN LAYOUT =================
-  if (isSuperAdmin || isSuperAdminRoute) {
+  if (isSuperAdminRoute) {
     return (
       <div className="flex h-screen w-screen overflow-hidden bg-gray-50">
         <SuperAdminSidebar
