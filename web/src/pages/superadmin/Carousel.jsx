@@ -319,9 +319,9 @@ export default function CarouselManagement() {
 
       {/* Upload Section */}
       {!viewArchived && (
-        <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm mb-10">
-          <div className="flex flex-col xl:flex-row items-center gap-6">
-            {/* Action Icon & Title (Hidden on Mobile) */}
+        <div className="bg-white rounded-[2rem] border border-slate-200 p-4 md:p-8 shadow-sm mb-10 transition-all">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-6">
+            {/* Action Icon & Title (Hidden on Mobile/Tablet) */}
             <div className="hidden xl:flex items-center gap-4 pr-6 border-r border-slate-100">
               <div className="p-3 bg-violet-100 rounded-2xl text-violet-600">
                 <Plus size={24} />
@@ -333,7 +333,7 @@ export default function CarouselManagement() {
             </div>
 
             {/* Inputs Section */}
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Album Title</label>
                 <input
@@ -357,13 +357,13 @@ export default function CarouselManagement() {
             </div>
 
             {/* Upload Zone & Action Button */}
-            <div className="flex items-end gap-3 w-full xl:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch gap-3 lg:w-auto">
               <div
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`relative group border-2 border-dashed rounded-2xl px-6 h-[54px] flex items-center transition-all duration-300 text-center flex-1 xl:flex-none ${
+                className={`relative group border-2 border-dashed rounded-2xl px-4 h-[56px] flex items-center transition-all duration-300 text-center flex-1 min-w-[160px] ${
                   isDragging
                     ? "border-violet-500 bg-violet-50"
                     : "border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-slate-100/50"
@@ -377,12 +377,12 @@ export default function CarouselManagement() {
                   id="file-upload"
                 />
                 <div className="flex items-center gap-3">
-                  <Upload size={20} className="text-violet-600" />
-                  <div className="text-left">
-                    <p className="text-[11px] font-bold text-slate-900 leading-tight whitespace-nowrap">
+                  <Upload size={20} className="text-violet-600 shrink-0" />
+                  <div className="text-left overflow-hidden">
+                    <p className="text-[11px] font-bold text-slate-900 leading-tight truncate">
                       {previews.length > 0 ? `${previews.length} Files Selected` : "Select Media"}
                     </p>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">JPG, MP4, WEBM</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">JPG, MP4, WEBM</p>
                   </div>
                 </div>
               </div>
@@ -390,7 +390,7 @@ export default function CarouselManagement() {
               <button
                 onClick={handleUpload}
                 disabled={isUploading}
-                className="px-10 h-[54px] bg-violet-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-violet-700 transition-all shadow-xl shadow-violet-100 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="px-6 md:px-10 h-[56px] bg-violet-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-violet-700 transition-all shadow-xl shadow-violet-100 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-fit"
               >
                 {isUploading ? (
                   <RefreshCcw className="animate-spin" size={18} />

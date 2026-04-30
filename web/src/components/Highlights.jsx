@@ -59,7 +59,7 @@ const StoryViewer = ({ highlight, onClose }) => {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-violet-200/30 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-200/30 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
 
-      <div className="relative w-full max-w-6xl aspect-video bg-white/60 rounded-[3rem] border border-white/40 overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] flex flex-col group/viewer backdrop-blur-md">
+      <div className="relative w-full max-w-6xl aspect-[9/16] md:aspect-video bg-white/60 rounded-[2rem] md:rounded-[3rem] border border-white/40 overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] flex flex-col group/viewer backdrop-blur-md transition-all duration-500">
         
         {/* Top Navigation - Glass Header */}
         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white/80 to-transparent z-30 flex items-center justify-between px-10">
