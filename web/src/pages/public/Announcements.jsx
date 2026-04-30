@@ -12,13 +12,23 @@ const Announcement = () => {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
   useEffect(() => {
     fetchAnnouncements();
   }, []);
 
   useEffect(() => {
     filterAnnouncements();
+    setCurrentPage(1);
   }, [announcements, selectedYear, selectedMonth]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentAnnouncements = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   const fetchAnnouncements = async () => {
     try {
@@ -170,47 +180,74 @@ const Announcement = () => {
               <p className="mt-4 text-slate-600">Loading announcements...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              No announcements found
+            <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-100">
+              <FileText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No announcements found</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {filtered.map((item) => (
-                <div
-                  key={item._id}
-                  className="bg-white border border-slate-200 rounded-lg p-8 hover:border-violet-300 hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-                    <div className="flex items-start gap-6 flex-1">
-                      <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-7 h-7 text-violet-600" />
-                      </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
+                {currentAnnouncements.map((item) => (
+                  <div
+                    key={item._id}
+                    className="bg-white border border-slate-200 rounded-lg p-8 hover:border-violet-300 hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                      <div className="flex items-start gap-6 flex-1">
+                        <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-7 h-7 text-violet-600" />
+                        </div>
 
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">
-                          {item.title}
-                        </h3>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-slate-900 mb-2">
+                            {item.title}
+                          </h3>
 
-                        {item.message && (
-                          <p className="text-slate-600 leading-relaxed mb-4">
-                            {item.message}
-                          </p>
-                        )}
+                          {item.message && (
+                            <p className="text-slate-600 leading-relaxed mb-4">
+                              {item.message}
+                            </p>
+                          )}
 
-                        <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar size={14} />
-                            <span>{formatDate(item.createdAt)}</span>
+                          <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+                            <div className="flex items-center gap-1">
+                              <Calendar size={14} />
+                              <span>{formatDate(item.createdAt)}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-
-
                   </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-20 pb-12">
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === 1}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
+                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
+                    <span className="font-black text-slate-900 text-lg">{currentPage}</span>
+                    <span className="text-slate-300 font-bold">/</span>
+                    <span className="font-black text-slate-400 text-lg">{totalPages}</span>
+                  </div>
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === totalPages}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </section>

@@ -11,6 +11,15 @@ const AllNews = () => {
     fetchNews();
   }, []);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  // Pagination calculations
+  const totalPages = Math.ceil(news.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentNews = news.slice(startIndex, startIndex + itemsPerPage);
+
   const fetchNews = async () => {
     try {
       const data = await getNews();
@@ -81,80 +90,110 @@ const AllNews = () => {
             <p className="text-center text-gray-500">Loading news...</p>
           )}
 
-          {!loading && news.length === 0 && (
+          {news.length === 0 && !loading && (
             <p className="text-center text-gray-500">
               No news available.
             </p>
           )}
 
-          {news.map((item) => (
-            <article
-              key={item._id}
-              className="flex flex-col sm:flex-row gap-6 p-6 border border-slate-200 rounded-xl hover:border-violet-600 hover:shadow-lg transition"
-            >
-              {/* IMAGE / VIDEO */}
-              <div className="w-full sm:w-40 flex-shrink-0">
-                {getYouTubeEmbedUrl(item.link) ? (
-                  <iframe
-                    className="w-full h-40 object-cover rounded-lg bg-black"
-                    src={getYouTubeEmbedUrl(item.link)}
-                    title={item.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : item.imageUrl ? (
-                  isVideo(item.imageUrl) ? (
-                    <video
-                      src={item.imageUrl}
-                      className="w-full h-40 object-cover rounded-lg bg-black"
-                    />
-                  ) : isDocument(item.imageUrl) ? (
-                    <div className="w-full h-40 bg-violet-100 rounded-lg flex flex-col items-center justify-center text-violet-600">
-                      <FileText className="w-10 h-10 mb-2" />
-                      <span className="font-bold text-sm">Document</span>
-                    </div>
-                  ) : (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title}
-                      className="w-full h-40 object-cover rounded-lg"
-                    />
-                  )
-                ) : (
-                  <div className="w-full h-40 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 font-bold">
-                    NEWS
-                  </div>
-                )}
-              </div>
-
-              {/* CONTENT */}
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-slate-900 mb-1">
-                  {item.title}
-                </h3>
-
-                <p className="flex items-center gap-2 text-sm text-slate-500 mb-3">
-                  <Calendar size={14} />
-                  {item.date
-                    ? new Date(item.date).toLocaleDateString()
-                    : "—"}
-                </p>
-
-                <p className="text-slate-700 line-clamp-3 mb-4">
-                  {item.content}
-                </p>
-
-                <button
-                  onClick={() => setSelectedNews(item)}
-                  className="inline-flex items-center gap-2 text-violet-700 font-semibold hover:gap-3 transition-all"
+          {!loading && news.length > 0 && (
+            <>
+              {currentNews.map((item) => (
+                <article
+                  key={item._id}
+                  className="flex flex-col sm:flex-row gap-6 p-6 border border-slate-200 rounded-xl hover:border-violet-600 hover:shadow-lg transition"
                 >
-                  Read more
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            </article>
-          ))}
+                  {/* IMAGE / VIDEO */}
+                  <div className="w-full sm:w-40 flex-shrink-0">
+                    {getYouTubeEmbedUrl(item.link) ? (
+                      <iframe
+                        className="w-full h-40 object-cover rounded-lg bg-black"
+                        src={getYouTubeEmbedUrl(item.link)}
+                        title={item.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : item.imageUrl ? (
+                      isVideo(item.imageUrl) ? (
+                        <video
+                          src={item.imageUrl}
+                          className="w-full h-40 object-cover rounded-lg bg-black"
+                        />
+                      ) : isDocument(item.imageUrl) ? (
+                        <div className="w-full h-40 bg-violet-100 rounded-lg flex flex-col items-center justify-center text-violet-600">
+                          <FileText className="w-10 h-10 mb-2" />
+                          <span className="font-bold text-sm">Document</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title}
+                          className="w-full h-40 object-cover rounded-lg"
+                        />
+                      )
+                    ) : (
+                      <div className="w-full h-40 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 font-bold">
+                        NEWS
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CONTENT */}
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-slate-900 mb-1">
+                      {item.title}
+                    </h3>
+
+                    <p className="flex items-center gap-2 text-sm text-slate-500 mb-3">
+                      <Calendar size={14} />
+                      {item.date
+                        ? new Date(item.date).toLocaleDateString()
+                        : "—"}
+                    </p>
+
+                    <p className="text-slate-700 line-clamp-3 mb-4">
+                      {item.content}
+                    </p>
+
+                    <button
+                      onClick={() => setSelectedNews(item)}
+                      className="inline-flex items-center gap-2 text-violet-700 font-semibold hover:gap-3 transition-all"
+                    >
+                      Read more
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-20 pb-12">
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === 1}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
+                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
+                    <span className="font-black text-slate-900 text-lg">{currentPage}</span>
+                    <span className="text-slate-300 font-bold">/</span>
+                    <span className="font-black text-slate-400 text-lg">{totalPages}</span>
+                  </div>
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === totalPages}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </section>
 

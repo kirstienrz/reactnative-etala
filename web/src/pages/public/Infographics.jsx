@@ -35,6 +35,10 @@ const Infographics = () => {
   const [loading, setLoading] = useState(true);
   const [fullscreenImage, setFullscreenImage] = useState(null);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   useEffect(() => {
     const fetchInfographics = async () => {
       try {
@@ -58,6 +62,15 @@ const Infographics = () => {
     const matchesCategory = selectedCategory === 'All' || info.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredInfographics.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentInfographics = filteredInfographics.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
 
   const handleView = (imageUrl) => setFullscreenImage(imageUrl);
 
@@ -110,16 +123,22 @@ const Infographics = () => {
         </div>
       </section>
 
-      {/* Infographics Grid */}
+      {/* Gallery Grid */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-6xl mx-auto px-8">
           {loading ? (
-            <div className="text-center py-12 text-slate-600">Loading infographics...</div>
-          ) : filteredInfographics.length === 0 ? (
-            <div className="text-center py-12 text-slate-600">No infographics found.</div>
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600"></div>
+              <p className="mt-4 text-slate-600">Loading infographics...</p>
+            </div>
+          ) : currentInfographics.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              No infographics found matching your criteria.
+            </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredInfographics.map(info => (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {currentInfographics.map(info => (
                 <div
                   key={info._id}
                   className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-violet-400 hover:shadow-xl transition-all duration-300 flex flex-col"
@@ -150,7 +169,34 @@ const Infographics = () => {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-20 pb-12">
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === 1}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
+                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
+                    <span className="font-black text-slate-900 text-lg">{currentPage}</span>
+                    <span className="text-slate-300 font-bold">/</span>
+                    <span className="font-black text-slate-400 text-lg">{totalPages}</span>
+                  </div>
+                  <button
+                    onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === totalPages}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

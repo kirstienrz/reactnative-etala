@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Eye, Calendar, Loader, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { FileText, Eye, Calendar, Loader, ZoomIn, ZoomOut, Maximize2, Minimize2, ChevronLeft, ChevronRight, X, ExternalLink } from 'lucide-react';
 import { getActiveBudgets } from '../../api/budget';
 
 const PlanAndBudget = () => {
@@ -9,6 +9,7 @@ const PlanAndBudget = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [imageError, setImageError] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Pagination states
   const [currentListPage, setCurrentListPage] = useState(1);
@@ -43,6 +44,7 @@ const PlanAndBudget = () => {
     setCurrentPage(0);
     setImageError(false);
     setZoomLevel(100);
+    setIsFullscreen(false);
   };
 
   const closePreview = () => {
@@ -50,6 +52,7 @@ const PlanAndBudget = () => {
     setCurrentPage(0);
     setImageError(false);
     setZoomLevel(100);
+    setIsFullscreen(false);
   };
 
   const nextPage = () => {
@@ -214,7 +217,7 @@ const PlanAndBudget = () => {
                         <div className="flex-shrink-0">
                           <button
                             onClick={() => handleView(doc)}
-                            className="w-full md:w-auto bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-violet-600 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 active:scale-95 group/btn"
+                            className="w-full md:w-auto bg-violet-600 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-violet-700 transition-all shadow-xl shadow-violet-200 flex items-center justify-center gap-3 active:scale-95 group/btn"
                           >
                             View Document
                             <Eye size={20} className="group-hover/btn:scale-110 transition-transform" />
@@ -300,11 +303,11 @@ const PlanAndBudget = () => {
       {previewDoc && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={closePreview}>
           <div
-            className="bg-white w-full sm:max-w-6xl h-full sm:h-[90vh] sm:rounded-[3rem] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+            className={isFullscreen ? "fixed inset-0 w-screen h-screen bg-white z-[10001] flex flex-col overflow-hidden" : "bg-white w-full sm:max-w-6xl h-[90vh] sm:rounded-[3rem] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-4 sm:px-10 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10">
+            <div className="p-4 sm:px-10 sm:py-6 border-b flex justify-between items-center bg-white text-slate-900 sticky top-0 z-10 flex-shrink-0">
               <div className="flex items-center gap-4 overflow-hidden">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center flex-shrink-0">
                   <FileText size={24} />
@@ -320,6 +323,15 @@ const PlanAndBudget = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-4">
+                <a 
+                  href={previewDoc.file.url || previewDoc.file.image_urls[0]} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={24} />
+                </a>
                 <div className="hidden sm:flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
                   <button
                     onClick={zoomOut}
@@ -338,6 +350,12 @@ const PlanAndBudget = () => {
                   </button>
                 </div>
                 <button
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="hidden sm:flex p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
+                >
+                  {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                </button>
+                <button
                   onClick={closePreview}
                   className="p-3 bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm"
                 >
@@ -347,8 +365,8 @@ const PlanAndBudget = () => {
             </div>
 
             {/* Document Viewer Area */}
-            <div className="flex-1 bg-slate-900 flex flex-col items-center justify-center relative overflow-hidden group">
-              <div className="w-full h-full overflow-auto custom-scrollbar p-4 sm:p-10 flex items-start justify-center">
+            <div className="flex-1 bg-slate-900 relative overflow-hidden group min-h-0">
+              <div className="absolute inset-0 overflow-auto custom-scrollbar p-4 sm:p-10 flex items-start justify-center">
                 {imageError ? (
                   <div className="text-center p-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[3rem] max-w-md my-auto">
                     <div className="inline-flex p-5 bg-amber-500/10 text-amber-500 rounded-full mb-6">

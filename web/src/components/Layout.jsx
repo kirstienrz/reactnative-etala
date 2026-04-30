@@ -70,7 +70,7 @@ const Layout = ({ children }) => {
   }, [user, isSuperAdmin, dispatch]);
 
   // ================= SUPER ADMIN LAYOUT =================
-  if (isSuperAdmin || isSuperAdminRoute) {
+  if (isSuperAdminRoute) {
     return (
       <div className="flex h-screen w-screen overflow-hidden bg-gray-50">
         <SuperAdminSidebar
