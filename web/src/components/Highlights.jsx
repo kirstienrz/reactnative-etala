@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Sparkles, X, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, X, Play, Pause, Volume2, VolumeX, Info } from 'lucide-react';
 import io from 'socket.io-client';
 import { getCarouselImages } from '../api/carousel';
 import { createPortal } from 'react-dom';
@@ -61,29 +61,30 @@ const StoryViewer = ({ highlight, onClose }) => {
 
       <div className="relative w-full max-w-6xl aspect-[9/16] md:aspect-video bg-white/60 rounded-[2rem] md:rounded-[3rem] border border-white/40 overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] flex flex-col group/viewer backdrop-blur-md transition-all duration-500">
         
-        {/* Top Navigation - Glass Header */}
-        <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white/80 to-transparent z-30 flex items-center justify-between px-10">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-white shadow-xl p-1.5 border border-slate-100 transition-transform group-hover/viewer:scale-110">
+        {/* Top Navigation - Compact Glass Header */}
+        <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black/40 to-transparent z-30 flex items-center justify-between px-6 md:px-10 pointer-events-none">
+          <div className="flex items-center gap-4 pointer-events-auto">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white shadow-xl p-1.5 border border-slate-100 transition-transform group-hover/viewer:scale-110 shrink-0">
               <img src="/assets/about/logo.png" className="w-full h-full object-contain" alt="" />
             </div>
-            <div>
-              <h3 className="text-slate-900 font-black text-xl leading-tight tracking-tight">{highlight.title}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="px-2 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-md uppercase tracking-wider">
-                  Highlight {currentIndex + 1}
+            <div className="min-w-0">
+              <h2 className="text-white font-black text-sm md:text-base leading-tight drop-shadow-md truncate">{highlight.title}</h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest bg-violet-600/80 px-2 py-0.5 rounded-full">
+                  {currentIndex + 1} / {items.length}
                 </span>
-                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest border-l border-slate-200 pl-2">
-                   {items.length} total pieces
+                <span className="hidden md:block text-[9px] text-white/60 font-black uppercase tracking-widest truncate max-w-[300px]">
+                  {highlight.description}
                 </span>
               </div>
             </div>
           </div>
+          
           <button 
-            onClick={onClose} 
-            className="w-12 h-12 bg-white/80 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm border border-slate-100"
+            onClick={onClose}
+            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-red-500 text-white flex items-center justify-center backdrop-blur-md transition-all pointer-events-auto active:scale-90"
           >
-            <X size={24} strokeWidth={3} />
+            <X size={20} />
           </button>
         </div>
 
@@ -120,11 +121,20 @@ const StoryViewer = ({ highlight, onClose }) => {
             </button>
           </div>
 
-          {/* Info Card Overlay - Glass Bottom */}
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-3xl z-30 px-6 opacity-0 group-hover/viewer:opacity-100 translate-y-4 group-hover/viewer:translate-y-0 transition-all duration-500">
-            <div className="bg-white/80 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
-              <h4 className="text-slate-900 font-black text-2xl mb-2">{highlight.title}</h4>
-              <p className="text-slate-500 text-sm leading-relaxed font-medium">{highlight.description}</p>
+          {/* Overlays are now handled by the compact header and this discreet chip */}
+          <div className="absolute bottom-6 left-6 z-30 group/desc max-w-[80%] md:max-w-md">
+            <div className="bg-black/20 hover:bg-black/60 backdrop-blur-xl border border-white/10 p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] transition-all duration-500 cursor-help">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-violet-500 flex items-center justify-center text-white shrink-0">
+                  <Info size={14} />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-white/40 text-[8px] font-black uppercase tracking-widest leading-none mb-1">Album Description</p>
+                  <p className="text-white text-[10px] md:text-xs font-medium leading-relaxed line-clamp-1 group-hover/desc:line-clamp-none transition-all duration-500">
+                    {highlight.description || "No description available."}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
