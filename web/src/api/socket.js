@@ -7,6 +7,7 @@ class SocketService {
   constructor() {
     this.socket = null;
     this.isConnected = false;
+    this.currentTicketRoom = null; // Track current ticket room
   }
 
   connect() {
@@ -37,10 +38,10 @@ class SocketService {
       console.error("❌ Socket connection error:", error);
     });
 
-    // 🔥 Debug: Log all incoming events
-    this.socket.onAny((eventName, ...args) => {
-      console.log(`📨 Socket event received: ${eventName}`, args);
-    });
+    // 🔥 Debug: Log all incoming events (remove in production)
+    // this.socket.onAny((eventName, ...args) => {
+    //   console.log(`📨 Socket event received: ${eventName}`, args);
+    // });
 
     return this.socket;
   }
@@ -56,7 +57,15 @@ class SocketService {
 
   joinTicket(ticketNumber) {
     if (this.socket?.connected) {
+      // Leave previous ticket room if exists
+      if (this.currentTicketRoom && this.currentTicketRoom !== ticketNumber) {
+        this.socket.emit("leave-ticket", this.currentTicketRoom);
+        console.log(`🚪 Auto-left previous ticket room: ${this.currentTicketRoom}`);
+      }
+      
+      // Join new ticket room
       this.socket.emit("join-ticket", ticketNumber);
+      this.currentTicketRoom = ticketNumber;
       console.log(`🎫 Joined ticket room: ${ticketNumber}`);
     } else {
       console.warn("⚠️ Cannot join ticket - socket not connected");
@@ -66,6 +75,9 @@ class SocketService {
   leaveTicket(ticketNumber) {
     if (this.socket?.connected) {
       this.socket.emit("leave-ticket", ticketNumber);
+      if (this.currentTicketRoom === ticketNumber) {
+        this.currentTicketRoom = null;
+      }
       console.log(`🚪 Left ticket room: ${ticketNumber}`);
     }
   }
@@ -137,9 +149,15 @@ class SocketService {
     }
   }
 
-  off(event) {
+  off(event, callback) {
     if (this.socket) {
-      this.socket.off(event);
+      if (callback) {
+        // Remove only the specific listener
+        this.socket.off(event, callback);
+      } else {
+        // Remove ALL listeners for this event (use with caution)
+        this.socket.off(event);
+      }
     }
   }
 }

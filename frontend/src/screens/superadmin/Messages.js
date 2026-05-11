@@ -314,12 +314,16 @@ const TicketMessagingMobile = () => {
 
   useEffect(() => {
     if (selectedTicket) {
-      socketService.joinTicket(selectedTicket.ticketNumber);
+      // Leave previous ticket room first before joining new one
+      const currentTicketNumber = selectedTicket.ticketNumber;
+      socketService.joinTicket(currentTicketNumber);
+      
       return () => {
-        socketService.leaveTicket(selectedTicket.ticketNumber);
+        // Only leave if we're still on the same ticket
+        socketService.leaveTicket(currentTicketNumber);
       };
     }
-  }, [selectedTicket]);
+  }, [selectedTicket?.ticketNumber]); // Only depend on ticketNumber, not entire object
 
   useEffect(() => {
     loadTickets();

@@ -1,4 +1,5 @@
 const Suggestion = require("../models/Suggestion");
+const notificationController = require("./notificationController");
 
 // Auto-increment (simple)
 async function getNextId() {
@@ -37,6 +38,25 @@ exports.createSuggestion = async (req, res) => {
     });
 
     await suggestion.save();
+
+    // 🔥 EMIT SOCKET EVENT FOR NEW SUGGESTION
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin-room").emit("new-suggestion", {
+        suggestion: suggestion
+      });
+
+      // ✅ SAVE PERSISTENT NOTIFICATION FOR ADMINS
+      notificationController.createNotification({
+        recipientRole: 'superadmin',
+        type: 'suggestion',
+        title: '💡 New Suggestion Received',
+        content: `A new suggestion has been submitted: "${suggestion.text.substring(0, 50)}..."`,
+        metadata: { suggestionId: suggestion.id },
+        link: '/superadmin/suggestions'
+      });
+    }
+
     res.json(suggestion);
   } catch (err) {
     console.error(err);

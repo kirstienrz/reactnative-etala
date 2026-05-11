@@ -44,6 +44,7 @@ import ResearchAdmin from "./pages/superadmin/Research";
 import DatasetPage from "./pages/superadmin/sexData";
 import Documentation from "./pages/superadmin/Documentation";
 import FinancePage from "./pages/superadmin/Finance";
+import NotificationsPage from "./pages/superadmin/Notifications";
 
 import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
@@ -134,6 +135,7 @@ const App = () => {
               <Route path="/superadmin/datasets" element={<DatasetPage />} />
               <Route path="/superadmin/documentation" element={<Documentation />} />
               <Route path="/superadmin/finance" element={<FinancePage />} />
+              <Route path="/superadmin/notifications" element={<NotificationsPage />} />
 
 
             </Route>
@@ -162,9 +164,9 @@ const App = () => {
         </Layout>
         <ToastContainer
           position="top-right"
-          autoClose={3000}
+          autoClose={5000}
           hideProgressBar={false}
-          newestOnTop={false}
+          newestOnTop={true}
           closeOnClick
           rtl={false}
           pauseOnFocusLoss

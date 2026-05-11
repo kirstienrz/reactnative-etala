@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Send, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, Calendar, AlertCircle, CheckCircle, Mail, Search, Trash2, PlusCircle, Copy, Undo2, Archive, RefreshCw, Info } from 'lucide-react';
 import {
   getAllTickets,
@@ -430,6 +431,7 @@ const AvailabilityPickerModal = ({ isOpen, onClose, onConfirm, adminId }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const TicketMessagingSystem = () => {
+  const location = useLocation();
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -603,21 +605,39 @@ const TicketMessagingSystem = () => {
 
   useEffect(() => {
     if (selectedTicket) {
-      socketService.joinTicket(selectedTicket.ticketNumber);
-      return () => socketService.leaveTicket(selectedTicket.ticketNumber);
+      // Leave previous ticket room first before joining new one
+      const currentTicketNumber = selectedTicket.ticketNumber;
+      socketService.joinTicket(currentTicketNumber);
+      
+      return () => {
+        // Only leave if we're still on the same ticket
+        socketService.leaveTicket(currentTicketNumber);
+      };
     }
-  }, [selectedTicket]);
+  }, [selectedTicket?.ticketNumber]); // Only depend on ticketNumber, not entire object
 
-  useEffect(() => { loadTickets(); }, []);
+  useEffect(() => { 
+    loadTickets(); 
+  }, []);
 
+  // Handle navigation state (select ticket from notification) - separate from tickets loading
+  const hasHandledNavigationRef = useRef(false);
+  
   useEffect(() => {
-    const state = window.history.state?.usr;
-    if (state?.selectedTicketNumber && tickets.length > 0) {
+    const state = location.state;
+    
+    // Only handle once and only if we have tickets loaded
+    if (state?.selectedTicketNumber && tickets.length > 0 && !hasHandledNavigationRef.current) {
       const t = tickets.find(t => t.ticketNumber === state.selectedTicketNumber);
-      if (t) handleSelectTicket(t);
-      window.history.replaceState({}, document.title);
+      if (t) {
+        hasHandledNavigationRef.current = true;
+        handleSelectTicket(t);
+        // Clear state immediately to prevent re-triggering
+        window.history.replaceState({}, document.title);
+      }
     }
-  }, [tickets]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickets.length]); // Only trigger when tickets are loaded (length changes from 0 to N)
 
   const loadTickets = async () => {
     setLoading(true);
@@ -638,12 +658,24 @@ const TicketMessagingSystem = () => {
 
   const loadMessages = async (ticketNumber) => {
     setLoading(true);
-    try { const data = await getTicketMessages(ticketNumber, { limit: 50 }); setMessages(data); }
-    catch { console.error('Error loading messages'); }
-    finally { setLoading(false); }
+    try { 
+      const data = await getTicketMessages(ticketNumber, { limit: 50 }); 
+      setMessages(data); 
+    }
+    catch { 
+      console.error('Error loading messages'); 
+    }
+    finally { 
+      setLoading(false); 
+    }
   };
 
-  const handleSelectTicket = async (ticket) => {
+  const handleSelectTicket = useCallback(async (ticket) => {
+    // Prevent selecting the same ticket multiple times
+    if (selectedTicketRef.current?.ticketNumber === ticket.ticketNumber) {
+      return;
+    }
+
     openingTicketRef.current.add(ticket.ticketNumber);
     selectedTicketRef.current = ticket;
 
@@ -664,7 +696,7 @@ const TicketMessagingSystem = () => {
     }, 3000);
 
     await loadMessages(ticket.ticketNumber);
-  };
+  }, [removeUnread]); // Only depend on removeUnread which is already memoized
 
   const handleMarkAsUnread = async (ticketNumber) => {
     manuallyUnreadRef.current.add(ticketNumber);

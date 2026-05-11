@@ -7,6 +7,7 @@ const Report = require("../models/report");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/auth");
 const sendEmail = require("../utils/sendEmail"); // ✉️ Import email utility
+const notificationController = require("../controllers/notificationController");
 
 // Middlewares
 const authenticateAdmin = authMiddleware(["superadmin"]);
@@ -405,6 +406,17 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
 
     // Convert to plain object with virtuals
     updatedTicket = updatedTicket.toObject({ virtuals: true });
+
+    // ✅ SAVE PERSISTENT NOTIFICATION
+    notificationController.createNotification({
+      recipient: isAdmin ? (ticket.userId?._id || ticket.userId) : null,
+      recipientRole: isAdmin ? 'user' : 'superadmin',
+      type: 'message',
+      title: `💬 New Message - Ticket #${ticketNumber}`,
+      content: `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+      metadata: { ticketNumber },
+      link: isAdmin ? '/user/chat' : '/superadmin/messages'
+    });
 
     // ✉️ SEND EMAIL NOTIFICATION ON FIRST ADMIN REPLY
     if (isFirstAdminReply && ticket.userId?.email) {

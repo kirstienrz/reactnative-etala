@@ -7,11 +7,16 @@ import Footer from "../components/Footer";
 import { useDispatch } from "react-redux";
 import { logout } from "../store/authSlice";
 import useUnreadMessages from "../hooks/useUnreadMessages";
+import useMessageNotifications from "../hooks/useMessageNotifications";
+import NotificationCenter from "./NotificationCenter";
 
 const Layout = ({ children }) => {
   const { user, role, department } = useSelector((state) => state.auth);
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+
+  // Initialize notifications
+  useMessageNotifications();
 
   const effectiveRole = (user?.role || role)?.toLowerCase();
   const effectiveDepartment = (user?.department || department)?.toLowerCase();
@@ -82,14 +87,38 @@ const Layout = ({ children }) => {
           {/* Mobile Header for Admin */}
           <header className="lg:hidden flex items-center justify-between p-4 bg-gray-900 text-white shadow-md">
             <h1 className="text-lg font-bold">Admin Panel</h1>
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 rounded-md hover:bg-gray-800 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 rounded-md hover:bg-gray-800 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          {/* Desktop Top Bar for Admin */}
+          <header className="hidden lg:flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wider">
+                {location.pathname.split('/').pop().replace(/-/g, ' ')}
+              </h2>
+            </div>
+            <div className="flex items-center gap-6">
+              <NotificationCenter />
+              <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gray-900">{user?.name || "Admin"}</p>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{user?.role || "Superadmin"}</p>
+                </div>
+                <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold">
+                  {(user?.name || "A")[0]}
+                </div>
+              </div>
+            </div>
           </header>
 
           <main className="flex-1 p-4 md:p-6 overflow-y-auto">

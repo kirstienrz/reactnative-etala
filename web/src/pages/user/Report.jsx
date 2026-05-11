@@ -3,6 +3,7 @@ import {
   ArrowLeft, Save, Calendar, ChevronDown, Check, Upload, X,
   Image as ImageIcon, Video, Info, Shield, AlertCircle, FileText
 } from 'lucide-react';
+import { useSelector } from 'react-redux';
 import { createReport } from '../../api/report';
 import { checkSpamReport } from "../../api/ai";
 import { generateReportPDF, sendPDFToEmail } from '../../utils/generateReportPDF';
@@ -580,6 +581,17 @@ const styles = {
 const ReportForm = () => {
   const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
 
+  // ✅ Get logged-in user's profile data
+  const { user } = useSelector((state) => state.auth);
+
+  // ✅ Department code → full name mapping
+  const departmentMap = {
+    'BASD': 'Basic Arts and Science Department',
+    'CAAD': 'Civil and Allied Department',
+    'EEAD': 'Electrical and Allied Department',
+    'MAAD': 'Mechanical and Allied Department',
+  };
+
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
@@ -647,6 +659,19 @@ const ReportForm = () => {
     attachments: [], additionalNotes: '', confirmAccuracy: false,
     confirmConfidentiality: false,
   });
+
+  // ✅ Auto-fill gender, department, and userType from user's profile
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        reporterGender: prev.reporterGender || user.gender || '',
+        reporterDepartment: prev.reporterDepartment || departmentMap[user.department] || user.department || '',
+        tupRole: prev.tupRole || user.userType || '',
+      }));
+    }
+  }, [user]);
+
 
   const totalSteps = 4;
 
@@ -1902,52 +1927,119 @@ const ReportForm = () => {
                 TUP Affiliation
                 <span style={currentStyles.requiredStar}> *</span>
               </label>
-              <select
-                style={currentStyles.selectInput}
-                value={formData.tupRole}
-                onChange={(e) => setFormData(prev => ({ ...prev, tupRole: e.target.value }))}
-              >
-                <option value="">Select affiliation</option>
-                <option value="Student">Student</option>
-                <option value="Faculty">Faculty</option>
-                <option value="Staff">Staff</option>
-              </select>
+              {user?.userType ? (
+                <div style={{
+                  ...currentStyles.input,
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  color: currentStyles.colors.textPrimary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Check size={16} color={currentStyles.colors.success} />
+                  {formData.tupRole}
+                  <span style={{ fontSize: '11px', color: currentStyles.colors.textSecondary, marginLeft: 'auto' }}>Auto-filled from profile</span>
+                </div>
+              ) : (
+                <select
+                  style={currentStyles.selectInput}
+                  value={formData.tupRole}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tupRole: e.target.value }))}
+                >
+                  <option value="">Select affiliation</option>
+                  <option value="Student">Student</option>
+                  <option value="Faculty">Faculty</option>
+                  <option value="Staff">Staff</option>
+                </select>
+              )}
             </div>
           </div>
 
           <div>
             <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: currentStyles.colors.textPrimary }}>
-              Optional Details
+              Auto-filled from Profile
             </h4>
             <div style={currentStyles.inputGroup}>
               <label style={currentStyles.inputLabel}>Gender</label>
-              <select
-                style={currentStyles.selectInput}
-                value={formData.reporterGender}
-                onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
-              >
-                <option value="">Prefer not to say</option>
-                <option value="Female">Female</option>
-                <option value="Male">Male</option>
-              </select>
+              {user?.gender ? (
+                <div style={{
+                  ...currentStyles.input,
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  color: currentStyles.colors.textPrimary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Check size={16} color={currentStyles.colors.success} />
+                  {formData.reporterGender}
+                  <span style={{ fontSize: '11px', color: currentStyles.colors.textSecondary, marginLeft: 'auto' }}>From profile</span>
+                </div>
+              ) : (
+                <select
+                  style={currentStyles.selectInput}
+                  value={formData.reporterGender}
+                  onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
+                >
+                  <option value="">Prefer not to say</option>
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                </select>
+              )}
             </div>
             <div style={currentStyles.inputGroup}>
               <label style={currentStyles.inputLabel}>Department
                 <span style={currentStyles.requiredStar}> *</span>
               </label>
-              <select
-                style={currentStyles.input}
-                value={formData.reporterDepartment}
-                onChange={(e) => setFormData(prev => ({ ...prev, reporterDepartment: e.target.value }))}
-                required
-              >
+              {user?.department ? (
+                <div style={{
+                  ...currentStyles.input,
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  color: currentStyles.colors.textPrimary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Check size={16} color={currentStyles.colors.success} />
+                  {formData.reporterDepartment}
+                  <span style={{ fontSize: '11px', color: currentStyles.colors.textSecondary, marginLeft: 'auto' }}>From profile</span>
+                </div>
+              ) : (
+                <select
+                  style={currentStyles.input}
+                  value={formData.reporterDepartment}
+                  onChange={(e) => setFormData(prev => ({ ...prev, reporterDepartment: e.target.value }))}
+                  required
+                >
+                  <option value="">Select Department</option>
+                  <option value="Civil and Allied Department">Civil and Allied Department</option>
+                  <option value="Electrical and Allied Department">Electrical and Allied Department</option>
+                  <option value="Mechanical and Allied Department">Mechanical and Allied Department</option>
+                  <option value="Basic Arts and Science Department">Basic Arts and Science Department</option>
+                </select>
+              )}
+            </div>
+          </div>
+        </div>
 
-                <option value="">Select Department</option>
-                <option value="Civil and Allied Department">Civil and Allied Department</option>
-                <option value="Electrical and Allied Department">Electrical and Allied Department</option>
-                <option value="Mechanical and Allied Department">Mechanical and Allied Department</option>
-                <option value="Basic Arts and Science Department">Basic Arts and Science Department</option>
-              </select>
+        <div style={{
+          ...currentStyles.importantNote,
+          backgroundColor: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          marginBottom: '32px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <Shield size={18} color={currentStyles.colors.success} />
+            <div>
+              <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: currentStyles.colors.textPrimary, fontWeight: '500' }}>
+                Your gender, department, and affiliation are pulled from your profile automatically.
+              </p>
+              <p style={{ margin: 0, fontSize: '13px', color: currentStyles.colors.textSecondary, lineHeight: '1.5' }}>
+                This information helps GAD for categorization and analytics only.
+                Your name and other personal details are <strong>never</strong> shared when the report is anonymous.
+              </p>
             </div>
           </div>
         </div>
@@ -2189,6 +2281,26 @@ const ReportForm = () => {
                     <p style={currentStyles.summaryValue}>{formData.firstName} {formData.lastName}</p>
                   </div>
                 )}
+
+                <div>
+                  <p style={currentStyles.summaryLabel}>Reporting As</p>
+                  <p style={currentStyles.summaryValue}>{formData.reporterRole || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <p style={currentStyles.summaryLabel}>TUP Affiliation</p>
+                  <p style={currentStyles.summaryValue}>{formData.tupRole || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <p style={currentStyles.summaryLabel}>Department</p>
+                  <p style={currentStyles.summaryValue}>{formData.reporterDepartment || 'Not specified'}</p>
+                </div>
+
+                <div>
+                  <p style={currentStyles.summaryLabel}>Gender</p>
+                  <p style={currentStyles.summaryValue}>{formData.reporterGender || 'Prefer not to say'}</p>
+                </div>
 
                 <div>
                   <p style={currentStyles.summaryLabel}>Incident Date</p>

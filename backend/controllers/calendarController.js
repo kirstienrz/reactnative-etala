@@ -519,6 +519,7 @@ const User = require('../models/User');
 const Report = require('../models/report');
 const sendEmail = require('../utils/sendEmail');
 const crypto = require('crypto');
+const notificationController = require("./notificationController");
 
 // ✅ UPDATED: Send interview booking link with report ticket number
 const sendInterviewBookingLink = async (req, res) => {
@@ -1062,6 +1063,24 @@ const createCalendarEvent = async (req, res) => {
       data: event,
       message: 'Event created successfully'
     });
+
+    // 🔥 EMIT SOCKET EVENT FOR NEW BOOKING
+    const io = req.app.get("io");
+    if (io) {
+      io.to("admin-room").emit("new-booking", {
+        event: event
+      });
+
+      // ✅ SAVE PERSISTENT NOTIFICATION FOR ADMINS
+      notificationController.createNotification({
+        recipientRole: 'superadmin',
+        type: 'booking',
+        title: '📅 New Interview Booked',
+        content: `A new interview has been booked by ${event.extendedProps?.userName || 'a client'}. Mode: ${event.extendedProps?.mode}`,
+        metadata: { eventId: event._id },
+        link: '/superadmin/events'
+      });
+    }
 
   } catch (error) {
     console.error('❌ Error creating calendar event:', error);

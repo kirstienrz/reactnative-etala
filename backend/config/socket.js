@@ -5,6 +5,15 @@ const setupSocketIO = (io) => {
 
     // 🎫 Join ticket room (for viewing a specific ticket conversation)
     socket.on("join-ticket", (ticketNumber) => {
+      // Leave all previous ticket rooms before joining new one
+      const rooms = Array.from(socket.rooms);
+      rooms.forEach(room => {
+        if (room.startsWith('ticket-') && room !== `ticket-${ticketNumber}`) {
+          socket.leave(room);
+          console.log(`🚪 Socket ${socket.id} auto-left ${room}`);
+        }
+      });
+      
       socket.join(`ticket-${ticketNumber}`);
       console.log(`🎫 Socket ${socket.id} joined ticket-${ticketNumber}`);
     });

@@ -208,6 +208,7 @@ app.use("/api/documentation", require("./routes/documentationRoutes"));
 app.use("/api/finance", require("./routes/financeRoutes"));
 app.use("/api/tickets", require("./routes/tickets"));
 app.use("/api/admin-availability", require("./routes/adminAvailabilityRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 // ================= START SERVER =================
 const PORT = process.env.PORT || 5000;

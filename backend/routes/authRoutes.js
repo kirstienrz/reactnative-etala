@@ -201,9 +201,11 @@ router.post("/login", async (req, res) => {
       tupId: user.tupId,
       isFirstLogin: user.isFirstLogin,
       hasPin: user.hasPin,
-      firstName: user.firstName,    // ✅ ADD THIS
-      lastName: user.lastName,      // ✅ ADD THIS
-      email: user.email,            // ✅ ADD THIS
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      gender: user.gender,           // ✅ For auto-fill in report form
+      userType: user.userType,       // ✅ For auto-fill in report form (Student/Faculty)
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -285,9 +287,11 @@ router.post("/verify-pin", async (req, res) => {
       role: user.role,
       department: user.department,
       tupId: user.tupId,
-      firstName: user.firstName,    // ✅ ADD THIS
-      lastName: user.lastName,      // ✅ ADD THIS
-      email: user.email,            // ✅ ADD THIS
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      gender: user.gender,           // ✅ For auto-fill in report form
+      userType: user.userType,       // ✅ For auto-fill in report form
     });
   } catch (err) {
     console.error("💥 Server error:", err);

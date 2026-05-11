@@ -22,7 +22,8 @@ import {
   ChevronRight,
   Video,
   Menu,
-  X
+  X,
+  Bell
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/authSlice";
@@ -140,6 +141,13 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
             <SidebarSection title="Main" isCollapsed={isCollapsed && !isOpen}>
               <SidebarItem icon={<User size={18} />} label="My Profile" to="/superadmin/profile" isCollapsed={isCollapsed && !isOpen} onClick={() => setIsOpen(false)} />
               <SidebarItem icon={<Users size={18} />} label="User Management" to="/superadmin/users" isCollapsed={isCollapsed && !isOpen} onClick={() => setIsOpen(false)} />
+              <SidebarItem
+                icon={<Bell size={18} />}
+                label="Notifications"
+                to="/superadmin/notifications"
+                isCollapsed={isCollapsed && !isOpen}
+                onClick={() => setIsOpen(false)}
+              />
             </SidebarSection>
 
             {/* REPORT HANDLING */}
@@ -262,7 +270,7 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
           </button>
         </div>
       </div>
-      <LogoutModal 
+      <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={confirmLogout}

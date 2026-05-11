@@ -6,6 +6,7 @@ const cloudinary = require("../config/cloudinary");
 const sendEmail = require("../utils/sendEmail");
 const mongoose = require("mongoose");
 const { Readable } = require("stream"); // Use native stream
+const notificationController = require("./notificationController");
 
 // ✅ Utility: Generate unique ticket number
 const generateTicketNumber = (isAnonymous) => {
@@ -120,9 +121,25 @@ const createReport = async (req, res) => {
     // 🔥 EMIT SOCKET EVENT FOR NEW MESSAGE (if socket.io is available)
     const io = req.app.get("io");
     if (io) {
+      // Notify the specific ticket room
       io.to(`ticket-${report.ticketNumber}`).emit("new-message", {
         message: systemMessage,
         ticket: ticket
+      });
+      // Notify admins of the new ticket
+      io.to("admin-room").emit("new-ticket", {
+        ticket: ticket,
+        report: report
+      });
+
+      // ✅ SAVE PERSISTENT NOTIFICATION FOR ADMINS
+      notificationController.createNotification({
+        recipientRole: 'superadmin',
+        type: 'ticket',
+        title: '🆕 New Report Submitted',
+        content: `A new report has been submitted by ${displayName}. Ticket #${ticket.ticketNumber}`,
+        metadata: { ticketNumber: ticket.ticketNumber },
+        link: '/superadmin/reports'
       });
     }
 
@@ -321,6 +338,25 @@ const updateReportStatus = async (req, res) => {
       data: report,
       message: "Report status updated successfully"
     });
+
+    // 🔥 EMIT SOCKET EVENT FOR STATUS UPDATE
+    const io = req.app.get("io");
+    if (io && report.createdBy) {
+      io.to(`user-${report.createdBy._id || report.createdBy}`).emit("report-status-updated", {
+        report: report
+      });
+
+      // ✅ SAVE PERSISTENT NOTIFICATION FOR USER
+      notificationController.createNotification({
+        recipient: report.createdBy._id || report.createdBy,
+        recipientRole: 'user',
+        type: 'status_update',
+        title: '🔔 Report Status Updated',
+        content: `Your report #${report.ticketNumber} is now: ${report.status}`,
+        metadata: { ticketNumber: report.ticketNumber },
+        link: '/user/consultations'
+      });
+    }
   } catch (error) {
     console.error("Error updating report status:", error);
     res.status(500).json({

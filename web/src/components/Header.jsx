@@ -5,6 +5,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/authSlice";
 import LogoutModal from "./LogoutModal";
+import NotificationCenter from "./NotificationCenter";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -357,11 +358,15 @@ const Header = () => {
           {/* Right Section: Auth & Hamburger */}
           <div className="flex items-center gap-3">
             {isLoggedIn && (
-              <div className="hidden xl:block relative" ref={userDropdownRef}>
-                <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded-full transition-all font-bold border border-purple-100"
-                >
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:block">
+                  <NotificationCenter />
+                </div>
+                <div className="hidden xl:block relative" ref={userDropdownRef}>
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded-full transition-all font-bold border border-purple-100"
+                  >
                   <div className="w-6 h-6 bg-purple-700 text-white rounded-full flex items-center justify-center">
                     <User size={14} />
                   </div>
@@ -394,47 +399,48 @@ const Header = () => {
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Hamburger Toggle */}
-            <button
-              onClick={() => setIsMenuOpen(true)}
-              className="xl:hidden bg-purple-50 text-purple-900 p-2.5 hover:bg-purple-100 rounded-full transition-all border border-purple-100 shadow-sm"
-              aria-label="Open menu"
-            >
-              <Menu size={24} />
-            </button>
-          </div>
+          {/* Hamburger Toggle */}
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            className="xl:hidden bg-purple-50 text-purple-900 p-2.5 hover:bg-purple-100 rounded-full transition-all border border-purple-100 shadow-sm"
+            aria-label="Open menu"
+          >
+            <Menu size={24} />
+          </button>
         </div>
       </div>
+    </div>
 
-      <LogoutModal
-        isOpen={isLogoutModalOpen}
-        onClose={() => setIsLogoutModalOpen(false)}
-        onConfirm={confirmLogout}
-      />
+    <LogoutModal
+      isOpen={isLogoutModalOpen}
+      onClose={() => setIsLogoutModalOpen(false)}
+      onConfirm={confirmLogout}
+    />
 
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f1f1;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e5e7eb;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #d1d5db;
-        }
-      `}} />
-    </header>
+    <style dangerouslySetInnerHTML={{
+      __html: `
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e5e7eb;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #d1d5db;
+      }
+    `}} />
+  </header>
 
-    {typeof document !== "undefined" ? createPortal(mobileMenu, document.body) : null}
-    </>
-  );
+  {typeof document !== "undefined" ? createPortal(mobileMenu, document.body) : null}
+</>
+);
 };
 
 export default Header;
