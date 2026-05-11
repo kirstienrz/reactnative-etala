@@ -1,0 +1,441 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ETALA System Flowchart</title>
+<style>
+@page { size: A4 landscape; margin: 8mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #fff; }
+.page { width: 277mm; padding: 6mm; page-break-after: always; display: flex; flex-direction: column; align-items: center; }
+.page:last-child { page-break-after: avoid; }
+h2 { font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 3px; }
+.sub { font-size: 9px; color: #555; text-align: center; margin-bottom: 5px; }
+.legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 6px; font-size: 9px; flex-wrap: wrap; }
+.legend span { display: flex; align-items: center; gap: 4px; }
+@media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: ADMIN -->
+<div class="page">
+  <h2>ETALA System Flowchart — ADMIN</h2>
+  <p class="sub">GAD Reporting &amp; Management System | Technological University of the Philippines</p>
+  <div class="legend">
+    <span>
+      <svg width="36" height="16"><ellipse cx="18" cy="8" rx="16" ry="7" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Start/End
+    </span>
+    <span>
+      <svg width="36" height="16"><rect x="2" y="2" width="32" height="12" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Process
+    </span>
+    <span>
+      <svg width="36" height="16"><polygon points="18,1 34,8 18,15 2,8" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Decision
+    </span>
+    <span>
+      <svg width="36" height="16"><polygon points="6,2 34,2 30,14 2,14" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Input/Output
+    </span>
+  </div>
+
+  <svg width="400" height="800" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+        <path d="M0,0 L7,3.5 L0,7 Z" fill="black"/>
+      </marker>
+    </defs>
+
+    <!-- 1. OVAL: Start cy=30 -->
+    <ellipse cx="150" cy="30" rx="60" ry="16" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="34" font-size="10" text-anchor="middle" font-family="Arial">Start</text>
+
+    <!-- Arrow 1→2 -->
+    <line x1="150" y1="46" x2="150" y2="56" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 2. RECT: Open App / Web y=58 -->
+    <rect x="80" y="58" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="78" font-size="10" text-anchor="middle" font-family="Arial">Open App / Web</text>
+
+    <!-- Arrow 2→3 -->
+    <line x1="150" y1="90" x2="150" y2="108" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 3. RECT: Enter Credentials y=110 -->
+    <rect x="80" y="110" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="130" font-size="10" text-anchor="middle" font-family="Arial">Enter Credentials</text>
+
+    <!-- Arrow 3→4 -->
+    <line x1="150" y1="142" x2="150" y2="152" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 4. DIAMOND: Valid? cy=176 -->
+    <polygon points="150,152 194,176 150,200 106,176" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="180" font-size="10" text-anchor="middle" font-family="Arial">Valid?</text>
+
+    <!-- No branch: right to Show Error, then back up to Enter Credentials -->
+    <!-- Right line from diamond -->
+    <line x1="194" y1="176" x2="260" y2="176" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+    <!-- Show Error box -->
+    <rect x="260" y="160" width="100" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="310" y="180" font-size="10" text-anchor="middle" font-family="Arial">Show Error</text>
+    <!-- Label "No" -->
+    <text x="222" y="170" font-size="9" text-anchor="middle" font-family="Arial">No</text>
+    <!-- Line up from Show Error back to Enter Credentials level -->
+    <line x1="360" y1="160" x2="360" y2="126" stroke="black" stroke-width="1.2"/>
+    <line x1="360" y1="126" x2="222" y2="126" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- Yes: continue down -->
+    <line x1="150" y1="200" x2="150" y2="220" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+    <text x="158" y="214" font-size="9" font-family="Arial">Yes</text>
+
+    <!-- 5. RECT: Admin Dashboard y=222 -->
+    <rect x="80" y="222" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="242" font-size="10" text-anchor="middle" font-family="Arial">Admin Dashboard</text>
+
+    <!-- Arrow 5→6 -->
+    <line x1="150" y1="254" x2="150" y2="272" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 6. RECT: Receive Notification y=274 -->
+    <rect x="80" y="274" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="294" font-size="10" text-anchor="middle" font-family="Arial">Receive Notification</text>
+
+    <!-- Arrow 6→7 -->
+    <line x1="150" y1="306" x2="150" y2="324" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 7. RECT: Review Report y=326 -->
+    <rect x="80" y="326" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="346" font-size="10" text-anchor="middle" font-family="Arial">Review Report</text>
+
+    <!-- Arrow 7→8 -->
+    <line x1="150" y1="358" x2="150" y2="368" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 8. DIAMOND: Referral Type? cy=392 -->
+    <polygon points="150,368 194,392 150,416 106,392" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="396" font-size="9" text-anchor="middle" font-family="Arial">Referral Type?</text>
+
+    <!-- Left branch: Dept. Referral -->
+    <line x1="106" y1="392" x2="40" y2="392" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+    <text x="72" y="386" font-size="9" text-anchor="middle" font-family="Arial">Dept.</text>
+    <rect x="0" y="406" width="80" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="40" y="421" font-size="9" text-anchor="middle" font-family="Arial">Dept.</text>
+    <text x="40" y="432" font-size="9" text-anchor="middle" font-family="Arial">Referral</text>
+    <!-- Left branch down to merge -->
+    <line x1="40" y1="438" x2="40" y2="458" stroke="black" stroke-width="1.2"/>
+    <line x1="40" y1="458" x2="80" y2="458" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- Right branch: Agency Referral -->
+    <line x1="194" y1="392" x2="260" y2="392" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+    <text x="228" y="386" font-size="9" text-anchor="middle" font-family="Arial">Agency</text>
+    <rect x="220" y="406" width="80" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="260" y="421" font-size="9" text-anchor="middle" font-family="Arial">Agency</text>
+    <text x="260" y="432" font-size="9" text-anchor="middle" font-family="Arial">Referral</text>
+    <!-- Right branch down to merge -->
+    <line x1="260" y1="438" x2="260" y2="458" stroke="black" stroke-width="1.2"/>
+    <line x1="260" y1="458" x2="220" y2="458" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- Center continues down from diamond -->
+    <line x1="150" y1="416" x2="150" y2="456" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 9. RECT: Update Status y=458 -->
+    <rect x="80" y="458" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="478" font-size="10" text-anchor="middle" font-family="Arial">Update Status</text>
+
+    <!-- Arrow 9→10 -->
+    <line x1="150" y1="490" x2="150" y2="508" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 10. RECT: Mark Resolved y=510 -->
+    <rect x="80" y="510" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="530" font-size="10" text-anchor="middle" font-family="Arial">Mark Resolved</text>
+
+    <!-- Arrow 10→11 -->
+    <line x1="150" y1="542" x2="150" y2="560" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 11. RECT: View Booking Requests y=562 -->
+    <rect x="80" y="562" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="582" font-size="10" text-anchor="middle" font-family="Arial">View Booking Requests</text>
+
+    <!-- Arrow 11→12 -->
+    <line x1="150" y1="594" x2="150" y2="604" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 12. DIAMOND: Available? cy=628 -->
+    <polygon points="150,604 194,628 150,652 106,628" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="632" font-size="10" text-anchor="middle" font-family="Arial">Available?</text>
+
+    <!-- Left branch: Reschedule -->
+    <line x1="106" y1="628" x2="40" y2="628" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+    <text x="72" y="622" font-size="9" text-anchor="middle" font-family="Arial">No</text>
+    <rect x="0" y="642" width="80" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="40" y="662" font-size="9" text-anchor="middle" font-family="Arial">Reschedule</text>
+    <line x1="40" y1="674" x2="40" y2="690" stroke="black" stroke-width="1.2"/>
+    <line x1="40" y1="690" x2="80" y2="690" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- Right branch: Confirm Slot -->
+    <line x1="194" y1="628" x2="260" y2="628" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+    <text x="228" y="622" font-size="9" text-anchor="middle" font-family="Arial">Yes</text>
+    <rect x="220" y="642" width="80" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="260" y="662" font-size="9" text-anchor="middle" font-family="Arial">Confirm Slot</text>
+    <line x1="260" y1="674" x2="260" y2="690" stroke="black" stroke-width="1.2"/>
+    <line x1="260" y1="690" x2="220" y2="690" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- Center continues down from diamond -->
+    <line x1="150" y1="652" x2="150" y2="688" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 13. RECT: Notify User y=690 -->
+    <rect x="80" y="690" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="710" font-size="10" text-anchor="middle" font-family="Arial">Notify User</text>
+
+    <!-- Arrow 13→14 -->
+    <line x1="150" y1="722" x2="150" y2="740" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 14. RECT: Mark Reviewed y=742 -->
+    <rect x="80" y="742" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="762" font-size="10" text-anchor="middle" font-family="Arial">Mark Reviewed</text>
+
+    <!-- Arrow 14→15 -->
+    <line x1="150" y1="774" x2="150" y2="782" stroke="black" stroke-width="1.2" marker-end="url(#ar)"/>
+
+    <!-- 15. OVAL: End cy=798 -->
+    <ellipse cx="150" cy="798" rx="60" ry="16" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="802" font-size="10" text-anchor="middle" font-family="Arial">End</text>
+
+  </svg>
+</div>
+
+<!-- PAGE 2: USER -->
+<div class="page">
+  <h2>ETALA System Flowchart — USER</h2>
+  <p class="sub">GAD Reporting &amp; Management System | Technological University of the Philippines</p>
+  <div class="legend">
+    <span>
+      <svg width="36" height="16"><ellipse cx="18" cy="8" rx="16" ry="7" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Start/End
+    </span>
+    <span>
+      <svg width="36" height="16"><rect x="2" y="2" width="32" height="12" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Process
+    </span>
+    <span>
+      <svg width="36" height="16"><polygon points="18,1 34,8 18,15 2,8" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Decision
+    </span>
+    <span>
+      <svg width="36" height="16"><polygon points="6,2 34,2 30,14 2,14" fill="white" stroke="black" stroke-width="1.5"/></svg>
+      Input/Output
+    </span>
+  </div>
+
+  <svg width="400" height="1120" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="ar2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+        <path d="M0,0 L7,3.5 L0,7 Z" fill="black"/>
+      </marker>
+    </defs>
+
+    <!-- 1. OVAL: Start cy=30 -->
+    <ellipse cx="150" cy="30" rx="60" ry="16" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="34" font-size="10" text-anchor="middle" font-family="Arial">Start</text>
+
+    <!-- Arrow 1→2 -->
+    <line x1="150" y1="46" x2="150" y2="66" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 2. DIAMOND: New User? cy=90 -->
+    <polygon points="150,66 194,90 150,114 106,90" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="94" font-size="10" text-anchor="middle" font-family="Arial">New User?</text>
+
+    <!-- Yes branch: right side — Fill Sign Up Form → Verify Email → Activate Account → merge back -->
+    <line x1="194" y1="90" x2="250" y2="90" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <text x="222" y="84" font-size="9" text-anchor="middle" font-family="Arial">Yes</text>
+
+    <!-- Fill Sign Up Form (PARA) -->
+    <polygon points="242,74 322,74 310,106 230,106" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="276" y="89" font-size="9" text-anchor="middle" font-family="Arial">Fill Sign Up</text>
+    <text x="276" y="100" font-size="9" text-anchor="middle" font-family="Arial">Form</text>
+
+    <!-- Arrow to Verify Email -->
+    <line x1="310" y1="90" x2="340" y2="90" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- Verify Email (RECT) -->
+    <rect x="340" y="74" width="50" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="365" y="87" font-size="8" text-anchor="middle" font-family="Arial">Verify</text>
+    <text x="365" y="98" font-size="8" text-anchor="middle" font-family="Arial">Email</text>
+
+    <!-- Arrow down to Activate Account -->
+    <line x1="365" y1="106" x2="365" y2="120" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- Activate Account (RECT) -->
+    <rect x="340" y="120" width="50" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="365" y="133" font-size="8" text-anchor="middle" font-family="Arial">Activate</text>
+    <text x="365" y="144" font-size="8" text-anchor="middle" font-family="Arial">Account</text>
+
+    <!-- Merge back to center at y=164 -->
+    <line x1="365" y1="152" x2="365" y2="164" stroke="black" stroke-width="1.2"/>
+    <line x1="365" y1="164" x2="222" y2="164" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- No: continue down from diamond -->
+    <line x1="150" y1="114" x2="150" y2="146" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <text x="158" y="134" font-size="9" font-family="Arial">No</text>
+
+    <!-- 3. PARA: Enter Login Credentials y=148 -->
+    <polygon points="92,148 232,148 220,180 80,180" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="156" y="163" font-size="10" text-anchor="middle" font-family="Arial">Enter Login</text>
+    <text x="156" y="174" font-size="10" text-anchor="middle" font-family="Arial">Credentials</text>
+
+    <!-- Arrow 3→4 -->
+    <line x1="150" y1="180" x2="150" y2="184" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 4. DIAMOND: Has PIN? cy=208 -->
+    <polygon points="150,184 194,208 150,232 106,208" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="212" font-size="10" text-anchor="middle" font-family="Arial">Has PIN?</text>
+
+    <!-- Yes left branch: Use PIN Login -->
+    <line x1="106" y1="208" x2="40" y2="208" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <text x="72" y="202" font-size="9" text-anchor="middle" font-family="Arial">Yes</text>
+    <rect x="0" y="222" width="80" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="40" y="237" font-size="9" text-anchor="middle" font-family="Arial">Use PIN</text>
+    <text x="40" y="248" font-size="9" text-anchor="middle" font-family="Arial">Login</text>
+    <!-- Merge back -->
+    <line x1="40" y1="254" x2="40" y2="272" stroke="black" stroke-width="1.2"/>
+    <line x1="40" y1="272" x2="80" y2="272" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- No: continue down -->
+    <line x1="150" y1="232" x2="150" y2="254" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <text x="158" y="246" font-size="9" font-family="Arial">No</text>
+
+    <!-- 5. RECT: User Dashboard y=256 -->
+    <rect x="80" y="256" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="276" font-size="10" text-anchor="middle" font-family="Arial">User Dashboard</text>
+
+    <!-- Arrow 5→6 -->
+    <line x1="150" y1="288" x2="150" y2="306" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 6. RECT: Open Report Form y=308 -->
+    <rect x="80" y="308" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="328" font-size="10" text-anchor="middle" font-family="Arial">Open Report Form</text>
+
+    <!-- Arrow 6→7 -->
+    <line x1="150" y1="340" x2="150" y2="358" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 7. PARA: Fill Report Details y=360 -->
+    <polygon points="92,360 232,360 220,392 80,392" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="156" y="375" font-size="10" text-anchor="middle" font-family="Arial">Fill Report</text>
+    <text x="156" y="386" font-size="10" text-anchor="middle" font-family="Arial">Details</text>
+
+    <!-- Arrow 7→8 -->
+    <line x1="150" y1="392" x2="150" y2="402" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 8. DIAMOND: Anonymous? cy=426 -->
+    <polygon points="150,402 194,426 150,450 106,426" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="430" font-size="10" text-anchor="middle" font-family="Arial">Anonymous?</text>
+
+    <!-- Yes left: Submit Anonymously -->
+    <line x1="106" y1="426" x2="40" y2="426" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <text x="72" y="420" font-size="9" text-anchor="middle" font-family="Arial">Yes</text>
+    <rect x="0" y="440" width="80" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="40" y="455" font-size="8" text-anchor="middle" font-family="Arial">Submit</text>
+    <text x="40" y="466" font-size="8" text-anchor="middle" font-family="Arial">Anonymously</text>
+    <line x1="40" y1="472" x2="40" y2="492" stroke="black" stroke-width="1.2"/>
+    <line x1="40" y1="492" x2="80" y2="492" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- No right: Submit with Identity -->
+    <line x1="194" y1="426" x2="260" y2="426" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+    <text x="228" y="420" font-size="9" text-anchor="middle" font-family="Arial">No</text>
+    <rect x="220" y="440" width="80" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="260" y="455" font-size="8" text-anchor="middle" font-family="Arial">Submit with</text>
+    <text x="260" y="466" font-size="8" text-anchor="middle" font-family="Arial">Identity</text>
+    <line x1="260" y1="472" x2="260" y2="492" stroke="black" stroke-width="1.2"/>
+    <line x1="260" y1="492" x2="220" y2="492" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- Center continues down from diamond -->
+    <line x1="150" y1="450" x2="150" y2="490" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 9. PARA: Receive Reference No. y=492 -->
+    <polygon points="92,492 232,492 220,524 80,524" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="156" y="507" font-size="10" text-anchor="middle" font-family="Arial">Receive</text>
+    <text x="156" y="518" font-size="10" text-anchor="middle" font-family="Arial">Reference No.</text>
+
+    <!-- Arrow 9→10 -->
+    <line x1="150" y1="524" x2="150" y2="542" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 10. RECT: Track Report Status y=544 -->
+    <rect x="80" y="544" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="564" font-size="10" text-anchor="middle" font-family="Arial">Track Report Status</text>
+
+    <!-- Arrow 10→11 -->
+    <line x1="150" y1="576" x2="150" y2="594" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 11. RECT: Request Consultation y=596 -->
+    <rect x="80" y="596" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="616" font-size="10" text-anchor="middle" font-family="Arial">Request Consultation</text>
+
+    <!-- Arrow 11→12 -->
+    <line x1="150" y1="628" x2="150" y2="646" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 12. RECT: Link to Report y=648 -->
+    <rect x="80" y="648" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="668" font-size="10" text-anchor="middle" font-family="Arial">Link to Report</text>
+
+    <!-- Arrow 12→13 -->
+    <line x1="150" y1="680" x2="150" y2="698" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 13. RECT: Wait for Confirmation y=700 -->
+    <rect x="80" y="700" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="720" font-size="10" text-anchor="middle" font-family="Arial">Wait for Confirmation</text>
+
+    <!-- Arrow 13→14 -->
+    <line x1="150" y1="732" x2="150" y2="750" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 14. RECT: View Confirmed Schedule y=752 -->
+    <rect x="80" y="752" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="772" font-size="10" text-anchor="middle" font-family="Arial">View Confirmed Schedule</text>
+
+    <!-- Arrow 14→15 -->
+    <line x1="150" y1="784" x2="150" y2="802" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 15. RECT: Browse Content y=804 -->
+    <rect x="80" y="804" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="824" font-size="10" text-anchor="middle" font-family="Arial">Browse Content</text>
+
+    <!-- Arrow 15→16 -->
+    <line x1="150" y1="836" x2="150" y2="854" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 16. RECT: Browse Programs & Events y=856 -->
+    <rect x="80" y="856" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="871" font-size="10" text-anchor="middle" font-family="Arial">Browse Programs</text>
+    <text x="150" y="882" font-size="10" text-anchor="middle" font-family="Arial">&amp; Events</text>
+
+    <!-- Arrow 16→17 -->
+    <line x1="150" y1="888" x2="150" y2="906" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 17. RECT: Open Chatbot / Send Message y=908 -->
+    <rect x="80" y="908" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="923" font-size="10" text-anchor="middle" font-family="Arial">Open Chatbot /</text>
+    <text x="150" y="934" font-size="10" text-anchor="middle" font-family="Arial">Send Message</text>
+
+    <!-- Arrow 17→18 -->
+    <line x1="150" y1="940" x2="150" y2="958" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 18. PARA: Submit Suggestion y=960 -->
+    <polygon points="92,960 232,960 220,992 80,992" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="156" y="975" font-size="10" text-anchor="middle" font-family="Arial">Submit</text>
+    <text x="156" y="986" font-size="10" text-anchor="middle" font-family="Arial">Suggestion</text>
+
+    <!-- Arrow 18→19 -->
+    <line x1="150" y1="992" x2="150" y2="1010" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 19. RECT: Receive Confirmation y=1012 -->
+    <rect x="80" y="1012" width="140" height="32" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="1032" font-size="10" text-anchor="middle" font-family="Arial">Receive Confirmation</text>
+
+    <!-- Arrow 19→20 -->
+    <line x1="150" y1="1044" x2="150" y2="1058" stroke="black" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+    <!-- 20. OVAL: End cy=1076 -->
+    <ellipse cx="150" cy="1076" rx="60" ry="16" fill="white" stroke="black" stroke-width="1.5"/>
+    <text x="150" y="1080" font-size="10" text-anchor="middle" font-family="Arial">End</text>
+
+  </svg>
+</div>
+
+</body>
+</html>
