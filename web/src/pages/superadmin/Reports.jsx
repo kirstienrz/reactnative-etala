@@ -244,13 +244,13 @@ const AdminReports = () => {
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const incidentTypes = Array.isArray(report.incidentTypes) ? report.incidentTypes.join(", ") : (report.incidentTypes || "N/A");
+    const salaysay = report.salaysay || "No statement provided";
     const submittedAtDate = report.submittedAt ? new Date(report.submittedAt).toLocaleDateString() : "N/A";
 
     const overviewData = [
       ["Field", "Content"],
       ["Incident Category", report.category || "N/A"],
-      ["Incident Types", incidentTypes],
+      ["Salaysay", salaysay],
       ["Date Reported", submittedAtDate],
       ["Current Case Status", report.caseStatus || "N/A"]
     ];
@@ -408,8 +408,7 @@ const AdminReports = () => {
 
     try {
       const res = await analyzeReportSeverity({
-        incidentDescription: reportData.incidentDescription,
-        incidentTypes: reportData.incidentTypes,
+        salaysay: reportData.salaysay,
         reportId: reportId, // Send actual report ID
         additionalContext: {
           timestamp: reportData.timestamp,
@@ -781,16 +780,12 @@ const AdminReports = () => {
     return icons[caseStatus] || <AlertCircle size={14} />;
   };
 
-  const allCategories = [...new Set(
-    [...reports, ...archivedReports]
-      .flatMap(r => r.incidentTypes || [])
-      .filter(Boolean)
-  )];
+  const allCategories = ["General"]; // Simplified as per removal of incident types
 
   const filteredReports = (activeTab === "active" ? reports : archivedReports).filter(r => {
     const matchesSearch = !searchTerm ||
       r.ticketNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.incidentDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.salaysay?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.createdBy?.tupId || "").toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesReadStatus = readStatusFilter === "All" ||
@@ -1234,8 +1229,7 @@ const AdminReports = () => {
                                 onClick={() => {
                                   setSelectedReportForAnalysis(report);
                                   analyzeSentiment(report._id, {
-                                    incidentDescription: report.incidentDescription,
-                                    incidentTypes: report.incidentTypes,
+                                    salaysay: report.salaysay,
                                     timestamp: report.submittedAt
                                   });
                                 }}
@@ -1344,8 +1338,7 @@ const AdminReports = () => {
                                   onClick={() => {
                                     setSelectedReportForAnalysis(report);
                                     analyzeSentiment(report._id, {
-                                      incidentDescription: report.incidentDescription,
-                                      incidentTypes: report.incidentTypes,
+                                      salaysay: report.salaysay,
                                       timestamp: report.submittedAt
                                     });
                                   }}
@@ -1555,8 +1548,7 @@ const AdminReports = () => {
                           for (const report of unanalyzed) {
                             try {
                               const res = await analyzeReportSeverity({
-                                incidentDescription: report.incidentDescription,
-                                incidentTypes: report.incidentTypes,
+                                salaysay: report.salaysay,
                                 reportId: report._id,
                                 additionalContext: {
                                   timestamp: report.submittedAt,
@@ -2074,20 +2066,11 @@ const AdminReports = () => {
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Incident Information</h3>
                     <div className="space-y-4">
+                      {/* Incident Type removed as per request */}
                       <div>
-                        <label className="text-sm text-gray-600 mb-2 block">Incident Type(s)</label>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedReport.incidentTypes?.map((type, index) => (
-                            <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                              {type}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600 mb-2 block">Description</label>
+                        <label className="text-sm text-gray-600 mb-2 block">Salaysay (Statement)</label>
                         <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg text-sm">
-                          {selectedReport.incidentDescription || "No description provided"}
+                          {selectedReport.salaysay || "No statement provided"}
                         </p>
                       </div>
                     </div>
@@ -2162,8 +2145,7 @@ const AdminReports = () => {
                   {!sentimentResults[selectedReport._id] && (
                     <button
                       onClick={() => analyzeSentiment(selectedReport._id, {
-                        incidentDescription: selectedReport.incidentDescription,
-                        incidentTypes: selectedReport.incidentTypes,
+                        salaysay: selectedReport.salaysay,
                         timestamp: selectedReport.submittedAt
                       })}
                       disabled={analyzing}

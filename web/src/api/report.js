@@ -196,9 +196,9 @@ export const updateReportByUser = async (reportId, payload) => {
 };
 
 // api/report.js - Idagdag ito sa mga existing na exports
-export const getReportAnalytics = async () => {
+export const getReportAnalytics = async (year) => {
   try {
-    const response = await API.get('/reports/analytics');
+    const response = await API.get(`/reports/analytics${year ? `?year=${year}` : ''}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching report analytics:', error);

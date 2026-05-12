@@ -13,6 +13,7 @@ import {
   AlertCircle, Bell, PieChart as PieChartIcon, Archive,
   Target, TrendingDown, BarChart3, Calendar, X
 } from 'lucide-react';
+import HeatmapTable from '../../components/HeatmapTable';
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
@@ -21,8 +22,10 @@ const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeChart, setActiveChart] = useState('userDept');
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'reports', 'comparison'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'reports', 'comparison', 'heatmap'
   const [showNotification, setShowNotification] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [heatmapView, setHeatmapView] = useState('department');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,7 +35,7 @@ const SuperAdminDashboard = () => {
 
         const [userRes, reportRes] = await Promise.all([
           getUserAnalytics(),
-          getReportAnalytics()
+          getReportAnalytics(selectedYear)
         ]);
 
         setUserData(userRes);
@@ -55,7 +58,7 @@ const SuperAdminDashboard = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [selectedYear]);
 
   if (loading) {
     return (
@@ -221,6 +224,14 @@ const SuperAdminDashboard = () => {
             : 'text-gray-500 hover:text-gray-700'}`}
         >
           Comparison
+        </button>
+        <button
+          onClick={() => setActiveTab('heatmap')}
+          className={`px-4 py-2 font-medium ${activeTab === 'heatmap'
+            ? 'border-b-2 border-blue-600 text-blue-600'
+            : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          Heatmap Analysis
         </button>
       </div>
 
@@ -629,6 +640,81 @@ const SuperAdminDashboard = () => {
                 </div>
                 <BarChart3 className="w-8 h-8 text-cyan-500 opacity-30" />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'heatmap' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+              <div className="max-w-3xl">
+                <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Heatmap Analysis</h2>
+                <p className="text-gray-500 text-lg">Visualize the concentration of incident reports across departments and time periods. Darker cells represent higher activity.</p>
+              </div>
+              
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2 min-w-[200px]">
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">View Perspective</label>
+                  <div className="flex bg-gray-50 p-1 rounded-2xl border border-gray-200 shadow-inner">
+                    <button
+                      onClick={() => setHeatmapView('department')}
+                      className={`flex-1 py-2 px-4 rounded-xl text-xs font-black transition-all ${heatmapView === 'department' ? 'bg-white text-violet-600 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      DEPARTMENT
+                    </button>
+                    <button
+                      onClick={() => setHeatmapView('gender')}
+                      className={`flex-1 py-2 px-4 rounded-xl text-xs font-black transition-all ${heatmapView === 'gender' ? 'bg-white text-violet-600 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      GENDER
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 min-w-[140px]">
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Select Year</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    className="bg-gray-50 border border-gray-200 text-gray-900 text-sm font-bold rounded-xl focus:ring-violet-500 focus:border-violet-500 block w-full p-3 shadow-sm hover:border-violet-300 transition-all cursor-pointer"
+                  >
+                    {[0, 1, 2, 3].map(offset => {
+                      const year = new Date().getFullYear() - offset;
+                      return <option key={year} value={year}>{year}</option>
+                    })}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-12">
+              {heatmapView === 'department' && reportAnalytics?.heatmaps?.deptVsMonth && (
+                <HeatmapTable 
+                  title="Monthly Report Volume by Department"
+                  subtitle={`Tracking incident distribution across campus departments for ${selectedYear}`}
+                  rows={reportAnalytics.heatmaps.deptVsMonth.rows}
+                  columns={reportAnalytics.heatmaps.deptVsMonth.columns}
+                  data={reportAnalytics.heatmaps.deptVsMonth.data}
+                  rowLabel="Department"
+                  columnLabel="Month"
+                  colorScheme="teal"
+                />
+              )}
+
+              {heatmapView === 'gender' && reportAnalytics?.heatmaps?.genderVsCategory && (
+                <HeatmapTable 
+                  title="Incident Distribution by Gender & Category"
+                  subtitle={`Analyzing incident types across different gender perspectives for ${selectedYear}`}
+                  rows={reportAnalytics.heatmaps.genderVsCategory.rows}
+                  columns={reportAnalytics.heatmaps.genderVsCategory.columns}
+                  data={reportAnalytics.heatmaps.genderVsCategory.data}
+                  rowLabel="Gender"
+                  columnLabel="Category"
+                  colorScheme="vibrant"
+                />
+              )}
             </div>
           </div>
         </div>

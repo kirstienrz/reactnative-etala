@@ -650,7 +650,7 @@ const ReportForm = () => {
     perpBarangay: '', perpRelationship: '',
 
     // Incident Information
-    incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+    salaysay: '', latestIncidentDate: '',
     incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
     placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
     witnessAccount: '', witnessDate: '',
@@ -682,21 +682,6 @@ const ReportForm = () => {
   const disabilities = ['Without Disability', 'Permanent Disability', 'Temporary Disability'];
   const relationships = ['Current spouse/partner', 'Former spouse/partner', 'Parent/Guardian', 'Sibling', 'Relative', 'Teacher/Professor', 'Employer/Supervisor', 'Classmate', 'Neighbor', 'Stranger', 'Other'];
   const places = ['House', 'Work', 'School', 'Commercial Place', 'Religious Institution', 'Medical Treatment', 'Transport', 'Other'];
-  const incidentTypesList = [
-    'RA 9262 - Sexual Abuse',
-    'RA 9262 - Psychological',
-    'RA 9262 - Physical',
-    'RA 9262 - Economic',
-    'RA 8353 - Rape by Sexual Intercourse',
-    'RA 8353 - Rape by Sexual Assault',
-    'RA 7877 - Sexual Harassment',
-    'RA 7610 - Child Abuse',
-    'RA 9208 - Trafficking',
-    'RA 9775 - Child Pornography',
-    'RA 9995 - Photo/Video Voyeurism',
-    'RPC Art 300 - Acts of Lasciviousness',
-    'Other'
-  ];
 
   useEffect(() => {
     loadSavedProgress();
@@ -835,14 +820,6 @@ const ReportForm = () => {
     }));
   };
 
-  const toggleIncidentType = (type) => {
-    setFormData(prev => ({
-      ...prev,
-      incidentTypes: prev.incidentTypes.includes(type)
-        ? prev.incidentTypes.filter(t => t !== type)
-        : [...prev.incidentTypes, type],
-    }));
-  };
 
   // const handleSubmit = async () => {
   //   if (!formData.confirmAccuracy || !formData.confirmConfidentiality) {
@@ -1058,7 +1035,7 @@ const ReportForm = () => {
 
       // CALL AI CHECK
       const aiCheck = await checkSpamReport({
-        incidentDescription: formData.incidentDescription || "",
+        salaysay: formData.salaysay || "",
         additionalNotes: formData.additionalNotes || "",
         witnessAccount: formData.witnessAccount || "",
       });
@@ -1162,7 +1139,7 @@ const ReportForm = () => {
         perpEducation: '', perpNationality: '', perpPassport: '', perpOccupation: '',
         perpReligion: '', perpRegion: '', perpProvince: '', perpCityMun: '',
         perpBarangay: '', perpRelationship: '',
-        incidentTypes: [], incidentDescription: '', latestIncidentDate: '',
+        salaysay: '', latestIncidentDate: '',
         incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
         placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
         witnessAccount: '', witnessDate: '',
@@ -1190,12 +1167,12 @@ const ReportForm = () => {
       }
     }
     if (currentStep === 2) {
-      if (!formData.latestIncidentDate || !formData.incidentDescription || !formData.placeOfIncident || !formData.incidentBarangay) {
+      if (!formData.latestIncidentDate || !formData.salaysay || !formData.placeOfIncident || !formData.incidentBarangay) {
         showAlert('Required', 'Please fill in all incident details.');
         return false;
       }
-      if (formData.incidentDescription.trim().length < 10) {
-        showAlert('Invalid Description', 'Description of Incident must be at least 10 characters long.');
+      if (formData.salaysay.trim().length < 10) {
+        showAlert('Invalid Statement', 'Salaysay must be at least 10 characters long.');
         return false;
       }
     }
@@ -2088,14 +2065,14 @@ const ReportForm = () => {
 
             <div style={currentStyles.inputGroup}>
               <label style={currentStyles.inputLabel}>
-                Description of Incident
+                Salaysay (Incident Statement)
                 <span style={currentStyles.requiredStar}> *</span>
               </label>
               <textarea
                 style={{ ...currentStyles.input, minHeight: '200px', resize: 'vertical' }}
                 placeholder="Provide a detailed description of what happened, including dates, times, locations, and any other relevant information..."
-                value={formData.incidentDescription}
-                onChange={(e) => setFormData(prev => ({ ...prev, incidentDescription: e.target.value }))}
+                value={formData.salaysay}
+                onChange={(e) => setFormData(prev => ({ ...prev, salaysay: e.target.value }))}
               />
             </div>
           </div>
@@ -2307,12 +2284,10 @@ const ReportForm = () => {
                   <p style={currentStyles.summaryValue}>{formData.latestIncidentDate || 'Not provided'}</p>
                 </div>
 
-                <div>
-                  <p style={currentStyles.summaryLabel}>Incident Types</p>
-                  <p style={currentStyles.summaryValue}>
-                    {formData.incidentTypes.length > 0
-                      ? formData.incidentTypes.slice(0, 2).join(', ') + (formData.incidentTypes.length > 2 ? `, +${formData.incidentTypes.length - 2} more` : '')
-                      : 'Not specified'}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <p style={currentStyles.summaryLabel}>Salaysay (Statement)</p>
+                  <p style={{ ...currentStyles.summaryValue, whiteSpace: 'pre-wrap', maxHeight: '100px', overflowY: 'auto', backgroundColor: '#f9fafb', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '4px' }}>
+                    {formData.salaysay || 'No statement provided'}
                   </p>
                 </div>
               </div>

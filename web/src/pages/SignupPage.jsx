@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff, Calendar } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Calendar, Shield, X } from "lucide-react";
 import { toast } from "react-toastify";
-import { signup } from "../api/auth"; // iyong signup API
+import { signup } from "../api/auth"; 
+import PolicyModal from "../components/PolicyModal";
 
 const departments = [
   { code: 'BASD', name: 'Basic Arts and Sciences Department' },
@@ -24,6 +25,8 @@ const SignupPage = () => {
   const [gender, setGender] = useState("");
   const [birthday, setBirthday] = useState(""); // ✅ new
   const [loading, setLoading] = useState(false);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const [policyTab, setPolicyTab] = useState('terms');
 
   const showDepartment = userType === "Student" || userType === "Faculty" || userType === "Staff";
 
@@ -76,7 +79,13 @@ const SignupPage = () => {
     setLoading(true);
 
     try {
-      // Validation
+      const policyChecked = document.getElementById('policy')?.checked;
+      if (!policyChecked) {
+        toast.warning("Please agree to the Terms and Conditions to proceed.");
+        setLoading(false);
+        return;
+      }
+
       if (
         !firstName ||
         !lastName ||
@@ -243,95 +252,128 @@ const SignupPage = () => {
               <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
             </div>
 
-            {/* Gender & Birthday */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  required
-                  className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Birthday <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                  <input
-                    type="date"
-                    value={birthday}
-                    onChange={(e) => setBirthday(e.target.value)}
-                    required
-                    className="w-full pl-11 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
+    // Gender & Birthday
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Gender <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={gender === "Male" || gender === "Female" || gender === "LGBTQ+" || gender === "Prefer not to say" ? gender : (gender ? "Other" : "")}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === "Other") {
+              setGender(""); // clear to let user type
+            } else {
+              setGender(val);
+            }
+          }}
+          required
+          className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+        >
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="LGBTQ+">LGBTQ+</option>
+          <option value="Prefer not to say">Prefer not to say</option>
+          <option value="Other">Other (Please specify)</option>
+        </select>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pl-11 pr-12 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white text-gray-400 hover:text-gray-600 p-1 rounded-full border border-gray-200 dark:bg-white dark:text-gray-400 dark:hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
+        {/* Other Gender Input */}
+        {!(gender === "Male" || gender === "Female" || gender === "LGBTQ+" || gender === "Prefer not to say" || gender === "") && (
+          <input
+            type="text"
+            placeholder="Please specify your gender"
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="w-full mt-2 pl-3 pr-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all text-sm"
+          />
+        )}
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Birthday <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+          <input
+            type="date"
+            value={birthday}
+            onChange={(e) => setBirthday(e.target.value)}
+            required
+            className="w-full pl-11 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+          />
+        </div>
+      </div>
+    </div>
 
-            {/* Department (conditional) */}
-            {showDepartment && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Department <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  required
-                  className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-                >
-                  <option value="">Select Department</option>
-                  {departments.map((d) => (
-                    <option key={d.code} value={d.code}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+    {/* Password */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Password <span className="text-red-500">*</span>
+      </label>
+      <div className="relative">
+        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+        <input
+          type={showPassword ? "text" : "password"}
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="w-full pl-11 pr-12 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+          minLength={6}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white text-gray-400 hover:text-gray-600 p-1 rounded-full border border-gray-200"
+        >
+          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+    </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {loading ? "Signing up..." : "Sign Up"}
-            </button>
-          </form>
+    {/* Department (conditional) */}
+    {showDepartment && (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Department <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          required
+          className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+        >
+          <option value="">Select Department</option>
+          {departments.map((d) => (
+            <option key={d.code} value={d.code}>{d.name}</option>
+          ))}
+        </select>
+      </div>
+    )}
+
+    {/* Policy / Terms Checkbox */}
+    <div className="flex items-start gap-3 p-4 bg-violet-50 rounded-2xl border border-violet-100">
+      <input
+        type="checkbox"
+        id="policy"
+        required
+        className="mt-1 w-5 h-5 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+      />
+      <label htmlFor="policy" className="text-xs text-gray-600 leading-relaxed">
+        I understand that providing false information or misusing this system is strictly prohibited. I agree to the <span onClick={() => { setPolicyTab('terms'); setIsPolicyModalOpen(true); }} className="text-violet-600 font-semibold cursor-pointer underline hover:text-violet-700 transition-colors">Terms of Use</span> and <span onClick={() => { setPolicyTab('privacy'); setIsPolicyModalOpen(true); }} className="text-violet-600 font-semibold cursor-pointer underline hover:text-violet-700 transition-colors">Privacy Policy</span> of ETALA.
+      </label>
+    </div>
+
+    <button
+      type="submit"
+      disabled={loading}
+      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-2"
+    >
+      {loading ? "Signing up..." : "Create Account"}
+    </button>
+  </form>
 
           <div className="mt-6 text-center text-sm text-gray-500">
             <p>
@@ -346,6 +388,12 @@ const SignupPage = () => {
           </div>
         </div>
       </div>
+
+      <PolicyModal 
+        isOpen={isPolicyModalOpen} 
+        onClose={() => setIsPolicyModalOpen(false)} 
+        initialTab={policyTab} 
+      />
     </div>
   );
 };

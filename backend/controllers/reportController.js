@@ -37,15 +37,7 @@ const createReport = async (req, res) => {
     const reporterDepartment = formData.reporterDepartment;
     console.log("📝 Reporter Department:", reporterDepartment); // Debug log
 
-    // Parse arrays if they're strings
-    if (typeof formData.incidentTypes === 'string') {
-      try {
-        formData.incidentTypes = JSON.parse(formData.incidentTypes);
-      } catch (e) {
-        console.error("Error parsing incidentTypes:", e);
-        formData.incidentTypes = [];
-      }
-    }
+    // salaysay (formerly incidentDescription) is passed directly from formData
 
     // Determine if anonymous
     const isAnonymous = formData.isAnonymous === "true" || formData.isAnonymous === true;
@@ -71,7 +63,7 @@ const createReport = async (req, res) => {
       isAnonymous: isAnonymous,
       status: "Open",
       lastMessageAt: new Date(),
-      lastMessage: formData.incidentDescription?.substring(0, 100) || "New report submitted",
+      lastMessage: formData.salaysay?.substring(0, 100) || "New report submitted",
     });
 
     await ticket.save();
@@ -978,14 +970,7 @@ const getReportAnalytics = async (req, res) => {
         statusCounts['Not Set'] += 1;
       }
 
-      // Incident types count
-      if (report.incidentTypes && Array.isArray(report.incidentTypes)) {
-        report.incidentTypes.forEach(type => {
-          if (type) {
-            incidentTypeCounts[type] = (incidentTypeCounts[type] || 0) + 1;
-          }
-        });
-      }
+      // Incident types analysis removed as per request
 
       // Department counts (reporterDepartment field)
       if (report.reporterDepartment) {
@@ -994,20 +979,19 @@ const getReportAnalytics = async (req, res) => {
       }
     });
 
-    // Monthly trends (last 6 months)
-    const months = [];
+    // Handle Year Filter
+    const { year } = req.query;
+    const currentYear = new Date().getFullYear();
+    const targetYear = year ? parseInt(year) : currentYear;
+
+    // Monthly trends (Jan to Dec of target year)
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthCounts = [];
     const monthArchivedCounts = [];
-    const now = new Date();
 
-    for (let i = 5; i >= 0; i--) {
-      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = month.toLocaleString('default', { month: 'short' });
-      months.push(monthName);
-
-      // Start and end of month
-      const startOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
-      const endOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    for (let i = 0; i < 12; i++) {
+      const startOfMonth = new Date(targetYear, i, 1);
+      const endOfMonth = new Date(targetYear, i + 1, 0, 23, 59, 59);
 
       // Count total reports this month
       const count = await Report.countDocuments({
@@ -1062,6 +1046,73 @@ const getReportAnalytics = async (req, res) => {
       ? Math.round((totalClosed / reports.length) * 100)
       : 0;
 
+    // Heatmap data: Department vs Incident Type, Month vs Incident Type, and Dept vs Month
+    const heatmapDeptIncident = {};
+    const heatmapMonthIncident = {};
+    const heatmapDeptMonth = {};
+    const heatmapGenderCategory = {};
+    const allDepartments = new Set();
+    const allIncidentTypes = new Set();
+    const allCategories = new Set(["Student-Student", "Student-Faculty", "Faculty-Student", "Student-Employee", "Employee-Student", "Faculty-Faculty", "Employee-Employee", "Faculty-Employee", "Employee-Faculty", "External", "Other"]);
+    const allGenders = new Set(["Male", "Female", "LGBTQ+", "Prefer not to say", "Other"]);
+    const allMonths = months;
+
+    reports.forEach(report => {
+      const dept = report.reporterDepartment || "Not Specified";
+      allDepartments.add(dept);
+
+      // Robustly collect incident types
+      let types = [];
+      if (Array.isArray(report.incidentTypes) && report.incidentTypes.length > 0) {
+        types = [...report.incidentTypes];
+      } else if (typeof report.incidentTypes === 'string' && report.incidentTypes.trim()) {
+        types = report.incidentTypes.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (report.incidentType) {
+        types = [report.incidentType];
+      }
+
+      if (report.otherIncidentType && (types.length === 0 || types.includes('Other'))) {
+        if (!types.includes(report.otherIncidentType)) {
+          types.push(report.otherIncidentType);
+        }
+      }
+      
+      if (types.length === 0) {
+        types = ["Unclassified"];
+      }
+
+      // Time info
+      const submittedDate = new Date(report.submittedAt || report.createdAt);
+      const monthName = submittedDate.toLocaleString('default', { month: 'short' });
+
+      // Dept vs Month Heatmap
+      if (months.includes(monthName)) {
+        if (!heatmapDeptMonth[dept]) heatmapDeptMonth[dept] = {};
+        heatmapDeptMonth[dept][monthName] = (heatmapDeptMonth[dept][monthName] || 0) + 1;
+      }
+
+      // Gender vs Category Heatmap
+      const gender = report.sex || "Not Specified";
+      const category = report.category || "Other";
+      if (!heatmapGenderCategory[gender]) heatmapGenderCategory[gender] = {};
+      heatmapGenderCategory[gender][category] = (heatmapGenderCategory[gender][category] || 0) + 1;
+
+      types.forEach(type => {
+        if (!type) return;
+        allIncidentTypes.add(type);
+
+        // Dept vs Incident Heatmap
+        if (!heatmapDeptIncident[dept]) heatmapDeptIncident[dept] = {};
+        heatmapDeptIncident[dept][type] = (heatmapDeptIncident[dept][type] || 0) + 1;
+
+        // Month vs Incident Heatmap
+        if (months.includes(monthName)) {
+          if (!heatmapMonthIncident[monthName]) heatmapMonthIncident[monthName] = {};
+          heatmapMonthIncident[monthName][type] = (heatmapMonthIncident[monthName][type] || 0) + 1;
+        }
+      });
+    });
+
     res.json({
       success: true,
       data: {
@@ -1087,7 +1138,6 @@ const getReportAnalytics = async (req, res) => {
         topIncidentTypes,
         topDepartments,
         recentActivity: {
-          // Last 5 reports
           recentReports: reports
             .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
             .slice(0, 5)
@@ -1098,14 +1148,12 @@ const getReportAnalytics = async (req, res) => {
               submittedAt: report.submittedAt,
               severity: report.severity || 'Unanalyzed'
             })),
-          // Today's new reports
           todayCount: await Report.countDocuments({
             submittedAt: {
               $gte: new Date().setHours(0, 0, 0, 0),
               $lte: new Date()
             }
           }),
-          // This week's new reports
           weekCount: await Report.countDocuments({
             submittedAt: {
               $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -1113,13 +1161,33 @@ const getReportAnalytics = async (req, res) => {
           })
         },
         performanceMetrics: {
-          // Average reports per day this month
           avgDailyReports: monthCounts[monthCounts.length - 1] > 0
             ? Math.round(monthCounts[monthCounts.length - 1] / 30)
             : 0,
-          // Peak month
           peakMonth: months[monthCounts.indexOf(Math.max(...monthCounts))],
           peakMonthCount: Math.max(...monthCounts)
+        },
+        heatmaps: {
+          deptVsIncident: {
+            rows: Array.from(allDepartments).sort(),
+            columns: Array.from(allIncidentTypes).sort(),
+            data: heatmapDeptIncident
+          },
+          monthVsIncident: {
+            rows: months,
+            columns: Array.from(allIncidentTypes).sort(),
+            data: heatmapMonthIncident
+          },
+          deptVsMonth: {
+            rows: Array.from(allDepartments).sort(),
+            columns: months,
+            data: heatmapDeptMonth
+          },
+          genderVsCategory: {
+            rows: Array.from(allGenders),
+            columns: Array.from(allCategories),
+            data: heatmapGenderCategory
+          }
         }
       },
       message: "Report analytics fetched successfully"

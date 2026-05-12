@@ -127,9 +127,7 @@ const reportSchema = new mongoose.Schema({
   perpGuardianContact: String,
 
   // Incident Info
-  incidentTypes: [String],
-  otherIncidentType: String,  // ✅ ADDED: For "Other" incident type details
-  incidentDescription: String,
+  salaysay: String,
   latestIncidentDate: String,
   incidentRegion: String,
   incidentProvince: String,
