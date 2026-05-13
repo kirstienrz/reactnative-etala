@@ -22,7 +22,8 @@ const {
   sendReportPDF,
   uploadPDFOnly,
   getReportAnalytics,
-  addReferral
+  addReferral,
+  updateReportServices
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -84,6 +85,9 @@ router.get("/admin/:id", auth(["admin", "superadmin"]), getReportById);
 
 // 📌 Update status
 router.put("/admin/:id/status", auth(["admin", "superadmin"]), updateReportStatus);
+
+// 📌 Update services
+router.put("/admin/:id/services", auth(["admin", "superadmin"]), updateReportServices);
 
 // 📌 Add referral (supports attachments)
 router.post(

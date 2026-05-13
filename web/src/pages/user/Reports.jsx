@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getUserReportsWithParams, discloseIdentity } from "../../api/report";
+import { getUserReportsWithParams } from "../../api/report";
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
@@ -9,8 +9,6 @@ export default function Reports() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [showPasswordInput, setShowPasswordInput] = useState(false);
-  const [revealPassword, setRevealPassword] = useState("");
 
   const limit = 5;
 
@@ -68,24 +66,6 @@ export default function Reports() {
     };
   }, [selectedReport]);
 
-  const handleReveal = async (reportId, password) => {
-    if (!password) return alert("Password is required.");
-
-    try {
-      setLoading(true);
-      await discloseIdentity(reportId, password);
-      alert("Your report is now revealed. Authorized personnel can see your info.");
-      fetchReports();
-      setSelectedReport(null);
-      setShowPasswordInput(false);
-      setRevealPassword("");
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to reveal the report. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -274,13 +254,9 @@ export default function Reports() {
                             minute: '2-digit'
                           })}
                         </p>
-                        {selectedReport.isAnonymous ? (
+                        {selectedReport.isAnonymous && (
                           <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
                             Anonymous Report
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-                            Identity Disclosed
                           </span>
                         )}
                       </div>
@@ -299,24 +275,25 @@ export default function Reports() {
 
                 <div className="flex-1 overflow-y-auto">
                   <div className="p-6 space-y-6">
-                    {/* Reporter Information Section */}
+
                     <section className="bg-white border border-gray-200 rounded-xl p-6">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="w-2 h-8 bg-purple-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Reporter Information</h3>
+                        <h3 className="text-xl font-semibold text-gray-900">Victim-Survivor Information</h3>
                       </div>
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Role</label>
-                          <p className="text-gray-900">{formatField(selectedReport.reporterRole)}</p>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
+                          <p className="text-gray-900 font-semibold">{formatField(`${selectedReport.firstName || ''} ${selectedReport.middleName || ''} ${selectedReport.lastName || ''}`.trim())}</p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">TUP Role</label>
-                          <p className="text-gray-900">{formatField(selectedReport.tupRole)}</p>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Age / Sex</label>
+                          <p className="text-gray-900">{formatField(selectedReport.age)} / {formatField(selectedReport.sex)}</p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Gender</label>
-                          <p className="text-gray-900">{formatField(selectedReport.reporterGender || selectedReport.anonymousGender)}</p>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Civil Status</label>
+                          <p className="text-gray-900">{formatField(selectedReport.civilStatus)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-500 block mb-2">Department</label>
@@ -325,252 +302,28 @@ export default function Reports() {
                       </div>
                     </section>
 
-                    {/* Victim Information Section - Enhanced with all fields */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-purple-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Victim Information</h3>
-                      </div>
-                      
-                      {/* Personal Details */}
-                      <div className="mb-6">
-                        <h4 className="text-md font-medium text-gray-700 mb-4">Personal Details</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
-                            <p className="text-gray-900">{formatField(`${selectedReport.firstName || ''} ${selectedReport.middleName || ''} ${selectedReport.lastName || ''}`.trim())}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Alias</label>
-                            <p className="text-gray-900">{formatField(selectedReport.alias)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Sex</label>
-                            <p className="text-gray-900">{formatField(selectedReport.sex)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Date of Birth</label>
-                            <p className="text-gray-900">{formatField(selectedReport.dateOfBirth)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Age</label>
-                            <p className="text-gray-900">{formatField(selectedReport.age)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Civil Status</label>
-                            <p className="text-gray-900">{formatField(selectedReport.civilStatus)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Educational Attainment</label>
-                            <p className="text-gray-900">{formatField(selectedReport.educationalAttainment)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Nationality</label>
-                            <p className="text-gray-900">{formatField(selectedReport.nationality)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Passport No.</label>
-                            <p className="text-gray-900">{formatField(selectedReport.passportNo)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Occupation</label>
-                            <p className="text-gray-900">{formatField(selectedReport.occupation)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Religion</label>
-                            <p className="text-gray-900">{formatField(selectedReport.religion)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Disability</label>
-                            <p className="text-gray-900">{formatField(selectedReport.disability)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Number of Children</label>
-                            <p className="text-gray-900">{formatField(selectedReport.numberOfChildren)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Ages of Children</label>
-                            <p className="text-gray-900">{formatField(selectedReport.agesOfChildren)}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Address Details */}
-                      <div className="mb-6">
-                        <h4 className="text-md font-medium text-gray-700 mb-4">Address</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Region</label>
-                            <p className="text-gray-900">{formatField(selectedReport.region)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Province</label>
-                            <p className="text-gray-900">{formatField(selectedReport.province)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">City/Municipality</label>
-                            <p className="text-gray-900">{formatField(selectedReport.cityMun)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Barangay</label>
-                            <p className="text-gray-900">{formatField(selectedReport.barangay)}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Guardian Information */}
-                      <div>
-                        <h4 className="text-md font-medium text-gray-700 mb-4">Guardian Information</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
-                            <p className="text-gray-900">{formatField(`${selectedReport.guardianFirstName || ''} ${selectedReport.guardianMiddleName || ''} ${selectedReport.guardianLastName || ''}`.trim())}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Relationship</label>
-                            <p className="text-gray-900">{formatField(selectedReport.guardianRelationship)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Contact</label>
-                            <p className="text-gray-900">{formatField(selectedReport.guardianContact)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Region</label>
-                            <p className="text-gray-900">{formatField(selectedReport.guardianRegion)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Province</label>
-                            <p className="text-gray-900">{formatField(selectedReport.guardianProvince)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">City/Municipality</label>
-                            <p className="text-gray-900">{formatField(selectedReport.guardianCityMun)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Barangay</label>
-                            <p className="text-gray-900">{formatField(selectedReport.guardianBarangay)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-
-                    {/* Perpetrator Information Section - Enhanced with all fields */}
                     <section className="bg-white border border-gray-200 rounded-xl p-6">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="w-2 h-8 bg-red-600 rounded-full"></div>
                         <h3 className="text-xl font-semibold text-gray-900">Perpetrator Information</h3>
                       </div>
 
-                      {/* Perpetrator Personal Details */}
-                      <div className="mb-6">
-                        <h4 className="text-md font-medium text-gray-700 mb-4">Personal Details</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
-                            <p className="text-gray-900">{formatField(`${selectedReport.perpFirstName || ''} ${selectedReport.perpMiddleName || ''} ${selectedReport.perpLastName || ''}`.trim())}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Alias</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpAlias)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Sex</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpSex)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Date of Birth</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpDateOfBirth)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Age</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpAge)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Civil Status</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpCivilStatus)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Education</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpEducation)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Nationality</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpNationality)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Passport</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpPassport)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Occupation</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpOccupation)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Religion</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpReligion)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Relationship to Victim</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpRelationship)}</p>
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
+                          <p className="text-gray-900 font-semibold">{formatField(`${selectedReport.perpFirstName || ''} ${selectedReport.perpMiddleName || ''} ${selectedReport.perpLastName || ''}`.trim())}</p>
                         </div>
-                      </div>
-
-                      {/* Perpetrator Address */}
-                      <div className="mb-6">
-                        <h4 className="text-md font-medium text-gray-700 mb-4">Address</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Region</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpRegion)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Province</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpProvince)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">City/Municipality</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpCityMun)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Barangay</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpBarangay)}</p>
-                          </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Alias</label>
+                          <p className="text-gray-900">{formatField(selectedReport.perpAlias)}</p>
                         </div>
-                      </div>
-
-                      {/* Perpetrator Guardian */}
-                      <div>
-                        <h4 className="text-md font-medium text-gray-700 mb-4">Guardian Information</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
-                            <p className="text-gray-900">{formatField(`${selectedReport.perpGuardianFirstName || ''} ${selectedReport.perpGuardianMiddleName || ''} ${selectedReport.perpGuardianLastName || ''}`.trim())}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Relationship</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpGuardianRelationship)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Contact</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpGuardianContact)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Region</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpGuardianRegion)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Province</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpGuardianProvince)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">City/Municipality</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpGuardianCityMun)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Barangay</label>
-                            <p className="text-gray-900">{formatField(selectedReport.perpGuardianBarangay)}</p>
-                          </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Age / Sex</label>
+                          <p className="text-gray-900">{formatField(selectedReport.perpAge)} / {formatField(selectedReport.perpSex)}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-2">Relationship to Victim</label>
+                          <p className="text-gray-900">{formatField(selectedReport.perpRelationship)}</p>
                         </div>
                       </div>
                     </section>
@@ -616,28 +369,6 @@ export default function Reports() {
                           </div>
                         </div>
 
-                        {/* Incident Address */}
-                        <div>
-                          <h4 className="text-md font-medium text-gray-700 mb-4">Incident Location</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Region</label>
-                              <p className="text-gray-900">{formatField(selectedReport.incidentRegion)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Province</label>
-                              <p className="text-gray-900">{formatField(selectedReport.incidentProvince)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">City/Municipality</label>
-                              <p className="text-gray-900">{formatField(selectedReport.incidentCityMun)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Barangay</label>
-                              <p className="text-gray-900">{formatField(selectedReport.incidentBarangay)}</p>
-                            </div>
-                          </div>
-                        </div>
 
                         {/* Witness Information */}
                         <div>
@@ -837,7 +568,7 @@ export default function Reports() {
                                 <div className="flex-1 pb-6 min-w-0">
                                   <p className="text-gray-900 font-medium">{t.action}</p>
                                   <p className="text-sm text-gray-500 mt-1">
-                                    By {t.performedBy} • {new Date(t.timestamp).toLocaleString()}
+                                    By {typeof t.performedBy === 'object' ? `${t.performedBy.firstName} ${t.performedBy.lastName}` : (t.performedBy || 'System')} • {new Date(t.timestamp).toLocaleString()}
                                   </p>
                                   {t.remarks && (
                                     <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -889,72 +620,17 @@ export default function Reports() {
                       </div>
                     </section>
 
-                    {/* Confirmation Section */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-indigo-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Confirmations</h3>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded-full ${selectedReport.confirmAccuracy ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                          <span className="text-gray-700">Information Accuracy Confirmed</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded-full ${selectedReport.confirmConfidentiality ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                          <span className="text-gray-700">Confidentiality Agreement Confirmed</span>
-                        </div>
-                      </div>
-                    </section>
                   </div>
                 </div>
 
                 <div className="border-t border-gray-200 bg-gray-50 px-6 py-5">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex-1">
-                      {selectedReport.isAnonymous && (
-                        <p className="text-sm text-gray-600">
-                          ⚠️ This is an anonymous report. You can choose to disclose your identity to enable editing capabilities.
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-center">
-                      <button
-                        onClick={() => setSelectedReport(null)}
-                        className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                      >
-                        Close
-                      </button>
-
-                      {selectedReport.isAnonymous && !showPasswordInput && (
-                        <button
-                          disabled={loading}
-                          onClick={() => setShowPasswordInput(true)}
-                          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                        >
-                          Disclose Identity
-                        </button>
-                      )}
-
-                      {selectedReport.isAnonymous && showPasswordInput && (
-                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-center">
-                          <input
-                            type="password"
-                            placeholder="Enter your password"
-                            value={revealPassword}
-                            onChange={(e) => setRevealPassword(e.target.value)}
-                            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none mb-2 sm:mb-0 sm:mr-2 w-full sm:w-auto"
-                          />
-                          <button
-                            disabled={loading || !revealPassword}
-                            onClick={() => handleReveal(selectedReport._id, revealPassword)}
-                            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                          >
-                            {loading ? "Processing..." : "Confirm"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setSelectedReport(null)}
+                      className="px-8 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-bold shadow-sm"
+                    >
+                      Close Report Details
+                    </button>
                   </div>
                 </div>
               </div>

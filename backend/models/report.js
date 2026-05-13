@@ -135,6 +135,7 @@ const reportSchema = new mongoose.Schema({
   incidentBarangay: String,
   placeOfIncident: String,
   witnessName: String,
+  witnessGender: String,
   witnessAddress: String,
   witnessContact: String,
   witnessAccount: String,

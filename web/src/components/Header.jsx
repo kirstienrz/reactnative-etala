@@ -96,6 +96,7 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
+    setUserDropdownOpen(false);
     setIsLogoutModalOpen(true);
   };
 
@@ -414,11 +415,14 @@ const Header = () => {
       </div>
     </div>
 
-    <LogoutModal
-      isOpen={isLogoutModalOpen}
-      onClose={() => setIsLogoutModalOpen(false)}
-      onConfirm={confirmLogout}
-    />
+    {typeof document !== "undefined" ? createPortal(
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={confirmLogout}
+      />,
+      document.body
+    ) : null}
 
     <style dangerouslySetInnerHTML={{
       __html: `

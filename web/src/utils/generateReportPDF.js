@@ -195,11 +195,19 @@ export const generateReportPDF = async ({ formData, ticketNumber, isAnonymous })
     doc.text(`Ref: ${ticketNumber}`, 196, 285, { align: "right" });
   }
 
-  // ✅ AUTO-DOWNLOAD PDF
-  doc.save(`TUP_GAD_Report_${ticketNumber}.pdf`);
+  // ✅ AUTO-DOWNLOAD PDF (Using Blob URL to avoid "data URL navigation" error)
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `TUP_GAD_Report_${ticketNumber}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 
   // ✅ RETURN PDF BLOB for sending to backend
-  return doc.output('blob');
+  return blob;
 };
 
 // ✅ Function to send PDF to backend via email

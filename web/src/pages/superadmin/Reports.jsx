@@ -13,7 +13,8 @@ import autoTable from "jspdf-autotable";
 
 import {
   getAllReports, getArchivedReports, getReportById,
-  updateReportStatus, archiveReport, restoreReport, addReferral, sendReferralPDFToUser
+  updateReportStatus, archiveReport, restoreReport, addReferral, 
+  sendReferralPDFToUser, updateReportServices
 } from "../../api/report";
 
 // Add this API function for sentiment analysis
@@ -79,6 +80,7 @@ const AdminReports = () => {
   });
   const [showExternalReferralForm, setShowExternalReferralForm] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [modalTab, setModalTab] = useState("details");
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -408,8 +410,8 @@ const AdminReports = () => {
 
     try {
       const res = await analyzeReportSeverity({
-        salaysay: reportData.salaysay,
-        reportId: reportId, // Send actual report ID
+        incidentDescription: reportData.salaysay,
+        reportId: reportId,
         additionalContext: {
           timestamp: reportData.timestamp,
           location: reportData.location || 'Not specified',
@@ -670,6 +672,28 @@ const AdminReports = () => {
       showToast(`Failed to update case status: ${errorMessage}`, "error");
     }
   };
+  
+  const handleUpdateServices = async (serviceField, value) => {
+    try {
+      setLoading(true);
+      const res = await updateReportServices(selectedReport._id, { [serviceField]: value });
+      if (res.success) {
+        showToast("Service status updated successfully");
+        // Update local state
+        const updatedReport = { ...selectedReport, ...res.data };
+        setSelectedReport(updatedReport);
+        // Also update in the list
+        setReports(prev => prev.map(r => r._id === selectedReport._id ? { ...r, ...res.data } : r));
+      } else {
+        showToast(res.message || "Failed to update services", "error");
+      }
+    } catch (error) {
+      console.error("Update services error:", error);
+      showToast(`Failed to update services: ${error.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleArchive = async () => {
     try {
@@ -708,11 +732,15 @@ const AdminReports = () => {
     try {
       const res = await addReferral(selectedReport._id, {
         department: referralDept,
-        note: referralNote
+        note: referralNote,
+        referralType: "Internal"
       });
       if (res.success) {
         showToast("Referral added successfully");
         setShowReferralModal(false);
+        setShowCaseStatusModal(false);
+        setNewCaseStatus("");
+        setNewReferralType("");
         setReferralDept("");
         setReferralNote("");
         fetchReports();
@@ -828,12 +856,23 @@ const AdminReports = () => {
     sentimentFilter !== "All"
   ].filter(Boolean).length;
 
-  const InfoItem = ({ label, value }) => {
-    if (!value) return null;
+  const InfoItem = ({ label, value, fallback = null }) => {
+    const displayValue = String(value || '').replace(/undefined/g, '').trim();
+    if (!displayValue || displayValue === '/' || displayValue === ',') {
+      if (fallback) {
+        return (
+          <div>
+            <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">{label}</label>
+            <p className="text-gray-400 text-xs font-medium leading-tight italic">{fallback}</p>
+          </div>
+        );
+      }
+      return null;
+    }
     return (
       <div>
-        <label className="text-gray-600 text-xs">{label}</label>
-        <p className="text-gray-900 text-sm">{value}</p>
+        <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">{label}</label>
+        <p className="text-gray-900 text-sm font-medium leading-tight">{displayValue}</p>
       </div>
     );
   };
@@ -858,13 +897,15 @@ const AdminReports = () => {
   const severityStats = getSeverityStats();
 
   return (
-    <div id="admin-reports-main-v2" className="min-h-screen bg-gray-50 p-6">
+    <>
+      <div id="admin-reports-main-v2" className="min-h-screen bg-gray-50 p-6">
       {/* Toast Notification */}
       {toast.show && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
+        <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 rounded-2xl px-6 py-4 shadow-2xl animate-in slide-in-from-top-4 duration-300 border ${
+          toast.type === "error" ? "bg-red-600 border-red-500" : "bg-emerald-600 border-emerald-500"
           } text-white`}>
-          {toast.type === "error" ? <XCircle size={20} /> : <CheckCircle size={20} />}
-          {toast.message}
+          {toast.type === "error" ? <XCircle size={22} className="text-red-100" /> : <CheckCircle size={22} className="text-emerald-100" />}
+          <span className="font-bold text-sm tracking-wide">{toast.message}</span>
         </div>
       )}
 
@@ -1638,14 +1679,14 @@ const AdminReports = () => {
           </div>
         </div>
       )}
-
-      {/* Dropdown Menu Portal - Fixed Position Overlay */}
-      {openDropdown && (
+      {/* Overlays and Modals Section */}
+      <div className="overlays-section">
+        {openDropdown && (
         <div
           className="dropdown-menu fixed bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-48"
           style={{
-            top: `${dropdownPosition.top}px`,
-            left: `${dropdownPosition.left}px`,
+            top: dropdownPosition.top + "px",
+            left: dropdownPosition.left + "px",
             zIndex: 1000
           }}
         >
@@ -1772,421 +1813,389 @@ const AdminReports = () => {
         </div>
       )}
 
-      {/* Enhanced Details Modal with Sentiment Analysis */}
       {showDetailsModal && selectedReport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
-                <p className="text-sm text-gray-600 mt-1">{selectedReport.ticketNumber}</p>
-                {sentimentResults[selectedReport._id] && (
-                  <div className="mt-2">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
-                      {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
-                      AI Analysis: {sentimentResults[selectedReport._id].severity}
-                      ({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
-                    </span>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={24} className="text-gray-500" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div>
-                {/* Sentiment Analysis Section */}
-                {!sentimentResults[selectedReport._id] ? (
-                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          <Brain size={20} className="text-purple-600" />
-                          AI Severity Analysis
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Analyze this report's severity level using OpenAI
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => analyzeSentiment(selectedReport._id, {
-                          incidentDescription: selectedReport.incidentDescription,
-                          incidentTypes: selectedReport.incidentTypes,
-                          timestamp: selectedReport.submittedAt
-                        })}
-                        disabled={analyzing}
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50"
-                      >
-                        <Brain size={16} />
-                        {analyzing ? "Analyzing..." : "Analyze Severity"}
-                      </button>
+        <div className="report-details-modal-wrapper">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">{selectedReport.ticketNumber}</p>
+                  {sentimentResults[selectedReport._id] && (
+                    <div className="mt-2">
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
+                        {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
+                        AI Analysis: {sentimentResults[selectedReport._id].severity}
+                        ({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
+                      </span>
                     </div>
-                  </div>
-                ) : (
-                  <div className={`border rounded-lg p-4 mb-6 ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
-                          AI Analysis Results
-                        </h3>
-                        <div className="space-y-2">
-                          <p className="text-sm">
-                            <span className="font-medium">Severity:</span> {sentimentResults[selectedReport._id].severity}
-                            <span className="ml-2 text-xs opacity-75">
-                              ({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
-                            </span>
-                          </p>
-                          {sentimentResults[selectedReport._id].explanation && (
-                            <p className="text-sm">
-                              <span className="font-medium">Analysis:</span> {sentimentResults[selectedReport._id].explanation}
-                            </p>
-                          )}
-                          {sentimentResults[selectedReport._id].keywords && sentimentResults[selectedReport._id].keywords.length > 0 && (
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={24} className="text-gray-500" />
+                </button>
+              </div>
+
+              {/* Tab Navigation */}
+              <div className="flex border-b border-gray-100 bg-gray-50/50 px-6">
+                <button
+                  onClick={() => setModalTab("details")}
+                  className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${
+                    modalTab === "details" 
+                      ? "border-indigo-600 text-indigo-600 bg-white" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Incident Details
+                </button>
+                <button
+                  onClick={() => setModalTab("history")}
+                  className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${
+                    modalTab === "history" 
+                      ? "border-indigo-600 text-indigo-600 bg-white" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Case History & Referrals
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                {modalTab === "details" ? (
+                  <div className="space-y-6">
+                    {/* AI Analysis Result (Inline if present) */}
+                    {sentimentResults[selectedReport._id] && (
+                      <div className={`border rounded-2xl p-5 ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-white/50 flex items-center justify-center shadow-sm">
+                              {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
+                            </div>
                             <div>
-                              <p className="text-sm font-medium mb-1">Key Indicators:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {sentimentResults[selectedReport._id].keywords.map((keyword, idx) => (
-                                  <span key={idx} className="text-xs bg-white/50 px-2 py-1 rounded">
-                                    {keyword}
+                              <h3 className="font-bold text-gray-900">AI Severity Analysis</h3>
+                              <p className="text-sm mt-1 opacity-90">{sentimentResults[selectedReport._id].explanation}</p>
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {sentimentResults[selectedReport._id].keywords?.map((k, idx) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-white/40 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                                    {k}
                                   </span>
                                 ))}
                               </div>
                             </div>
-                          )}
-                          <p className="text-xs text-gray-500 mt-2">
-                            Analyzed on {new Date(sentimentResults[selectedReport._id].analyzedAt).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const newResults = { ...sentimentResults };
-                          delete newResults[selectedReport._id];
-                          setSentimentResults(newResults);
-                          localStorage.setItem('reportSentiments', JSON.stringify(newResults));
-                          showToast("Analysis removed", "success");
-                        }}
-                        className="text-gray-400 hover:text-gray-600"
-                        title="Remove analysis"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Timeline */}
-                {selectedReport.timeline?.length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                    <h3 className="font-semibold text-gray-900 mb-3">Recent Activity</h3>
-                    <div className="space-y-3">
-                      {selectedReport.timeline.slice(0, 3).map((t, i) => (
-                        <div key={i} className="border-l-2 border-blue-500 pl-3 py-1">
-                          <p className="text-sm font-medium text-gray-900">{t.action}</p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(t.timestamp).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Rest of the details modal content remains the same */}
-                <div className="space-y-6">
-                  {/* Basic Information */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Basic Information</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <label className="text-gray-600">Submitted Date</label>
-                        <p className="text-gray-900 font-medium">{new Date(selectedReport.submittedAt).toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <label className="text-gray-600">Last Updated</label>
-                        <p className="text-gray-900 font-medium">{new Date(selectedReport.lastUpdated).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reporter Information */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Reporter Information</h3>
-                    {selectedReport.isAnonymous ? (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <p className="text-yellow-800 font-medium mb-2">Anonymous Report</p>
-                        <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                          {selectedReport.reporterRole && (
-                            <div>
-                              <label className="text-yellow-700">Role</label>
-                              <p className="text-yellow-900">{selectedReport.reporterRole}</p>
-                            </div>
-                          )}
-                          {selectedReport.anonymousGender && (
-                            <div>
-                              <label className="text-yellow-700">Gender</label>
-                              <p className="text-yellow-900">{selectedReport.anonymousGender}</p>
-                            </div>
-                          )}
-                          {selectedReport.tupRole && (
-                            <div>
-                              <label className="text-yellow-700">TUP Affiliation</label>
-                              <p className="text-yellow-900">{selectedReport.tupRole}</p>
-                            </div>
-                          )}
-                          <div className="mb-4">
-                            <label className="block text-sm text-gray-600 mb-1">Department</label>
-                            <p className="text-gray-900 font-medium">
-                              {selectedReport.reporterDepartment || "Not specified"}
-                            </p>
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <label className="text-gray-600">TUP ID</label>
-                          <p className="text-gray-900 font-medium">{selectedReport.createdBy?.tupId || "Unknown"}</p>
-                        </div>
-                        {selectedReport.createdBy?.email && (
-                          <div>
-                            <label className="text-gray-600">Email</label>
-                            <p className="text-gray-900">{selectedReport.createdBy.email}</p>
-                          </div>
-                        )}
-                        <div className="col-span-2 mt-3">
-                          <button
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-                            onClick={() => handleMessageUser(selectedReport)}
-                          >
-                            <MessageSquare size={16} />
-                            Message User
-                          </button>
                         </div>
                       </div>
                     )}
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
-                      Victim / Reporter Details
-                    </h3>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <InfoItem label="TUP Affiliation" value={selectedReport.tupRole} />
-                      <InfoItem label="Last Name" value={selectedReport.lastName} />
-                      <InfoItem label="First Name" value={selectedReport.firstName} />
-                      <InfoItem label="Middle Name" value={selectedReport.middleName} />
-                      <InfoItem label="Alias" value={selectedReport.alias} />
-                      <InfoItem label="Sex" value={selectedReport.sex} />
-                      <InfoItem label="Date of Birth" value={selectedReport.dateOfBirth} />
-                      <InfoItem label="Age" value={selectedReport.age} />
-                      <InfoItem label="Civil Status" value={selectedReport.civilStatus} />
-                      <InfoItem label="Educational Attainment" value={selectedReport.educationalAttainment} />
-                      <InfoItem label="Nationality" value={selectedReport.nationality} />
-                      <InfoItem label="Occupation" value={selectedReport.occupation} />
-                      <InfoItem label="Religion" value={selectedReport.religion} />
-                      <InfoItem label="Region" value={selectedReport.region} />
-                      <InfoItem label="Province" value={selectedReport.province} />
-                      <InfoItem label="City / Municipality" value={selectedReport.cityMun} />
-                      <InfoItem label="Barangay" value={selectedReport.barangay} />
-                      <InfoItem label="Disability" value={selectedReport.disability} />
-                      <InfoItem label="Number of Children" value={selectedReport.numberOfChildren} />
-                      <InfoItem label="Ages of Children" value={selectedReport.agesOfChildren} />
-                    </div>
-                  </div>
-
-
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
-                      Guardian Information
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <InfoItem label="Last Name" value={selectedReport.guardianLastName} />
-                      <InfoItem label="First Name" value={selectedReport.guardianFirstName} />
-                      <InfoItem label="Middle Name" value={selectedReport.guardianMiddleName} />
-                      <InfoItem label="Relationship" value={selectedReport.guardianRelationship} />
-                      <InfoItem label="Contact" value={selectedReport.guardianContact} />
-                      <InfoItem label="Region" value={selectedReport.guardianRegion} />
-                      <InfoItem label="Province" value={selectedReport.guardianProvince} />
-                      <InfoItem label="City / Municipality" value={selectedReport.guardianCityMun} />
-                      <InfoItem label="Barangay" value={selectedReport.guardianBarangay} />
-                    </div>
-                  </div>
-
-
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
-                      Perpetrator Information
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <InfoItem label="Last Name" value={selectedReport.perpLastName} />
-                      <InfoItem label="First Name" value={selectedReport.perpFirstName} />
-                      <InfoItem label="Middle Name" value={selectedReport.perpMiddleName} />
-                      <InfoItem label="Alias" value={selectedReport.perpAlias} />
-                      <InfoItem label="Sex" value={selectedReport.perpSex} />
-                      <InfoItem label="Age" value={selectedReport.perpAge} />
-                      <InfoItem label="Relationship to Victim" value={selectedReport.perpRelationship} />
-                      <InfoItem label="Occupation" value={selectedReport.perpOccupation} />
-                      <InfoItem label="Religion" value={selectedReport.perpReligion} />
-                      <InfoItem label="Region" value={selectedReport.perpRegion} />
-                      <InfoItem label="Province" value={selectedReport.perpProvince} />
-                      <InfoItem label="City / Municipality" value={selectedReport.perpCityMun} />
-                      <InfoItem label="Barangay" value={selectedReport.perpBarangay} />
-                    </div>
-                  </div>
-
-
-                  {/* <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">
-                      Services & Referrals
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <InfoItem label="Crisis Intervention" value={selectedReport.crisisIntervention ? "Yes" : "No"} />
-                      <InfoItem label="Protection Order" value={selectedReport.protectionOrder ? "Yes" : "No"} />
-                      <InfoItem label="Refer to SWDO" value={selectedReport.referToSWDO ? "Yes" : "No"} />
-                      <InfoItem label="Healthcare Referral" value={selectedReport.referToHealthcare ? "Yes" : "No"} />
-                      <InfoItem label="Law Enforcement Referral" value={selectedReport.referToLawEnforcement ? "Yes" : "No"} />
-                      <InfoItem label="Other Referral" value={selectedReport.referToOther ? "Yes" : "No"} />
-                    </div>
-                  </div> */}
-
-
-                  {/* Incident Information */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Incident Information</h3>
-                    <div className="space-y-4">
-                      {/* Incident Type removed as per request */}
-                      <div>
-                        <label className="text-sm text-gray-600 mb-2 block">Salaysay (Statement)</label>
-                        <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg text-sm">
-                          {selectedReport.salaysay || "No statement provided"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Referral Tracking */}
-                {selectedReport.referrals?.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b flex items-center gap-2">
-                      <Share2 size={16} className="text-gray-400" />
-                      Referral Tracking
-                    </h3>
-                    <div className="space-y-3">
-                      {selectedReport.referrals.map((ref, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${ref.referralType === "External" ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"}`}>
-                              {ref.referralType === "External" ? <Shield size={16} /> : <Users size={16} />}
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-gray-900 leading-tight">
-                                {ref.referralType === "External" ? `${ref.barangayName} (External)` : `${ref.department} (Internal)`}
-                              </p>
-                              <p className="text-[10px] text-gray-500">
-                                {new Date(ref.date).toLocaleDateString()}
-                              </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Reporter Info */}
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <UserCheck size={14} /> Reporter Information
+                        </h3>
+                        {selectedReport.isAnonymous ? (
+                          <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                            <p className="text-sm font-bold text-indigo-900 mb-2">Anonymous Submission</p>
+                            <div className="grid grid-cols-2 gap-y-3">
+                              <InfoItem label="Role" value={selectedReport.reporterRole} />
+                              <InfoItem label="Gender" value={selectedReport.anonymousGender} />
+                              <InfoItem label="Affiliation" value={selectedReport.tupRole} />
+                              <InfoItem label="Dept" value={selectedReport.reporterDepartment} />
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              setSelectedReferral(ref);
-                              setShowViewReferralModal(true);
-                            }}
-                            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95"
-                          >
-                            View Details
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                              <div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                                {selectedReport.createdBy?.firstName?.charAt(0) || "U"}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900">
+                                  {selectedReport.createdBy?.firstName} {selectedReport.createdBy?.lastName}
+                                </p>
+                                <p className="text-xs text-gray-500">{selectedReport.createdBy?.tupId}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleMessageUser(selectedReport)}
+                              className="w-full py-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                            >
+                              <MessageSquare size={14} /> Message Reporter
+                            </button>
+                          </div>
+                        )}
+                      </section>
 
-                {/* Attachments */}
-                {selectedReport.attachments?.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b">Attachments</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {selectedReport.attachments.map((att, i) => (
-                        <a
-                          key={i}
-                          href={att.uri}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-                        >
-                          <FileText size={16} className="text-gray-400" />
-                          <span className="text-sm text-gray-900 flex-1 truncate">{att.fileName}</span>
-                          <Download size={16} className="text-gray-400" />
-                        </a>
-                      ))}
+                      {/* Basic Info */}
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <ClipboardList size={14} /> Case Overview
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <InfoItem label="Status" value={selectedReport.caseStatus} />
+                          <InfoItem label="Category" value={selectedReport.incidentTypes?.join(", ") || "General"} />
+                          <InfoItem label="Submitted" value={new Date(selectedReport.submittedAt).toLocaleDateString()} />
+                          <InfoItem label="Time" value={new Date(selectedReport.submittedAt).toLocaleTimeString()} />
+                        </div>
+                      </section>
                     </div>
+
+                    {/* Location Details */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                         <Shield size={14} /> Location Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InfoItem label="Place of Incident" value={selectedReport.placeOfIncident} />
+                        <InfoItem label="Address Details" value={`${selectedReport.incidentBarangay || ''} ${selectedReport.incidentCityMun || ''} ${selectedReport.incidentProvince || ''}`} />
+                      </div>
+                    </section>
+
+                    {/* Incident Statement */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Incident Statement</h3>
+                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {selectedReport.salaysay || selectedReport.incidentDescription || selectedReport.incidentStatement || "No statement provided"}
+                        </p>
+                      </div>
+                    </section>
+
+                    {/* Victim & Perpetrator Details */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Victim Details</h3>
+                        <div className="grid grid-cols-2 gap-y-4">
+                          <InfoItem label="Full Name" value={selectedReport.isAnonymous ? "Anonymous Reporter" : `${selectedReport.firstName || ''} ${selectedReport.lastName || ''}`} />
+                          <InfoItem label="Gender" value={selectedReport.isAnonymous ? (selectedReport.reporterGender || selectedReport.anonymousGender) : selectedReport.sex} />
+                          <InfoItem label="Address" value={`${selectedReport.barangay || ''} ${selectedReport.cityMun || ''}`} />
+                          <InfoItem label="Occupation" value={selectedReport.occupation} />
+                        </div>
+                      </section>
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Perpetrator Details</h3>
+                        <div className="grid grid-cols-2 gap-y-4">
+                          <InfoItem label="Name" value={`${selectedReport.perpFirstName || ''} ${selectedReport.perpLastName || ''}`} fallback="Not provided" />
+                          <InfoItem label="Gender" value={selectedReport.perpSex} fallback="Not provided" />
+                          <InfoItem label="Relationship" value={selectedReport.perpRelationship} fallback="Not provided" />
+                          <InfoItem label="Occupation" value={selectedReport.perpOccupation} fallback="Not provided" />
+                          <InfoItem label="Address" value={selectedReport.perpBarangay} fallback="Not provided" />
+                        </div>
+                      </section>
+                    </div>
+
+                    {/* Witness Information */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Users size={14} /> Witness Information
+                      </h3>
+                      {selectedReport.witnessName ? (
+                        <div className="space-y-4">
+                           <div className="grid grid-cols-2 gap-4">
+                             <InfoItem label="Witness Name" value={selectedReport.witnessName} fallback="Not provided" />
+                             <InfoItem label="Gender" value={selectedReport.witnessGender} fallback="Not provided" />
+                             <InfoItem label="Contact Info" value={selectedReport.witnessContact} fallback="Not provided" />
+                             <InfoItem label="Address" value={selectedReport.witnessAddress} fallback="Not provided" />
+                           </div>
+                          {selectedReport.witnessAccount && (
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                               <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-1">Witness Statement</label>
+                               <p className="text-sm text-gray-800 leading-relaxed italic">"{selectedReport.witnessAccount}"</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No witnesses provided</p>
+                      )}
+                    </section>
+
+                    {/* Attachments */}
+                    {selectedReport.attachments?.length > 0 && (
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Evidence & Attachments</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                          {selectedReport.attachments.map((att, i) => (
+                            <a
+                              key={i}
+                              href={att.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-indigo-50 rounded-xl border border-gray-200 hover:border-indigo-200 transition-all group"
+                            >
+                              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-gray-400 group-hover:text-indigo-600 transition-colors shadow-sm">
+                                <FileText size={16} />
+                              </div>
+                              <span className="text-[11px] font-bold text-gray-700 truncate flex-1">{att.fileName}</span>
+                              <Download size={14} className="text-gray-400" />
+                            </a>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Additional Notes */}
+                    {selectedReport.additionalNotes && (
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Additional Notes</h3>
+                        <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100">
+                          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
+                            {selectedReport.additionalNotes}
+                          </p>
+                        </div>
+                      </section>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Referral Tracking Section */}
+                    {selectedReport.referrals?.length > 0 && (
+                      <section className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl">
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                            <Share2 size={18} /> Formal Referrals Issued
+                          </h3>
+                          <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold">
+                            {selectedReport.referrals.length} {selectedReport.referrals.length === 1 ? 'Referral' : 'Referrals'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedReport.referrals.map((ref, idx) => (
+                            <div key={idx} className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                    {ref.referralType === "External" ? <Shield size={20} /> : <Users size={20} />}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold leading-tight">
+                                      {ref.referralType === "External" ? ref.barangayName : ref.department}
+                                    </p>
+                                    <p className="text-[10px] opacity-70 uppercase font-bold tracking-tighter">
+                                      {ref.referralType} Referral
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => { setSelectedReferral(ref); setShowViewReferralModal(true); }}
+                                  className="w-8 h-8 bg-white text-indigo-600 rounded-lg flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                              </div>
+                              <div className="text-[10px] opacity-80 flex items-center gap-1">
+                                <Clock size={10} /> Issued on {new Date(ref.date).toLocaleDateString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Unified Timeline */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <Clock size={16} /> Activity Log & Audit Trail
+                      </h3>
+                      <div className="space-y-6">
+                        {selectedReport.timeline?.map((t, i) => (
+                          <div key={i} className="relative pl-8 border-l-2 border-gray-100 pb-2">
+                            <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${
+                              t.action.includes("Referral") ? "bg-indigo-600" : 
+                              t.action.includes("Closed") ? "bg-gray-800" : "bg-blue-500"
+                            }`}></div>
+                            
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+                              <p className="text-sm font-bold text-gray-900">{t.action}</p>
+                              <time className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                                {new Date(t.timestamp).toLocaleString()}
+                              </time>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 mt-2">
+                              <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                                <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <UserCheck size={10} className="text-gray-400" />
+                                </div>
+                                <span className="font-bold text-gray-700">
+                                  {selectedReport.isAnonymous && 
+                                   (typeof t.performedBy === 'object' 
+                                     ? (t.performedBy?._id === (selectedReport.createdBy?._id || selectedReport.createdBy))
+                                     : (t.performedBy === (selectedReport.createdBy?._id || selectedReport.createdBy)))
+                                    ? "Anonymous Reporter"
+                                    : (typeof t.performedBy === 'object' ? `${t.performedBy.firstName} ${t.performedBy.lastName}` : (t.performedBy || 'System'))
+                                  }
+                                </span>
+                              </p>
+                            </div>
+
+                            {t.remarks && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <p className="text-[11px] text-gray-600 italic leading-relaxed">
+                                  "{t.remarks}"
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
                   </div>
                 )}
               </div>
 
-              {/* Footer Actions for Details Modal */}
-              <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {!sentimentResults[selectedReport._id] && (
-                    <button
-                      onClick={() => analyzeSentiment(selectedReport._id, {
-                        salaysay: selectedReport.salaysay,
-                        timestamp: selectedReport.submittedAt
-                      })}
-                      disabled={analyzing}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      <Brain size={18} />
-                      {analyzing ? "Analyzing..." : "AI Analyze Severity"}
-                    </button>
-                  )}
+                {/* Footer Actions for Details Modal */}
+                <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {!sentimentResults[selectedReport._id] && (
+                      <button
+                        onClick={() => analyzeSentiment(selectedReport._id, {
+                          salaysay: selectedReport.salaysay || selectedReport.incidentDescription || selectedReport.incidentStatement,
+                          timestamp: selectedReport.submittedAt
+                        })}
+                        disabled={analyzing}
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        <Brain size={18} />
+                        {analyzing ? "Analyzing..." : "AI Analyze Severity"}
+                      </button>
+                    )}
 
-                  {selectedReport.caseStatus === "For Interview" && (
-                    <button
-                      onClick={() => setShowReferralModal(true)}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Share2 size={18} />
-                      Refer
-                    </button>
-                  )}
+                    {selectedReport.caseStatus === "For Interview" && (
+                      <button
+                        onClick={() => setShowReferralModal(true)}
+                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Share2 size={18} />
+                        Refer
+                      </button>
+                    )}
 
-                  {!selectedReport.archived ? (
-                    <button
-                      onClick={() => setShowArchiveModal(true)}
-                      className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Archive size={18} />
-                      Archive Report
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowRestoreModal(true)}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <RefreshCw size={18} />
-                      Restore Report
-                    </button>
-                  )}
+                    {!selectedReport.archived ? (
+                      <button
+                        onClick={() => setShowArchiveModal(true)}
+                        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Archive size={18} />
+                        Archive Report
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowRestoreModal(true)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <RefreshCw size={18} />
+                        Restore Report
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
         </div>
       )}
 
@@ -2498,17 +2507,52 @@ const AdminReports = () => {
               </div>
 
               {newCaseStatus === "For Referral" && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Referral Type</label>
-                  <select
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white"
-                    value={newReferralType}
-                    onChange={(e) => setNewReferralType(e.target.value)}
-                  >
-                    <option value="">Select type</option>
-                    <option>Internal</option>
-                    <option>External</option>
-                  </select>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Referral Type</label>
+                    <select
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white"
+                      value={newReferralType}
+                      onChange={(e) => {
+                        setNewReferralType(e.target.value);
+                        setShowExternalReferralForm(false);
+                      }}
+                    >
+                      <option value="">Select type</option>
+                      <option value="Internal">Internal</option>
+                      <option value="External">External</option>
+                    </select>
+                  </div>
+
+                  {newReferralType === "Internal" && (
+                    <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div>
+                        <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Target Department</label>
+                        <select
+                          value={referralDept}
+                          onChange={(e) => setReferralDept(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                        >
+                          <option value="">Select a department</option>
+                          <option value="Legal Clinic">Legal Clinic</option>
+                          <option value="Guidance and Counseling">Guidance and Counseling</option>
+                          <option value="Medical Health Services">Medical Health Services</option>
+                          <option value="Director's Office">Director's Office</option>
+                          <option value="Human Resources">Human Resources (for Employees)</option>
+                          <option value="Student Affairs">Student Affairs</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Internal Note</label>
+                        <textarea
+                          placeholder="Instructions for the target department..."
+                          value={referralNote}
+                          onChange={(e) => setReferralNote(e.target.value)}
+                          className="w-full h-24 px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                        ></textarea>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2735,11 +2779,16 @@ const AdminReports = () => {
                 </button>
               ) : (
                 <button
-                  onClick={handleUpdateCaseStatus}
-                  disabled={!newCaseStatus || (newCaseStatus === "For Referral" && !newReferralType)}
+                  onClick={newReferralType === "Internal" ? handleAddReferral : handleUpdateCaseStatus}
+                  disabled={
+                    !newCaseStatus || 
+                    (newCaseStatus === "For Referral" && !newReferralType) || 
+                    (newReferralType === "Internal" && !referralDept) ||
+                    loading
+                  }
                   className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all"
                 >
-                  Update Status
+                  {newReferralType === "Internal" ? "Submit Internal Referral" : "Update Status"}
                 </button>
               )}
             </div>
@@ -2805,6 +2854,8 @@ const AdminReports = () => {
         </div>
       )}
     </div>
+    </div>
+    </>
   );
 };
 

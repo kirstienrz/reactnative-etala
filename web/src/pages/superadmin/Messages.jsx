@@ -734,9 +734,9 @@ const TicketMessagingSystem = () => {
     } finally { setSending(false); }
   };
 
-  const handleToggleStatus = async () => {
-    if (!selectedTicket) return;
-    const isClosing = selectedTicket.status === 'Open';
+  const handleToggleStatus = async (ticketToToggle = selectedTicket) => {
+    if (!ticketToToggle) return;
+    const isClosing = ticketToToggle.status === 'Open';
     
     showModal({
       title: isClosing ? 'Archive Conversation?' : 'Reopen Conversation?',
@@ -748,9 +748,9 @@ const TicketMessagingSystem = () => {
       onConfirm: async () => {
         try {
           if (isClosing) {
-            await closeTicket(selectedTicket.ticketNumber, 'Closed by superadmin');
+            await closeTicket(ticketToToggle.ticketNumber, 'Closed by superadmin');
           } else {
-            await reopenTicket(selectedTicket.ticketNumber);
+            await reopenTicket(ticketToToggle.ticketNumber);
           }
           setShowConfirmModal(false);
         } catch (error) {
@@ -939,20 +939,39 @@ const TicketMessagingSystem = () => {
                           <p className={`text-xs mb-1.5 transition-colors duration-150 ${ticketUnread ? 'text-gray-600 font-medium' : 'text-gray-400'}`}>
                             {ticket.reportId?.ticketNumber || ticket.ticketNumber}
                           </p>
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mt-1">
                             {ticket.reportId?.caseStatus && (
-                              <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${ticket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${ticket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                                 {ticket.reportId.caseStatus === 'Case Closed' ? 'Archived (Closed)' : 
                                  ticket.reportId.caseStatus === 'For Referral' ? 'Archived (Referred)' : 
                                  ticket.reportId.caseStatus}
                               </span>
                             )}
-                            {ticketUnread && !isSelected && (
-                              <span className="ml-auto flex items-center gap-1 text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">
-                                <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping inline-block" />
-                                New
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2 ml-auto">
+                              {ticket.status === 'Open' ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(ticket); }}
+                                  className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-all"
+                                  title="Archive Ticket"
+                                >
+                                  <Archive size={14} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(ticket); }}
+                                  className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-all"
+                                  title="Reopen Ticket"
+                                >
+                                  <RefreshCw size={14} />
+                                </button>
+                              )}
+                              {ticketUnread && !isSelected && (
+                                <span className="flex items-center gap-1 text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">
+                                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping inline-block" />
+                                  New
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -990,9 +1009,24 @@ const TicketMessagingSystem = () => {
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700">
                       <Mail className="w-4 h-4" />
                     </button>
-                    <button onClick={handleToggleStatus} title={selectedTicket.status === 'Open' ? 'Archive Ticket' : 'Reopen Ticket'}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${selectedTicket.status === 'Open' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                      {selectedTicket.status === 'Closed' ? 'Archived' : selectedTicket.status}
+                    <button onClick={() => handleToggleStatus(selectedTicket)} 
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${
+                        selectedTicket.status === 'Open' 
+                          ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-600 hover:text-white' 
+                          : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-600 hover:text-white'
+                      }`}
+                    >
+                      {selectedTicket.status === 'Open' ? (
+                        <>
+                          <Archive size={16} />
+                          Archive
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw size={16} />
+                          Reopen
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1022,17 +1056,32 @@ const TicketMessagingSystem = () => {
                                 {msg.attachments.map((file, fIdx) => {
                                   const isPdf = file.type === 'application/pdf' || file.fileName?.endsWith('.pdf');
                                   const handleDownload = async (e) => {
-                                    if (!isPdf) return;
                                     e.preventDefault();
                                     try {
                                       let url;
                                       if (file.uri.startsWith('data:')) {
-                                        // Handle Base64 Data URI directly
-                                        const response = await fetch(file.uri);
-                                        const blob = await response.blob();
+                                        // 1. Manually convert Base64 to Blob (Safer than fetch for very large data URLs)
+                                        const parts = file.uri.split(',');
+                                        const contentType = parts[0].split(':')[1].split(';')[0];
+                                        const b64Data = parts[1];
+                                        
+                                        const byteCharacters = atob(b64Data);
+                                        const byteArrays = [];
+                                        
+                                        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+                                          const slice = byteCharacters.slice(offset, offset + 512);
+                                          const byteNumbers = new Array(slice.length);
+                                          for (let i = 0; i < slice.length; i++) {
+                                            byteNumbers[i] = slice.charCodeAt(i);
+                                          }
+                                          const byteArray = new Uint8Array(byteNumbers);
+                                          byteArrays.push(byteArray);
+                                        }
+                                        
+                                        const blob = new Blob(byteArrays, { type: contentType });
                                         url = window.URL.createObjectURL(blob);
                                       } else {
-                                        // Handle remote URL (Cloudinary, etc)
+                                        // 2. Handle remote URL (Cloudinary, etc)
                                         const response = await fetch(file.uri);
                                         const blob = await response.blob();
                                         url = window.URL.createObjectURL(blob);
@@ -1040,7 +1089,7 @@ const TicketMessagingSystem = () => {
 
                                       const link = document.createElement('a');
                                       link.href = url;
-                                      link.download = file.fileName || `Referral_Report.pdf`;
+                                      link.download = file.fileName || `Attachment_${Date.now()}`;
                                       document.body.appendChild(link);
                                       link.click();
                                       document.body.removeChild(link);
@@ -1051,28 +1100,30 @@ const TicketMessagingSystem = () => {
                                     }
                                   };
                                   return (
-                                    <a
+                                    <div
                                       key={fIdx}
-                                      href={file.uri}
                                       onClick={handleDownload}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={`flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer ${isAdmin
-                                        ? "bg-white/10 hover:bg-white/20 text-white"
-                                        : "bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200"
+                                      className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer group border shadow-sm ${isAdmin
+                                        ? "bg-white/10 hover:bg-white/20 text-white border-white/20"
+                                        : "bg-white hover:bg-blue-50 text-gray-700 border-gray-200 hover:border-blue-200"
                                         }`}
+                                      title={`Download ${file.fileName || 'Attachment'}`}
                                     >
-                                      <div className={`p-1.5 rounded ${isAdmin ? "bg-white/20" : "bg-blue-100"}`}>
-                                        <Paperclip className="w-3.5 h-3.5" />
+                                      <div className={`p-2.5 rounded-lg transition-colors ${isAdmin ? "bg-white/20 group-hover:bg-white/30" : "bg-blue-50 group-hover:bg-blue-100"}`}>
+                                        {isPdf ? <FileText className={isAdmin ? "text-white" : "text-blue-600"} size={20} /> : <Paperclip className={isAdmin ? "text-white" : "text-blue-600"} size={20} />}
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-[11px] font-semibold truncate">{file.fileName || "File Attachment"}</p>
-                                        <p className={`text-[9px] ${isAdmin ? "text-blue-100" : "text-gray-500"}`}>
-                                          {isPdf ? '📄 Click to Download PDF' : (file.type?.split('/')[1]?.toUpperCase() || "FILE")}
+                                        <p className={`text-sm font-bold truncate ${isAdmin ? "text-white" : "text-gray-900"}`}>
+                                          {file.fileName || (isPdf ? 'Official Report.pdf' : 'Attachment')}
+                                        </p>
+                                        <p className={`text-[10px] font-medium tracking-wide uppercase ${isAdmin ? "text-blue-100/60" : "text-gray-500"}`}>
+                                          {isPdf ? '📄 Official Document' : (file.type?.split('/')[1]?.toUpperCase() || "FILE")}
                                         </p>
                                       </div>
-                                      <ChevronRight className={`w-3 h-3 ${isAdmin ? "text-white/60" : "text-gray-400"}`} />
-                                    </a>
+                                      <div className={`p-2 rounded-lg transition-all ${isAdmin ? "text-white/40 group-hover:text-white" : "text-gray-300 group-hover:text-blue-600 group-hover:bg-blue-100"}`}>
+                                        <Download size={18} />
+                                      </div>
+                                    </div>
                                   );
                                 })}
                               </div>

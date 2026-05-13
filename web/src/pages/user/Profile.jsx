@@ -333,15 +333,39 @@ const EditProfile = () => {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
+                      value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(gender) ? gender : (gender ? "Other" : "")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "Other") {
+                          setGender("Other");
+                        } else {
+                          setGender(val);
+                        }
+                      }}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
                     >
-                      <option value="">Select gender</option>
+                      <option value="">Select Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
+                      <option value="Gay">Gay</option>
+                      <option value="Lesbian">Lesbian</option>
+                      <option value="Bisexual">Bisexual</option>
+                      <option value="Transgender">Transgender</option>
+                      <option value="Queer">Queer/Questioning</option>
+                      <option value="Non-binary">Non-binary</option>
                       <option value="Prefer not to say">Prefer not to say</option>
+                      <option value="Other">Other (Please specify)</option>
                     </select>
+
+                    {(gender === "Other" || (!["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(gender))) && (
+                      <input
+                        type="text"
+                        placeholder="Please specify your gender"
+                        value={gender === "Other" ? "" : gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="w-full mt-2 pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                      />
+                    )}
                   </div>
                 </div>
               </div>

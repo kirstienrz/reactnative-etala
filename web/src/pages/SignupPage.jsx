@@ -259,11 +259,11 @@ const SignupPage = () => {
           Gender <span className="text-red-500">*</span>
         </label>
         <select
-          value={gender === "Male" || gender === "Female" || gender === "LGBTQ+" || gender === "Prefer not to say" ? gender : (gender ? "Other" : "")}
+          value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(gender) ? gender : "Other"}
           onChange={(e) => {
             const val = e.target.value;
             if (val === "Other") {
-              setGender(""); // clear to let user type
+              setGender("Other"); // Set to 'Other' initially to show input
             } else {
               setGender(val);
             }
@@ -274,17 +274,22 @@ const SignupPage = () => {
           <option value="">Select Gender</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>
-          <option value="LGBTQ+">LGBTQ+</option>
+          <option value="Gay">Gay</option>
+          <option value="Lesbian">Lesbian</option>
+          <option value="Bisexual">Bisexual</option>
+          <option value="Transgender">Transgender</option>
+          <option value="Queer">Queer/Questioning</option>
+          <option value="Non-binary">Non-binary</option>
           <option value="Prefer not to say">Prefer not to say</option>
           <option value="Other">Other (Please specify)</option>
         </select>
 
         {/* Other Gender Input */}
-        {!(gender === "Male" || gender === "Female" || gender === "LGBTQ+" || gender === "Prefer not to say" || gender === "") && (
+        {(gender === "Other" || (!["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(gender))) && (
           <input
             type="text"
             placeholder="Please specify your gender"
-            value={gender}
+            value={gender === "Other" ? "" : gender}
             onChange={(e) => setGender(e.target.value)}
             className="w-full mt-2 pl-3 pr-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all text-sm"
           />

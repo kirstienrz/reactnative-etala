@@ -15,21 +15,20 @@ router.post("/check-report", async (req, res) => {
       witnessAccount = "" 
     } = req.body;
     
-    // Combine all text fields
+    // Combine all text fields for AI analysis
     const combinedText = `
-      Incident: ${incidentDescription}
+      Incident Statement: ${incidentDescription}
       Notes: ${additionalNotes}
       Witness: ${witnessAccount}
     `.trim();
     
-    console.log("🔍 AI Checking text:", combinedText.substring(0, 100));
     
-    // Basic validation lang - para di ma-empty
+    // Basic validation
     const mainText = incidentDescription.trim();
-    if (!mainText || mainText.length < 2) {
+    if (!mainText || mainText.length < 10) {
       return res.json({ 
         allowed: false, 
-        reason: "Please provide a description of the incident. / Mangyaring magbigay ng paglalarawan ng insidente." 
+        reason: "Please provide a more detailed description of the incident (at least 10 characters). / Mangyaring magbigay ng mas detalyadong paglalarawan ng insidente (hindi bababa sa 10 characters)." 
       });
     }
     
@@ -37,23 +36,22 @@ router.post("/check-report", async (req, res) => {
     try {
       const prompt = `You are a content moderator for a university reporting system. You understand BOTH English and Filipino/Tagalog.
 
-Analyze this incident report and determine if it's LEGITIMATE or SPAM.
+Analyze this incident report and determine if it's LEGITIMATE or SPAM/GIBBERISH.
 
 Report text (could be English, Filipino, or Taglish):
 "${combinedText}"
 
 Think like this:
-- LEGITIMATE: May sense ang sinasabi, naglalarawan ng totoong insidente, may details (sino, saan, kailan, ano nangyari)
-- SPAM: Walang kwenta, random letters, test lang, paulit-ulit, walang meaning
+- LEGITIMATE: The text makes sense, describes a real incident, and contains coherent details (who, where, when, what happened). Even if short, it should have a clear meaning.
+- SPAM/GIBBERISH: Random letters (e.g., "asdfghjk", "qwerty"), meaningless words, test strings, repetitive nonsense, or text that clearly lacks any logical context.
 
-Important: Kahit maikli pero may sense, legitimate yun. Example: "May nambubully sa room 201" - kahit maikli, legitimate yan.
+Important: A short but meaningful report like "Someone is bullying me in room 201" is LEGITIMATE. A report like "hdjkshdka" or "test report 123" is SPAM/GIBBERISH.
 
 Respond with ONLY ONE WORD: either "spam" or "legitimate"`;
 
       const result = await model.generateContent(prompt);
       const aiResponse = result.response.text().trim().toLowerCase();
       
-      console.log("🤖 Gemini Response:", aiResponse);
       
       if (aiResponse.includes("spam")) {
         return res.json({ 
@@ -92,11 +90,11 @@ Respond with ONLY ONE WORD: either "spam" or "legitimate"`;
 router.post("/analyze-severity", async (req, res) => {
   try {
     const { 
-      incidentDescription = "", 
       reportId = "unknown"
     } = req.body;
+
+    const incidentDescription = req.body.incidentDescription || req.body.incidentStatement || req.body.salaysay || "";
     
-    console.log(`🔍 Analyzing report: ${reportId}`);
     
     if (!incidentDescription || incidentDescription.trim().length < 5) {
       return res.status(400).json({
@@ -111,7 +109,6 @@ router.post("/analyze-severity", async (req, res) => {
     analysis.analyzedAt = new Date().toISOString();
     analysis.analysisId = `ai_${Date.now()}`;
     
-    console.log(`✅ Analysis Complete: ${analysis.severity}`);
     
     return res.json({
       success: true,

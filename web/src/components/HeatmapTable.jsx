@@ -103,7 +103,7 @@ const HeatmapTable = ({
   const rampStops = COLOR_RAMPS[colorScheme] ?? COLOR_RAMPS.vibrant;
 
   return (
-    <div className="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden text-sm select-none transition-all duration-300 hover:shadow-2xl">
+    <div className="bg-white shadow-xl rounded-2xl border border-gray-100 text-sm select-none transition-all duration-300 hover:shadow-2xl relative">
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-50 bg-white">
         <div className="min-w-0">
@@ -146,7 +146,7 @@ const HeatmapTable = ({
       </div>
 
       {/* ── Table ─────────────────────────────────────────────────────── */}
-      <div className="overflow-x-auto p-4">
+      <div className="overflow-x-auto p-4 overflow-hidden rounded-b-2xl">
         <table className="w-full min-w-max border-separate border-spacing-1">
           <thead>
             <tr>

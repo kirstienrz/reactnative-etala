@@ -127,6 +127,12 @@ export const updateReportStatus = async (id, status, remarks = "", caseStatus = 
   return res.data;
 };
 
+// 🛠️ UPDATE report services
+export const updateReportServices = async (id, services) => {
+  const res = await API.put(`/reports/admin/${id}/services`, services);
+  return res.data;
+};
+
 // 📨 ADD referral entry to a report
 export const addReferral = async (id, payload) => {
   const isMultipart = payload.attachments && payload.attachments.length > 0;

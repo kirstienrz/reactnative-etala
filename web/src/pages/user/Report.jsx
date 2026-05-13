@@ -1030,45 +1030,48 @@ const ReportForm = () => {
     setAiValidationResult(null);
 
     try {
-      console.log("🔍 [1] Starting submission...");
-      console.log("📝 Text being submitted:", formData.incidentDescription);
+
+      // Simple repetitive character check (e.g. "aaaaa")
+      const repetitivePattern = /(.)\1{4,}/; 
+      if (repetitivePattern.test(formData.salaysay)) {
+        setAiValidationResult({
+          allowed: false,
+          reason: "Please avoid using repetitive characters. Provide a meaningful description.",
+          details: { salaysay: formData.salaysay }
+        });
+        setShowAIValidation(true);
+        setLoading(false);
+        return;
+      }
 
       // CALL AI CHECK
       const aiCheck = await checkSpamReport({
-        salaysay: formData.salaysay || "",
+        incidentDescription: formData.salaysay || "",
         additionalNotes: formData.additionalNotes || "",
         witnessAccount: formData.witnessAccount || "",
       });
 
-      console.log("✅ [2] AI Response RECEIVED:", aiCheck.data);
-      console.log("✅ [3] aiCheck.data.allowed =", aiCheck.data.allowed);
-      console.log("✅ [4] aiCheck.data.reason =", aiCheck.data.reason);
 
       // CRITICAL: Check if AI blocked it
       if (!aiCheck.data.allowed) {
-        console.log("❌ [5] AI BLOCKED DETECTED! Showing modal...");
 
         setAiValidationResult({
           allowed: false,
           reason: aiCheck.data.reason || "Your report lacks meaningful details.",
           details: {
-            incidentDescription: formData.incidentDescription,
+            salaysay: formData.salaysay,
             additionalNotes: formData.additionalNotes,
             witnessAccount: formData.witnessAccount
           }
         });
 
-        console.log("✅ [6] Setting showAIValidation to TRUE");
         setShowAIValidation(true);
         setLoading(false);
-        console.log("✅ [7] Modal should now appear!");
         return;
       } else {
-        console.log("✅ [5] AI APPROVED - continuing to submission");
       }
 
       // ALWAYS CONTINUE TO SUBMISSION
-      console.log("✅ [6] Continuing to submission...");
 
       // ---- EXISTING SUBMISSION CODE ----
       const submitData = new FormData();
@@ -1105,7 +1108,6 @@ const ReportForm = () => {
       // Send PDF via Email
       try {
         await sendPDFToEmail(pdfBlob, ticketNumber);
-        console.log('✅ PDF sent to your registered email successfully');
       } catch (emailError) {
         console.error('❌ Failed to send PDF email:', emailError);
         showAlert(
@@ -1141,7 +1143,7 @@ const ReportForm = () => {
         perpBarangay: '', perpRelationship: '',
         salaysay: '', latestIncidentDate: '',
         incidentRegion: '', incidentProvince: '', incidentCityMun: '', incidentBarangay: '',
-        placeOfIncident: '', witnessName: '', witnessAddress: '', witnessContact: '',
+        placeOfIncident: '', witnessName: '', witnessGender: '', witnessAddress: '', witnessContact: '',
         witnessAccount: '', witnessDate: '',
         attachments: [], additionalNotes: '', confirmAccuracy: false,
         confirmConfidentiality: false,
@@ -1179,8 +1181,56 @@ const ReportForm = () => {
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep()) setCurrentStep(prev => prev + 1);
+  const handleNext = async () => {
+    if (!validateStep()) return;
+
+    // AI Check specifically for Step 2 (Salaysay)
+    if (currentStep === 2) {
+      setLoading(true);
+      try {
+        // Simple repetitive character check (e.g. "aaaaa")
+        const repetitivePattern = /(.)\1{4,}/;
+        if (repetitivePattern.test(formData.salaysay)) {
+          setAiValidationResult({
+            allowed: false,
+            reason: "Please avoid using repetitive characters. Provide a meaningful description.",
+            details: { salaysay: formData.salaysay }
+          });
+          setShowAIValidation(true);
+          setLoading(false);
+          return;
+        }
+
+        // CALL AI CHECK
+        const aiCheck = await checkSpamReport({
+          incidentDescription: formData.salaysay || "",
+          additionalNotes: formData.additionalNotes || "",
+          witnessAccount: formData.witnessAccount || "",
+        });
+
+        if (!aiCheck.data.allowed) {
+          setAiValidationResult({
+            allowed: false,
+            reason: aiCheck.data.reason || "Your report lacks meaningful details.",
+            details: {
+              salaysay: formData.salaysay,
+              additionalNotes: formData.additionalNotes,
+              witnessAccount: formData.witnessAccount
+            }
+          });
+          setShowAIValidation(true);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error("AI Check error in handleNext:", error);
+        // If AI fails, we allow proceeding to avoid blocking users due to technical issues
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    setCurrentStep(prev => prev + 1);
   };
 
   const handleBack = () => {
@@ -1217,10 +1267,17 @@ const ReportForm = () => {
   };
 
   const getStepTitle = () => {
+    let step3Title = "Perpetrator & Witness Information";
+    if (formData.reporterRole === 'Witness') {
+      step3Title = "Perpetrator & Victim Information";
+    } else if (formData.reporterRole === 'Mandatory Reporter') {
+      step3Title = "Perpetrator, Victim & Witness Info";
+    }
+
     const titles = [
       "Reporter Information",
       "Incident Details",
-      "Perpetrator & Witness Information",
+      step3Title,
       "Review & Submit"
     ];
     return titles[currentStep - 1] || "";
@@ -1228,11 +1285,9 @@ const ReportForm = () => {
 
   const renderAIValidationModal = () => {
     if (!showAIValidation || !aiValidationResult) {
-      console.log("❌ Modal conditions not met:", { showAIValidation, aiValidationResult });
       return null;
     }
 
-    console.log("✅ Rendering AI Validation Modal...");
 
     return (
       <div style={{
@@ -1248,7 +1303,6 @@ const ReportForm = () => {
         zIndex: 9999,
         padding: '20px'
       }} onClick={() => {
-        console.log("Closing modal");
         setShowAIValidation(false);
       }}>
         <div style={{
@@ -1262,7 +1316,6 @@ const ReportForm = () => {
           fontFamily: 'system-ui, -apple-system, sans-serif'
         }} onClick={(e) => {
           e.stopPropagation();
-          console.log("Modal content clicked");
         }}>
 
           {/* MODAL HEADER */}
@@ -1295,7 +1348,7 @@ const ReportForm = () => {
                   fontWeight: '600',
                   lineHeight: '1.4'
                 }}>
-                  Content Validation Required
+                  {aiValidationResult.reason === "Guide for writing a good incident report." ? "Report Guidelines" : "Content Validation Required"}
                 </h3>
                 <p style={{
                   margin: '4px 0 0 0',
@@ -1303,7 +1356,7 @@ const ReportForm = () => {
                   color: '#6B7280',
                   fontWeight: '400'
                 }}>
-                  AI-assisted quality assessment
+                  {aiValidationResult.reason === "Guide for writing a good incident report." ? "Tips for a high-quality submission" : "AI-assisted quality assessment"}
                 </p>
               </div>
             </div>
@@ -1337,11 +1390,11 @@ const ReportForm = () => {
 
             {/* VALIDATION STATUS */}
             <div style={{
-              backgroundColor: '#FEF2F2',
+              backgroundColor: aiValidationResult.reason === "Guide for writing a good incident report." ? '#F0F9FF' : '#FEF2F2',
               borderRadius: '8px',
               padding: '20px',
               marginBottom: '24px',
-              border: '1px solid #FECACA'
+              border: `1px solid ${aiValidationResult.reason === "Guide for writing a good incident report." ? "#BAE6FD" : "#FECACA"}`
             }}>
               <div style={{
                 display: 'flex',
@@ -1353,19 +1406,23 @@ const ReportForm = () => {
                   width: '32px',
                   height: '32px',
                   borderRadius: '6px',
-                  backgroundColor: '#FEE2E2',
+                  backgroundColor: aiValidationResult.reason === "Guide for writing a good incident report." ? '#E0F2FE' : '#FEE2E2',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <X size={18} color="#DC2626" />
+                  {aiValidationResult.reason === "Guide for writing a good incident report." ? (
+                    <Info size={18} color="#0284C7" />
+                  ) : (
+                    <X size={18} color="#DC2626" />
+                  )}
                 </div>
                 <span style={{
                   fontSize: '16px',
                   fontWeight: '600',
-                  color: '#DC2626'
+                  color: aiValidationResult.reason === "Guide for writing a good incident report." ? '#0284C7' : '#DC2626'
                 }}>
-                  Report Not Approved
+                  {aiValidationResult.reason === "Guide for writing a good incident report." ? "Submission Guide" : "Report Not Approved"}
                 </span>
               </div>
 
@@ -1374,7 +1431,7 @@ const ReportForm = () => {
                 padding: '16px',
                 borderRadius: '6px',
                 marginBottom: '20px',
-                borderLeft: '3px solid #DC2626'
+                borderLeft: `3px solid ${aiValidationResult.reason === "Guide for writing a good incident report." ? "#0284C7" : "#DC2626"}`
               }}>
                 <p style={{
                   margin: 0,
@@ -1383,137 +1440,10 @@ const ReportForm = () => {
                   lineHeight: '1.6',
                   fontWeight: '400'
                 }}>
-                  {aiValidationResult.reason}
+                  {aiValidationResult.reason === "Guide for writing a good incident report." 
+                    ? "Follow these tips to ensure your report is clear, complete, and helpful for the GAD Office investigation."
+                    : aiValidationResult.reason}
                 </p>
-              </div>
-
-              {/* CONTENT ANALYSIS */}
-              <div style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: '6px',
-                padding: '20px',
-                border: '1px solid #E5E7EB'
-              }}>
-                <h4 style={{
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  margin: '0 0 20px 0',
-                  color: '#111827',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Content Analysis
-                </h4>
-
-                {formData.incidentDescription && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      color: '#6B7280',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      <span>Incident Description</span>
-                      <span style={{
-                        fontSize: '11px',
-                        backgroundColor: '#F3F4F6',
-                        padding: '2px 8px',
-                        borderRadius: '10px'
-                      }}>
-                        {formData.incidentDescription.length} characters
-                      </span>
-                    </div>
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#374151',
-                      backgroundColor: '#F9FAFB',
-                      padding: '16px',
-                      borderRadius: '6px',
-                      borderLeft: '2px solid #DC2626',
-                      fontFamily: 'monospace',
-                      lineHeight: '1.5'
-                    }}>
-                      {formData.incidentDescription.length > 120
-                        ? formData.incidentDescription.substring(0, 120) + '...'
-                        : formData.incidentDescription}
-                    </div>
-                  </div>
-                )}
-
-                {formData.additionalNotes && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      color: '#6B7280',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      <span>Additional Notes</span>
-                      <span style={{
-                        fontSize: '11px',
-                        backgroundColor: '#F3F4F6',
-                        padding: '2px 8px',
-                        borderRadius: '10px'
-                      }}>
-                        {formData.additionalNotes.length} characters
-                      </span>
-                    </div>
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#374151',
-                      backgroundColor: '#F9FAFB',
-                      padding: '16px',
-                      borderRadius: '6px',
-                      borderLeft: '2px solid #F59E0B'
-                    }}>
-                      {formData.additionalNotes.length > 80
-                        ? formData.additionalNotes.substring(0, 80) + '...'
-                        : formData.additionalNotes}
-                    </div>
-                  </div>
-                )}
-
-                {formData.witnessAccount && (
-                  <div>
-                    <div style={{
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      color: '#6B7280',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      <span>Witness Account</span>
-                      <span style={{
-                        fontSize: '11px',
-                        backgroundColor: '#F3F4F6',
-                        padding: '2px 8px',
-                        borderRadius: '10px'
-                      }}>
-                        {formData.witnessAccount.length} characters
-                      </span>
-                    </div>
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#374151',
-                      backgroundColor: '#F9FAFB',
-                      padding: '16px',
-                      borderRadius: '6px',
-                      borderLeft: '2px solid #10B981'
-                    }}>
-                      {formData.witnessAccount.length > 80
-                        ? formData.witnessAccount.substring(0, 80) + '...'
-                        : formData.witnessAccount}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -1632,7 +1562,6 @@ const ReportForm = () => {
             }}>
               <button
                 onClick={() => {
-                  console.log("Edit Report clicked");
                   setShowAIValidation(false);
                   setTimeout(() => {
                     const textarea = document.querySelector('textarea');
@@ -1643,7 +1572,7 @@ const ReportForm = () => {
                   }, 100);
                 }}
                 style={{
-                  backgroundColor: '#DC2626',
+                  backgroundColor: aiValidationResult.reason === "Guide for writing a good incident report." ? '#3B82F6' : '#DC2626',
                   color: '#FFFFFF',
                   border: 'none',
                   padding: '14px 28px',
@@ -1658,15 +1587,15 @@ const ReportForm = () => {
                   letterSpacing: '0.025em'
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#B91C1C';
+                  e.target.style.backgroundColor = aiValidationResult.reason === "Guide for writing a good incident report." ? '#2563EB' : '#B91C1C';
                   e.target.style.transform = 'translateY(-1px)';
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#DC2626';
+                  e.target.style.backgroundColor = aiValidationResult.reason === "Guide for writing a good incident report." ? '#3B82F6' : '#DC2626';
                   e.target.style.transform = 'translateY(0)';
                 }}
               >
-                Revise Report
+                {aiValidationResult.reason === "Guide for writing a good incident report." ? "Got it" : "Revise Report"}
               </button>
             </div>
 
@@ -1727,7 +1656,7 @@ const ReportForm = () => {
               <Shield size={32} color={currentStyles.colors.primary} />
             </div>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: currentStyles.colors.textPrimary, margin: '0 0 8px 0' }}>
-              Terms of Confidentiality
+              GBV Reporting Confidentiality
             </h2>
             <p style={{ fontSize: '14px', color: currentStyles.colors.textSecondary, margin: 0 }}>
               Please review and agree to our confidentiality terms to proceed.
@@ -1745,23 +1674,23 @@ const ReportForm = () => {
             textAlign: 'justify'
           }}>
             <p style={{ fontWeight: '600', marginBottom: '16px' }}>
-              By proceeding with the submission of this report, you acknowledge and agree to the following confidentiality terms:
+              By proceeding with this report, you acknowledge that ETALA is a safe space for reporting Gender-Based Violence (GBV). We adhere to the following principles:
             </p>
 
             <p style={{ marginBottom: '16px' }}>
-              All information provided in this report will be treated with strict confidentiality and will only be accessed by authorized personnel of the system for the purpose of reviewing, processing, and responding to the concern submitted.
+              <strong>1. Survivor-Centered Privacy:</strong> All information provided will be treated with the utmost sensitivity. Access is restricted to authorized TUP GAD Office personnel who are trained in trauma-informed response.
             </p>
 
             <p style={{ marginBottom: '16px' }}>
-              The information you provide may be viewed by designated administrators or authorized individuals responsible for handling reports and ensuring appropriate action. These individuals are required to handle all submitted information with respect, privacy, and confidentiality.
+              <strong>2. Purpose of Use:</strong> Your data is used solely to facilitate support, provide referrals (medical, legal, or psychological), and ensure appropriate institutional response. We do not share your identity without your explicit consent unless required by law in life-threatening situations.
             </p>
 
             <p style={{ marginBottom: '16px' }}>
-              Your personal information and report details will not be disclosed to unauthorized persons and will only be used for documentation, analysis, and appropriate response related to the concern filed within the system.
+              <strong>3. Non-Retaliation:</strong> TUP prohibits any form of retaliation against individuals who report incidents of GBV. This system is designed to protect you and your right to a safe campus environment.
             </p>
 
             <p style={{ marginBottom: '16px' }}>
-              By submitting this report, you confirm that the information you are providing is true and accurate to the best of your knowledge, and you understand that the report will be handled according to the confidentiality and data protection policies of the system.
+              <strong>4. Accuracy & Integrity:</strong> While we stand with survivors, we maintain the integrity of the system by requiring truthful accounts. This ensures that resources are directed effectively to those in need.
             </p>
 
             <p style={{ fontStyle: 'italic', color: currentStyles.colors.textSecondary }}>
@@ -1789,7 +1718,7 @@ const ReportForm = () => {
                 {agreedToTerms && <Check size={14} color="white" />}
               </div>
               <span style={{ fontSize: '14px', fontWeight: '500', color: currentStyles.colors.textPrimary, lineHeight: '1.4' }}>
-                I have read and agree to the terms of confidentiality and confirm that all information provided is true and accurate.
+                I have read and agree to the GBV reporting confidentiality terms and confirm that my statement is true to the best of my knowledge.
               </span>
             </div>
 
@@ -1954,15 +1883,41 @@ const ReportForm = () => {
                   <span style={{ fontSize: '11px', color: currentStyles.colors.textSecondary, marginLeft: 'auto' }}>From profile</span>
                 </div>
               ) : (
-                <select
-                  style={currentStyles.selectInput}
-                  value={formData.reporterGender}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
-                >
-                  <option value="">Prefer not to say</option>
-                  <option value="Female">Female</option>
-                  <option value="Male">Male</option>
-                </select>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <select
+                    style={currentStyles.selectInput}
+                    value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.reporterGender) ? formData.reporterGender : (formData.reporterGender ? "Other" : "")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "Other") {
+                        setFormData(prev => ({ ...prev, reporterGender: "Other" }));
+                      } else {
+                        setFormData(prev => ({ ...prev, reporterGender: val }));
+                      }
+                    }}
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Gay">Gay</option>
+                    <option value="Lesbian">Lesbian</option>
+                    <option value="Bisexual">Bisexual</option>
+                    <option value="Transgender">Transgender</option>
+                    <option value="Queer">Queer/Questioning</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                    <option value="Other">Other (Please specify)</option>
+                  </select>
+
+                  {(formData.reporterGender === "Other" || (formData.reporterGender && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.reporterGender))) && (
+                    <input
+                      style={currentStyles.input}
+                      placeholder="Please specify your gender"
+                      value={formData.reporterGender === "Other" ? "" : formData.reporterGender}
+                      onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
+                    />
+                  )}
+                </div>
               )}
             </div>
             <div style={currentStyles.inputGroup}>
@@ -2032,8 +1987,8 @@ const ReportForm = () => {
               Privacy & Confidentiality
             </p>
             <p style={{ margin: 0, fontSize: '13px', color: currentStyles.colors.textSecondary, lineHeight: '1.5' }}>
-              All reports are handled with strict confidentiality by the TUP GAD Office.
-              Whether you choose to remain anonymous or provide your details, your privacy is our priority.
+              All GBV reports are handled with extreme sensitivity and strict confidentiality by the TUP GAD Office. 
+              Your safety and privacy are our top priorities throughout this process.
             </p>
           </div>
         </div>
@@ -2044,8 +1999,7 @@ const ReportForm = () => {
   const renderIncidentDetails = () => (
     <div style={currentStyles.stepContainer}>
       <div style={{ display: 'grid' }}>
-        <div>
-          <div style={{ ...currentStyles.sectionCard, marginBottom: '24px' }}>
+        <div style={{ ...currentStyles.sectionCard, marginBottom: '24px' }}>
             <div style={currentStyles.sectionHeader}>
               <h3 style={currentStyles.sectionTitle}>Incident Details</h3>
               <p style={currentStyles.sectionDescription}>Tell us what happened</p>
@@ -2064,13 +2018,36 @@ const ReportForm = () => {
             </div>
 
             <div style={currentStyles.inputGroup}>
-              <label style={currentStyles.inputLabel}>
+              <label style={{ ...currentStyles.inputLabel, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Salaysay (Incident Statement)
                 <span style={currentStyles.requiredStar}> *</span>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setAiValidationResult({
+                      allowed: false,
+                      reason: "Guide for writing a good incident report.",
+                      details: { salaysay: "" }
+                    });
+                    setShowAIValidation(true);
+                  }}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    padding: 0, 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: currentStyles.colors.primary
+                  }}
+                  title="Click for guidelines"
+                >
+                  <Info size={16} />
+                </button>
               </label>
               <textarea
                 style={{ ...currentStyles.input, minHeight: '200px', resize: 'vertical' }}
-                placeholder="Provide a detailed description of what happened, including dates, times, locations, and any other relevant information..."
+                placeholder="Provide a detailed and meaningful description of what happened (who, where, when). Please avoid random characters or meaningless text as these will be filtered by our system..."
                 value={formData.salaysay}
                 onChange={(e) => setFormData(prev => ({ ...prev, salaysay: e.target.value }))}
               />
@@ -2109,128 +2086,282 @@ const ReportForm = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
 
-  const renderPerpetratorInfo = () => (
-    <div style={currentStyles.stepContainer}>
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '24px' : '32px' }}>
+  const renderPerpetratorInfo = () => {
+    const isVictimReporter = formData.reporterRole === 'Victim';
+    const isWitnessReporter = formData.reporterRole === 'Witness';
+    const isMandatoryReporter = formData.reporterRole === 'Mandatory Reporter';
 
-        <div style={currentStyles.sectionCard}>
-          <div style={currentStyles.sectionHeader}>
-            <h3 style={currentStyles.sectionTitle}>Perpetrator Information</h3>
-            <p style={currentStyles.sectionDescription}>Details about the alleged perpetrator (if known)</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
+    return (
+      <div style={currentStyles.stepContainer}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '24px' : '32px' }}>
 
-            <div style={currentStyles.inputGroup}>
-              <label style={currentStyles.inputLabel}>Last Name</label>
-              <input
-                style={currentStyles.input}
-                placeholder="Enter last name"
-                value={formData.perpLastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpLastName: e.target.value }))}
-              />
+          {/* Perpetrator Card */}
+          <div style={currentStyles.sectionCard}>
+            <div style={currentStyles.sectionHeader}>
+              <h3 style={currentStyles.sectionTitle}>Perpetrator Information</h3>
+              <p style={currentStyles.sectionDescription}>Details about the alleged perpetrator (if known)</p>
             </div>
-            <div style={currentStyles.inputGroup}>
-              <label style={currentStyles.inputLabel}>First Name</label>
-              <input
-                style={currentStyles.input}
-                placeholder="Enter first name"
-                value={formData.perpFirstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpFirstName: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
 
-            <div style={currentStyles.inputGroup}>
-              <label style={currentStyles.inputLabel}>Sex</label>
-              <div style={currentStyles.optionGroup}>
-                {['Male', 'Female'].map(sex => (
-                  <button
-                    key={sex}
-                    type="button"
-                    style={{
-                      ...currentStyles.optionButton,
-                      backgroundColor: formData.perpSex === sex ? currentStyles.colors.primary : 'white',
-                      color: formData.perpSex === sex ? 'white' : currentStyles.colors.textPrimary,
-                      borderColor: formData.perpSex === sex ? currentStyles.colors.primary : currentStyles.colors.border,
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Last Name</label>
+                <input
+                  style={currentStyles.input}
+                  placeholder="Enter last name"
+                  value={formData.perpLastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, perpLastName: e.target.value }))}
+                />
+              </div>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>First Name</label>
+                <input
+                  style={currentStyles.input}
+                  placeholder="Enter first name"
+                  value={formData.perpFirstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, perpFirstName: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
+
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Gender</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <select
+                    style={currentStyles.selectInput}
+                    value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.perpSex) ? formData.perpSex : (formData.perpSex ? "Other" : "")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "Other") {
+                        setFormData(prev => ({ ...prev, perpSex: "Other" }));
+                      } else {
+                        setFormData(prev => ({ ...prev, perpSex: val }));
+                      }
                     }}
-                    onClick={() => setFormData(prev => ({ ...prev, perpSex: sex }))}
                   >
-                    {sex}
-                  </button>
-                ))}
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Gay">Gay</option>
+                    <option value="Lesbian">Lesbian</option>
+                    <option value="Bisexual">Bisexual</option>
+                    <option value="Transgender">Transgender</option>
+                    <option value="Queer">Queer/Questioning</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                    <option value="Other">Other (Please specify)</option>
+                  </select>
+
+                  {(formData.perpSex === "Other" || (formData.perpSex && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.perpSex))) && (
+                    <input
+                      style={currentStyles.input}
+                      placeholder="Please specify"
+                      value={formData.perpSex === "Other" ? "" : formData.perpSex}
+                      onChange={(e) => setFormData(prev => ({ ...prev, perpSex: e.target.value }))}
+                    />
+                  )}
+                </div>
+              </div>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Age (approx.)</label>
+                <input
+                  style={currentStyles.input}
+                  placeholder="Approximate age"
+                  type="number"
+                  value={formData.perpAge}
+                  onChange={(e) => setFormData(prev => ({ ...prev, perpAge: e.target.value }))}
+                />
               </div>
             </div>
             <div style={currentStyles.inputGroup}>
-              <label style={currentStyles.inputLabel}>Age (approx.)</label>
+              <label style={currentStyles.inputLabel}>Relationship to {isVictimReporter ? 'You' : 'Victim'}</label>
+              <div style={currentStyles.dropdownInput} onClick={() => showDropdown('perpRelationship', relationships)}>
+                <span style={{ color: !formData.perpRelationship ? currentStyles.colors.textSecondary : currentStyles.colors.textPrimary }}>
+                  {formData.perpRelationship || 'Select relationship'}
+                </span>
+                <ChevronDown size={20} color={currentStyles.colors.textSecondary} />
+              </div>
+            </div>
+            <div style={currentStyles.inputGroup}>
+              <label style={currentStyles.inputLabel}>Occupation (if known)</label>
               <input
                 style={currentStyles.input}
-                placeholder="Approximate age"
-                type="number"
-                value={formData.perpAge}
-                onChange={(e) => setFormData(prev => ({ ...prev, perpAge: e.target.value }))}
+                placeholder="Enter occupation"
+                value={formData.perpOccupation}
+                onChange={(e) => setFormData(prev => ({ ...prev, perpOccupation: e.target.value }))}
               />
             </div>
           </div>
-          <div style={currentStyles.inputGroup}>
-            <label style={currentStyles.inputLabel}>Relationship to You</label>
-            <div style={currentStyles.dropdownInput} onClick={() => showDropdown('perpRelationship', relationships)}>
-              <span style={{ color: !formData.perpRelationship ? currentStyles.colors.textSecondary : currentStyles.colors.textPrimary }}>
-                {formData.perpRelationship || 'Select relationship'}
-              </span>
-              <ChevronDown size={20} color={currentStyles.colors.textSecondary} />
-            </div>
-          </div>
-          <div style={currentStyles.inputGroup}>
-            <label style={currentStyles.inputLabel}>Occupation (if known)</label>
-            <input
-              style={currentStyles.input}
-              placeholder="Enter occupation"
-              value={formData.perpOccupation}
-              onChange={(e) => setFormData(prev => ({ ...prev, perpOccupation: e.target.value }))}
-            />
-          </div>
-        </div>
 
-        <div style={currentStyles.sectionCard}>
-          <div style={currentStyles.sectionHeader}>
-            <h3 style={currentStyles.sectionTitle}>Witness Information</h3>
-            <p style={currentStyles.sectionDescription}>Details of any witnesses (if applicable)</p>
-          </div>
-          <div style={currentStyles.inputGroup}>
-            <label style={currentStyles.inputLabel}>Witness Name</label>
-            <input
-              style={currentStyles.input}
-              placeholder="Enter witness name"
-              value={formData.witnessName}
-              onChange={(e) => setFormData(prev => ({ ...prev, witnessName: e.target.value }))}
-            />
-          </div>
-          <div style={currentStyles.inputGroup}>
-            <label style={currentStyles.inputLabel}>Witness Contact</label>
-            <input
-              style={currentStyles.input}
-              placeholder="Contact information"
-              value={formData.witnessContact}
-              onChange={(e) => setFormData(prev => ({ ...prev, witnessContact: e.target.value }))}
-            />
-          </div>
-          <div style={currentStyles.inputGroup}>
-            <label style={currentStyles.inputLabel}>Witness Statement</label>
-            <textarea
-              style={{ ...currentStyles.input, minHeight: '150px', resize: 'vertical' }}
-              placeholder="Brief statement from witness (if available)..."
-              value={formData.witnessAccount}
-              onChange={(e) => setFormData(prev => ({ ...prev, witnessAccount: e.target.value }))}
-            />
-          </div>
+          {/* Victim Information Card (If reporter is Witness or Mandatory Reporter) */}
+          {(isWitnessReporter || isMandatoryReporter) && (
+            <div style={currentStyles.sectionCard}>
+              <div style={currentStyles.sectionHeader}>
+                <h3 style={currentStyles.sectionTitle}>Victim Information</h3>
+                <p style={currentStyles.sectionDescription}>Details about the victim</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
+                <div style={currentStyles.inputGroup}>
+                  <label style={currentStyles.inputLabel}>Last Name</label>
+                  <input
+                    style={currentStyles.input}
+                    placeholder="Enter last name"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  />
+                </div>
+                <div style={currentStyles.inputGroup}>
+                  <label style={currentStyles.inputLabel}>First Name</label>
+                  <input
+                    style={currentStyles.input}
+                    placeholder="Enter first name"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px', marginBottom: '20px' }}>
+                <div style={currentStyles.inputGroup}>
+                  <label style={currentStyles.inputLabel}>Gender</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <select
+                      style={currentStyles.selectInput}
+                      value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.sex) ? formData.sex : (formData.sex ? "Other" : "")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "Other") {
+                          setFormData(prev => ({ ...prev, sex: "Other" }));
+                        } else {
+                          setFormData(prev => ({ ...prev, sex: val }));
+                        }
+                      }}
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Gay">Gay</option>
+                      <option value="Lesbian">Lesbian</option>
+                      <option value="Bisexual">Bisexual</option>
+                      <option value="Transgender">Transgender</option>
+                      <option value="Queer">Queer/Questioning</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                      <option value="Other">Other (Please specify)</option>
+                    </select>
+
+                    {(formData.sex === "Other" || (formData.sex && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.sex))) && (
+                      <input
+                        style={currentStyles.input}
+                        placeholder="Please specify"
+                        value={formData.sex === "Other" ? "" : formData.sex}
+                        onChange={(e) => setFormData(prev => ({ ...prev, sex: e.target.value }))}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div style={currentStyles.inputGroup}>
+                  <label style={currentStyles.inputLabel}>Age</label>
+                  <input
+                    style={currentStyles.input}
+                    placeholder="Enter age"
+                    type="number"
+                    value={formData.age}
+                    onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Occupation</label>
+                <input
+                  style={currentStyles.input}
+                  placeholder="Enter occupation"
+                  value={formData.occupation}
+                  onChange={(e) => setFormData(prev => ({ ...prev, occupation: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Witness Information Card (If reporter is Victim or Mandatory Reporter) */}
+          {(isVictimReporter || isMandatoryReporter) && (
+            <div style={currentStyles.sectionCard}>
+              <div style={currentStyles.sectionHeader}>
+                <h3 style={currentStyles.sectionTitle}>Witness Information</h3>
+                <p style={currentStyles.sectionDescription}>Details of any witnesses (if applicable)</p>
+              </div>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Witness Name</label>
+                <input
+                  style={currentStyles.input}
+                  placeholder="Enter witness name"
+                  value={formData.witnessName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, witnessName: e.target.value }))}
+                />
+              </div>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Witness Gender</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <select
+                    style={currentStyles.selectInput}
+                    value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.witnessGender) ? formData.witnessGender : (formData.witnessGender ? "Other" : "")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "Other") {
+                        setFormData(prev => ({ ...prev, witnessGender: "Other" }));
+                      } else {
+                        setFormData(prev => ({ ...prev, witnessGender: val }));
+                      }
+                    }}
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Gay">Gay</option>
+                    <option value="Lesbian">Lesbian</option>
+                    <option value="Bisexual">Bisexual</option>
+                    <option value="Transgender">Transgender</option>
+                    <option value="Queer">Queer/Questioning</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                    <option value="Other">Other (Please specify)</option>
+                  </select>
+
+                  {(formData.witnessGender === "Other" || (formData.witnessGender && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.witnessGender))) && (
+                    <input
+                      style={currentStyles.input}
+                      placeholder="Please specify witness gender"
+                      value={formData.witnessGender === "Other" ? "" : formData.witnessGender}
+                      onChange={(e) => setFormData(prev => ({ ...prev, witnessGender: e.target.value }))}
+                    />
+                  )}
+                </div>
+              </div>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Witness Contact</label>
+                <input
+                  style={currentStyles.input}
+                  placeholder="Contact information"
+                  value={formData.witnessContact}
+                  onChange={(e) => setFormData(prev => ({ ...prev, witnessContact: e.target.value }))}
+                />
+              </div>
+              <div style={currentStyles.inputGroup}>
+                <label style={currentStyles.inputLabel}>Witness Statement</label>
+                <textarea
+                  style={{ ...currentStyles.input, minHeight: '100px', resize: 'vertical' }}
+                  placeholder="Brief statement from witness (if available)..."
+                  value={formData.witnessAccount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, witnessAccount: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderConfirmation = () => {
     const isAnonymous = !formData.firstName && !formData.lastName;
@@ -2432,7 +2563,7 @@ const ReportForm = () => {
                     {formData.confirmConfidentiality && <Check size={16} color="white" />}
                   </div>
                   <span style={currentStyles.checkboxLabel}>
-                    I understand this report will be handled confidentially by the TUP GAD Office
+                    I understand this report will be handled with extreme sensitivity by the TUP GAD Office
                   </span>
                   <span style={currentStyles.requiredStar}> *</span>
                 </div>

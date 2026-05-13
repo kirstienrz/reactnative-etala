@@ -26,6 +26,7 @@ const SuperAdminDashboard = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [heatmapView, setHeatmapView] = useState('department');
+  const [heatmapSubView, setHeatmapSubView] = useState('reporter'); // 'reporter', 'victim', 'witness'
 
   useEffect(() => {
     const fetchData = async () => {
@@ -648,37 +649,70 @@ const SuperAdminDashboard = () => {
       {activeTab === 'heatmap' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-              <div className="max-w-3xl">
-                <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Heatmap Analysis</h2>
-                <p className="text-gray-500 text-lg">Visualize the concentration of incident reports across departments and time periods. Darker cells represent higher activity.</p>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
+              <div className="max-w-2xl">
+                <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Heatmap Analysis</h2>
+                <p className="text-gray-500 text-lg leading-relaxed">
+                  Visualize the concentration of incident reports across departments, roles, and time periods. 
+                  <span className="font-semibold text-violet-600 ml-1">Darker cells represent higher activity.</span>
+                </p>
               </div>
               
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2 min-w-[200px]">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">View Perspective</label>
-                  <div className="flex bg-gray-50 p-1 rounded-2xl border border-gray-200 shadow-inner">
+              <div className="flex flex-wrap items-center gap-4 bg-gray-50/50 p-4 rounded-[2rem] border border-gray-100 shadow-sm">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">View Perspective</label>
+                  <div className="flex bg-white p-1 rounded-2xl border border-gray-200 shadow-sm">
                     <button
                       onClick={() => setHeatmapView('department')}
-                      className={`flex-1 py-2 px-4 rounded-xl text-xs font-black transition-all ${heatmapView === 'department' ? 'bg-white text-violet-600 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                      className={`py-2 px-4 rounded-xl text-[10px] font-black transition-all duration-300 ${heatmapView === 'department' ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                     >
-                      DEPARTMENT
+                      DEPT
                     </button>
                     <button
-                      onClick={() => setHeatmapView('gender')}
-                      className={`flex-1 py-2 px-4 rounded-xl text-xs font-black transition-all ${heatmapView === 'gender' ? 'bg-white text-violet-600 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                      onClick={() => setHeatmapView('gender_role')}
+                      className={`py-2 px-4 rounded-xl text-[10px] font-black transition-all duration-300 ${heatmapView === 'gender_role' ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                     >
-                      GENDER
+                      GENDER/ROLE
+                    </button>
+                    <button
+                      onClick={() => setHeatmapView('gender_month')}
+                      className={`py-2 px-4 rounded-xl text-[10px] font-black transition-all duration-300 ${heatmapView === 'gender_month' ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      GENDER/MONTH
                     </button>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 min-w-[140px]">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Select Year</label>
+                {heatmapView === 'gender_month' && (
+                  <div className="flex flex-col gap-1.5 animate-in slide-in-from-left-2 duration-300">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Whose Gender?</label>
+                    <div className="flex bg-white p-1 rounded-2xl border border-gray-200 shadow-sm">
+                      {[
+                        { id: 'reporter', label: 'Reporter' },
+                        { id: 'victim', label: 'Victim' },
+                        { id: 'witness', label: 'Witness' },
+                        { id: 'mandatory', label: 'Mandatory' }
+                      ].map((role) => (
+                        <button
+                          key={role.id}
+                          onClick={() => setHeatmapSubView(role.id)}
+                          className={`py-2 px-4 rounded-xl text-[10px] font-black transition-all duration-300 uppercase ${heatmapSubView === role.id ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                        >
+                          {role.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="w-px h-10 bg-gray-200 hidden sm:block" />
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Select Year</label>
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                    className="bg-gray-50 border border-gray-200 text-gray-900 text-sm font-bold rounded-xl focus:ring-violet-500 focus:border-violet-500 block w-full p-3 shadow-sm hover:border-violet-300 transition-all cursor-pointer"
+                    className="bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 block w-full p-2.5 shadow-sm hover:border-violet-300 transition-all cursor-pointer min-w-[120px]"
                   >
                     {[0, 1, 2, 3].map(offset => {
                       const year = new Date().getFullYear() - offset;
@@ -703,17 +737,70 @@ const SuperAdminDashboard = () => {
                 />
               )}
 
-              {heatmapView === 'gender' && reportAnalytics?.heatmaps?.genderVsCategory && (
+              {heatmapView === 'gender_role' && reportAnalytics?.heatmaps?.genderVsRole && (
                 <HeatmapTable 
-                  title="Incident Distribution by Gender & Category"
-                  subtitle={`Analyzing incident types across different gender perspectives for ${selectedYear}`}
-                  rows={reportAnalytics.heatmaps.genderVsCategory.rows}
-                  columns={reportAnalytics.heatmaps.genderVsCategory.columns}
-                  data={reportAnalytics.heatmaps.genderVsCategory.data}
+                  title="Incident Distribution by Gender & Role"
+                  subtitle={`Analyzing reporter perspectives across different gender identities for ${selectedYear}`}
+                  rows={reportAnalytics.heatmaps.genderVsRole.rows}
+                  columns={reportAnalytics.heatmaps.genderVsRole.columns}
+                  data={reportAnalytics.heatmaps.genderVsRole.data}
                   rowLabel="Gender"
-                  columnLabel="Category"
+                  columnLabel="Role"
                   colorScheme="vibrant"
                 />
+              )}
+
+              {heatmapView === 'gender_month' && (
+                <>
+                  {heatmapSubView === 'reporter' && reportAnalytics?.heatmaps?.reporterGenderVsMonth && (
+                    <HeatmapTable 
+                      title="General Reporter Gender Distribution by Month"
+                      subtitle={`Monthly breakdown of all reporters' gender identities for ${selectedYear}`}
+                      rows={reportAnalytics.heatmaps.reporterGenderVsMonth.rows}
+                      columns={reportAnalytics.heatmaps.reporterGenderVsMonth.columns}
+                      data={reportAnalytics.heatmaps.reporterGenderVsMonth.data}
+                      rowLabel="Gender"
+                      columnLabel="Month"
+                      colorScheme="indigo"
+                    />
+                  )}
+                  {heatmapSubView === 'victim' && reportAnalytics?.heatmaps?.victimGenderVsMonth && (
+                    <HeatmapTable 
+                      title="Victim Gender Distribution by Month"
+                      subtitle={`Monthly breakdown of victims' gender identities for ${selectedYear}`}
+                      rows={reportAnalytics.heatmaps.victimGenderVsMonth.rows}
+                      columns={reportAnalytics.heatmaps.victimGenderVsMonth.columns}
+                      data={reportAnalytics.heatmaps.victimGenderVsMonth.data}
+                      rowLabel="Gender"
+                      columnLabel="Month"
+                      colorScheme="rose"
+                    />
+                  )}
+                  {heatmapSubView === 'witness' && reportAnalytics?.heatmaps?.witnessGenderVsMonth && (
+                    <HeatmapTable 
+                      title="Witness Gender Distribution by Month"
+                      subtitle={`Monthly breakdown of witnesses' gender identities for ${selectedYear}`}
+                      rows={reportAnalytics.heatmaps.witnessGenderVsMonth.rows}
+                      columns={reportAnalytics.heatmaps.witnessGenderVsMonth.columns}
+                      data={reportAnalytics.heatmaps.witnessGenderVsMonth.data}
+                      rowLabel="Gender"
+                      columnLabel="Month"
+                      colorScheme="amber"
+                    />
+                  )}
+                  {heatmapSubView === 'mandatory' && reportAnalytics?.heatmaps?.mandatoryReporterGenderVsMonth && (
+                    <HeatmapTable 
+                      title="Mandatory Reporter Gender Distribution by Month"
+                      subtitle={`Monthly breakdown of mandatory reporters' gender identities for ${selectedYear}`}
+                      rows={reportAnalytics.heatmaps.mandatoryReporterGenderVsMonth.rows}
+                      columns={reportAnalytics.heatmaps.mandatoryReporterGenderVsMonth.columns}
+                      data={reportAnalytics.heatmaps.mandatoryReporterGenderVsMonth.data}
+                      rowLabel="Gender"
+                      columnLabel="Month"
+                      colorScheme="teal"
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>

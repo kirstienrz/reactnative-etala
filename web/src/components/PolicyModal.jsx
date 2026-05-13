@@ -14,7 +14,7 @@ const PolicyModal = ({ isOpen, onClose, initialTab = 'terms' }) => {
           1. System Purpose
         </h4>
         <p className="text-gray-600 text-sm leading-relaxed">
-          ETALA is an official incident reporting system designed to enhance safety, accountability, and support within the campus community. It provides a secure platform for students, faculty, and staff to report incidents of abuse, harassment, or any campus-related concerns.
+          ETALA is the official reporting platform for Gender-Based Violence (GBV) and harassment within the campus community. Our purpose is to provide a safe, secure, and confidential space for survivors and witnesses to report incidents and seek support from the TUP Gender and Development (GAD) Office.
         </p>
       </section>
 
@@ -36,7 +36,7 @@ const PolicyModal = ({ isOpen, onClose, initialTab = 'terms' }) => {
           3. Confidentiality & Disclosure
         </h4>
         <p className="text-gray-600 text-sm leading-relaxed">
-          While ETALA supports anonymous reporting, the system tracks technical identifiers for security purposes. In cases of severe threat to life or public safety, or when required by legal mandates, authorized administrators may disclose certain information to relevant authorities.
+          ETALA prioritizes your safety and confidentiality. Reports are handled exclusively by the TUP GAD Office. Personal identifiers are protected under strict security protocols. Disclosure to external authorities only occurs with your explicit consent or in extreme circumstances where there is an immediate threat to life or a legal mandate for public safety.
         </p>
       </section>
 
@@ -60,7 +60,7 @@ const PolicyModal = ({ isOpen, onClose, initialTab = 'terms' }) => {
           1. Data Collection
         </h4>
         <p className="text-gray-600 text-sm leading-relaxed mb-3">
-          We collect personal information necessary to validate your identity and process your reports:
+          We collect information necessary to provide support and process your report safely:
         </p>
         <div className="grid grid-cols-2 gap-2 text-xs font-medium text-gray-500">
           <div className="bg-blue-50 p-2 rounded-lg">TUP ID & Full Name</div>
@@ -79,10 +79,10 @@ const PolicyModal = ({ isOpen, onClose, initialTab = 'terms' }) => {
           Your data is used exclusively for:
         </p>
         <ul className="space-y-2 text-gray-600 text-sm leading-relaxed list-disc pl-5 mt-2">
-          <li>Processing and validating incident reports.</li>
-          <li>Coordinating with campus departments (OSA, Guidance, Medical) for referrals.</li>
-          <li>Generating anonymized statistical analytics for campus safety improvements.</li>
-          <li>Communicating case status updates to you.</li>
+          <li>Providing immediate support and guidance through the GAD Office.</li>
+          <li>Coordinating with campus units (Guidance, Medical, Security) for holistic survivor care.</li>
+          <li>Developing gender-responsive programs based on anonymized statistical data.</li>
+          <li>Assisting in administrative or legal proceedings as requested by the survivor.</li>
         </ul>
       </section>
 
@@ -114,7 +114,7 @@ const PolicyModal = ({ isOpen, onClose, initialTab = 'terms' }) => {
             <Shield size={28} className="text-violet-200" />
             <div>
               <h2 className="text-xl font-black tracking-tight">Policies & Guidelines</h2>
-              <p className="text-violet-100 text-xs">Last updated: May 2024</p>
+              <p className="text-violet-100 text-xs">Last updated: May 2026</p>
             </div>
           </div>
           <button 

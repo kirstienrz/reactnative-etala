@@ -78,8 +78,13 @@ const createReport = async (req, res) => {
       attachments: attachments,
       status: "Pending",
       caseStatus: "For Queuing",
-      reporterDepartment: reporterDepartment, // ✅ ADD THIS LINE
-
+      reporterDepartment: reporterDepartment,
+      timeline: [{
+        action: "Report Submitted",
+        performedBy: userId,
+        timestamp: new Date(),
+        remarks: "Incident report successfully filed via the platform."
+      }]
     });
 
     await report.save();
@@ -165,7 +170,8 @@ const getUserReports = async (req, res) => {
 
     const reports = await Report.find({ createdBy: userId, archived: false })
       .sort({ createdAt: -1 })
-      .populate("createdBy", "firstName lastName email");
+      .populate("createdBy", "firstName lastName email")
+      .populate("timeline.performedBy", "firstName lastName role");
 
     res.json({
       success: true,
@@ -237,7 +243,8 @@ const getAllReports = async (req, res) => {
 
     const reports = await Report.find(query)
       .sort({ [sortBy]: -1 })
-      .populate("createdBy", "firstName lastName email tupId");
+      .populate("createdBy", "firstName lastName email tupId")
+      .populate("timeline.performedBy", "firstName lastName role");
 
     res.json({
       success: true,
@@ -263,7 +270,8 @@ const getReportById = async (req, res) => {
     const { id } = req.params;
 
     const report = await Report.findById(id)
-      .populate("createdBy", "firstName lastName email tupId");
+      .populate("createdBy", "firstName lastName email tupId")
+      .populate("timeline.performedBy", "firstName lastName role");
 
     if (!report) {
       return res.status(404).json({
@@ -315,8 +323,22 @@ const updateReportStatus = async (req, res) => {
 
     updateData.lastUpdated = new Date();
 
-    const report = await Report.findByIdAndUpdate(id, updateData, { new: true })
-      .populate("createdBy", "firstName lastName email");
+    // Add timeline entry for status update
+    const timelineEntry = {
+      action: `Status Updated to ${status || caseStatus}`,
+      performedBy: req.user.id,
+      timestamp: new Date(),
+      remarks: remarks || `Case status changed to ${status || caseStatus}`
+    };
+
+    const report = await Report.findByIdAndUpdate(
+      id, 
+      { 
+        ...updateData, 
+        $push: { timeline: timelineEntry } 
+      }, 
+      { new: true }
+    ).populate("createdBy", "firstName lastName email");
 
     if (!report) {
       return res.status(404).json({
@@ -493,7 +515,7 @@ const addReferral = async (req, res) => {
     res.json({
       success: true,
       data: report,
-      message: `Successfully added ${body.referralType.toLowerCase()} referral`
+      message: `Successfully added ${referralData.referralType.toLowerCase()} referral`
     });
   } catch (error) {
     console.error("❌ Error adding referral:", error);
@@ -562,6 +584,57 @@ const getArchivedReports = async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+};
+
+/**
+ * Update report services (admin only)
+ * @route PUT /api/reports/admin/:id/services
+ * @access Admin, Superadmin
+ */
+const updateReportServices = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const services = req.body; // e.g. { crisisIntervention: true, protectionOrder: true }
+
+    const report = await Report.findById(id);
+    if (!report) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+
+    // Track changes for timeline
+    const updates = [];
+    const serviceFields = [
+      "crisisIntervention", "protectionOrder", "referToSWDO", 
+      "referToHealthcare", "referToLawEnforcement", "referToOther"
+    ];
+
+    serviceFields.forEach(field => {
+      if (services[field] !== undefined && services[field] !== report[field]) {
+        report[field] = services[field];
+        const label = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        updates.push(services[field] ? `${label} provided` : `${label} removed`);
+      }
+    });
+
+    if (updates.length > 0) {
+      report.timeline.push({
+        action: `Services Updated: ${updates.join(", ")}`,
+        performedBy: req.user.id,
+        timestamp: new Date()
+      });
+      report.lastUpdated = new Date();
+      await report.save();
+    }
+
+    res.json({
+      success: true,
+      data: report,
+      message: "Report services updated successfully"
+    });
+  } catch (error) {
+    console.error("Error updating report services:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -1046,71 +1119,75 @@ const getReportAnalytics = async (req, res) => {
       ? Math.round((totalClosed / reports.length) * 100)
       : 0;
 
-    // Heatmap data: Department vs Incident Type, Month vs Incident Type, and Dept vs Month
-    const heatmapDeptIncident = {};
-    const heatmapMonthIncident = {};
     const heatmapDeptMonth = {};
-    const heatmapGenderCategory = {};
+    const heatmapGenderRole = {};
+    const heatmapReporterGenderMonth = {};
+    const heatmapVictimGenderMonth = {};
+    const heatmapWitnessGenderMonth = {};
+    const heatmapMandatoryReporterGenderMonth = {};
+    
     const allDepartments = new Set();
-    const allIncidentTypes = new Set();
-    const allCategories = new Set(["Student-Student", "Student-Faculty", "Faculty-Student", "Student-Employee", "Employee-Student", "Faculty-Faculty", "Employee-Employee", "Faculty-Employee", "Employee-Faculty", "External", "Other"]);
+    const allRoles = new Set(["Victim", "Witness", "Mandatory Reporter"]); // Explicitly excluded "Other" and "Third Party"
     const allGenders = new Set(["Male", "Female", "LGBTQ+", "Prefer not to say", "Other"]);
-    const allMonths = months;
+    const monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     reports.forEach(report => {
+      // Basic info
       const dept = report.reporterDepartment || "Not Specified";
-      allDepartments.add(dept);
-
-      // Robustly collect incident types
-      let types = [];
-      if (Array.isArray(report.incidentTypes) && report.incidentTypes.length > 0) {
-        types = [...report.incidentTypes];
-      } else if (typeof report.incidentTypes === 'string' && report.incidentTypes.trim()) {
-        types = report.incidentTypes.split(',').map(s => s.trim()).filter(Boolean);
-      } else if (report.incidentType) {
-        types = [report.incidentType];
-      }
-
-      if (report.otherIncidentType && (types.length === 0 || types.includes('Other'))) {
-        if (!types.includes(report.otherIncidentType)) {
-          types.push(report.otherIncidentType);
-        }
-      }
+      let role = report.reporterRole || "Other";
       
-      if (types.length === 0) {
-        types = ["Unclassified"];
-      }
+      // Exclude "Third Party" and "Other" if they appear in data but not in our list
+      if (role === "Third Party") return; 
 
-      // Time info
       const submittedDate = new Date(report.submittedAt || report.createdAt);
       const monthName = submittedDate.toLocaleString('default', { month: 'short' });
+      
+      allDepartments.add(dept);
+      if (allRoles.has(role)) {
+        // Only process roles we want to track in the heatmap
+      } else {
+        // If it's a valid but new role, we might want it, but per request we focus on the specified ones
+        if (role !== "Other") allRoles.add(role);
+      }
 
       // Dept vs Month Heatmap
-      if (months.includes(monthName)) {
+      if (monthsShort.includes(monthName)) {
         if (!heatmapDeptMonth[dept]) heatmapDeptMonth[dept] = {};
         heatmapDeptMonth[dept][monthName] = (heatmapDeptMonth[dept][monthName] || 0) + 1;
       }
 
-      // Gender vs Category Heatmap
-      const gender = report.sex || "Not Specified";
-      const category = report.category || "Other";
-      if (!heatmapGenderCategory[gender]) heatmapGenderCategory[gender] = {};
-      heatmapGenderCategory[gender][category] = (heatmapGenderCategory[gender][category] || 0) + 1;
+      // 1. Gender vs Role Heatmap
+      const rGender = report.reporterGender || report.anonymousGender || report.sex || "Not Specified";
+      if (rGender && allRoles.has(role)) {
+        if (!heatmapGenderRole[rGender]) heatmapGenderRole[rGender] = {};
+        heatmapGenderRole[rGender][role] = (heatmapGenderRole[rGender][role] || 0) + 1;
+      }
 
-      types.forEach(type => {
-        if (!type) return;
-        allIncidentTypes.add(type);
+      // 2. Reporter Gender vs Month
+      if (monthsShort.includes(monthName)) {
+        if (!heatmapReporterGenderMonth[rGender]) heatmapReporterGenderMonth[rGender] = {};
+        heatmapReporterGenderMonth[rGender][monthName] = (heatmapReporterGenderMonth[rGender][monthName] || 0) + 1;
+      }
 
-        // Dept vs Incident Heatmap
-        if (!heatmapDeptIncident[dept]) heatmapDeptIncident[dept] = {};
-        heatmapDeptIncident[dept][type] = (heatmapDeptIncident[dept][type] || 0) + 1;
+      // 3. Victim Gender vs Month
+      const vGender = report.sex || "Not Provided";
+      if (monthsShort.includes(monthName)) {
+        if (!heatmapVictimGenderMonth[vGender]) heatmapVictimGenderMonth[vGender] = {};
+        heatmapVictimGenderMonth[vGender][monthName] = (heatmapVictimGenderMonth[vGender][monthName] || 0) + 1;
+      }
 
-        // Month vs Incident Heatmap
-        if (months.includes(monthName)) {
-          if (!heatmapMonthIncident[monthName]) heatmapMonthIncident[monthName] = {};
-          heatmapMonthIncident[monthName][type] = (heatmapMonthIncident[monthName][type] || 0) + 1;
-        }
-      });
+      // 4. Witness Gender vs Month
+      const wGender = report.witnessGender || "Not Provided";
+      if (monthsShort.includes(monthName)) {
+        if (!heatmapWitnessGenderMonth[wGender]) heatmapWitnessGenderMonth[wGender] = {};
+        heatmapWitnessGenderMonth[wGender][monthName] = (heatmapWitnessGenderMonth[wGender][monthName] || 0) + 1;
+      }
+
+      // 5. Mandatory Reporter Gender vs Month
+      if (role === "Mandatory Reporter" && monthsShort.includes(monthName)) {
+        if (!heatmapMandatoryReporterGenderMonth[rGender]) heatmapMandatoryReporterGenderMonth[rGender] = {};
+        heatmapMandatoryReporterGenderMonth[rGender][monthName] = (heatmapMandatoryReporterGenderMonth[rGender][monthName] || 0) + 1;
+      }
     });
 
     res.json({
@@ -1168,25 +1245,35 @@ const getReportAnalytics = async (req, res) => {
           peakMonthCount: Math.max(...monthCounts)
         },
         heatmaps: {
-          deptVsIncident: {
-            rows: Array.from(allDepartments).sort(),
-            columns: Array.from(allIncidentTypes).sort(),
-            data: heatmapDeptIncident
-          },
-          monthVsIncident: {
-            rows: months,
-            columns: Array.from(allIncidentTypes).sort(),
-            data: heatmapMonthIncident
-          },
           deptVsMonth: {
             rows: Array.from(allDepartments).sort(),
             columns: months,
             data: heatmapDeptMonth
           },
-          genderVsCategory: {
+          genderVsRole: {
             rows: Array.from(allGenders),
-            columns: Array.from(allCategories),
-            data: heatmapGenderCategory
+            columns: Array.from(allRoles).sort(),
+            data: heatmapGenderRole
+          },
+          reporterGenderVsMonth: {
+            rows: Array.from(allGenders),
+            columns: months,
+            data: heatmapReporterGenderMonth
+          },
+          victimGenderVsMonth: {
+            rows: Array.from(allGenders),
+            columns: months,
+            data: heatmapVictimGenderMonth
+          },
+          witnessGenderVsMonth: {
+            rows: Array.from(allGenders),
+            columns: months,
+            data: heatmapWitnessGenderMonth
+          },
+          mandatoryReporterGenderVsMonth: {
+            rows: Array.from(allGenders),
+            columns: months,
+            data: heatmapMandatoryReporterGenderMonth
           }
         }
       },
@@ -1218,5 +1305,6 @@ module.exports = {
   sendReportPDF,
   uploadPDFOnly,
   generateTicketNumber,
-  getReportAnalytics
+  getReportAnalytics,
+  updateReportServices
 };

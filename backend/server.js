@@ -113,6 +113,7 @@ const reportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: { success: false, message: "Too many report submissions, please try again later." },
+  skip: (req) => req.method === "GET", // Allow fetching reports without hitting submission limit
   standardHeaders: true,
   legacyHeaders: false,
 });
