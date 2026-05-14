@@ -17,9 +17,28 @@ exports.getSuggestions = async (req, res) => {
   }
 };
 
-// CREATE (optional)
+// CREATE
 exports.createSuggestion = async (req, res) => {
   try {
+    const userId = req.user ? req.user._id : null;
+    
+    if (!userId) {
+      return res.status(401).json({ error: "You must be logged in to submit a suggestion." });
+    }
+
+    // Rate limiting: 2 suggestions per day (last 24 hours)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const count = await Suggestion.countDocuments({
+      user: userId,
+      submittedDate: { $gte: oneDayAgo }
+    });
+
+    if (count >= 2) {
+      return res.status(429).json({ 
+        error: "Daily limit reached. You can only submit 2 suggestions per 24 hours." 
+      });
+    }
+
     const newId = await getNextId();
 
     // Set priority automatically to "low"
@@ -32,8 +51,9 @@ exports.createSuggestion = async (req, res) => {
 
     const suggestion = new Suggestion({
       id: newId,
+      user: userId,
       text: req.body.text,
-      submittedBy: req.body.submittedBy,
+      submittedBy: req.user.name || "User",
       priority: priority
     });
 

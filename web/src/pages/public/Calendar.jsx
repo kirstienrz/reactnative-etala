@@ -102,8 +102,8 @@ export default function SuperAdminCalendarRedux() {
               >
                 <div>
                   <p className="font-semibold text-gray-900">{event.title}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(event.start).toLocaleString()}
+                  <p className="text-sm text-gray-500 font-medium">
+                    <span className="font-bold text-gray-700">Schedule:</span> {new Date(event.start).toLocaleString()}
                   </p>
                   {event.extendedProps?.location && (
                     <p className="text-sm text-gray-500">
@@ -161,7 +161,7 @@ export default function SuperAdminCalendarRedux() {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Event Date</th>
                   <th className="px-4 py-3 text-left">Title</th>
                   <th className="px-4 py-3 text-left">Type</th>
                   <th className="px-4 py-3 text-left">Location</th>

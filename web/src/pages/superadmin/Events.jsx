@@ -35,10 +35,11 @@ import { deleteEvent as deleteProgramEvent, getAllPrograms } from "../../api/pro
 import API from '../../api/config';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function SuperAdminCalendarUI() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -205,6 +206,39 @@ export default function SuperAdminCalendarUI() {
     fetchEvents();
     fetchPrograms();
   }, []);
+
+  // ✅ Auto-open Add Modal when navigating from Projects page
+  useEffect(() => {
+    if (location.state?.openAddModal && location.state?.prefill) {
+      const prefill = location.state.prefill;
+      const today = new Date().toISOString().split('T')[0];
+
+      setModalMode("create");
+      setSelectedEvent(null);
+      setFormData({
+        title: prefill.title || "",
+        type: prefill.type || "program_event",
+        start: today,
+        end: today,
+        startTime: "09:00",
+        endTime: "10:00",
+        location: "",
+        description: "",
+        notes: "",
+        allDay: true,
+        color: getEventColor(prefill.type || "program_event"),
+        status: prefill.status || "upcoming",
+        reportTicketNumber: "",
+        mode: "online",
+        programId: prefill.programId || "",
+        projectId: prefill.projectId || "",
+      });
+      setShowModal(true);
+
+      // Clear the location state to avoid re-triggering on back navigation
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const fetchPrograms = async () => {
     try {

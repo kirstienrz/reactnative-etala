@@ -36,7 +36,7 @@ const getArchivedInfographics = async (req, res) => {
 // ✅ Create infographics (multiple images)
 const createInfographics = async (req, res) => {
   try {
-    const { academicYear, title } = req.body;
+    const { academicYear, title, category } = req.body;
     const files = req.files;
 
     if (!academicYear) {
@@ -62,6 +62,7 @@ const createInfographics = async (req, res) => {
             const newInfographic = new Infographic({
               academicYear,
               title: infographicTitle,
+              category: category || 'Policy',
               imageUrl: result.secure_url,
               cloudinaryId: result.public_id,
               uploadDate: new Date(),
@@ -102,7 +103,7 @@ const createInfographics = async (req, res) => {
 const updateInfographic = async (req, res) => {
   try {
     const { id } = req.params;
-    const { academicYear, title } = req.body;
+    const { academicYear, title, category } = req.body;
     
     const infographic = await Infographic.findById(id);
     if (!infographic) {
@@ -135,6 +136,7 @@ const updateInfographic = async (req, res) => {
     // Update other fields
     if (academicYear) infographic.academicYear = academicYear;
     if (title) infographic.title = title;
+    if (category) infographic.category = category;
 
     await infographic.save();
 

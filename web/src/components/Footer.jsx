@@ -1,8 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Mail, Phone, MapPin, Globe } from 'lucide-react';
 
 const Footer = () => {
+  const location = useLocation();
+
+  const handleLinkClick = (path) => {
+    if (path && location.pathname === path) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <footer className="bg-gradient-to-r from-violet-950 via-violet-900 to-violet-950 text-white relative overflow-hidden flex flex-col py-8 md:py-10">
       {/* Background decoration matching header exactly */}
@@ -20,12 +28,12 @@ const Footer = () => {
                 <h3 className="text-lg font-bold mb-4 text-white tracking-wide">Resources</h3>
                 <ul className="space-y-3">
                   <li>
-                    <Link to="/PlanAndBudget" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/PlanAndBudget" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/PlanAndBudget")}>
                       Plan & Budget
                     </Link>
                   </li>
                   <li>
-                    <Link to="/Accomplishment" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/Accomplishment" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/Accomplishment")}>
                       Accomplishment Reports
                     </Link>
                   </li>
@@ -40,22 +48,22 @@ const Footer = () => {
                 <h3 className="text-lg font-bold mb-4 text-white tracking-wide">Quick Links</h3>
                 <ul className="space-y-3">
                   <li>
-                    <Link to="/Mission-Vision" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/Mission-Vision" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/Mission-Vision")}>
                       About 
                     </Link>
                   </li>
                   <li>
-                    <Link to="/Organization" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/Organization" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/Organization")}>
                      Committee
                     </Link>
                   </li>
                   <li>
-                    <Link to="/Projects" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/Projects" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/Projects")}>
                       Programs & Projects
                     </Link>
                   </li>
                   <li>
-                    <Link to="/SuggestionBox" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/SuggestionBox" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/SuggestionBox")}>
                       Suggestion Box
                     </Link>
                   </li>
@@ -67,27 +75,27 @@ const Footer = () => {
                 <h3 className="text-lg font-bold mb-4 text-white tracking-wide">Knowledge Hub</h3>
                 <ul className="space-y-3">
                   <li>
-                    <Link to="/SexDisaggregated" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/SexDisaggregated" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/SexDisaggregated")}>
                       Sex Disaggregated Data
                     </Link>
                   </li>
                   <li>
-                    <Link to="/album" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/album" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/album")}>
                       Gallery
                     </Link>
                   </li>
                   <li>
-                    <Link to="/Knowledge" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/Knowledge" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/Knowledge")}>
                       Videos
                     </Link>
                   </li>
                   <li>
-                    <Link to="/Research" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/Research" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/Research")}>
                       Research
                     </Link>
                   </li>
                   <li>
-                    <Link to="/Infographics" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block">
+                    <Link to="/Infographics" className="text-violet-200 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block" onClick={() => handleLinkClick("/Infographics")}>
                       Infographics
                     </Link>
                   </li>

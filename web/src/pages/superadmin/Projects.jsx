@@ -1276,22 +1276,18 @@ const GADProgramsHybrid = () => {
                                 <h4 className="font-semibold text-gray-900">Events</h4>
                                 <button
                                   onClick={() => {
-                                    setShowModal(true);
-                                    setModalType('event');
-                                    const today = new Date();
-                                    const currentYear = today.getFullYear();
-                                    const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
-                                    const currentDay = today.getDate().toString();
-
-                                    // Use current month/day only if project year is current or future
-                                    const projectYear = project?.year || selectedProgram?.year || currentYear;
-                                    const isCurrentOrFutureYear = parseInt(projectYear) >= currentYear;
-
-                                    setFormData({
-                                      status: 'upcoming',
-                                      projectId: project._id,
-                                      month: isCurrentOrFutureYear ? currentMonth : '01',
-                                      day: isCurrentOrFutureYear ? currentDay : '1'
+                                    // Navigate to Calendar with prefilled data
+                                    navigate('/superadmin/events', {
+                                      state: {
+                                        openAddModal: true,
+                                        prefill: {
+                                          title: project.name || '',
+                                          type: 'program_event',
+                                          status: project.status || 'upcoming',
+                                          programId: selectedProgram._id,
+                                          projectId: project._id,
+                                        }
+                                      }
                                     });
                                   }}
                                   className="text-blue-600 text-sm font-medium flex items-center space-x-1 hover:text-blue-700"

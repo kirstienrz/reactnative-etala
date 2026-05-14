@@ -307,15 +307,6 @@ const Gallery = () => {
     fetchAlbums();
   }, []);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredAlbums.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentAlbums = filteredAlbums.slice(startIndex, startIndex + itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
   // Filter albums based on search
   const filteredAlbums = albums.filter(album => {
     if (!searchTerm.trim()) return true;
@@ -326,6 +317,15 @@ const Gallery = () => {
       (album.description && album.description.toLowerCase().includes(searchLower))
     );
   }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAlbums.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentAlbums = filteredAlbums.slice(startIndex, startIndex + itemsPerPage);
 
   const handleViewAlbum = (album) => {
     console.log('Viewing album:', album);

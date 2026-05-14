@@ -10,6 +10,11 @@ const InfographicSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
+  category: {
+    type: String,
+    required: true,
+    default: 'Policy'
+  },
   imageUrl: { 
     type: String, 
     required: true 

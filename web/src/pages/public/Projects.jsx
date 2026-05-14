@@ -412,9 +412,6 @@ export default function GADProjectsArchive() {
                               </p>
                             </div>
                             <div className="flex flex-col items-end gap-2 shrink-0">
-                              <span className="text-xs font-black text-slate-400">
-                                {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
                               <button className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-violet-600 hover:border-violet-200 transition-all">
                                 <ChevronRight size={20} />
                               </button>
@@ -567,7 +564,10 @@ export default function GADProjectsArchive() {
                     {selectedProject.extendedProps?.type?.replace('_', ' ') || 'Project'}
                   </span>
                   <span className="flex items-center gap-1 text-white/80 text-xs font-bold">
-                    <CalendarIcon size={12} /> {new Date(selectedProject.start).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    <CalendarIcon size={12} /> 
+                    <span className="opacity-70">Event Date:</span> {new Date(selectedProject.start).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    <span className="mx-2 opacity-30">|</span>
+                    <span className="opacity-70 text-violet-200">Time:</span> {new Date(selectedProject.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <h2 className="text-3xl md:text-4xl font-black text-white text-glow leading-tight line-clamp-2">
@@ -577,20 +577,27 @@ export default function GADProjectsArchive() {
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                <div className="md:col-span-8 space-y-8">
-                  <div>
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <FileText size={14} className="text-violet-500" /> Description
-                    </h3>
-                    <p className="text-slate-600 leading-relaxed font-medium">
-                      {selectedProject.extendedProps?.description || "No detailed description provided for this project."}
-                    </p>
-                  </div>
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                
+                {/* Left column */}
+                <div className="md:col-span-8 space-y-5">
 
+                  {/* Description - only if present */}
+                  {selectedProject.extendedProps?.description && (
+                    <div>
+                      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <FileText size={14} className="text-violet-500" /> Description
+                      </h3>
+                      <p className="text-slate-600 leading-relaxed font-medium">
+                        {selectedProject.extendedProps.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Notes - only if present */}
                   {selectedProject.extendedProps?.notes && (
-                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
                       <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Key Notes</h3>
                       <p className="text-slate-600 text-sm font-medium italic">
                         "{selectedProject.extendedProps.notes}"
@@ -598,19 +605,18 @@ export default function GADProjectsArchive() {
                     </div>
                   )}
 
-                  {/* Attachments Section */}
-                  <div>
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Layers size={14} className="text-violet-500" /> Project Assets
-                      </div>
-                      <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">
-                        {selectedProject.extendedProps?.attachments?.length || 0} Files
-                      </span>
-                    </h3>
-
-                    {selectedProject.extendedProps?.attachments?.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Attachments - only if present */}
+                  {selectedProject.extendedProps?.attachments?.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Layers size={14} className="text-violet-500" /> Project Assets
+                        </div>
+                        <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">
+                          {selectedProject.extendedProps.attachments.length} Files
+                        </span>
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {selectedProject.extendedProps.attachments.map((file, i) => (
                           <div key={i} className="group p-4 bg-white border border-slate-100 rounded-2xl hover:border-violet-200 hover:shadow-lg hover:shadow-slate-100 transition-all flex items-center gap-4">
                             <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-violet-50 transition-colors">
@@ -629,30 +635,38 @@ export default function GADProjectsArchive() {
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="p-10 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                        <ImageIcon className="mx-auto text-slate-300 mb-2" size={32} />
-                        <p className="text-slate-400 text-sm italic">No digital assets attached to this project.</p>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Fallback if nothing to show on left */}
+                  {!selectedProject.extendedProps?.description &&
+                   !selectedProject.extendedProps?.notes &&
+                   !selectedProject.extendedProps?.attachments?.length && (
+                    <div className="py-8 text-center text-slate-400">
+                      <FileText className="mx-auto mb-2 text-slate-300" size={28} />
+                      <p className="text-sm italic">No additional details for this event.</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="md:col-span-4 space-y-6">
-                  <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
+                {/* Right column - Details */}
+                <div className="md:col-span-4 space-y-4">
+                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Project Details</h4>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-lg shadow-sm">
-                          <MapPin size={14} className="text-violet-500" />
+                    <div className="space-y-3">
+                      {selectedProject.extendedProps?.location && (
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                            <MapPin size={14} className="text-violet-500" />
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-black text-slate-400 uppercase">Location</span>
+                            <span className="text-sm font-bold text-slate-700">{selectedProject.extendedProps.location}</span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="block text-[10px] font-black text-slate-400 uppercase">Location</span>
-                          <span className="text-sm font-bold text-slate-700">{selectedProject.extendedProps?.location || "TUPT Main"}</span>
-                        </div>
-                      </div>
+                      )}
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
                           <HardDrive size={14} className="text-violet-500" />
                         </div>
                         <div>
@@ -660,21 +674,12 @@ export default function GADProjectsArchive() {
                           <span className="text-sm font-bold text-slate-700 capitalize">{selectedProject.extendedProps?.source || "Calendar"}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-lg shadow-sm">
-                          <Maximize2 size={14} className="text-violet-500" />
-                        </div>
-                        <div>
-                          <span className="block text-[10px] font-black text-slate-400 uppercase">Reference ID</span>
-                          <span className="text-xs font-mono font-bold text-slate-500 truncate block w-32">{selectedProject.id}</span>
-                        </div>
-                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-violet-600 rounded-3xl p-6 text-white shadow-xl shadow-violet-100">
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-80">Timeline Status</p>
-                    <p className="text-lg font-black mb-4">
+                  <div className="bg-violet-600 rounded-2xl p-5 text-white shadow-xl shadow-violet-100">
+                    <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Timeline Status</p>
+                    <p className="text-lg font-black mb-3">
                       {new Date(selectedProject.start) > new Date() ? 'Scheduled' : 'Historical Record'}
                     </p>
                     <div className="h-1 bg-white/20 rounded-full overflow-hidden">

@@ -1,16 +1,30 @@
 import React, { useState } from 'react';
-import { MessageSquare, Send, CheckCircle, Lock, AlertCircle } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle, Lock, AlertCircle, Loader2, X } from 'lucide-react';
 import { createSuggestion } from '../../api/suggestion';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
 
 const GADSuggestionBox = () => {
+  const { isLoggedIn, user } = useSelector((state) => state.auth);
   const [newSuggestion, setNewSuggestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState('');
+  const [showLoginOverlay, setShowLoginOverlay] = useState(false);
 
   const handleSubmit = async () => {
+    if (!isLoggedIn) {
+      setShowLoginOverlay(true);
+      return;
+    }
+
     if (!newSuggestion.trim()) {
       setShowError('Please enter a suggestion before submitting.');
+      return;
+    }
+
+    if (isOverLimit) {
+      setShowError('Your suggestion is too long. Please shorten it.');
       return;
     }
 
@@ -24,7 +38,8 @@ const GADSuggestionBox = () => {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      setShowError('Failed to submit suggestion. Please try again.');
+      const msg = err.response?.data?.error || 'Failed to submit suggestion. Please try again.';
+      setShowError(msg);
     } finally {
       setLoading(false);
     }
@@ -68,9 +83,16 @@ const GADSuggestionBox = () => {
 
             {/* Error */}
             {showError && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <span className="text-red-700">{showError}</span>
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-700">{showError}</span>
+                </div>
+                {!isLoggedIn && showError.includes('logged in') && (
+                  <Link to="/login" className="text-red-600 font-bold text-xs uppercase tracking-wider hover:underline">
+                    Login Now
+                  </Link>
+                )}
               </div>
             )}
 
@@ -78,30 +100,71 @@ const GADSuggestionBox = () => {
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">Your Suggestion</h2>
 
-              <textarea
-                placeholder="Share your ideas, concerns, or recommendations..."
-                value={newSuggestion}
-                onChange={(e) => {
-                  setNewSuggestion(e.target.value);
-                  setShowError('');
-                }}
-                className="w-full h-52 p-4 border border-slate-300 rounded-xl
-                           focus:ring-2 focus:ring-violet-500 focus:border-transparent
-                           text-slate-700 resize-none"
-                maxLength={maxCharacters}
-              />
+              <div className="relative">
+                <textarea
+                  placeholder="Share your ideas, concerns, or recommendations..."
+                  value={newSuggestion}
+                  onChange={(e) => {
+                    setNewSuggestion(e.target.value);
+                    setShowError('');
+                  }}
+                  disabled={loading}
+                  className={`w-full h-52 p-4 border border-slate-300 rounded-xl transition-all
+                            focus:ring-2 focus:ring-violet-500 focus:border-transparent text-slate-700
+                            resize-none`}
+                  maxLength={maxCharacters}
+                />
+                
+                {/* Login Overlay - Only shown when clicking submit without being logged in */}
+                {showLoginOverlay && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[4px] rounded-xl z-20 animate-in fade-in duration-300">
+                    <div className="text-center p-8 bg-white shadow-2xl border border-slate-100 rounded-3xl max-w-sm mx-4 animate-in zoom-in-95 duration-300 relative">
+                      <button 
+                        onClick={() => setShowLoginOverlay(false)}
+                        className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                      
+                      <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Lock className="w-8 h-8 text-violet-600" />
+                      </div>
+                      
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Login Required</h3>
+                      <p className="text-sm text-slate-500 mb-6 px-2">
+                        To maintain a high-quality community feedback system, we require users to be logged in to submit suggestions.
+                      </p>
+                      
+                      <div className="flex flex-col gap-3">
+                        <Link 
+                          to="/login" 
+                          className="w-full bg-violet-600 text-white py-3 rounded-xl font-bold hover:bg-violet-700 transition shadow-lg shadow-violet-200 no-underline"
+                        >
+                          Log In to Submit
+                        </Link>
+                        <button 
+                          onClick={() => setShowLoginOverlay(false)}
+                          className="w-full py-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-between items-center mt-3 text-sm">
-                <span className="text-slate-500">
-                  Your submission is <strong>anonymous</strong>.
+                <span className="text-slate-500 italic">
+                  {isLoggedIn ? `Posting as ${user?.name || 'User'}` : ''}
                 </span>
                 <span
-                  className={`font-medium ${
+                  className={`font-bold ${
                     isOverLimit
                       ? 'text-red-600'
                       : isNearLimit
                       ? 'text-amber-600'
-                      : 'text-slate-500'
+                      : 'text-slate-400'
                   }`}
                 >
                   {characterCount} / {maxCharacters}
@@ -109,20 +172,23 @@ const GADSuggestionBox = () => {
               </div>
 
               <button
-                className="bg-white text-violet-700 border border-violet-200 rounded-lg px-4 py-2 shadow hover:bg-violet-50 transition-colors dark:bg-white dark:text-violet-700 dark:hover:bg-violet-100
-                "
+                className={`mt-6 w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg
+                ${loading
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                    : 'bg-violet-600 text-white hover:bg-violet-700 hover:shadow-violet-200 active:scale-[0.98]'
+                  }`}
                 onClick={handleSubmit}
-                disabled={loading || isOverLimit}
+                disabled={loading}
               >
                 {loading ? (
                   <>
-                    <div className="animate-spin h-5 w-5 border-b-2 border-white rounded-full" />
-                    Submitting...
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Submitting suggestion...</span>
                   </>
                 ) : (
                   <>
-                    <Send className="w-5 h-5 text-white" />
-                    Submit Suggestion
+                    <Send className="w-5 h-5" />
+                    <span>Submit Suggestion</span>
                   </>
                 )}
               </button>
@@ -130,15 +196,15 @@ const GADSuggestionBox = () => {
 
             {/* Privacy Card */}
             <div className="bg-white rounded-2xl p-6 shadow border border-slate-200">
-              <div className="flex items-start gap-4">
-                <Lock className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-slate-800 mb-1">Anonymous & Confidential</h3>
-                  <p className="text-slate-600">
-                    Your identity will never be recorded. The committee reviews all submissions with respect and confidentiality.
-                  </p>
+                <div className="flex items-start gap-4">
+                  <Lock className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-slate-800 mb-1">Fair & Responsible Feedback</h3>
+                    <p className="text-slate-600">
+                      To ensure high-quality feedback, we limit submissions to <strong>2 per day</strong> per user. This helps us focus on the most important suggestions.
+                    </p>
+                  </div>
                 </div>
-              </div>
             </div>
           </div>
 

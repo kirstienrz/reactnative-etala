@@ -85,8 +85,7 @@ const Layout = ({ children }) => {
         />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Mobile Header for Admin */}
-          <header className="lg:hidden flex items-center justify-between p-4 bg-gray-900 text-white shadow-md">
-            <h1 className="text-lg font-bold">Admin Panel</h1>
+          <header className="lg:hidden flex items-center justify-between p-3 bg-gray-900 text-white shadow-md">
             <div className="flex items-center gap-2">
               <NotificationCenter />
               <button
@@ -101,11 +100,9 @@ const Layout = ({ children }) => {
           </header>
 
           {/* Desktop Top Bar for Admin */}
-          <header className="hidden lg:flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
+          <header className="hidden lg:flex items-center justify-between px-8 py-2 bg-white border-b border-gray-200">
             <div className="flex items-center gap-4">
-              <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wider">
-                {location.pathname.split('/').pop().replace(/-/g, ' ')}
-              </h2>
+              {/* Title removed as requested */}
             </div>
             <div className="flex items-center gap-6">
               <NotificationCenter />
@@ -121,7 +118,7 @@ const Layout = ({ children }) => {
             </div>
           </header>
 
-          <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+          <main className="flex-1 p-4 md:p-6 pt-2 md:pt-4 overflow-y-auto">
             {children}
           </main>
         </div>
