@@ -252,8 +252,8 @@ const SignupPage = () => {
               <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
             </div>
 
-    // Gender & Birthday
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Gender & Birthday */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Gender <span className="text-red-500">*</span>
