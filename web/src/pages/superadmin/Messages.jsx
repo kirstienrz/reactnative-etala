@@ -636,8 +636,7 @@ const TicketMessagingSystem = () => {
         window.history.replaceState({}, document.title);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tickets.length]); // Only trigger when tickets are loaded (length changes from 0 to N)
+  }, [tickets.length]);  
 
   const loadTickets = async () => {
     setLoading(true);
