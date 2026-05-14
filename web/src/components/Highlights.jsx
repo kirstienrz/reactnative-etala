@@ -258,10 +258,10 @@ const HighlightsSection = () => {
                 key={item._id}
                 onClick={() => setSelectedHighlight(item)}
                 className={`
-                  relative rounded-[2.5rem] overflow-hidden group/story cursor-pointer shadow-lg hover:shadow-violet-200/50 transition-all duration-500 snap-start hover:-translate-y-2 border-2 border-transparent hover:border-violet-500
+                  relative rounded-2xl md:rounded-[2.5rem] overflow-hidden group/story cursor-pointer shadow-lg hover:shadow-violet-200/50 transition-all duration-500 snap-start hover:-translate-y-2 border-2 border-transparent hover:border-violet-500
                   ${highlights.length >= 5 
-                    ? 'flex-shrink-0 w-[180px] md:w-[220px] aspect-[9/16]' 
-                    : 'flex-1 min-w-[280px] max-w-[600px] h-[200px] md:h-[300px] lg:h-[380px] xl:h-[420px]'
+                    ? 'flex-shrink-0 w-[140px] sm:w-[180px] md:w-[220px] aspect-[9/16]' 
+                    : 'w-full sm:flex-1 min-w-[260px] max-w-[600px] aspect-video md:aspect-auto md:h-[300px] lg:h-[380px] xl:h-[420px]'
                   }
                 `}
               >
@@ -283,7 +283,7 @@ const HighlightsSection = () => {
                   />
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/90" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/10 to-black/60" />
                 
                 {/* Profile Circle */}
                 <div className="absolute top-4 left-4 w-10 h-10 rounded-full border-2 border-violet-600 p-0.5 bg-white shadow-lg z-10">
@@ -293,11 +293,11 @@ const HighlightsSection = () => {
                 </div>
 
                 {/* Text Content */}
-                <div className="absolute bottom-5 left-5 right-5 z-10">
-                  <h3 className="text-white font-black text-xs md:text-sm leading-tight drop-shadow-lg line-clamp-2">
+                <div className="absolute bottom-4 left-4 right-4 z-10">
+                  <h3 className="text-white font-black text-sm md:text-base leading-tight drop-shadow-md line-clamp-2">
                     {item.title}
                   </h3>
-                  <p className="text-white/60 text-[8px] md:text-[10px] font-bold mt-1.5 uppercase tracking-widest">
+                  <p className="text-white/80 text-[10px] md:text-xs font-bold mt-1.5 uppercase tracking-widest drop-shadow">
                     {item.items?.length || 1} {item.items?.length === 1 ? 'Highlight' : 'Highlights'}
                   </p>
                 </div>

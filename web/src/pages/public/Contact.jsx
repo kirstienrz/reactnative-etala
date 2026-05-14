@@ -149,6 +149,7 @@
 
 // export default Contact;
 import React, { useState } from "react";
+import { Mail, Clock, MapPin } from "lucide-react";
 import { sendContactMessage, prepareContactFormData, validateContactForm } from "../../api/contact";
 
 const Contact = () => {
@@ -454,7 +455,7 @@ const Contact = () => {
             <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center p-4">
                 <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-violet-600 text-xl">📧</span>
+                  <Mail className="w-5 h-5 text-violet-600" />
                 </div>
                 <h4 className="font-bold text-slate-900 mb-2">Email</h4>
                 <a
@@ -466,14 +467,14 @@ const Contact = () => {
               </div>
               <div className="text-center p-4">
                 <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-violet-600 text-xl">📱</span>
+                  <Clock className="w-5 h-5 text-violet-600" />
                 </div>
                 <h4 className="font-bold text-slate-900 mb-2">Response Time</h4>
                 <p className="text-slate-600">3-5 Business Day</p>
               </div>
               <div className="text-center p-4">
                 <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-violet-600 text-xl">📍</span>
+                  <MapPin className="w-5 h-5 text-violet-600" />
                 </div>
                 <h4 className="font-bold text-slate-900 mb-2">Office Hours</h4>
                 <p className="text-slate-600">Mon-Fri, 9AM-5PM</p>
