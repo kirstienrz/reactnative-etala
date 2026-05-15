@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/suggestionController");
-
 const auth = require("../middleware/auth");
+
 // GET ALL
 router.get("/", controller.getSuggestions);
 
-// CREATE
+// CREATE — login required (frontend shows login overlay if not logged in)
 router.post("/", auth(), controller.createSuggestion);
 
 // UPDATE

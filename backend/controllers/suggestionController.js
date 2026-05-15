@@ -20,8 +20,9 @@ exports.getSuggestions = async (req, res) => {
 // CREATE
 exports.createSuggestion = async (req, res) => {
   try {
-    const userId = req.user ? req.user._id : null;
-    
+    // JWT stores 'id', not '_id'
+    const userId = req.user?.id || req.user?._id;
+
     if (!userId) {
       return res.status(401).json({ error: "You must be logged in to submit a suggestion." });
     }

@@ -15,6 +15,7 @@ import FloatingChatbot from "./components/FloatingChatbot";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
+import AutoLogout from "./components/AutoLogout";
 
 import SuperAdminLayout from "./components/SuperAdminLayout";
 
@@ -80,7 +81,21 @@ import "react-toastify/dist/ReactToastify.css";
 const App = () => {
   return (
     <Provider store={store}>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        style={{ zIndex: 99999 }}
+      />
       <Router>
+        <AutoLogout />
         <ScrollToTop />
         <Layout>
           <Routes>
@@ -162,18 +177,6 @@ const App = () => {
           <FloatingChatbot />
 
         </Layout>
-        <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={true}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
       </Router>
     </Provider>
   );

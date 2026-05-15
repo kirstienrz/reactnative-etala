@@ -229,23 +229,26 @@ const LandingPage = () => {
   return (
     <main className="bg-white">
       {/* Hero Section */}
-      <section className="relative h-[400px] sm:h-[500px] md:h-[600px] bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent z-10"></div>
-        {heroSlides.map((slide, idx) => (
-          <div
-            key={idx}
-            className={`absolute inset-0 transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100' : 'opacity-0'}`}
-          >
-            {slide.image ? (
-              <img src={slide.image} alt={slide.title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-violet-900 to-purple-900"></div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/10"></div>
-          </div>
-        ))}
+      <section className="relative w-full h-[350px] sm:h-[450px] md:h-auto bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-x-auto overflow-y-hidden no-scrollbar">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent z-10 pointer-events-none"></div>
 
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="relative h-full w-max min-w-full md:w-full md:block">
+          {heroSlides.map((slide, idx) => (
+            <div
+              key={idx}
+              className={`h-full transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}
+            >
+              {slide.image ? (
+                <img src={slide.image} alt={slide.title || "Hero Banner"} className="h-full w-auto max-w-none md:w-full md:h-auto md:max-w-full block" />
+              ) : (
+                <div className="h-full w-screen md:w-full md:aspect-[21/9] bg-gradient-to-br from-violet-900 to-purple-900"></div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/10 pointer-events-none"></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center px-4 md:px-6 max-w-5xl relative z-10">
             {heroSlides.map((slide, idx) => (
               <div
@@ -256,32 +259,6 @@ const LandingPage = () => {
             ))}
           </div>
         </div>
-
-        {/* Carousel Controls */}
-        {/* <button
-          onClick={prevSlide}
-          className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 md:p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
-        >
-          <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-violet-700 group-hover:scale-110 transition-transform" />
-        </button>
-        <button
-          onClick={nextSlide}
-          className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 md:p-4 transition-all duration-300 backdrop-blur-md border border-white/60 group shadow-lg dark:bg-white/90 dark:hover:bg-white"
-        >
-          <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-violet-700 group-hover:scale-110 transition-transform" />
-        </button> */}
-
-
-        {/* Carousel Indicators */}
-        {/* <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-3">
-          {heroSlides.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentSlide(idx)}
-              className={`h-2 transition-all duration-500 ${idx === currentSlide ? 'bg-violet-700 w-12' : 'bg-violet-300 w-6 hover:bg-violet-400'} rounded-full`}
-            />
-          ))}
-        </div> */}
       </section>
 
 
@@ -296,14 +273,14 @@ const LandingPage = () => {
                 <img
                   src="/assets/about/logo.png"
                   alt="GAD Office Logo"
-                  className="w-full max-w-sm md:max-w-xl h-auto object-contain drop-shadow-2xl"
+                  className="w-48 sm:w-64 md:w-full md:max-w-xl h-auto object-contain drop-shadow-2xl"
                 />
               </div>
             </div>
 
             {/* Right side - Content */}
             <div>
-              <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-6 lg:mb-10 leading-tight">
+              <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 mb-6 lg:mb-10 leading-tight">
                 GAD Agenda
               </h2>
 
@@ -327,16 +304,16 @@ const LandingPage = () => {
       <HighlightsSection />
 
       {/* Press Releases Section */}
-      <section className="py-40 bg-slate-50">
+      <section className="py-16 md:py-32 bg-slate-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-12 md:mb-24 border-b-4 border-violet-600 pb-8 gap-4">
-            <h2 className="text-4xl md:text-6xl font-black text-slate-800 text-center sm:text-left">Press Releases</h2>
+          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-8 md:mb-24 border-b-4 border-violet-600 pb-4 md:pb-8 gap-4">
+            <h2 className="text-3xl md:text-6xl font-black text-slate-800 text-center sm:text-left">Press Releases</h2>
             <button
               onClick={() => navigate("/news")}
-              className="bg-white text-violet-700 font-bold text-lg md:text-xl hover:text-violet-600 transition-colors flex items-center gap-3 border border-violet-200 px-6 py-2 rounded-lg shadow dark:bg-white dark:text-violet-700 dark:hover:text-violet-600"
+              className="bg-white text-violet-700 font-bold text-base md:text-xl hover:text-violet-600 transition-colors flex items-center gap-2 md:gap-3 border border-violet-200 px-4 md:px-6 py-2 rounded-lg shadow dark:bg-white dark:text-violet-700 dark:hover:text-violet-600"
             >
-              View All <ArrowRight className="w-6 h-6 md:w-7 md:h-7" />
+              View All <ArrowRight className="w-5 h-5 md:w-7 md:h-7" />
             </button>
           </div>
 
@@ -359,7 +336,7 @@ const LandingPage = () => {
                   className="bg-white shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col"
                 >
                   {/* Image */}
-                  <div className="h-80 bg-slate-200 overflow-hidden">
+                  <div className="h-48 md:h-80 bg-slate-200 overflow-hidden">
                     {getYouTubeEmbedUrl(item.link) ? (
                       <iframe
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-500 bg-black"
@@ -406,23 +383,23 @@ const LandingPage = () => {
                   {/* Content */}
                   <div className="flex flex-1">
                     {/* Date Badge */}
-                    <div className="bg-violet-600 text-white p-8 flex flex-col items-center justify-center w-28 flex-shrink-0">
-                      <div className="text-4xl font-bold leading-none">
+                    <div className="bg-violet-600 text-white p-4 md:p-8 flex flex-col items-center justify-center w-20 md:w-28 flex-shrink-0">
+                      <div className="text-2xl md:text-4xl font-bold leading-none">
                         {item.date.split(' ')[1] || '01'}
                       </div>
-                      <div className="text-base font-semibold mt-2">
+                      <div className="text-xs md:text-base font-semibold mt-1 md:mt-2">
                         {item.date.split(' ')[0] || 'Jan'}
                       </div>
                     </div>
 
                     {/* Text Content */}
-                    <div className="p-8 flex flex-col flex-1">
-                      <h3 className="text-2xl font-bold text-slate-800 mb-6 line-clamp-3 leading-snug flex-1">
+                    <div className="p-4 md:p-8 flex flex-col flex-1">
+                      <h3 className="text-lg md:text-2xl font-bold text-slate-800 mb-3 md:mb-6 line-clamp-3 leading-snug flex-1">
                         {item.title}
                       </h3>
                       <button
                         onClick={() => setSelectedNews(item)}
-                        className="text-violet-700 font-bold text-xl hover:text-violet-600 transition-colors text-left"
+                        className="text-violet-700 font-bold text-base md:text-xl hover:text-violet-600 transition-colors text-left"
                       >
                         Read More
                       </button>
@@ -456,11 +433,11 @@ const LandingPage = () => {
             <div className="relative group">
               <div className="absolute -inset-4 bg-gradient-to-r from-violet-400 to-purple-400 rounded-[2.5rem] opacity-20 blur-2xl group-hover:opacity-40 transition duration-1000"></div>
               <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center relative border border-white/20">
-                <div className="bg-gray-50 p-4 rounded-2xl mb-6 shadow-inner">
+                <div className="bg-gray-50 overflow-hidden rounded-2xl mb-6 shadow-inner flex items-center justify-center w-48 h-48 md:w-64 md:h-64">
                   <img
                     src="/assets/qr.jpg"
                     alt="Scan this QR to download our app"
-                    className="w-48 h-48 md:w-56 md:h-56 object-contain"
+                    className="w-full h-full object-cover scale-[2] translate-y-24 -translate-x-2.5"
                   />
                 </div>
                 <div className="text-center">
