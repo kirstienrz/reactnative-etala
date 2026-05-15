@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff, Calendar, Shield, X } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Calendar, Shield, X, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import { signup } from "../api/auth"; 
 import PolicyModal from "../components/PolicyModal";
@@ -226,13 +226,14 @@ const SignupPage = () => {
                   className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
                 />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1 px-1">
-                {userType === "Student"
-                  ? "💡 Students: use dot (.) separator"
-                  : userType === "Faculty"
-                    ? "💡 Faculty: use underscore (_) separator"
-                    : ""}
-              </p>
+              {(userType === "Student" || userType === "Faculty") && (
+                <p className="flex items-center gap-1 text-[10px] text-gray-500 mt-1 px-1">
+                  <Info size={11} className="shrink-0 text-violet-400" />
+                  {userType === "Student"
+                    ? "Students: use dot (.) separator"
+                    : "Faculty: use underscore (_) separator"}
+                </p>
+              )}
             </div>
 
             {/* TUP ID */}
@@ -252,8 +253,8 @@ const SignupPage = () => {
               <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
             </div>
 
-    // Gender & Birthday
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Gender & Birthday */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Gender <span className="text-red-500">*</span>

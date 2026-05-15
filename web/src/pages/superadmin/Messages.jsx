@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, Calendar, AlertCircle, CheckCircle, Mail, Search, Trash2, PlusCircle, Copy, Undo2, Archive, RefreshCw, Info } from 'lucide-react';
+import { Send, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, Calendar, AlertCircle, CheckCircle, Mail, Search, Trash2, PlusCircle, Copy, Undo2, Archive, RefreshCw, Info, FileText, Download } from 'lucide-react';
 import {
   getAllTickets,
   getTicketMessages,
@@ -608,7 +608,7 @@ const TicketMessagingSystem = () => {
       // Leave previous ticket room first before joining new one
       const currentTicketNumber = selectedTicket.ticketNumber;
       socketService.joinTicket(currentTicketNumber);
-      
+
       return () => {
         // Only leave if we're still on the same ticket
         socketService.leaveTicket(currentTicketNumber);
@@ -616,16 +616,16 @@ const TicketMessagingSystem = () => {
     }
   }, [selectedTicket?.ticketNumber]); // Only depend on ticketNumber, not entire object
 
-  useEffect(() => { 
-    loadTickets(); 
+  useEffect(() => {
+    loadTickets();
   }, []);
 
   // Handle navigation state (select ticket from notification) - separate from tickets loading
   const hasHandledNavigationRef = useRef(false);
-  
+
   useEffect(() => {
     const state = location.state;
-    
+
     // Only handle once and only if we have tickets loaded
     if (state?.selectedTicketNumber && tickets.length > 0 && !hasHandledNavigationRef.current) {
       const t = tickets.find(t => t.ticketNumber === state.selectedTicketNumber);
@@ -636,7 +636,7 @@ const TicketMessagingSystem = () => {
         window.history.replaceState({}, document.title);
       }
     }
-  }, [tickets.length]);  
+  }, [tickets.length]);
 
   const loadTickets = async () => {
     setLoading(true);
@@ -657,15 +657,15 @@ const TicketMessagingSystem = () => {
 
   const loadMessages = async (ticketNumber) => {
     setLoading(true);
-    try { 
-      const data = await getTicketMessages(ticketNumber, { limit: 50 }); 
-      setMessages(data); 
+    try {
+      const data = await getTicketMessages(ticketNumber, { limit: 50 });
+      setMessages(data);
     }
-    catch { 
-      console.error('Error loading messages'); 
+    catch {
+      console.error('Error loading messages');
     }
-    finally { 
-      setLoading(false); 
+    finally {
+      setLoading(false);
     }
   };
 
@@ -736,10 +736,10 @@ const TicketMessagingSystem = () => {
   const handleToggleStatus = async (ticketToToggle = selectedTicket) => {
     if (!ticketToToggle) return;
     const isClosing = ticketToToggle.status === 'Open';
-    
+
     showModal({
       title: isClosing ? 'Archive Conversation?' : 'Reopen Conversation?',
-      message: isClosing 
+      message: isClosing
         ? 'This will mark the ticket as closed/archived. You can still view it later in the Archived filter.'
         : 'This will reopen the ticket for active messaging.',
       type: isClosing ? 'warning' : 'info',
@@ -762,8 +762,8 @@ const TicketMessagingSystem = () => {
   const showModal = (config) => { setModalConfig(config); setShowConfirmModal(true); };
 
   const handleSendAppointmentLink = () => {
-     setShowAvailabilityModal(true);
-   };
+    setShowAvailabilityModal(true);
+  };
 
   const handleCalendarConfirmed = () => {
     setShowCalendarReminder(false);
@@ -777,46 +777,46 @@ const TicketMessagingSystem = () => {
   };
 
   const handleConfirmSendLink = async () => {
-     try {
-       setIsSending(true);
-       const ticket = selectedTicket;
-       if (!ticket) {
-         showModal({ title: 'Error', message: 'No ticket selected.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
-         return;
-       }
-       const userId = ticket.userId?._id || ticket.userId;
-       const userEmail = ticket.userId?.email || ticket.reportId?.email || ticket.email;
-       const userName = ticket.displayName && ticket.displayName !== "Anonymous User" ? ticket.displayName
-         : ticket.userId?.firstName ? `${ticket.userId.firstName} ${ticket.userId.lastName}`
-           : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}`
-             : "Anonymous User";
-       const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
+    try {
+      setIsSending(true);
+      const ticket = selectedTicket;
+      if (!ticket) {
+        showModal({ title: 'Error', message: 'No ticket selected.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
+        return;
+      }
+      const userId = ticket.userId?._id || ticket.userId;
+      const userEmail = ticket.userId?.email || ticket.reportId?.email || ticket.email;
+      const userName = ticket.displayName && ticket.displayName !== "Anonymous User" ? ticket.displayName
+        : ticket.userId?.firstName ? `${ticket.userId.firstName} ${ticket.userId.lastName}`
+          : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}`
+            : "Anonymous User";
+      const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
 
-       if (!userId || !userEmail || !ticketNumber) {
-         showModal({ title: 'Error', message: 'Missing required information to send the link.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
-         return;
-       }
+      if (!userId || !userEmail || !ticketNumber) {
+        showModal({ title: 'Error', message: 'Missing required information to send the link.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
+        return;
+      }
 
-       const response = await sendBookingLinkEmail({ userId, userEmail, userName, ticketNumber });
-       if (response.success) {
-         showModal({
-           title: 'Link Sent Successfully',
-           message: '✅ Booking link sent!\n\nThe user has been notified via email. The link expires in 24 hours.',
-           type: 'success',
-           confirmText: 'Great',
-           onConfirm: () => setShowConfirmModal(false)
-         });
-         try { await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been sent to your email.\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } }); }
-         catch { console.error("⚠️ Failed to send chat message"); }
-       } else {
-         showModal({ title: 'Failed to Send', message: response.message || "Failed to send booking link. Please try again.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
-       }
-     } catch (error) {
-       showModal({ title: 'Error', message: error.message || "An unexpected error occurred while sending the link.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
-     } finally {
-       setIsSending(false);
-     }
-   };
+      const response = await sendBookingLinkEmail({ userId, userEmail, userName, ticketNumber });
+      if (response.success) {
+        showModal({
+          title: 'Link Sent Successfully',
+          message: '✅ Booking link sent!\n\nThe user has been notified via email. The link expires in 24 hours.',
+          type: 'success',
+          confirmText: 'Great',
+          onConfirm: () => setShowConfirmModal(false)
+        });
+        try { await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been sent to your email.\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } }); }
+        catch { console.error("⚠️ Failed to send chat message"); }
+      } else {
+        showModal({ title: 'Failed to Send', message: response.message || "Failed to send booking link. Please try again.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
+      }
+    } catch (error) {
+      showModal({ title: 'Error', message: error.message || "An unexpected error occurred while sending the link.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   useEffect(() => {
     dispatch(setUnreadMessageCount(unreadCount));
@@ -858,8 +858,8 @@ const TicketMessagingSystem = () => {
   return (
     <>
       <ConfirmationModal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} confirmText={modalConfig.confirmText} cancelText={modalConfig.cancelText} isLoading={sending} />
-       <CalendarReminderModal isOpen={showCalendarReminder} onClose={() => setShowCalendarReminder(false)} onConfirm={handleCalendarConfirmed} />
-       <AvailabilityPickerModal isOpen={showAvailabilityModal} onClose={() => setShowAvailabilityModal(false)} onConfirm={handleCalendarConfirmed} adminId={selectedTicket?.adminId || 'me'} />
+      <CalendarReminderModal isOpen={showCalendarReminder} onClose={() => setShowCalendarReminder(false)} onConfirm={handleCalendarConfirmed} />
+      <AvailabilityPickerModal isOpen={showAvailabilityModal} onClose={() => setShowAvailabilityModal(false)} onConfirm={handleCalendarConfirmed} adminId={selectedTicket?.adminId || 'me'} />
 
       <div className="flex bg-white" style={{ height: '100%', overflow: 'hidden' }}>
 
@@ -941,9 +941,9 @@ const TicketMessagingSystem = () => {
                           <div className="flex items-center justify-between mt-1">
                             {ticket.reportId?.caseStatus && (
                               <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${ticket.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                {ticket.reportId.caseStatus === 'Case Closed' ? 'Archived (Closed)' : 
-                                 ticket.reportId.caseStatus === 'For Referral' ? 'Archived (Referred)' : 
-                                 ticket.reportId.caseStatus}
+                                {ticket.reportId.caseStatus === 'Case Closed' ? 'Archived (Closed)' :
+                                  ticket.reportId.caseStatus === 'For Referral' ? 'Archived (Referred)' :
+                                    ticket.reportId.caseStatus}
                               </span>
                             )}
                             <div className="flex items-center gap-2 ml-auto">
@@ -1008,12 +1008,11 @@ const TicketMessagingSystem = () => {
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700">
                       <Mail className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleToggleStatus(selectedTicket)} 
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${
-                        selectedTicket.status === 'Open' 
-                          ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-600 hover:text-white' 
-                          : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-600 hover:text-white'
-                      }`}
+                    <button onClick={() => handleToggleStatus(selectedTicket)}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${selectedTicket.status === 'Open'
+                        ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-600 hover:text-white'
+                        : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-600 hover:text-white'
+                        }`}
                     >
                       {selectedTicket.status === 'Open' ? (
                         <>
@@ -1063,10 +1062,10 @@ const TicketMessagingSystem = () => {
                                         const parts = file.uri.split(',');
                                         const contentType = parts[0].split(':')[1].split(';')[0];
                                         const b64Data = parts[1];
-                                        
+
                                         const byteCharacters = atob(b64Data);
                                         const byteArrays = [];
-                                        
+
                                         for (let offset = 0; offset < byteCharacters.length; offset += 512) {
                                           const slice = byteCharacters.slice(offset, offset + 512);
                                           const byteNumbers = new Array(slice.length);
@@ -1076,7 +1075,7 @@ const TicketMessagingSystem = () => {
                                           const byteArray = new Uint8Array(byteNumbers);
                                           byteArrays.push(byteArray);
                                         }
-                                        
+
                                         const blob = new Blob(byteArrays, { type: contentType });
                                         url = window.URL.createObjectURL(blob);
                                       } else {

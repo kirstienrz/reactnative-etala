@@ -425,8 +425,8 @@ const SuperAdminDashboard = () => {
 
       {activeTab === 'reports' && (
         <div className="space-y-6">
-          {/* Department & Incident Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Department Analysis */}
+          <div className="grid grid-cols-1 gap-6">
             {/* Top Departments */}
             <div className="bg-white rounded-lg shadow border p-6">
               <div className="flex justify-between items-center mb-4">
@@ -463,41 +463,7 @@ const SuperAdminDashboard = () => {
               </div>
             </div>
 
-            {/* Top Incident Types */}
-            <div className="bg-white rounded-lg shadow border p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Top Incident Types</h3>
-                <AlertTriangle className="w-5 h-5 text-gray-500" />
-              </div>
-              <div className="h-80">
-                {topIncidentData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <BarChart data={topIncidentData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis
-                        dataKey="name"
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                        fontSize={12}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar
-                        dataKey="value"
-                        fill="#3b82f6"
-                        radius={[4, 4, 0, 0]}
-                        name="Incidents"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    No incident type data available
-                  </div>
-                )}
-              </div>
-            </div>
+
           </div>
 
           {/* Severity Analysis */}

@@ -190,7 +190,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: user.role, department: user.department },
       process.env.JWT_SECRET,
-      { expiresIn: user.role === "superadmin" ? "1h" : "15m" }
+      { expiresIn: "30d" }
     );
 
     res.json({
@@ -277,7 +277,7 @@ router.post("/verify-pin", async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: user.role === "superadmin" ? "1h" : "15m" }
+      { expiresIn: "30d" }
     );
 
     console.log("✅ PIN verified for:", email);
