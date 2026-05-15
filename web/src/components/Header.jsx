@@ -295,9 +295,9 @@ const Header = () => {
 
   return (
     <>
-      <header className={`sticky top-0 z-[9999] transition-all duration-300 pt-safe ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
+      <header className={`sticky top-0 z-[9999] transition-all duration-300 ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
         {/* Top Bar */}
-        <div className="bg-gradient-to-r from-purple-900 to-purple-800 text-white py-1.5 text-xs">
+        <div className="bg-gradient-to-r from-purple-900 to-purple-800 text-white py-1.5 pt-safe text-xs">
           <div className="max-w-7xl mx-auto px-4 flex justify-between items-center font-medium tracking-wide">
           </div>
         </div>
