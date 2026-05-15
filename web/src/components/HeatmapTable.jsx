@@ -105,7 +105,7 @@ const HeatmapTable = ({
   return (
     <div className="bg-white shadow-xl rounded-2xl border border-gray-100 text-sm select-none transition-all duration-300 hover:shadow-2xl relative">
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-50 bg-white">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 px-4 py-4 md:px-6 border-b border-gray-50 bg-white">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-bold text-gray-900 leading-tight truncate text-lg tracking-tight">{title}</p>
@@ -151,9 +151,8 @@ const HeatmapTable = ({
           <thead>
             <tr>
               <th
-                className="group sticky left-0 z-20 bg-gray-50 px-3 py-2 text-left font-bold text-[10px] text-gray-500 uppercase tracking-widest border border-gray-100 cursor-pointer rounded-xl transition-colors hover:bg-blue-50"
+                className="group bg-gray-50 px-2 py-1.5 md:px-3 md:py-2 text-left font-bold text-[8px] md:text-[10px] text-gray-500 uppercase tracking-widest border border-gray-100 cursor-pointer rounded-xl transition-colors hover:bg-blue-50 min-w-[80px] md:min-w-[160px]"
                 onClick={() => toggleSort("__name__")}
-                style={{ minWidth: 160 }}
               >
                 <span className="flex items-center gap-1">
                   {rowLabel}
@@ -164,11 +163,11 @@ const HeatmapTable = ({
               {columns.map(col => (
                 <th
                   key={col}
-                  className={`group px-2 py-2 text-center font-bold text-[10px] uppercase tracking-widest cursor-pointer transition-all border border-gray-100 rounded-xl ${hoverCol === col
+                  className={`group px-1 py-1.5 md:px-2 md:py-2 text-center font-bold text-[8px] md:text-[10px] uppercase tracking-widest cursor-pointer transition-all border border-gray-100 rounded-xl ${hoverCol === col
                     ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100"
                     : "bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200"
                     }`}
-                  style={{ minWidth: 85 }}
+                  className="min-w-[30px] md:min-w-[85px]"
                   onClick={() => toggleSort(col)}
                   onMouseEnter={() => setHoverCol(col)}
                   onMouseLeave={() => setHoverCol(null)}
@@ -181,8 +180,7 @@ const HeatmapTable = ({
               ))}
 
               <th
-                className="group px-3 py-2 text-right font-bold text-[10px] uppercase tracking-widest text-gray-500 bg-gray-50 border border-gray-100 cursor-pointer hover:text-blue-600 hover:bg-blue-50 transition-all rounded-xl"
-                style={{ minWidth: 85 }}
+                className="group px-2 py-1.5 md:px-3 md:py-2 text-right font-bold text-[8px] md:text-[10px] uppercase tracking-widest text-gray-500 bg-gray-50 border border-gray-100 cursor-pointer hover:text-blue-600 hover:bg-blue-50 transition-all rounded-xl min-w-[50px] md:min-w-[85px]"
                 onClick={() => toggleSort("__total__")}
               >
                 <span className="flex items-center justify-end gap-1">
@@ -202,10 +200,10 @@ const HeatmapTable = ({
                 onMouseLeave={() => setHoverRow(null)}
               >
                 <td
-                  className={`sticky left-0 z-10 px-3 py-2 text-[10px] font-bold border border-gray-100 transition-all rounded-xl ${hoverRow === row ? "bg-blue-50 text-blue-700 border-blue-200 shadow-sm" : "bg-white text-gray-600"
+                  className={`px-2 py-1.5 md:px-3 md:py-2 text-[8px] md:text-[10px] font-bold border border-gray-100 transition-all rounded-xl ${hoverRow === row ? "bg-blue-50 text-blue-700 border-blue-200 shadow-sm" : "bg-white text-gray-600"
                     }`}
                 >
-                  <span className="truncate block" style={{ maxWidth: 145 }}>{row}</span>
+                  <span className="truncate block" className="max-w-[70px] md:max-w-[145px]">{row}</span>
                 </td>
 
                 {columns.map(col => {
@@ -218,7 +216,7 @@ const HeatmapTable = ({
                   return (
                     <td
                       key={col}
-                      className={`px-2 py-2 text-center tabular-nums font-bold text-xs transition-all duration-200 h-11 border rounded-xl ${onCol || onRow ? "border-blue-200" : "border-transparent"
+                      className={`px-1 py-1 md:px-2 md:py-2 text-center tabular-nums font-bold text-[8px] md:text-xs transition-all duration-200 h-8 md:h-11 border rounded-xl ${onCol || onRow ? "border-blue-200" : "border-transparent"
                         } ${!bgColor && onCol ? "bg-blue-50/50" : ""} ${!bgColor && onRow && !onCol ? "bg-gray-50/50" : ""}`}
                       style={{
                         backgroundColor: bgColor ?? undefined,
@@ -236,7 +234,7 @@ const HeatmapTable = ({
                 })}
 
                 <td
-                  className={`px-3 py-2 text-right tabular-nums font-bold text-xs border border-gray-100 transition-all rounded-xl ${hoverRow === row ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-500"
+                  className={`px-2 py-1.5 md:px-3 md:py-2 text-right tabular-nums font-bold text-[8px] md:text-xs border border-gray-100 transition-all rounded-xl ${hoverRow === row ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-500"
                     }`}
                 >
                   {fmtTotal(rowTotals[row])}
@@ -245,13 +243,13 @@ const HeatmapTable = ({
             ))}
 
             <tr className="border-t-2 border-gray-100">
-              <td className="sticky left-0 z-10 px-3 py-3 text-[10px] font-bold uppercase text-gray-500 bg-gray-50 border border-gray-100 rounded-xl">
+              <td className="px-2 py-2 md:px-3 md:py-3 text-[8px] md:text-[10px] font-bold uppercase text-gray-500 bg-gray-50 border border-gray-100 rounded-xl">
                 Year Total
               </td>
               {columns.map(col => (
                 <td
                   key={col}
-                  className={`px-2 py-3 text-center tabular-nums font-bold text-xs bg-gray-50 transition-all border border-gray-100 rounded-xl ${hoverCol === col ? "bg-blue-50 text-blue-700" : "text-gray-400"
+                  className={`px-1 py-2 md:px-2 md:py-3 text-center tabular-nums font-bold text-[8px] md:text-xs bg-gray-50 transition-all border border-gray-100 rounded-xl ${hoverCol === col ? "bg-blue-50 text-blue-700" : "text-gray-400"
                     }`}
                   onMouseEnter={() => setHoverCol(col)}
                   onMouseLeave={() => setHoverCol(null)}
@@ -259,7 +257,7 @@ const HeatmapTable = ({
                   {fmtTotal(colTotals[col])}
                 </td>
               ))}
-              <td className="px-3 py-3 text-right tabular-nums font-bold text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-xl">
+              <td className="px-2 py-2 md:px-3 md:py-3 text-right tabular-nums font-bold text-[8px] md:text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-xl">
                 {showPct ? "100%" : grandTotal.toLocaleString()}
               </td>
             </tr>

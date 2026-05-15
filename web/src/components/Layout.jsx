@@ -85,7 +85,7 @@ const Layout = ({ children }) => {
         />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Mobile Header for Admin */}
-          <header className="lg:hidden flex items-center justify-between px-4 py-3 pt-safe bg-gray-900 text-white shadow-md">
+          <header className="lg:hidden flex items-center justify-between px-4 pb-3 admin-header-pt bg-gray-900 text-white shadow-md">
             <div className="flex items-center">
               <button
                 onClick={() => setIsSidebarOpen(true)}

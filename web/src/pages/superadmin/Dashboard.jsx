@@ -201,7 +201,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 border-b">
+      <div className="flex space-x-2 border-b overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2 font-medium ${activeTab === 'overview'
@@ -614,8 +614,8 @@ const SuperAdminDashboard = () => {
 
       {activeTab === 'heatmap' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
+          <div className="bg-white p-3 md:p-8 rounded-xl md:rounded-3xl border border-gray-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-8 mb-6 md:mb-10">
               <div className="max-w-2xl">
                 <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Heatmap Analysis</h2>
                 <p className="text-gray-500 text-lg leading-relaxed">

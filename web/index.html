@@ -10,6 +10,18 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        document.body.classList.add('is-native');
+      } else {
+        // Fallback detection if script runs before Capacitor is injected
+        document.addEventListener('DOMContentLoaded', () => {
+          if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            document.body.classList.add('is-native');
+          }
+        });
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

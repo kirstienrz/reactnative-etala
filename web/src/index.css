@@ -10,10 +10,42 @@
 
 @layer utilities {
   .pt-safe {
-    padding-top: max(env(safe-area-inset-top), 35px);
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .pb-safe {
-    padding-bottom: max(env(safe-area-inset-bottom), 24px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .is-native .pt-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 35px);
+  }
+  .is-native .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
+  }
+  
+  /* Component specific safe paddings */
+  .admin-header-pt {
+    padding-top: max(env(safe-area-inset-top, 0px), 0.75rem); /* Web default py-3 */
+  }
+  
+  .sidebar-header-pt {
+    padding-top: max(env(safe-area-inset-top, 0px), 1.5rem); /* Web default p-6 */
+  }
+  
+  .is-native .admin-header-pt {
+    padding-top: max(env(safe-area-inset-top, 0px), 40px);
+  }
+  .is-native .sidebar-header-pt {
+    padding-top: max(env(safe-area-inset-top, 0px), 48px);
+  }
+  
+  .drawer-header-h {
+    height: calc(84px + env(safe-area-inset-top, 0px));
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  }
+  .is-native .drawer-header-h {
+    height: max(calc(84px + env(safe-area-inset-top, 0px)), 110px);
+    padding-top: max(calc(16px + env(safe-area-inset-top, 0px)), 42px);
   }
 }
 
