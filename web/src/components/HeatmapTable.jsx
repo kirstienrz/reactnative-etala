@@ -163,11 +163,10 @@ const HeatmapTable = ({
               {columns.map(col => (
                 <th
                   key={col}
-                  className={`group px-1 py-1.5 md:px-2 md:py-2 text-center font-bold text-[8px] md:text-[10px] uppercase tracking-widest cursor-pointer transition-all border border-gray-100 rounded-xl ${hoverCol === col
+                  className={`group px-1 py-1.5 md:px-2 md:py-2 text-center font-bold text-[8px] md:text-[10px] uppercase tracking-widest cursor-pointer transition-all border border-gray-100 rounded-xl min-w-[30px] md:min-w-[85px] ${hoverCol === col
                     ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100"
                     : "bg-white text-gray-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200"
                     }`}
-                  className="min-w-[30px] md:min-w-[85px]"
                   onClick={() => toggleSort(col)}
                   onMouseEnter={() => setHoverCol(col)}
                   onMouseLeave={() => setHoverCol(null)}
@@ -203,7 +202,7 @@ const HeatmapTable = ({
                   className={`px-2 py-1.5 md:px-3 md:py-2 text-[8px] md:text-[10px] font-bold border border-gray-100 transition-all rounded-xl ${hoverRow === row ? "bg-blue-50 text-blue-700 border-blue-200 shadow-sm" : "bg-white text-gray-600"
                     }`}
                 >
-                  <span className="truncate block" className="max-w-[70px] md:max-w-[145px]">{row}</span>
+                  <span className="truncate block max-w-[70px] md:max-w-[145px]">{row}</span>
                 </td>
 
                 {columns.map(col => {
