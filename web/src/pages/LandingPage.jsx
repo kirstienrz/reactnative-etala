@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import {
@@ -60,6 +60,29 @@ const LandingPage = () => {
 
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [calendarLoading, setCalendarLoading] = useState(true);
+
+  const heroRef = useRef(null);
+
+  // Center the hero section on load and resize if scrollable (mobile)
+  useEffect(() => {
+    const centerHero = () => {
+      if (heroRef.current) {
+        const { scrollWidth, clientWidth } = heroRef.current;
+        if (scrollWidth > clientWidth) {
+          heroRef.current.scrollLeft = (scrollWidth - clientWidth) / 2;
+        }
+      }
+    };
+
+    // Slight delay to ensure layout is computed after image load
+    const timeoutId = setTimeout(centerHero, 150);
+    window.addEventListener('resize', centerHero);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', centerHero);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchCalendarEvents = async () => {
@@ -229,19 +252,19 @@ const LandingPage = () => {
   return (
     <main className="bg-white">
       {/* Hero Section */}
-      <section className="relative w-full h-[350px] sm:h-[450px] md:h-auto bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-x-auto overflow-y-hidden no-scrollbar">
+      <section ref={heroRef} className="relative w-full h-[400px] sm:h-[500px] lg:h-[calc(100vh-116px)] bg-slate-900 overflow-x-auto overflow-y-hidden lg:overflow-hidden no-scrollbar scroll-smooth">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent z-10 pointer-events-none"></div>
 
-        <div className="relative h-full w-max min-w-full md:w-full md:block">
+        <div className="relative h-full w-max min-w-full lg:w-full lg:block">
           {heroSlides.map((slide, idx) => (
             <div
               key={idx}
-              className={`h-full transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}
+              className={`h-full lg:w-full lg:h-full transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}
             >
               {slide.image ? (
-                <img src={slide.image} alt={slide.title || "Hero Banner"} className="h-full w-auto max-w-none md:w-full md:h-auto md:max-w-full block" />
+                <img src={slide.image} alt={slide.title || "Hero Banner"} className="h-full w-auto max-w-none lg:w-full lg:h-full lg:object-cover block" />
               ) : (
-                <div className="h-full w-screen md:w-full md:aspect-[21/9] bg-gradient-to-br from-violet-900 to-purple-900"></div>
+                <div className="h-full w-screen lg:w-full lg:h-full bg-gradient-to-br from-violet-900 to-purple-900"></div>
               )}
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/10 pointer-events-none"></div>
             </div>
