@@ -138,7 +138,7 @@ const Footer = () => {
 
         {/* Copyright Section */}
         <div className="w-full border-t border-white/5 bg-black/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-safe text-center">
             <p className="text-sm text-violet-200/80 font-medium">
               &copy; {new Date().getFullYear()} eTALA. All Rights Reserved.
             </p>

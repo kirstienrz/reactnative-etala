@@ -91,7 +91,7 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
         ${isCollapsed ? 'lg:w-20' : 'w-64'}
       `}>
         {/* Header */}
-        <div className={`p-6 pt-safe border-b border-gray-700 flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'}`}>
+        <div className={`px-6 pb-6 sidebar-header-pt border-b border-gray-700 flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'}`}>
           {(!isCollapsed || isOpen) && (
             <div className="cursor-pointer" onClick={() => {
               navigate("/superadmin/dashboard");
@@ -259,7 +259,7 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         {/* LOGOUT */}
-        <div className="border-t border-gray-700 p-4 pb-safe">
+        <div className="border-t border-gray-700 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
           <button
             onClick={handleLogout}
             className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-gray-400 hover:text-white rounded-lg hover:bg-red-600 transition-colors duration-200 ${(isCollapsed && !isOpen) ? 'justify-center' : ''}`}

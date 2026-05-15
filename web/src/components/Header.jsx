@@ -189,11 +189,11 @@ const Header = () => {
         aria-label="Mobile menu"
       >
         <div className="flex flex-col h-full bg-white">
-          <div className="p-5 pt-safe flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
-            <span className="font-bold text-lg">Menu</span>
+          <div className="px-4 pb-4 drawer-header-h flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
+            <span className="font-bold text-lg mt-auto">Menu</span>
             <button
               onClick={() => setIsMenuOpen(false)}
-              className="p-1.5 hover:bg-white/20 rounded-full transition-colors"
+              className="p-1.5 hover:bg-white/20 rounded-full transition-colors mt-auto"
               aria-label="Close menu"
             >
               <X size={24} />
@@ -282,7 +282,7 @@ const Header = () => {
           </nav>
 
           {/* Mobile Footer Area */}
-          <div className="p-6 bg-gray-50 text-center flex-shrink-0">
+          <div className="px-6 pt-6 pb-safe bg-gray-50 text-center flex-shrink-0">
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
               &copy; 2024 Gender and Development Office<br />
               TUP-Taguig Campus
