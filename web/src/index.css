@@ -8,6 +8,15 @@
   }
 }
 
+@layer utilities {
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 10px);
+  }
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 10px);
+  }
+}
+
 /* Optional: keep your original global styles below */
 :root {
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;

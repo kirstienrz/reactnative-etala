@@ -85,7 +85,7 @@ const Layout = ({ children }) => {
         />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Mobile Header for Admin */}
-          <header className="lg:hidden flex items-center justify-between p-3 bg-gray-900 text-white shadow-md">
+          <header className="lg:hidden flex items-center justify-between p-3 pt-[max(env(safe-area-inset-top),0.75rem)] bg-gray-900 text-white shadow-md">
             <div className="flex items-center gap-2">
               <NotificationCenter />
               <button

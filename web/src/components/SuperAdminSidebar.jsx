@@ -91,7 +91,7 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
         ${isCollapsed ? 'lg:w-20' : 'w-64'}
       `}>
         {/* Header */}
-        <div className={`p-6 border-b border-gray-700 flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'}`}>
+        <div className={`p-6 pt-[max(env(safe-area-inset-top),1.5rem)] border-b border-gray-700 flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'}`}>
           {(!isCollapsed || isOpen) && (
             <div className="cursor-pointer" onClick={() => {
               navigate("/superadmin/dashboard");
