@@ -102,7 +102,7 @@ All conversations are **confidential**. How can I help you today? 💜`,
   const styles = {
     floatingBtn: {
       position: "fixed",
-      bottom: isMobile ? "18px" : "24px",
+      bottom: isMobile ? "calc(env(safe-area-inset-bottom) + 18px)" : "24px",
       right: isMobile ? "16px" : "24px",
       width: isMobile ? "52px" : "60px",
       height: isMobile ? "52px" : "60px",
@@ -127,6 +127,7 @@ All conversations are **confidential**. How can I help you today? 💜`,
       justifyContent: "flex-end",
       alignItems: isMobile ? "flex-end" : "flex-end",
       padding: isMobile ? "8px" : "16px",
+      paddingBottom: isMobile ? "calc(env(safe-area-inset-bottom) + 8px)" : "16px",
       zIndex: 2001,
     },
     chatContainer: {

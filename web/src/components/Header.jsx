@@ -189,7 +189,7 @@ const Header = () => {
         aria-label="Mobile menu"
       >
         <div className="flex flex-col h-full bg-white">
-          <div className="p-5 flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
+          <div className="p-5 pt-[max(env(safe-area-inset-top),1.25rem)] flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
             <span className="font-bold text-lg">Menu</span>
             <button
               onClick={() => setIsMenuOpen(false)}
@@ -295,7 +295,7 @@ const Header = () => {
 
   return (
     <>
-      <header className={`sticky top-0 z-[9999] transition-all duration-300 ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
+      <header className={`sticky top-0 z-[9999] transition-all duration-300 pt-safe ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
         {/* Top Bar */}
         <div className="bg-gradient-to-r from-purple-900 to-purple-800 text-white py-1.5 text-xs">
           <div className="max-w-7xl mx-auto px-4 flex justify-between items-center font-medium tracking-wide">
