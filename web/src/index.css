@@ -10,10 +10,10 @@
 
 @layer utilities {
   .pt-safe {
-    padding-top: max(env(safe-area-inset-top), 10px);
+    padding-top: max(env(safe-area-inset-top), 35px);
   }
   .pb-safe {
-    padding-bottom: max(env(safe-area-inset-bottom), 10px);
+    padding-bottom: max(env(safe-area-inset-bottom), 24px);
   }
 }
 

@@ -85,9 +85,8 @@ const Layout = ({ children }) => {
         />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Mobile Header for Admin */}
-          <header className="lg:hidden flex items-center justify-between p-3 pt-[max(env(safe-area-inset-top),0.75rem)] bg-gray-900 text-white shadow-md">
-            <div className="flex items-center gap-2">
-              <NotificationCenter />
+          <header className="lg:hidden flex items-center justify-between p-3 pt-safe bg-gray-900 text-white shadow-md">
+            <div className="flex items-center">
               <button
                 onClick={() => setIsSidebarOpen(true)}
                 className="p-2 rounded-md hover:bg-gray-800 transition-colors"
@@ -96,6 +95,9 @@ const Layout = ({ children }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
+            </div>
+            <div className="flex items-center">
+              <NotificationCenter />
             </div>
           </header>
 

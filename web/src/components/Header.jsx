@@ -189,7 +189,7 @@ const Header = () => {
         aria-label="Mobile menu"
       >
         <div className="flex flex-col h-full bg-white">
-          <div className="p-5 pt-[max(env(safe-area-inset-top),1.25rem)] flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
+          <div className="p-5 pt-safe flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
             <span className="font-bold text-lg">Menu</span>
             <button
               onClick={() => setIsMenuOpen(false)}
