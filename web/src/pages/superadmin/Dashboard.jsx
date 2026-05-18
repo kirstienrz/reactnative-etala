@@ -401,7 +401,7 @@ const SuperAdminDashboard = () => {
                           {report.caseStatus || 'Pending'}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 truncate">{report.incidentDescription}</p>
+                      <p className="text-sm text-gray-600 truncate">{report.salaysay || report.incidentDescription || report.incidentStatement || "No statement provided"}</p>
                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                         <span className={`font-medium ${report.severity === 'Severe' ? 'text-red-600' :
                           report.severity === 'Moderate' ? 'text-yellow-600' : 'text-green-600'

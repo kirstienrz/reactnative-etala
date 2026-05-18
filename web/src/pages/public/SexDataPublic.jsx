@@ -41,7 +41,16 @@ export default function SexDataViewer() {
     const [filters, setFilters] = useState({});
     const [viewMode, setViewMode] = useState("charts"); // "charts" or "table"
     const [showReportOptions, setShowReportOptions] = useState(false);
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const chartRef = useRef(null);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const isMobile = windowWidth < 768;
 
     const loadDatasets = async () => {
         try {
@@ -151,6 +160,19 @@ export default function SexDataViewer() {
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
+        indexAxis: 'x',
+        scales: {
+            x: {
+                display: chartType !== 'pie',
+                ticks: {
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            },
+            y: {
+                display: chartType !== 'pie'
+            }
+        },
         plugins: {
             legend: {
                 position: 'top',
@@ -158,6 +180,13 @@ export default function SexDataViewer() {
             title: {
                 display: true,
                 text: `${yField} by ${xField}`
+            },
+            tooltip: {
+                callbacks: {
+                    title: function(context) {
+                        return context[0].label;
+                    }
+                }
             }
         }
     };
@@ -580,8 +609,14 @@ export default function SexDataViewer() {
                                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Preview</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex-1 flex items-center justify-center">
-                                                    {renderChart(chartType)}
+                                                <div className="flex-1 w-full overflow-x-auto pb-4">
+                                                    <div style={{ 
+                                                        minWidth: chartType === 'pie' ? '100%' : `${Math.max(100, (generateChartData()?.labels?.length || 0) * (isMobile ? 40 : 55))}px`, 
+                                                        height: '100%', 
+                                                        minHeight: '600px' 
+                                                    }}>
+                                                        {renderChart(chartType)}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -593,7 +628,9 @@ export default function SexDataViewer() {
                                             </h3>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">X-Axis (Label)</label>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">
+                                                        {chartType === 'pie' ? 'Category (Slice Label)' : 'X-Axis (Label)'}
+                                                    </label>
                                                     <select
                                                         value={xField}
                                                         onChange={(e) => setXField(e.target.value)}
@@ -607,17 +644,25 @@ export default function SexDataViewer() {
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Y-Axis (Value)</label>
-                                                    <select
-                                                        value={yField}
-                                                        onChange={(e) => setYField(e.target.value)}
-                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all"
-                                                    >
-                                                        <option value="">Select Numeric Field</option>
-                                                        {numericFields.map((h) => (
-                                                            <option key={h} value={h}>{h}</option>
-                                                        ))}
-                                                    </select>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">
+                                                        {chartType === 'pie' ? 'Value (Slice Size)' : 'Y-Axis (Value)'}
+                                                    </label>
+                                                    {numericFields.length > 0 ? (
+                                                        <select
+                                                            value={yField}
+                                                            onChange={(e) => setYField(e.target.value)}
+                                                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all"
+                                                        >
+                                                            <option value="">Select Numeric Field</option>
+                                                            {numericFields.map((h) => (
+                                                                <option key={h} value={h}>{h}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <div className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-400 cursor-not-allowed">
+                                                            Auto (Count occurrences)
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div>
