@@ -275,4 +275,19 @@ Actions: [2 quick actions]`;
   };
 }
 
+// ========== SAVE SEVERITY DIRECTLY - NO AI CALL ==========
+router.post("/save-severity", async (req, res) => {
+  try {
+    const { reportId, severity } = req.body;
+    if (!reportId || !severity) {
+      return res.status(400).json({ success: false, message: "Missing reportId or severity" });
+    }
+    const severityFormatted = severity.charAt(0).toUpperCase() + severity.slice(1).toLowerCase();
+    await Report.findByIdAndUpdate(reportId, { severity: severityFormatted });
+    return res.json({ success: true, message: `Successfully saved severity "${severityFormatted}" to report ${reportId}` });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

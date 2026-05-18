@@ -55,6 +55,9 @@ app.use(cors({
 // Correct IP detection behind proxies (Must be before rate limiters)
 app.set("trust proxy", 1);
 
+// Body parser (Must be before rate limiters to populate req.body)
+app.use(express.json({ limit: '10mb' }));
+
 // ================= SMART RATE LIMITERS =================
 
 // Helper function to dynamically generate a rate-limiting key
@@ -63,8 +66,8 @@ const getRateLimitKey = (req) => {
   if (req.headers.authorization) {
     return req.headers.authorization;
   }
-  // 2. If not authenticated, fall back to IP address
-  return req.ip;
+  // 2. If not authenticated, fall back to safe IP address (handles IPv6 subnets)
+  return rateLimit.ipKeyGenerator(req.ip);
 };
 
 // Global: 200 requests per 15 minutes per User/IP
@@ -84,8 +87,8 @@ const authLimiter = rateLimit({
   max: 20,
   keyGenerator: (req) => {
     // Combine IP and target email/username to prevent blocking the entire school Wi-Fi
-    const targetEmail = req.body.email || req.body.username || "anonymous";
-    return `${req.ip}_${targetEmail}`;
+    const targetEmail = (req.body && (req.body.email || req.body.username)) || "anonymous";
+    return `${rateLimit.ipKeyGenerator(req.ip)}_${targetEmail}`;
   },
   message: { success: false, message: "Too many authentication attempts for this account, please try again later." },
   standardHeaders: true,
@@ -151,9 +154,6 @@ const uploadLimiter = rateLimit({
 app.use("/api/albums", uploadLimiter);
 app.use("/api/documents", uploadLimiter);
 app.use("/api/carousel", uploadLimiter);
-
-// Body parser
-app.use(express.json({ limit: '10mb' }));
 
 // Fix for Express 5 compatibility with express-mongo-sanitize
 app.use((req, res, next) => {
