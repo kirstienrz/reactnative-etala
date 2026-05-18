@@ -383,60 +383,62 @@ export default function GADProjectsArchive() {
                     <p className="text-slate-400 font-medium italic">No upcoming events scheduled at this time.</p>
                   </div>
                 ) : (
-                  <div className="space-y-6 relative timeline-line">
-                    {upcomingEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        className="relative pl-14 group cursor-pointer"
-                        onClick={() => {
-                          setSelectedProject(event);
-                          setShowDetailsModal(true);
-                        }}
-                      >
-                        {/* Timeline Point */}
-                        <div className="absolute left-0 top-0 w-12 h-12 rounded-2xl bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center z-10 group-hover:border-violet-500 group-hover:scale-110 transition-all duration-300">
-                          <div className="text-center">
-                            <span className="block text-[10px] font-black text-slate-400 uppercase leading-none">
-                              {new Date(event.start).toLocaleString('en-US', { month: 'short' })}
-                            </span>
-                            <span className="block text-lg font-black text-slate-900 leading-none mt-0.5">
-                              {new Date(event.start).getDate()}
-                            </span>
+                  <div className="max-h-[450px] overflow-y-auto pr-4 custom-scrollbar">
+                    <div className="space-y-6 relative timeline-line py-2">
+                      {upcomingEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          className="relative pl-14 group cursor-pointer"
+                          onClick={() => {
+                            setSelectedProject(event);
+                            setShowDetailsModal(true);
+                          }}
+                        >
+                          {/* Timeline Point */}
+                          <div className="absolute left-0 top-2 w-12 h-12 rounded-2xl bg-white border-2 border-slate-100 shadow-sm flex items-center justify-center z-10 group-hover:border-violet-500 group-hover:scale-110 transition-all duration-300">
+                            <div className="text-center">
+                              <span className="block text-[10px] font-black text-slate-400 uppercase leading-none">
+                                {new Date(event.start).toLocaleString('en-US', { month: 'short' })}
+                              </span>
+                              <span className="block text-lg font-black text-slate-900 leading-none mt-0.5">
+                                {new Date(event.start).getDate()}
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="bg-slate-50/50 hover:bg-white p-6 rounded-2xl border border-transparent hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-300">
-                          <div className="flex justify-between items-start gap-4">
-                            <div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${event.extendedProps?.type === 'program_event' ? 'bg-blue-100 text-blue-700' :
-                                    event.extendedProps?.type === 'training' ? 'bg-purple-100 text-purple-700' :
-                                      'bg-amber-100 text-amber-700'
-                                  }`}>
-                                  {event.extendedProps?.type?.replace('_', ' ') || 'Event'}
-                                </span>
-                                {event.extendedProps?.location && (
-                                  <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
-                                    <MapPin size={10} /> {event.extendedProps.location}
+                          <div className="bg-slate-50/50 hover:bg-white p-6 rounded-2xl border border-transparent hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-300">
+                            <div className="flex justify-between items-start gap-4">
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${event.extendedProps?.type === 'program_event' ? 'bg-blue-100 text-blue-700' :
+                                      event.extendedProps?.type === 'training' ? 'bg-purple-100 text-purple-700' :
+                                        'bg-amber-100 text-amber-700'
+                                    }`}>
+                                    {event.extendedProps?.type?.replace('_', ' ') || 'Event'}
                                   </span>
-                                )}
+                                  {event.extendedProps?.location && (
+                                    <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                      <MapPin size={10} /> {event.extendedProps.location}
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors mb-2">
+                                  {event.title}
+                                </h3>
+                                <p className="text-slate-500 text-sm line-clamp-2 font-medium">
+                                  {event.extendedProps?.description || "Join us for this gender-responsive initiative designed to empower and educate."}
+                                </p>
                               </div>
-                              <h3 className="text-xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors mb-2">
-                                {event.title}
-                              </h3>
-                              <p className="text-slate-500 text-sm line-clamp-2 font-medium">
-                                {event.extendedProps?.description || "Join us for this gender-responsive initiative designed to empower and educate."}
-                              </p>
-                            </div>
-                            <div className="flex flex-col items-end gap-2 shrink-0">
-                              <button className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-violet-600 hover:border-violet-200 transition-all">
-                                <ChevronRight size={20} />
-                              </button>
+                              <div className="flex flex-col items-end gap-2 shrink-0">
+                                <button className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-violet-600 hover:border-violet-200 transition-all">
+                                  <ChevronRight size={20} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
