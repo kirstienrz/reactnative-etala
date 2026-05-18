@@ -20,3 +20,18 @@ export const analyzeReportSeverity = async (reportData) => {
   }
 };
 
+export const saveReportSeverity = async (reportId, severity) => {
+  try {
+    const response = await API.post("/ai/save-severity", { reportId, severity }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error saving report severity:', error);
+    throw error;
+  }
+};
+
