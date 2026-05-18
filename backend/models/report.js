@@ -195,6 +195,11 @@ const reportSchema = new mongoose.Schema({
     enum: ["For Queuing", "For Interview", "For Appointment", "For Referral", "Case Closed"],
     default: "For Queuing"
   },
+  severity: {
+    type: String,
+    enum: ["Severe", "Moderate", "Mild", "Unanalyzed"],
+    default: "Unanalyzed"
+  },
 
   submittedAt: { type: Date, default: Date.now },
   lastUpdated: { type: Date, default: Date.now },

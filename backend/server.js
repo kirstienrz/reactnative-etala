@@ -55,52 +55,71 @@ app.use(cors({
 // Correct IP detection behind proxies (Must be before rate limiters)
 app.set("trust proxy", 1);
 
-// ================= RATE LIMITERS =================
+// ================= SMART RATE LIMITERS =================
 
-// Global: 100 requests per 15 minutes per IP
+// Helper function to dynamically generate a rate-limiting key
+const getRateLimitKey = (req) => {
+  // 1. If authenticated, rate limit per user/token
+  if (req.headers.authorization) {
+    return req.headers.authorization;
+  }
+  // 2. If not authenticated, fall back to IP address
+  return req.ip;
+};
+
+// Global: 200 requests per 15 minutes per User/IP
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { success: false, message: "Too many requests from this IP, please try again in 15 minutes." },
+  max: 200,
+  keyGenerator: getRateLimitKey,
+  message: { success: false, message: "Too many requests, please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api", globalLimiter);
 
-// Auth: 15 attempts per 15 minutes (login, register, forgot password)
+// Auth: 20 attempts per 15 minutes (login, register, forgot password)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
-  message: { success: false, message: "Too many authentication attempts, please try again later." },
+  max: 20,
+  keyGenerator: (req) => {
+    // Combine IP and target email/username to prevent blocking the entire school Wi-Fi
+    const targetEmail = req.body.email || req.body.username || "anonymous";
+    return `${req.ip}_${targetEmail}`;
+  },
+  message: { success: false, message: "Too many authentication attempts for this account, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api/auth", authLimiter);
 
-// Chatbot: 30 messages per minute per IP (prevent AI abuse)
+// Chatbot: 45 messages per minute per User/IP (prevent AI abuse)
 const chatbotLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 45,
+  keyGenerator: getRateLimitKey,
   message: { success: false, message: "Too many chatbot requests, please slow down." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api/chatbot", chatbotLimiter);
 
-// AI moderation: 20 requests per minute
+// AI moderation: 30 requests per minute
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 20,
+  max: 30,
+  keyGenerator: getRateLimitKey,
   message: { success: false, message: "Too many AI requests, please slow down." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api/ai", aiLimiter);
 
-// Suggestions/Contact: 10 submissions per hour (prevent spam)
+// Suggestions/Contact: 15 submissions per hour (prevent spam)
 const submissionLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: 15,
+  keyGenerator: getRateLimitKey,
   message: { success: false, message: "Too many submissions, please try again in an hour." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -108,10 +127,11 @@ const submissionLimiter = rateLimit({
 app.use("/api/suggestions", submissionLimiter);
 app.use("/api/contact", submissionLimiter);
 
-// Reports: 20 submissions per hour
+// Reports: 25 submissions per hour
 const reportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 25,
+  keyGenerator: getRateLimitKey,
   message: { success: false, message: "Too many report submissions, please try again later." },
   skip: (req) => req.method === "GET", // Allow fetching reports without hitting submission limit
   standardHeaders: true,
@@ -119,10 +139,11 @@ const reportLimiter = rateLimit({
 });
 app.use("/api/reports", reportLimiter);
 
-// File uploads: 30 uploads per 15 minutes
+// File uploads: 45 uploads per 15 minutes
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 45,
+  keyGenerator: getRateLimitKey,
   message: { success: false, message: "Too many file uploads, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,

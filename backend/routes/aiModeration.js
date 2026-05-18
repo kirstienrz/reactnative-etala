@@ -1,6 +1,7 @@
 const express = require("express");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const router = express.Router();
+const Report = require("../models/report");
 
 // Initialize Gemini (same as your chatbot)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -109,6 +110,16 @@ router.post("/analyze-severity", async (req, res) => {
     analysis.analyzedAt = new Date().toISOString();
     analysis.analysisId = `ai_${Date.now()}`;
     
+    // Persist severity to the MongoDB report
+    if (reportId && reportId !== "unknown" && reportId !== "") {
+      try {
+        const severityFormatted = analysis.severity.charAt(0).toUpperCase() + analysis.severity.slice(1).toLowerCase();
+        await Report.findByIdAndUpdate(reportId, { severity: severityFormatted });
+        console.log(`✅ Persisted AI severity "${severityFormatted}" to report ${reportId}`);
+      } catch (dbErr) {
+        console.error("❌ Failed to persist AI severity to report DB:", dbErr);
+      }
+    }
     
     return res.json({
       success: true,
@@ -123,11 +134,23 @@ router.post("/analyze-severity", async (req, res) => {
     // Last resort - Gemini ulit pero simpler prompt
     try {
       const fallbackAnalysis = await simpleGeminiAnalysis(req.body.incidentDescription || '');
+      
+      const reportIdVal = req.body.reportId || "unknown";
+      if (reportIdVal && reportIdVal !== "unknown" && reportIdVal !== "") {
+        try {
+          const severityFormatted = fallbackAnalysis.severity.charAt(0).toUpperCase() + fallbackAnalysis.severity.slice(1).toLowerCase();
+          await Report.findByIdAndUpdate(reportIdVal, { severity: severityFormatted });
+          console.log(`✅ Persisted fallback AI severity "${severityFormatted}" to report ${reportIdVal}`);
+        } catch (dbErr) {
+          console.error("❌ Failed to persist fallback AI severity to report DB:", dbErr);
+        }
+      }
+
       return res.json({
         success: true,
         data: fallbackAnalysis,
         isFallback: true,
-        reportId: req.body.reportId || "unknown"
+        reportId: reportIdVal
       });
     } catch (finalError) {
       return res.status(503).json({
