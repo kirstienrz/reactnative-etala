@@ -277,7 +277,7 @@ const AdminReports = () => {
   const filteredReports = (activeTab === 'active' ? reports : archivedReports).filter(r => {
     const matchesSearch = !searchTerm || 
       r.ticketNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.incidentDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.salaysay || r.incidentDescription || r.incidentStatement || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.createdBy?.tupId || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'All' || r.status === statusFilter;
@@ -318,7 +318,7 @@ const AdminReports = () => {
       </View>
 {/*       
       <Text style={styles.description} numberOfLines={2}>
-        {item.incidentDescription || 'No description'}
+        {item.salaysay || item.incidentDescription || item.incidentStatement || 'No statement provided'}
       </Text> */}
       
       <View style={styles.reportFooter}>
@@ -622,7 +622,7 @@ const AdminReports = () => {
                     </View>
                   )}
                   <Text style={styles.descriptionText}>
-                    {selectedReport.incidentDescription || 'No description provided'}
+                    {selectedReport?.salaysay || selectedReport?.incidentDescription || selectedReport?.incidentStatement || 'No statement provided'}
                   </Text>
                 </View>
 
