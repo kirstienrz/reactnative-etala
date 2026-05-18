@@ -27,6 +27,17 @@ export default function SuperAdminCalendarRedux() {
     return allEvents.filter((e) => e.type !== "consultation");
   };
 
+  // Helper for event color coding
+  const getEventColor = (type) => {
+    const colors = {
+      consultation: "#8b5cf6",
+      holiday: "#ef4444",
+      not_available: "#6b7280",
+      program_event: "#3b82f6"
+    };
+    return colors[type] || "#3b82f6";
+  };
+
   const fetchEvents = async () => {
     try {
       setLoading(true);
@@ -38,11 +49,23 @@ export default function SuperAdminCalendarRedux() {
         // Apply role filter
         const roleFiltered = filterByRole(res.data);
 
-        // Separate upcoming vs past
-        const upcoming = roleFiltered.filter((e) => new Date(e.start) >= now);
-        const past = roleFiltered.filter((e) => new Date(e.start) < now);
+        // Format and map colors
+        const formatted = roleFiltered.map(event => {
+          const type = event.extendedProps?.type || event.type || 'program_event';
+          const color = event.color || getEventColor(type);
+          return {
+            ...event,
+            backgroundColor: color,
+            borderColor: color,
+            textColor: "#ffffff"
+          };
+        });
 
-        setEvents(roleFiltered);
+        // Separate upcoming vs past
+        const upcoming = formatted.filter((e) => new Date(e.start) >= now);
+        const past = formatted.filter((e) => new Date(e.start) < now);
+
+        setEvents(formatted);
         setUpcomingEvents(upcoming);
         setPastEvents(past);
       }

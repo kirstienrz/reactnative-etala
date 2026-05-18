@@ -1122,7 +1122,7 @@ const GADProgramsHybrid = () => {
                         </span>
                         <span className="flex items-center">
                           <Calendar className="w-3 h-3 mr-1" />
-                          {program.projects?.flatMap(p => p.events || []).length || 0} events
+                          {getStats(program).totalEvents} events
                         </span>
                       </div>
                     </button>
@@ -1216,29 +1216,35 @@ const GADProgramsHybrid = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {selectedProgram.projects.map(project => (
-                        <div key={project._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                          <div
-                            className="bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors"
-                            onClick={() => toggleProject(project._id)}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start space-x-3 flex-1">
-                                {expandedProjects[project._id] ?
-                                  <ChevronDown className="w-5 h-5 text-gray-600 mt-0.5" /> :
-                                  <ChevronRight className="w-5 h-5 text-gray-600 mt-0.5" />
-                                }
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-3 mb-2">
-                                    <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                                    <span className="text-xs text-gray-500">{project.year}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                    <span>{project.events?.length || 0} events</span>
-                                    <span>{project.events?.filter(e => e.status === 'completed').length || 0} completed</span>
+                      {selectedProgram.projects.map(project => {
+                        const projectCalendarEvents = calendarEvents.filter(e => e.extendedProps?.projectId === project._id);
+                        const totalProjectEvents = (project.events?.length || 0) + projectCalendarEvents.length;
+                        const completedProjectEvents = (project.events?.filter(e => e.status === 'completed').length || 0) +
+                                                      projectCalendarEvents.filter(e => e.extendedProps?.status === 'completed').length;
+
+                        return (
+                          <div key={project._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div
+                              className="bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                              onClick={() => toggleProject(project._id)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3 flex-1">
+                                  {expandedProjects[project._id] ?
+                                    <ChevronDown className="w-5 h-5 text-gray-600 mt-0.5" /> :
+                                    <ChevronRight className="w-5 h-5 text-gray-600 mt-0.5" />
+                                  }
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-3 mb-2">
+                                      <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                                      <span className="text-xs text-gray-500">{project.year}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                      <span>{totalProjectEvents} events</span>
+                                      <span>{completedProjectEvents} completed</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
                               <div className="flex items-center space-x-2">
                                 <button
                                   onClick={(e) => {
@@ -1302,11 +1308,11 @@ const GADProgramsHybrid = () => {
                                 const allProjectEvents = [
                                   ...(project.events || []).map(e => ({ ...e, source: 'program' })),
                                   ...projectCalendarEvents.map(e => ({
-                                    _id: e.id,
+                                    _id: e._id || e.id,
                                     title: e.title,
                                     date: (e.start || "").split('T')[0],
-                                    participants: 'N/A',
-                                    venue: e.extendedProps?.location || 'N/A',
+                                    participants: e.participants || 0,
+                                    venue: e.location || e.extendedProps?.location || 'N/A',
                                     status: e.extendedProps?.status || 'upcoming',
                                     source: 'calendar',
                                     originalEvent: e
@@ -1373,11 +1379,16 @@ const GADProgramsHybrid = () => {
                                             </button>
                                           ) : (
                                             <button
-                                              onClick={() => navigate('/superadmin/events')}
+                                              onClick={() => navigate('/superadmin/events', {
+                                                state: {
+                                                  openEditModal: true,
+                                                  eventId: event._id
+                                                }
+                                              })}
                                               className="p-2 hover:bg-purple-50 text-purple-600 rounded-lg transition-colors"
-                                              title="Manage in Calendar"
+                                              title="Edit Event"
                                             >
-                                              <Calendar className="w-4 h-4" />
+                                              <Edit2 className="w-4 h-4" />
                                             </button>
                                           )}
                                           <button
@@ -1404,7 +1415,7 @@ const GADProgramsHybrid = () => {
                             </div>
                           )}
                         </div>
-                      ))}
+                      )})}
                     </div>
                   )}
                 </div>

@@ -245,6 +245,10 @@ const calendarEventSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  participants: {
+    type: Number,
+    default: 0
+  },
   location: {
     type: String,
     trim: true,
