@@ -15,16 +15,20 @@ const AdminGADSuggestionBox = () => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Suggestions from backend
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [suggestions, setSuggestions] = useState([]);
-
   const [_recentlyViewed, setRecentlyViewed] = useState([]);
 
   // Fetch suggestions from backend on component mount
   useEffect(() => {
     fetchSuggestions();
   }, []);
+
+  // Reset to first page when any filter or view changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, dateRange, viewMode]);
 
   const fetchSuggestions = async () => {
     try {
@@ -205,6 +209,11 @@ const AdminGADSuggestionBox = () => {
     if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
     return 0;
   });
+
+  // Pagination calculation
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSuggestions = filteredSuggestions.slice(indexOfFirstItem, indexOfLastItem);
 
   const getStatusColor = (status) => {
     const colors = {
@@ -515,8 +524,8 @@ const AdminGADSuggestionBox = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSuggestions.length > 0 ? (
-                    filteredSuggestions.map((s) => (
+                  {currentSuggestions.length > 0 ? (
+                    currentSuggestions.map((s) => (
                       <tr key={s.id} className={`border-b hover:bg-gray-50 transition ${selectedItems.includes(s.id) ? 'bg-blue-50' : ''}`}>
                         <td className="p-4">
                           <input
@@ -621,8 +630,8 @@ const AdminGADSuggestionBox = () => {
               <div className="text-xs text-gray-500">{filteredSuggestions.length} shown</div>
             </div>
 
-            {filteredSuggestions.length > 0 ? (
-              filteredSuggestions.map((s) => (
+            {currentSuggestions.length > 0 ? (
+              currentSuggestions.map((s) => (
                 <div
                   key={s.id}
                   className={`bg-white border rounded-lg shadow-sm p-4 transition ${selectedItems.includes(s.id) ? 'ring-2 ring-blue-200 border-blue-200' : ''}`}
@@ -717,10 +726,63 @@ const AdminGADSuggestionBox = () => {
             )}
           </div>
 
-          {/* Results Summary */}
-          <div className="mt-4 text-sm text-gray-600">
-            Showing {filteredSuggestions.length} of {displayedSuggestions.length} suggestions
-          </div>
+          {/* Pagination Controls */}
+          {filteredSuggestions.length > 0 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100 print:hidden">
+              <div className="text-sm text-gray-600">
+                Showing <span className="font-semibold">{filteredSuggestions.length === 0 ? 0 : indexOfFirstItem + 1}</span> to{" "}
+                <span className="font-semibold">
+                  {Math.min(indexOfLastItem, filteredSuggestions.length)}
+                </span>{" "}
+                of <span className="font-semibold">{filteredSuggestions.length}</span> suggestions
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border text-sm font-semibold transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                {(() => {
+                  const totalPages = Math.ceil(filteredSuggestions.length / itemsPerPage);
+                  const maxButtons = 5;
+                  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                  
+                  if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                  }
+
+                  const buttons = [];
+                  for (let i = startPage; i <= endPage; i++) {
+                    buttons.push(i);
+                  }
+                  
+                  return buttons.map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-9 h-9 rounded-lg text-sm font-semibold border transition ${
+                        currentPage === pageNum
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ));
+                })()}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredSuggestions.length / itemsPerPage)))}
+                  disabled={currentPage === Math.ceil(filteredSuggestions.length / itemsPerPage)}
+                  className="px-3 py-1.5 rounded-lg border text-sm font-semibold transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
