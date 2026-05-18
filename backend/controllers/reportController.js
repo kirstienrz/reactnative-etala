@@ -1218,13 +1218,17 @@ const getReportAnalytics = async (req, res) => {
           recentReports: reports
             .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
             .slice(0, 5)
-            .map(report => ({
-              ticketNumber: report.ticketNumber,
-              incidentDescription: report.incidentDescription?.substring(0, 100) + '...',
-              caseStatus: report.caseStatus || 'Not Set',
-              submittedAt: report.submittedAt,
-              severity: report.severity || 'Unanalyzed'
-            })),
+            .map(report => {
+              const desc = report.incidentDescription || report.incidentStatement || report.salaysay || "";
+              return {
+                _id: report._id,
+                ticketNumber: report.ticketNumber,
+                incidentDescription: desc ? (desc.substring(0, 100) + (desc.length > 100 ? '...' : '')) : "No statement provided",
+                caseStatus: report.caseStatus || 'Not Set',
+                submittedAt: report.submittedAt,
+                severity: report.severity || 'Unanalyzed'
+              };
+            }),
           todayCount: await Report.countDocuments({
             submittedAt: {
               $gte: new Date().setHours(0, 0, 0, 0),

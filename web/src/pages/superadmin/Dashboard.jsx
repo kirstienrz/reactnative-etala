@@ -28,6 +28,7 @@ const SuperAdminDashboard = () => {
   const [heatmapView, setHeatmapView] = useState('department');
   const [heatmapSubView, setHeatmapSubView] = useState('reporter'); // 'reporter', 'victim', 'witness'
 
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -176,8 +177,38 @@ const SuperAdminDashboard = () => {
   // Performance metrics
   const performance = reportAnalytics?.performanceMetrics || {};
   const avgDailyReports = performance.avgDailyReports || 0;
-  const peakMonth = performance.peakMonth || 'N/A';
+  const peakMonth = performance.peakMonth || "N/A";
   const peakMonthCount = performance.peakMonthCount || 0;
+  const agileTestData = [
+    { name: 'Passed', value: 75, color: '#10b981' }, 
+    { name: 'In Progress', value: 15, color: '#3b82f6' }, 
+    { name: 'Pending Review', value: 8, color: '#f59e0b' }, 
+    { name: 'Failed / Bugs', value: 2, color: '#ef4444' } 
+  ];
+
+  // Formal Agile Dashboard Data
+  const burndownData = [
+    { day: 'Day 1', ideal: 120, actual: 120 },
+    { day: 'Day 2', ideal: 108, actual: 115 },
+    { day: 'Day 3', ideal: 96, actual: 100 },
+    { day: 'Day 4', ideal: 84, actual: 80 },
+    { day: 'Day 5', ideal: 72, actual: 75 },
+    { day: 'Day 6', ideal: 60, actual: 50 },
+    { day: 'Day 7', ideal: 48, actual: 45 },
+    { day: 'Day 8', ideal: 36, actual: 30 },
+    { day: 'Day 9', ideal: 24, actual: 20 },
+    { day: 'Day 10', ideal: 12, actual: 5 },
+    { day: 'Day 11', ideal: 0, actual: 0 },
+  ];
+
+  const coverageData = [
+    { module: 'Authentication', coverage: 98, target: 95 },
+    { module: 'Incident Reports', coverage: 95, target: 90 },
+    { module: 'Data Heatmaps', coverage: 85, target: 90 },
+    { module: 'Live Chat', coverage: 92, target: 85 },
+    { module: 'Responsive UI', coverage: 78, target: 85 },
+    { module: 'PDF Generation', coverage: 65, target: 80 },
+  ];
 
   return (
     <div className="content-container py-6 space-y-6">
@@ -234,6 +265,7 @@ const SuperAdminDashboard = () => {
         >
           Heatmap Analysis
         </button>
+
       </div>
 
       {/* Main Content */}
@@ -392,23 +424,17 @@ const SuperAdminDashboard = () => {
                 recentReports.map((report, index) => (
                   <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-gray-900">{report.ticketNumber}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${report.caseStatus === 'Case Closed' ? 'bg-green-100 text-green-800' :
-                          report.caseStatus === 'For Interview' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                          {report.caseStatus || 'Pending'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 truncate">{report.salaysay || report.incidentDescription || report.incidentStatement || "No statement provided"}</p>
-                      <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                        <span className={`font-medium ${report.severity === 'Severe' ? 'text-red-600' :
-                          report.severity === 'Moderate' ? 'text-yellow-600' : 'text-green-600'
-                          }`}>
-                          Severity: {report.severity || 'Unanalyzed'}
-                        </span>
-                        <span>Submitted: {new Date(report.submittedAt).toLocaleDateString()}</span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-gray-900">{report.ticketNumber}</span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${report.caseStatus === 'Case Closed' ? 'bg-green-100 text-green-800' :
+                            report.caseStatus === 'For Interview' ? 'bg-blue-100 text-blue-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                            {report.caseStatus || 'Pending'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-medium">Submitted: {new Date(report.submittedAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
@@ -771,7 +797,7 @@ const SuperAdminDashboard = () => {
             </div>
           </div>
         </div>
-      )}
+        )}
 
       {/* New Report Notification Modal */}
       {showNotification && (
