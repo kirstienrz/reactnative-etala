@@ -139,7 +139,13 @@ export default function SexDataViewer() {
         if (filteredRows.length === 0) return null;
 
         return {
-            labels: filteredRows.map((r) => String(r[xField] || "")),
+            labels: filteredRows.map((r) => {
+                const rawLabel = String(r[xField] || "");
+                return rawLabel
+                    .replace(/\r?\n|\r/g, ' ') // Strip carriage returns and newlines
+                    .replace(/\s+/g, ' ')       // Normalize consecutive spaces
+                    .trim();
+            }),
             datasets: [
                 {
                     label: yField,
@@ -157,10 +163,54 @@ export default function SexDataViewer() {
         };
     };
 
+    const getDynamicPadding = () => {
+        if (chartType === 'pie') {
+            return { left: 20, right: 20, top: 40, bottom: 20 };
+        }
+
+        const data = generateChartData();
+        const labels = data?.labels || [];
+        const maxLabelLength = labels.reduce((max, label) => Math.max(max, String(label).length), 0);
+
+        // Short labels (Sex, Year, Status) — tight minimal padding
+        if (maxLabelLength <= 10) {
+            return {
+                left: 20,
+                right: 20,
+                top: 10,
+                bottom: 40
+            };
+        }
+
+        // Medium labels (10-25 chars)
+        if (maxLabelLength <= 25) {
+            const leftPad = Math.round(maxLabelLength * 3);
+            const bottom = Math.round(maxLabelLength * 2.5);
+            return { left: leftPad, right: 20, top: 10, bottom: bottom };
+        }
+
+        // Long labels (25+ chars like DEPARTMENT/PROGRAM names)
+        // Decouple left padding (needs to be large to prevent "BTVTED" cutoff on the left)
+        // from right padding (keep tight at 20px so chart has maximum grid width and no right empty space)
+        // from bottom padding (keep tight at 95px to prevent empty bottom spaces)
+        const leftPadding = Math.min(170, Math.max(80, maxLabelLength * 3.7));
+        const bottomPadding = Math.min(95, Math.max(60, maxLabelLength * 2));
+
+        return {
+            left: leftPadding,
+            right: 20, // Tight right padding to maximize chart grid width and prevent squishing
+            top: 10,
+            bottom: bottomPadding
+        };
+    };
+
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: 'x',
+        layout: {
+            padding: getDynamicPadding()
+        },
         scales: {
             x: {
                 display: chartType !== 'pie',
@@ -176,6 +226,9 @@ export default function SexDataViewer() {
         plugins: {
             legend: {
                 position: 'top',
+                labels: {
+                    padding: chartType === 'pie' ? 20 : 10 // Adds clean vertical space below legend items
+                }
             },
             title: {
                 display: true,
@@ -240,13 +293,43 @@ export default function SexDataViewer() {
         }
     };
 
+    const captureFullChart = async () => {
+        const element = chartRef.current;
+        if (!element) return null;
+
+        try {
+            const canvasElement = element.querySelector('canvas');
+            if (!canvasElement) {
+                console.error("Canvas element not found!");
+                return null;
+            }
+
+            // Create a temporary canvas to draw a solid white background
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvasElement.width;
+            tempCanvas.height = canvasElement.height;
+            const ctx = tempCanvas.getContext('2d');
+
+            // Fill background with white to match the report theme
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            // Draw the original high-resolution chart canvas on top
+            ctx.drawImage(canvasElement, 0, 0);
+
+            return tempCanvas;
+        } catch (err) {
+            console.error("Failed to capture chart canvas:", err);
+            return null;
+        }
+    };
+
     const downloadPDF = async () => {
         if (!active) return;
 
         try {
             const { jsPDF } = await import('jspdf');
             const autoTable = (await import('jspdf-autotable')).default;
-            const html2canvas = (await import('html2canvas')).default;
 
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = pdf.internal.pageSize.getWidth();
@@ -294,18 +377,20 @@ export default function SexDataViewer() {
                     pdf.text("Data Visualization", 14, y);
                     y += 6;
 
-                    const canvas = await html2canvas(chartRef.current);
-                    const imgData = canvas.toDataURL('image/png');
-                    const imgWidth = pageWidth - 40;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    const canvas = await captureFullChart();
+                    if (canvas) {
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgWidth = pageWidth - 40;
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-                    if (y + imgHeight > pageHeight - 30) {
-                        pdf.addPage();
-                        y = 20;
+                        if (y + imgHeight > pageHeight - 30) {
+                            pdf.addPage();
+                            y = 20;
+                        }
+
+                        pdf.addImage(imgData, 'PNG', 20, y, imgWidth, imgHeight);
+                        y += imgHeight + 15;
                     }
-
-                    pdf.addImage(imgData, 'PNG', 20, y, imgWidth, imgHeight);
-                    y += imgHeight + 15;
                 } catch (chartErr) {
                     console.error("Error capturing chart for PDF:", chartErr);
                 }
@@ -411,8 +496,8 @@ export default function SexDataViewer() {
         if (!chartRef.current) return;
 
         try {
-            const html2canvas = await import('html2canvas');
-            const canvas = await html2canvas.default(chartRef.current);
+            const canvas = await captureFullChart();
+            if (!canvas) return;
             const link = document.createElement('a');
             link.download = `${active.name}_chart_${new Date().toISOString().slice(0, 10)}.png`;
             link.href = canvas.toDataURL('image/png');
@@ -572,9 +657,9 @@ export default function SexDataViewer() {
                             </div>
                         </div>
 
-                        <div className="p-6 md:p-8 space-y-8">
+                        <div className="p-4 md:p-8 space-y-6 md:space-y-8">
                             {/* Horizontal Filters */}
-                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                            <div className="bg-gray-50 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-gray-100">
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                     <Filter size={14} /> Global Filters
                                 </h3>
@@ -598,7 +683,7 @@ export default function SexDataViewer() {
                             <div className="w-full flex flex-col gap-6">
                                 {viewMode === 'charts' ? (
                                     <div className="flex flex-col gap-6">
-                                        <div className="bg-gray-50 rounded-3xl p-6 md:p-8 flex-1 border border-gray-100 min-h-[1000px]">
+                                        <div className="bg-gray-50 rounded-2xl md:rounded-3xl p-4 md:p-8 flex-1 border border-gray-100 min-h-[680px]">
                                             <div ref={chartRef} className="w-full h-full flex flex-col">
                                                 <div className="flex justify-between items-center mb-6">
                                                     <h3 className="text-xl font-bold text-gray-900">
@@ -609,9 +694,20 @@ export default function SexDataViewer() {
                                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Preview</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex-1 w-full overflow-x-auto pb-4">
+                                                <div className={isMobile ? "flex-1 w-full overflow-x-auto pb-4" : "flex-1 w-full"}>
                                                     <div style={{ 
-                                                        minWidth: chartType === 'pie' ? '100%' : `${Math.max(100, (generateChartData()?.labels?.length || 0) * (isMobile ? 40 : 55))}px`, 
+                                                        width: '100%',
+                                                        minWidth: isMobile 
+                                                            ? (chartType === 'pie' 
+                                                                ? '100%' 
+                                                                : (() => {
+                                                                    const labels = generateChartData()?.labels || [];
+                                                                    const maxLabel = labels.reduce((max, l) => Math.max(max, String(l).length), 0);
+                                                                    if (maxLabel <= 10) return '100%';
+                                                                    return `${Math.max(750, labels.length * 45)}px`;
+                                                                  })()
+                                                              )
+                                                            : '100%', 
                                                         height: '100%', 
                                                         minHeight: '600px' 
                                                     }}>
