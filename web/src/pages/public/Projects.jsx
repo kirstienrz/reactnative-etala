@@ -140,6 +140,17 @@ export default function GADProjectsArchive() {
     }
   };
 
+  // Helper for event color coding
+  const getEventColor = (type) => {
+    const colors = {
+      consultation: "#8b5cf6",
+      holiday: "#ef4444",
+      not_available: "#6b7280",
+      program_event: "#3b82f6"
+    };
+    return colors[type] || "#3b82f6";
+  };
+
   const formatEvents = (apiEvents) => {
     return apiEvents.map(event => {
       let attachments = [];
@@ -164,14 +175,20 @@ export default function GADProjectsArchive() {
         _id: attachment._id
       }));
 
+      const type = event.extendedProps?.type || event.type || 'program_event';
+      const color = event.color || getEventColor(type);
+
       return {
         id: event._id || event.id,
         title: event.title || "Untitled Event",
         start: event.start,
         end: event.end || event.start,
         allDay: event.allDay || false,
+        backgroundColor: color,
+        borderColor: color,
+        textColor: "#ffffff",
         extendedProps: {
-          type: event.extendedProps?.type || event.type || 'program_event',
+          type: type,
           description: event.description || event.extendedProps?.description || "",
           location: event.location || event.extendedProps?.location || "",
           notes: event.notes || event.extendedProps?.notes || "",

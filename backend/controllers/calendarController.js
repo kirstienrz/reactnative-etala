@@ -867,7 +867,11 @@ const getAllCalendarEvents = async (req, res) => {
         start: event.start,
         end: event.end,
         allDay: event.allDay,
-        color: getEventColor(event.type),
+        participants: event.participants || 0,
+        location: event.location || "",
+        description: event.description || "",
+        notes: event.notes || "",
+        color: event.color || "",
         userId: event.userId?._id, // Keep the ID reference
         reportTicketNumber: event.reportTicketNumber, // <-- Ensure this is sent to frontend
         extendedProps: {
@@ -941,10 +945,19 @@ const createCalendarEvent = async (req, res) => {
       notes: req.body.notes?.trim() || undefined,
       // ✅ Convert string boolean to actual boolean
       allDay: req.body.allDay === 'true' || req.body.allDay === true,
+      participants: req.body.participants ? parseInt(req.body.participants) : 0,
       color: req.body.color || undefined,
       userId: req.body.userId || undefined,
       reportTicketNumber: req.body.reportTicketNumber || undefined
     };
+
+    // ✅ Link to Program and Project if present
+    if (req.body.programId || req.body.projectId) {
+      eventData.programEventRef = {
+        programId: req.body.programId ? req.body.programId : undefined,
+        projectId: req.body.projectId ? req.body.projectId : undefined
+      };
+    }
 
     console.log('🟣 Processed event data:', {
       ...eventData,
@@ -1118,6 +1131,19 @@ const updateCalendarEvent = async (req, res) => {
       // Convert boolean strings
       allDay: req.body.allDay === 'true' || req.body.allDay === true,
     };
+
+    // ✅ Convert program/project links to sub-document format
+    if (req.body.programId !== undefined || req.body.projectId !== undefined) {
+      updateData.programEventRef = {
+        programId: req.body.programId ? req.body.programId : undefined,
+        projectId: req.body.projectId ? req.body.projectId : undefined
+      };
+    }
+
+    // ✅ Parse participants integer if provided
+    if (req.body.participants !== undefined) {
+      updateData.participants = req.body.participants ? parseInt(req.body.participants) : 0;
+    }
 
     // Dates need parsing
     if (req.body.start) updateData.start = new Date(req.body.start);

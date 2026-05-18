@@ -61,7 +61,8 @@ export default function SuperAdminCalendarUI() {
     reportTicketNumber: "",
     mode: "online",
     programId: "",
-    projectId: ""
+    projectId: "",
+    participants: 0
   });
   const [programs, setPrograms] = useState([]);
   const [eventFiles, setEventFiles] = useState([]);
@@ -124,6 +125,7 @@ export default function SuperAdminCalendarUI() {
 
   const isMobile = windowWidth < 768;
   const isTablet = windowWidth < 1024;
+  const isLocationDescriptionRequired = formData.type === 'program_event' || formData.type === 'consultation';
 
   // Get event color based on type
   const getEventColor = (type) => {
@@ -207,7 +209,7 @@ export default function SuperAdminCalendarUI() {
     fetchPrograms();
   }, []);
 
-  // ✅ Auto-open Add Modal when navigating from Projects page
+  // ✅ Auto-open Add Modal or Edit Modal when navigating from Projects page
   useEffect(() => {
     if (location.state?.openAddModal && location.state?.prefill) {
       const prefill = location.state.prefill;
@@ -232,13 +234,33 @@ export default function SuperAdminCalendarUI() {
         mode: "online",
         programId: prefill.programId || "",
         projectId: prefill.projectId || "",
+        participants: 0
       });
       setShowModal(true);
 
       // Clear the location state to avoid re-triggering on back navigation
       window.history.replaceState({}, document.title);
+    } else if (location.state?.openEditModal && location.state?.eventId && events.length > 0) {
+      const targetEventId = location.state.eventId;
+      const eventObj = events.find(e => e.id === targetEventId);
+      if (eventObj) {
+        // Prepare mock calendar event context to pass to handleEditEvent
+        const mockCalendarEvent = {
+          id: eventObj.id,
+          title: eventObj.title,
+          start: eventObj.start,
+          end: eventObj.end,
+          allDay: eventObj.allDay,
+          originalEnd: eventObj.extendedProps?.originalEnd,
+          ...eventObj.extendedProps
+        };
+        handleEditEvent(mockCalendarEvent);
+      }
+      
+      // Clear the location state to avoid re-triggering on back navigation
+      window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, events]);
 
   const fetchPrograms = async () => {
     try {
@@ -422,7 +444,8 @@ export default function SuperAdminCalendarUI() {
       reportTicketNumber: "",
       mode: "online",
       programId: "",
-      projectId: ""
+      projectId: "",
+      participants: 0
     });
     setShowModal(true);
   };
@@ -477,7 +500,8 @@ export default function SuperAdminCalendarUI() {
       reportTicketNumber: event.reportTicketNumber || "",
       mode: event.mode || "online",
       programId: event.programId || "",
-      projectId: event.projectId || ""
+      projectId: event.projectId || "",
+      participants: event.participants || 0
     });
     setShowModal(true);
     setShowDetailsModal(false);
@@ -610,6 +634,18 @@ export default function SuperAdminCalendarUI() {
       toast.error("Please select event type");
       return;
     }
+    if (isLocationDescriptionRequired && (!formData.location || !formData.location.trim())) {
+      toast.error("Please enter event location");
+      return;
+    }
+    if (isLocationDescriptionRequired && (!formData.description || !formData.description.trim())) {
+      toast.error("Please enter event description");
+      return;
+    }
+    if (formData.type === 'program_event' && (!formData.participants || parseInt(formData.participants) <= 0)) {
+      toast.error("Please enter a valid number of participants (minimum 1)");
+      return;
+    }
     if (formData.type === 'consultation' && !formData.reportTicketNumber?.trim()) {
       toast.error("Please enter report ticket number for consultation");
       return;
@@ -642,7 +678,8 @@ export default function SuperAdminCalendarUI() {
       status: formData.status,
       userId: userId,
       programId: formData.programId || undefined,
-      projectId: formData.projectId || undefined
+      projectId: formData.projectId || undefined,
+      participants: formData.type === 'program_event' ? parseInt(formData.participants || 0) : undefined
     };
 
     // Add consultation-specific fields
@@ -748,7 +785,8 @@ export default function SuperAdminCalendarUI() {
       reportTicketNumber: "",
       mode: "online",
       programId: "",
-      projectId: ""
+      projectId: "",
+      participants: 0
     });
   };
 
@@ -1918,31 +1956,33 @@ export default function SuperAdminCalendarUI() {
                   </div>
                 )}
 
-                {/* Optional Details (Location, Description, Notes) */}
+                {/* Details (Location, Description, Notes) */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Location
+                      {isLocationDescriptionRequired ? "Location *" : "Location"}
                     </label>
                     <input
                       type="text"
-                      placeholder="Enter location (optional)"
+                      placeholder={isLocationDescriptionRequired ? "Enter event location" : "Enter location (optional)"}
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
+                      required={isLocationDescriptionRequired}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
+                      {isLocationDescriptionRequired ? "Description *" : "Description"}
                     </label>
                     <textarea
-                      placeholder="Enter description (optional)"
+                      placeholder={isLocationDescriptionRequired ? "Enter event description" : "Enter description (optional)"}
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900"
                       rows="3"
+                      required={isLocationDescriptionRequired}
                     />
                   </div>
 
@@ -1958,6 +1998,23 @@ export default function SuperAdminCalendarUI() {
                       rows="2"
                     />
                   </div>
+
+                  {formData.type === 'program_event' && (
+                    <div className="animate-fadeIn">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Number of Participants *
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Enter number of participants"
+                        value={formData.participants || ""}
+                        onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
+                        min="1"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Program & Project Linking */}
@@ -2067,7 +2124,13 @@ export default function SuperAdminCalendarUI() {
                   <button
                     onClick={handleSaveEvent}
                     className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!formData.title.trim() || !formData.start}
+                    disabled={
+                      !formData.title.trim() || 
+                      !formData.start || 
+                      (isLocationDescriptionRequired && !formData.location.trim()) || 
+                      (isLocationDescriptionRequired && !formData.description.trim()) ||
+                      (formData.type === 'program_event' && (!formData.participants || parseInt(formData.participants) <= 0))
+                    }
                   >
                     {modalMode === "edit" ? "Update Event" : "Create Event"}
                   </button>
