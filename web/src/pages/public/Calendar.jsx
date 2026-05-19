@@ -55,6 +55,7 @@ export default function SuperAdminCalendarRedux() {
           const color = event.color || getEventColor(type);
           return {
             ...event,
+            color: color,
             backgroundColor: color,
             borderColor: color,
             textColor: "#ffffff"

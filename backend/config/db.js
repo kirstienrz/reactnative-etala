@@ -12,10 +12,7 @@ const connectDB = async () => {
       family: 4, // Force IPv4
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
-    
-    // Seed standard Philippine Holidays
-    const { seedPHHolidays } = require('../utils/holidaySeeder');
-    seedPHHolidays().catch(err => console.error("Error seeding holidays:", err));
+
   } catch (err) {
     console.error(`MongoDB Connection Error: ${err.message}`);
     // We don't exit(1) here to allow the app to potentially retry or show errors on requests
