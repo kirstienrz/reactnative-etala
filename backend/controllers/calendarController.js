@@ -1103,7 +1103,11 @@ const createCalendarEvent = async (req, res) => {
         type: 'booking',
         title: '📅 New Interview Booked',
         content: `A new interview has been booked by ${event.extendedProps?.userName || 'a client'}. Mode: ${event.extendedProps?.mode}`,
-        metadata: { eventId: event._id },
+        metadata: { 
+          eventId: event._id.toString(),
+          userName: event.extendedProps?.userName,
+          mode: event.extendedProps?.mode
+        },
         link: '/superadmin/events'
       });
     }
