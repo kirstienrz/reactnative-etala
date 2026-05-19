@@ -264,6 +264,25 @@ export default function SuperAdminCalendarUI() {
       
       // Clear the location state to avoid re-triggering on back navigation
       window.history.replaceState({}, document.title);
+    } else if (location.state?.openDetailsModal && location.state?.eventId && events.length > 0) {
+      // Open details modal (view only) for booking notifications
+      const targetEventId = location.state.eventId;
+      const eventObj = events.find(e => e.id === targetEventId);
+      if (eventObj) {
+        setSelectedEvent({
+          id: eventObj.id,
+          title: eventObj.title,
+          start: eventObj.start,
+          end: eventObj.end,
+          allDay: eventObj.allDay,
+          backgroundColor: eventObj.backgroundColor,
+          ...eventObj.extendedProps
+        });
+        setShowDetailsModal(true);
+      }
+      
+      // Clear the location state to avoid re-triggering on back navigation
+      window.history.replaceState({}, document.title);
     }
   }, [location.state, events]);
 
