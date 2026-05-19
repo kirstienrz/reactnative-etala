@@ -20,11 +20,12 @@ export default function SuperAdminCalendarRedux() {
     fetchEvents();
   }, []);
 
-  // 🔐 ROLE-BASED FILTER
+  // 🔐 PUBLIC CALENDAR FILTER (Show only program_events and holidays for everyone)
   const filterByRole = (allEvents) => {
-    if (userRole === "superadmin") return allEvents;
-    // normal users: hide consultation
-    return allEvents.filter((e) => e.type !== "consultation");
+    return allEvents.filter((e) => {
+      const type = e.extendedProps?.type || e.type;
+      return type === "program_event" || type === "holiday";
+    });
   };
 
   // Helper for event color coding

@@ -102,11 +102,12 @@ export default function GADProjectsArchive() {
     fetchEvents();
   }, [userRole]);
 
-  // 🔐 SIMPLE & CORRECT ROLE-BASED FILTER
+  // 🔐 PUBLIC FILTER (Show only program_events and holidays for everyone)
   const filterByRole = (allEvents) => {
-    if (userRole === "superadmin") return allEvents;
-    // Public view: only show program_event types
-    return allEvents.filter((e) => e.extendedProps?.type === "program_event");
+    return allEvents.filter((e) => {
+      const type = e.extendedProps?.type || e.type;
+      return type === "program_event" || type === "holiday";
+    });
   };
 
   const fetchEvents = async () => {
