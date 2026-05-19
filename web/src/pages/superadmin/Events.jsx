@@ -980,55 +980,7 @@ export default function SuperAdminCalendarUI() {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="bg-white p-4 md:p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
-        <div className="flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
-          <div className="flex-1 w-full relative">
-            <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by title, location, or user..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium transition-all"
-            />
-          </div>
 
-          <div className="flex flex-wrap gap-2 w-full xl:w-auto">
-            <div className="flex-1 xl:flex-none relative">
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
-              >
-                <option value="all">All Types</option>
-                {eventTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
-            </div>
-
-            <div className="flex-1 xl:flex-none relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
-              >
-                <option value="all">All Status</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                <ChevronDown size={16} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Calendar Container */}
       <style>{`
@@ -1126,7 +1078,7 @@ export default function SuperAdminCalendarUI() {
 
       {/* Events Table Section */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-8">
-        <div className="px-6 py-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               Event Catalog
@@ -1146,6 +1098,54 @@ export default function SuperAdminCalendarUI() {
               <Trash2 size={16} /> Delete Selected ({selectedEvents.size})
             </button>
           )}
+        </div>
+
+        {/* Integrated Search & Filters inside Catalog Panel */}
+        <div className="px-6 pb-6 border-b border-gray-100 flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
+          <div className="flex-1 w-full relative">
+            <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by title, location, or user..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium transition-all"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+            <div className="flex-1 xl:flex-none relative">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
+              >
+                <option value="all">All Types</option>
+                {eventTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+            </div>
+
+            <div className="flex-1 xl:flex-none relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
+              >
+                <option value="all">All Status</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <ChevronDown size={16} />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="overflow-x-auto scrollbar-hide">
