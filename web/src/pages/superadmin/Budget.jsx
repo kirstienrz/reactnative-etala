@@ -1007,7 +1007,7 @@ const BudgetProgramsDashboard = () => {
                     </div>
                   ) : (
                     <img
-                      src={previewFile.file.image_urls[currentPage]}
+                      src={previewFile.file.image_urls[currentPage]?.replace("http://", "https://")}
                       className="rounded-lg shadow-lg transition-transform duration-200 block"
                       style={{
                         transform: `scale(${zoomLevel})`,
