@@ -130,6 +130,7 @@ exports.uploadBudgetProgram = async (req, res, next) => {
         // Generate URLs for actual number of pages
         for (let page = 1; page <= actualPages; page++) {
           const url = cloudinary.url(publicId, {
+            secure: true,
             resource_type: "image",
             format: "jpg",
             page: page,
@@ -150,6 +151,7 @@ exports.uploadBudgetProgram = async (req, res, next) => {
         pageCount = 10;
         for (let page = 1; page <= 10; page++) {
           const url = cloudinary.url(publicId, {
+            secure: true,
             resource_type: "image",
             format: "jpg",
             page: page,

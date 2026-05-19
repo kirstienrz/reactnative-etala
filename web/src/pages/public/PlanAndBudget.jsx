@@ -324,7 +324,7 @@ const PlanAndBudget = () => {
               </div>
               <div className="flex items-center gap-2 sm:gap-4">
                 <a 
-                  href={previewDoc.file.url || previewDoc.file.image_urls[0]} 
+                  href={(previewDoc.file.url || previewDoc.file.image_urls[0])?.replace("http://", "https://")} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="p-3 text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
@@ -384,7 +384,7 @@ const PlanAndBudget = () => {
                 ) : (
                   <div className="relative">
                     <img
-                      src={previewDoc.file.image_urls[currentPage]}
+                      src={previewDoc.file.image_urls[currentPage]?.replace("http://", "https://")}
                       style={{
                         width: `${zoomLevel}%`,
                         maxWidth: 'none',
