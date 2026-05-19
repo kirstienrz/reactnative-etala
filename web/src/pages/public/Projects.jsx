@@ -30,7 +30,8 @@ import {
   Maximize2,
   Minimize2,
   ChevronLeft,
-  ExternalLink
+  ExternalLink,
+  Users
 } from "lucide-react";
 import { getAllCalendarEvents } from "../../api/calendar";
 import { toast, ToastContainer } from "react-toastify";
@@ -208,7 +209,11 @@ export default function GADProjectsArchive() {
           mode: event.extendedProps?.mode || event.mode || "N/A",
           userId: event.userId || event.extendedProps?.userId,
           attachments: formattedAttachments,
-          source: event.extendedProps?.source || 'calendar'
+          source: event.extendedProps?.source || 'calendar',
+          participants: event.extendedProps?.participants !== undefined 
+            ? event.extendedProps.participants 
+            : (event.participants !== undefined ? event.participants : 0),
+          eventDetails: event.extendedProps?.eventDetails || event.eventDetails || null
         }
       };
     });
@@ -670,6 +675,74 @@ export default function GADProjectsArchive() {
                     </div>
                   )}
 
+                  {/* GAD Program Event Details */}
+                  {selectedProject.extendedProps?.type === 'program_event' && 
+                   (selectedProject.extendedProps?.eventDetails?.programDetails || selectedProject.eventDetails?.programDetails) && (() => {
+                    const pDetails = selectedProject.extendedProps?.eventDetails?.programDetails || selectedProject.eventDetails?.programDetails;
+                    const hasObjectives = pDetails.objectives && pDetails.objectives.length > 0;
+                    const hasRequirements = pDetails.requirements && pDetails.requirements.length > 0;
+                    const hasOutcomes = pDetails.expectedOutcomes && pDetails.expectedOutcomes.length > 0;
+                    const hasAudience = !!pDetails.targetAudience;
+
+                    if (!hasObjectives && !hasRequirements && !hasOutcomes && !hasAudience) return null;
+
+                    return (
+                      <div className="p-6 bg-gradient-to-br from-violet-50/40 to-fuchsia-50/40 rounded-3xl border border-violet-100/50 space-y-5">
+                        <div className="flex items-center gap-2 border-b border-violet-100 pb-3">
+                          <Layers size={16} className="text-violet-500" />
+                          <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">
+                            GAD Initiative Details
+                          </h3>
+                        </div>
+
+                        {hasAudience && (
+                          <div>
+                            <span className="block text-[10px] font-black text-violet-600 uppercase tracking-widest mb-1.5">Target Audience</span>
+                            <span className="text-xs font-bold text-slate-800 bg-white px-3 py-1.5 rounded-xl border border-violet-100/30 shadow-sm inline-block">{pDetails.targetAudience}</span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {/* Objectives */}
+                          {hasObjectives && (
+                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+                              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 border-b border-slate-100 pb-1.5">Objectives</span>
+                              <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside flex-1 leading-relaxed">
+                                {pDetails.objectives.map((obj, i) => (
+                                  <li key={i} className="font-medium"><span className="text-slate-800">{obj}</span></li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Requirements */}
+                          {hasRequirements && (
+                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+                              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 border-b border-slate-100 pb-1.5">Requirements</span>
+                              <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside flex-1 leading-relaxed">
+                                {pDetails.requirements.map((req, i) => (
+                                  <li key={i} className="font-medium"><span className="text-slate-800">{req}</span></li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Expected Outcomes */}
+                          {hasOutcomes && (
+                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+                              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 border-b border-slate-100 pb-1.5">Expected Outcomes</span>
+                              <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside flex-1 leading-relaxed">
+                                {pDetails.expectedOutcomes.map((out, i) => (
+                                  <li key={i} className="font-medium"><span className="text-slate-800">{out}</span></li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Attachments - only if present */}
                   {selectedProject.extendedProps?.attachments?.length > 0 && (
                     <div>
@@ -706,7 +779,9 @@ export default function GADProjectsArchive() {
                   {/* Fallback if nothing to show on left */}
                   {!selectedProject.extendedProps?.description &&
                    !selectedProject.extendedProps?.notes &&
-                   !selectedProject.extendedProps?.attachments?.length && (
+                   !selectedProject.extendedProps?.attachments?.length &&
+                   !selectedProject.extendedProps?.eventDetails?.programDetails &&
+                   !selectedProject.eventDetails?.programDetails && (
                     <div className="py-8 text-center text-slate-400">
                       <FileText className="mx-auto mb-2 text-slate-300" size={28} />
                       <p className="text-sm italic">No additional details for this event.</p>
@@ -739,6 +814,19 @@ export default function GADProjectsArchive() {
                           <span className="text-sm font-bold text-slate-700 capitalize">{selectedProject.extendedProps?.source || "Calendar"}</span>
                         </div>
                       </div>
+                      {(selectedProject.extendedProps?.participants !== undefined || selectedProject.participants !== undefined) && (
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                            <Users size={14} className="text-violet-500" />
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-black text-slate-400 uppercase">Participants</span>
+                            <span className="text-sm font-bold text-slate-700">
+                              {selectedProject.extendedProps?.participants ?? selectedProject.participants}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
