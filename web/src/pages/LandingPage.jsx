@@ -17,6 +17,7 @@ import {
   Sparkles,
   Bell, Calendar, X, Download
 } from 'lucide-react';
+import { Capacitor } from "@capacitor/core";
 import { getInfographics } from "../api/infographics";
 import { getNews, getAnnouncements } from "../api/newsAnnouncement";
 import { getAllCalendarEvents } from "../api/calendar";
@@ -61,16 +62,29 @@ const LandingPage = () => {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [calendarLoading, setCalendarLoading] = useState(true);
 
-  const [isMobileView, setIsMobileView] = useState(false);
+  const isApkAccess = Capacitor.isNative;
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const getWebUrl = () => {
+    if (!isApkAccess) {
+      return window.location.origin;
+    }
+    const apiUrl = import.meta.env.VITE_API_URL_MOBILE || import.meta.env.VITE_API_URL || "";
+    if (apiUrl.includes("localhost") || apiUrl.includes("127.0.0.1") || apiUrl.includes("192.168")) {
+      return "http://localhost:5173";
+    }
+    if (window.location.hostname.includes("vercel.app")) {
+      return window.location.origin;
+    }
+    return "https://reactnative-etala.vercel.app";
+  };
+
+  const getQrData = () => {
+    if (isApkAccess) {
+      return getWebUrl();
+    } else {
+      return window.location.origin + "/download";
+    }
+  };
 
   const heroRef = useRef(null);
 
@@ -474,25 +488,23 @@ const LandingPage = () => {
               <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center relative border border-white/20">
                 <div className="bg-gray-50 overflow-hidden rounded-2xl mb-6 shadow-inner flex items-center justify-center w-48 h-48 md:w-64 md:h-64">
                   <Link 
-                    to={isMobileView ? "/" : "/download"}
+                    to={isApkAccess ? "/" : "/download"}
                     className="block w-full h-full p-3 cursor-pointer"
-                    title={isMobileView ? "eTALA Web Portal" : "Click to download eTALA APK"}
+                    title={isApkAccess ? "eTALA Web Portal" : "Click to download eTALA APK"}
                   >
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                        window.location.origin + (isMobileView ? "" : "/download")
-                      )}`}
-                      alt={isMobileView ? "Scan to open web portal" : "Scan to download app"}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getQrData())}`}
+                      alt={isApkAccess ? "Scan to open web portal" : "Scan to download app"}
                       className="w-full h-full object-contain"
                     />
                   </Link>
                 </div>
                 <div className="text-center">
                   <p className="text-slate-900 font-black text-xl mb-1">
-                    {isMobileView ? "Scan to Share Web" : "Scan or Click to Download"}
+                    {isApkAccess ? "Scan to Share Web" : "Scan or Click to Download"}
                   </p>
                   <p className="text-slate-500 font-medium">
-                    {isMobileView ? "Open portal on another device" : "Available for Android"}
+                    {isApkAccess ? "Open portal on another device" : "Available for Android"}
                   </p>
                 </div>
               </div>
