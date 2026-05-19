@@ -324,7 +324,8 @@ const Header = () => {
                 </p>
               </div>
               <div className="sm:hidden">
-                <h1 className="text-lg font-bold text-purple-950">GADO</h1>
+                <h1 className="text-sm font-bold text-purple-950 leading-tight">Gender and Development Office</h1>
+                <p className="text-xs text-gray-500 font-medium">TUP-Taguig</p>
               </div>
             </Link>
 
