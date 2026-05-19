@@ -277,19 +277,19 @@ const LandingPage = () => {
   return (
     <main className="bg-white">
       {/* Hero Section */}
-      <section ref={heroRef} className="relative w-full h-[400px] sm:h-[500px] lg:h-[calc(100vh-116px)] bg-slate-900 overflow-x-auto overflow-y-hidden lg:overflow-hidden no-scrollbar scroll-smooth">
+      <section ref={heroRef} className="relative w-full bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent z-10 pointer-events-none"></div>
 
-        <div className="relative h-full w-max min-w-full lg:w-full lg:block">
+        <div className="relative w-full">
           {heroSlides.map((slide, idx) => (
             <div
               key={idx}
-              className={`h-full lg:w-full lg:h-full transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}
+              className={`w-full transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 relative' : 'opacity-0 absolute inset-0'}`}
             >
               {slide.image ? (
-                <img src={slide.image} alt={slide.title || "Hero Banner"} className="h-full w-auto max-w-none lg:w-full lg:h-full lg:object-cover block" />
+                <img src={slide.image} alt={slide.title || "Hero Banner"} className="w-full h-auto block" />
               ) : (
-                <div className="h-full w-screen lg:w-full lg:h-full bg-gradient-to-br from-violet-900 to-purple-900"></div>
+                <div className="w-full h-[400px] sm:h-[500px] lg:h-[calc(100vh-116px)] bg-gradient-to-br from-violet-900 to-purple-900"></div>
               )}
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/10 pointer-events-none"></div>
             </div>
@@ -311,9 +311,9 @@ const LandingPage = () => {
 
 
       {/* GAD Agenda Section */}
-      <section className="py-16 md:py-32 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
+      <section className="py-10 md:py-20 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center text-center lg:text-left">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center text-center lg:text-left">
 
             {/* Left side - Logo */}
             <div className="flex justify-center lg:justify-start">
@@ -352,10 +352,10 @@ const LandingPage = () => {
       <HighlightsSection />
 
       {/* Press Releases Section */}
-      <section className="py-16 md:py-32 bg-slate-50">
+      <section className="py-10 md:py-20 bg-slate-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-8 md:mb-24 border-b-4 border-violet-600 pb-4 md:pb-8 gap-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-6 md:mb-12 border-b-4 border-violet-600 pb-4 md:pb-6 gap-4">
             <h2 className="text-3xl md:text-6xl font-black text-slate-800 text-center sm:text-left">Press Releases</h2>
             <button
               onClick={() => navigate("/news")}
@@ -461,7 +461,7 @@ const LandingPage = () => {
       </section>
 
       {/* App Download Section */}
-      <section className="py-24 bg-violet-900 text-white overflow-hidden relative">
+      <section className="py-12 bg-violet-900 text-white overflow-hidden relative">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-16">
             <div className="flex-1">
@@ -516,11 +516,11 @@ const LandingPage = () => {
 
 
       {/* Report Section */}
-      <section className="py-20 md:py-40 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
+      <section className="py-10 md:py-20 bg-gradient-to-b from-gray-50 to-white border-t-4 border-b-4 border-gray-300">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Top - Case Handling Process */}
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start mb-12 lg:mb-24">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-start mb-10 lg:mb-16">
 
             {/* Left - Label */}
             <div>

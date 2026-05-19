@@ -254,7 +254,8 @@ const AdminNewsAnnouncements = () => {
               News
             </div>
           </button>
-          <button
+          {/* Announcements tab hidden */}
+          {/* <button
             onClick={() => setActiveTab("announcements")}
             className={`pb-3 px-4 font-medium transition ${activeTab === "announcements"
               ? "border-b-2 border-blue-600 text-blue-600"
@@ -265,7 +266,7 @@ const AdminNewsAnnouncements = () => {
               <Megaphone size={18} />
               Announcements
             </div>
-          </button>
+          </button> */}
         </div>
 
         {/* Search + Layout Controls + Add */}
@@ -312,11 +313,11 @@ const AdminNewsAnnouncements = () => {
           </div>
 
           <button
-            onClick={() => openModal(activeTab === "news" ? "news" : "announcement")}
+            onClick={() => openModal("news")}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition w-full sm:w-auto justify-center font-semibold"
           >
             <Plus size={18} />
-            Add {activeTab === "news" ? "News" : "Announcement"}
+            Add News
           </button>
         </div>
 
@@ -352,13 +353,15 @@ const AdminNewsAnnouncements = () => {
                       <video
                         controls
                         src={item.imageUrl}
-                        className="w-full h-48 object-cover bg-black"
+                        className="w-full bg-black"
+                        style={{ display: 'block' }}
                       />
                     ) : (
                       <img
                         src={item.imageUrl}
                         alt={item.title}
-                        className="w-full h-48 object-cover"
+                        className="w-full bg-gray-100"
+                        style={{ display: 'block' }}
                       />
                     )
                   ) : null}
@@ -428,13 +431,15 @@ const AdminNewsAnnouncements = () => {
                       <video
                         controls
                         src={item.imageUrl}
-                        className="w-full sm:w-48 shrink-0 h-32 object-cover bg-black"
+                        className="w-full sm:w-48 shrink-0 bg-black"
+                        style={{ display: 'block' }}
                       />
                     ) : (
                       <img
                         src={item.imageUrl}
                         alt={item.title}
-                        className="w-full sm:w-48 shrink-0 h-32 object-cover"
+                        className="w-full sm:w-48 shrink-0 bg-gray-100"
+                        style={{ display: 'block' }}
                       />
                     )
                   ) : null}
@@ -642,8 +647,7 @@ const AdminNewsAnnouncements = () => {
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {editingItem ? "Edit" : "Add"}{" "}
-                  {modalType === "news" ? "News" : "Announcement"}
+                  {editingItem ? "Edit" : "Add"} News
                 </h2>
                 <button
                   onClick={closeModal}
