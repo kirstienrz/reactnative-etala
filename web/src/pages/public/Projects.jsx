@@ -46,6 +46,15 @@ export default function GADProjectsArchive() {
   const [expandedProjects, setExpandedProjects] = useState({});
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Modern UI Styles
   const customStyles = `
@@ -309,10 +318,10 @@ export default function GADProjectsArchive() {
           <div className="lg:col-span-8 space-y-12">
 
             {/* CALENDAR SECTION */}
-            <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
-              <div className="flex justify-between items-center mb-8">
+            <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-4 md:p-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
+                  <div className="p-2 bg-blue-100 rounded-xl text-blue-600 animate-pulse">
                     <Grid size={24} />
                   </div>
                   Interactive Calendar
@@ -321,7 +330,7 @@ export default function GADProjectsArchive() {
                   Live Schedule
                 </div>
               </div>
-              <div className="modern-calendar-container">
+              <div className="modern-calendar-container overflow-hidden">
                 <style>{`
                    .fc { font-family: inherit; --fc-border-color: #f1f5f9; --fc-today-bg-color: #f8fafc; }
                    .fc .fc-toolbar-title { font-weight: 900; font-size: 1.25rem; color: #0f172a; }
@@ -331,19 +340,55 @@ export default function GADProjectsArchive() {
                    .fc .fc-col-header-cell { padding: 12px 0; background: #f8fafc; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; color: #94a3b8; border: none; }
                    .fc td, .fc th { border-style: solid !important; }
                    .fc-daygrid-event { border-radius: 6px; padding: 2px 4px; font-weight: 600; font-size: 0.75rem; border: none !important; }
+                   .fc .fc-toolbar {
+                     display: flex;
+                     flex-wrap: wrap;
+                     gap: 0.75rem;
+                     justify-content: space-between;
+                     align-items: center;
+                   }
+                   @media (max-width: 768px) {
+                     .fc .fc-toolbar {
+                       flex-direction: column;
+                       justify-content: center;
+                     }
+                     .fc .fc-toolbar-chunk {
+                       display: flex;
+                       justify-content: center;
+                       width: 100%;
+                     }
+                     .fc .fc-toolbar-title {
+                       font-size: 1.1rem !important;
+                       text-align: center;
+                       margin: 0.5rem 0 !important;
+                     }
+                     .fc .fc-button {
+                       padding: 0.4rem 0.6rem !important;
+                       font-size: 0.8rem !important;
+                       border-radius: 8px !important;
+                     }
+                   }
                  `}</style>
                 <FullCalendar
                   plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                  initialView="dayGridMonth"
-                  height="75vh"
+                  initialView={isMobile ? "dayGridMonth" : "dayGridMonth"}
+                  height={isMobile ? "auto" : "75vh"}
+                  aspectRatio={isMobile ? 0.8 : 1.35}
                   events={events}
-                  headerToolbar={{
+                  headerToolbar={isMobile ? {
+                    left: "prev,next today",
+                    center: "title",
+                    right: "",
+                  } : {
                     left: "prev,next today",
                     center: "title",
                     right: "dayGridMonth,timeGridWeek",
                   }}
+                  footerToolbar={isMobile ? {
+                    center: "dayGridMonth,timeGridWeek"
+                  } : null}
                   nowIndicator={true}
-                  dayMaxEvents={true}
+                  dayMaxEvents={isMobile ? 2 : true}
                   eventDisplay="block"
                   eventClick={(info) => {
                     const event = events.find(e => (e.id || e._id) === info.event.id);
@@ -358,7 +403,7 @@ export default function GADProjectsArchive() {
 
             {/* UPCOMING EVENTS SECTION */}
             <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+              <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/30">
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
                     <div className="p-2 bg-green-100 rounded-xl text-green-600">
@@ -375,7 +420,7 @@ export default function GADProjectsArchive() {
                 </div>
               </div>
 
-              <div className="p-8">
+              <div className="p-4 md:p-8">
                 {upcomingEvents.length === 0 ? (
                   <div className="py-12 text-center">
                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -578,8 +623,8 @@ export default function GADProjectsArchive() {
                 <X size={20} />
               </button>
 
-              <div className="absolute bottom-8 left-8 right-8">
-                <div className="flex items-center gap-3 mb-3">
+              <div className="absolute bottom-6 left-6 right-6 md:bottom-8 md:left-8 md:right-8">
+                <div className="flex flex-wrap items-center gap-3 mb-3">
                   <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-black uppercase tracking-widest">
                     {selectedProject.extendedProps?.type?.replace('_', ' ') || 'Project'}
                   </span>
@@ -753,19 +798,19 @@ export default function GADProjectsArchive() {
                 <>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handlePrevPreview(); }}
-                    className="absolute left-[-4rem] lg:left-[-6rem] top-1/2 -translate-y-1/2 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"
+                    className="absolute left-2 md:left-[-4rem] lg:left-[-6rem] top-1/2 -translate-y-1/2 p-3 md:p-5 bg-white/20 hover:bg-white/30 text-white rounded-full transition-all backdrop-blur-md z-50 animate-in fade-in duration-300"
                   >
-                    <ChevronLeft size={40} />
+                    <ChevronLeft size={24} className="md:w-10 md:h-10" />
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleNextPreview(); }}
-                    className="absolute right-[-4rem] lg:right-[-6rem] top-1/2 -translate-y-1/2 p-5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md opacity-0 group-hover:opacity-100"
+                    className="absolute right-2 md:right-[-4rem] lg:right-[-6rem] top-1/2 -translate-y-1/2 p-3 md:p-5 bg-white/20 hover:bg-white/30 text-white rounded-full transition-all backdrop-blur-md z-50 animate-in fade-in duration-300"
                   >
-                    <ChevronRight size={40} />
+                    <ChevronRight size={24} className="md:w-10 md:h-10" />
                   </button>
                   
                   {/* Counter Bubble */}
-                  <div className="absolute bottom-[-4rem] left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-3 rounded-full text-xs font-black tracking-[0.2em] transition-all">
+                  <div className="absolute bottom-[-3rem] md:bottom-[-4rem] left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-6 md:px-8 py-2 md:py-3 rounded-full text-xs font-black tracking-[0.2em] transition-all">
                     {currentPreviewIndex + 1} / {previewFiles.length}
                   </div>
                 </>
