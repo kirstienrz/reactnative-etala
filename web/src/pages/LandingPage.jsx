@@ -62,7 +62,12 @@ const LandingPage = () => {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [calendarLoading, setCalendarLoading] = useState(true);
 
-  const isApkAccess = Capacitor.isNative;
+  const isApkAccess = 
+    (typeof window !== "undefined" && window.Capacitor && window.Capacitor.isNative) ||
+    Capacitor.isNative || 
+    (Capacitor.getPlatform && Capacitor.getPlatform() !== "web") ||
+    window.location.protocol === "capacitor:" || 
+    (window.location.hostname === "localhost" && !window.location.port);
 
   const getWebUrl = () => {
     if (!isApkAccess) {
@@ -72,10 +77,7 @@ const LandingPage = () => {
     if (apiUrl.includes("localhost") || apiUrl.includes("127.0.0.1") || apiUrl.includes("192.168")) {
       return "http://localhost:5173";
     }
-    if (window.location.hostname.includes("vercel.app")) {
-      return window.location.origin;
-    }
-    return "https://reactnative-etala.vercel.app";
+    return "https://etala.vercel.app";
   };
 
   const getQrData = () => {
@@ -487,17 +489,35 @@ const LandingPage = () => {
               <div className="absolute -inset-4 bg-gradient-to-r from-violet-400 to-purple-400 rounded-[2.5rem] opacity-20 blur-2xl group-hover:opacity-40 transition duration-1000"></div>
               <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center relative border border-white/20">
                 <div className="bg-gray-50 overflow-hidden rounded-2xl mb-6 shadow-inner flex items-center justify-center w-48 h-48 md:w-64 md:h-64">
-                  <Link 
-                    to={isApkAccess ? "/" : "/download"}
-                    className="block w-full h-full p-3 cursor-pointer"
-                    title={isApkAccess ? "eTALA Web Portal" : "Click to download eTALA APK"}
-                  >
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getQrData())}`}
-                      alt={isApkAccess ? "Scan to open web portal" : "Scan to download app"}
-                      className="w-full h-full object-contain"
-                    />
-                  </Link>
+                  {isApkAccess ? (
+                    <a 
+                      href={getWebUrl()}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.open(getWebUrl(), "_system");
+                      }}
+                      className="block w-full h-full p-3 cursor-pointer"
+                      title="Open eTALA Web Portal"
+                    >
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getQrData())}`}
+                        alt="Scan to open web portal"
+                        className="w-full h-full object-contain"
+                      />
+                    </a>
+                  ) : (
+                    <Link 
+                      to="/download"
+                      className="block w-full h-full p-3 cursor-pointer"
+                      title="Click to download eTALA APK"
+                    >
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getQrData())}`}
+                        alt="Scan to download app"
+                        className="w-full h-full object-contain"
+                      />
+                    </Link>
+                  )}
                 </div>
                 <div className="text-center">
                   <p className="text-slate-900 font-black text-xl mb-1">
