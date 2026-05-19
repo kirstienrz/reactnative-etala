@@ -15,7 +15,7 @@ import {
   MessageSquare,
   GraduationCap,
   Sparkles,
-  Bell, Calendar, X
+  Bell, Calendar, X, Download
 } from 'lucide-react';
 import { getInfographics } from "../api/infographics";
 import { getNews, getAnnouncements } from "../api/newsAnnouncement";
@@ -448,24 +448,35 @@ const LandingPage = () => {
               <p className="text-xl text-violet-100 mb-10 max-w-2xl leading-relaxed">
                 Download the ETALA mobile app to report issues on the go.
               </p>
-              <div className="flex flex-wrap gap-8 items-center">
-                <div className="flex items-center gap-3">
-                </div>
+              <div className="flex flex-wrap gap-4 items-center">
+                <Link
+                  to="/download"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-white text-violet-900 hover:bg-violet-100 transition-all duration-300 font-extrabold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 text-lg"
+                >
+                  <Download className="w-5 h-5 text-violet-900" />
+                  Download eTALA APK
+                </Link>
               </div>
             </div>
             <div className="relative group">
               <div className="absolute -inset-4 bg-gradient-to-r from-violet-400 to-purple-400 rounded-[2.5rem] opacity-20 blur-2xl group-hover:opacity-40 transition duration-1000"></div>
               <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center relative border border-white/20">
                 <div className="bg-gray-50 overflow-hidden rounded-2xl mb-6 shadow-inner flex items-center justify-center w-48 h-48 md:w-64 md:h-64">
-                  <img
-                    src="/assets/qr.jpg"
-                    alt="Scan this QR to download our app"
-                    className="w-full h-full object-cover scale-[2] translate-y-24 -translate-x-2.5"
-                  />
+                  <Link 
+                    to="/download"
+                    className="block w-full h-full p-3 cursor-pointer"
+                    title="Click to download eTALA APK"
+                  >
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(window.location.origin + '/download')}`}
+                      alt="Scan this QR to download our app"
+                      className="w-full h-full object-contain"
+                    />
+                  </Link>
                 </div>
                 <div className="text-center">
                   <p className="text-slate-900 font-black text-xl mb-1">
-                    Scan to Download
+                    Scan or Click to Download
                   </p>
                   <p className="text-slate-500 font-medium">
                     Available for Android
