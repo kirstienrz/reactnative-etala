@@ -816,6 +816,16 @@ export default function SuperAdminCalendarUI() {
     });
   };
 
+  // Pending completion calculation
+  const now = new Date();
+  const pendingEvents = events.filter(event => {
+    const eventDate = new Date(event.start);
+    const isPastOrToday = eventDate <= now || eventDate.toDateString() === now.toDateString();
+    const isApplicableType = event.extendedProps?.type === 'program_event' || event.extendedProps?.type === 'consultation';
+    const isNotCompleted = event.extendedProps?.status !== 'completed' && event.extendedProps?.status !== 'cancelled';
+    return isPastOrToday && isApplicableType && isNotCompleted;
+  });
+
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -880,28 +890,76 @@ export default function SuperAdminCalendarUI() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {Object.entries(stats).map(([key, value]) => (
-          <div key={key} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-colors">
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                {key.replace(/([A-Z])/g, ' $1').trim()}
-              </p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {value}
-              </p>
+      {/* Stats & Pendings side-by-side grid */}
+      <div className={pendingEvents.length > 0 ? "grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8 items-start" : "mb-8"}>
+        {/* Stats Cards container */}
+        <div className={pendingEvents.length > 0 ? "lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"}>
+          {Object.entries(stats).map(([key, value]) => (
+            <div key={key} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-colors">
+              <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {value}
+                </p>
+              </div>
+              <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${key === 'total' ? 'bg-blue-50 text-blue-600' :
+                key === 'thisMonth' ? 'bg-green-50 text-green-600' :
+                  key === 'upcoming' ? 'bg-orange-50 text-orange-600' :
+                    'bg-gray-50 text-gray-600'
+                }`}>
+                <CalendarIcon size={24} />
+              </div>
             </div>
-            <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${key === 'total' ? 'bg-blue-50 text-blue-600' :
-              key === 'thisMonth' ? 'bg-green-50 text-green-600' :
-                key === 'upcoming' ? 'bg-orange-50 text-orange-600' :
-                  'bg-gray-50 text-gray-600'
-              }`}>
-              <CalendarIcon size={24} />
+          ))}
+        </div>
+
+        {/* Scrollable Widget for Pending Completion Events */}
+        {pendingEvents.length > 0 && (
+          <div className="lg:col-span-1 bg-white rounded-2xl border border-amber-200 shadow-sm p-4 w-full animate-in fade-in duration-300">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-100">
+              <Clock size={16} className="text-amber-500 animate-pulse" />
+              <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">
+                Pending Completion ({pendingEvents.length})
+              </h4>
+            </div>
+            
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+              {pendingEvents.map((event) => (
+                <div 
+                  key={event.id}
+                  onClick={() => handleEditEvent({
+                    id: event.id,
+                    title: event.title,
+                    type: event.extendedProps?.type,
+                    start: event.start,
+                    end: event.extendedProps?.originalEnd || event.end,
+                    allDay: event.allDay,
+                    location: event.extendedProps?.location,
+                    description: event.extendedProps?.description,
+                    notes: event.extendedProps?.notes,
+                    status: event.extendedProps?.status,
+                    color: event.backgroundColor
+                  })}
+                  className="flex items-center justify-between gap-3 p-2 bg-amber-50/30 hover:bg-amber-50 border border-amber-100/30 hover:border-amber-200/50 rounded-xl cursor-pointer transition-all duration-200 group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-gray-800 truncate group-hover:text-amber-800 transition-colors">
+                      {event.title}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-semibold">
+                      {formatDate(event.start)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[9px] font-black text-amber-600 uppercase bg-amber-100/60 px-2 py-0.5 rounded-md tracking-wider group-hover:bg-amber-200/80 transition-colors">
+                    Complete
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Legend for Color Coding */}

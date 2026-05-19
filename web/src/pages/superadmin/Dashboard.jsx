@@ -14,6 +14,7 @@ import {
   Target, TrendingDown, BarChart3, Calendar, X
 } from 'lucide-react';
 import HeatmapTable from '../../components/HeatmapTable';
+import { getAllCalendarEvents } from '../../api/calendar';
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
@@ -27,7 +28,39 @@ const SuperAdminDashboard = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [heatmapView, setHeatmapView] = useState('department');
   const [heatmapSubView, setHeatmapSubView] = useState('reporter'); // 'reporter', 'victim', 'witness'
+  const [pendingCompletionEvents, setPendingCompletionEvents] = useState([]);
+  const [showCompletionPopup, setShowCompletionPopup] = useState(false);
 
+
+  useEffect(() => {
+    const checkPendingEvents = async () => {
+      try {
+        const res = await getAllCalendarEvents();
+        if (res.success && Array.isArray(res.data)) {
+          const now = new Date();
+          
+          const pending = res.data.filter(event => {
+            const eventDate = new Date(event.start);
+            const isPastOrToday = eventDate <= now || eventDate.toDateString() === now.toDateString();
+            const isApplicableType = event.extendedProps?.type === 'program_event' || event.extendedProps?.type === 'consultation';
+            const isNotCompleted = event.extendedProps?.status !== 'completed' && event.extendedProps?.status !== 'cancelled';
+            return isPastOrToday && isApplicableType && isNotCompleted;
+          });
+          
+          if (pending.length > 0) {
+            setPendingCompletionEvents(pending);
+            const hasBeenDismissed = sessionStorage.getItem('dismissed_completion_popup');
+            if (!hasBeenDismissed) {
+              setShowCompletionPopup(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking pending events:", error);
+      }
+    };
+    checkPendingEvents();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -837,6 +870,75 @@ const SuperAdminDashboard = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Pending Completion Popup */}
+      {showCompletionPopup && pendingCompletionEvents.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-[99] max-w-sm w-full bg-white rounded-2xl shadow-2xl border border-amber-200 p-6 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-amber-50 rounded-xl text-amber-500">
+                <Clock className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm">Action Required</h4>
+                <p className="text-[10px] text-gray-500 font-medium">Pending events for today or past</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                setShowCompletionPopup(false);
+                sessionStorage.setItem('dismissed_completion_popup', 'true');
+              }}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          
+          <div className="space-y-2.5 max-h-40 overflow-y-auto pr-1">
+            {pendingCompletionEvents.slice(0, 3).map((event) => (
+              <div 
+                key={event._id}
+                onClick={() => navigate('/superadmin/events', { state: { openEditModal: true, eventId: event._id } })}
+                className="flex items-center justify-between p-2.5 bg-amber-50/40 hover:bg-amber-50 rounded-xl border border-amber-100/30 cursor-pointer transition-all hover:scale-[1.01] group"
+              >
+                <div className="min-w-0 flex-1 pr-3">
+                  <p className="text-xs font-bold text-gray-800 truncate group-hover:text-amber-700 transition-colors">{event.title}</p>
+                  <p className="text-[9px] text-gray-500 font-semibold">
+                    Date: {new Date(event.start).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[9px] font-black text-amber-600 uppercase bg-amber-100/60 px-2 py-0.5 rounded-md tracking-wider">
+                  Complete
+                </span>
+              </div>
+            ))}
+            {pendingCompletionEvents.length > 3 && (
+              <p className="text-center text-[10px] text-gray-500 font-semibold pt-1">
+                And {pendingCompletionEvents.length - 3} more event(s)...
+              </p>
+            )}
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+            <button
+              onClick={() => navigate('/superadmin/events')}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold rounded-xl transition-all text-center"
+            >
+              View All
+            </button>
+            <button
+              onClick={() => {
+                const firstEvent = pendingCompletionEvents[0];
+                navigate('/superadmin/events', { state: { openEditModal: true, eventId: firstEvent._id } });
+              }}
+              className="flex-1 py-2 px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[10px] font-bold rounded-xl transition-all shadow-md shadow-amber-100 text-center"
+            >
+              Complete First
+            </button>
           </div>
         </div>
       )}
