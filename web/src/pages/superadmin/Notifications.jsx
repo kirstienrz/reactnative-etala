@@ -63,9 +63,22 @@ const NotificationsPage = () => {
     if (!notification.isRead) {
       handleMarkAsRead(notification._id);
     }
-    navigate(notification.link, { 
-      state: notification.metadata?.ticketNumber ? { selectedTicketNumber: notification.metadata.ticketNumber } : {}
-    });
+    
+    // Prepare navigation state based on notification type
+    let navigationState = {};
+    
+    if (notification.metadata?.ticketNumber) {
+      // For ticket/message notifications
+      navigationState = { selectedTicketNumber: notification.metadata.ticketNumber };
+    } else if (notification.metadata?.eventId) {
+      // For booking/event notifications - open the event details (view only)
+      navigationState = { 
+        openDetailsModal: true, 
+        eventId: notification.metadata.eventId 
+      };
+    }
+    
+    navigate(notification.link, { state: navigationState });
   };
 
   const filteredNotifications = notifications.filter(n => {
