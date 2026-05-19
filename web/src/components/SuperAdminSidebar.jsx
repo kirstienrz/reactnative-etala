@@ -141,13 +141,13 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
             <SidebarSection title="Main" isCollapsed={isCollapsed && !isOpen}>
               <SidebarItem icon={<User size={18} />} label="My Profile" to="/superadmin/profile" isCollapsed={isCollapsed && !isOpen} onClick={() => setIsOpen(false)} />
               <SidebarItem icon={<Users size={18} />} label="User Management" to="/superadmin/users" isCollapsed={isCollapsed && !isOpen} onClick={() => setIsOpen(false)} />
-              <SidebarItem
+              {/* <SidebarItem
                 icon={<Bell size={18} />}
                 label="Notifications"
                 to="/superadmin/notifications"
                 isCollapsed={isCollapsed && !isOpen}
                 onClick={() => setIsOpen(false)}
-              />
+              /> */}
             </SidebarSection>
 
             {/* REPORT HANDLING */}
