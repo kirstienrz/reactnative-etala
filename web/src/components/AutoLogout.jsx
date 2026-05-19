@@ -7,11 +7,11 @@ import { toast } from 'react-toastify';
 const AutoLogout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isAuthenticated, user, role } = useSelector((state) => state.auth);
+  const { isLoggedIn, user, role } = useSelector((state) => state.auth);
   const activeRole = user?.role || role;
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isLoggedIn) return;
 
     let timeoutId;
     const isAdmin = activeRole === 'superadmin' || activeRole === 'admin';
@@ -68,7 +68,7 @@ const AutoLogout = () => {
         window.removeEventListener(event, resetTimer);
       });
     };
-  }, [isAuthenticated, activeRole, dispatch, navigate]);
+  }, [isLoggedIn, activeRole, dispatch, navigate]);
 
   return null;
 };
