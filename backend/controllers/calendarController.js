@@ -887,10 +887,12 @@ const getAllCalendarEvents = async (req, res) => {
             : user?.email || event.extendedProps?.userEmail || 'N/A',
            mode: event.extendedProps?.mode || 'N/A',
            status: displayStatus || 'upcoming',
+           participants: event.participants || 0,
            attachments: eventAttachments,
            programId: event.programEventRef?.programId,
            projectId: event.programEventRef?.projectId,
-           source: 'calendar'
+           source: 'calendar',
+           eventDetails: event.eventDetails
          }
        };
      });
@@ -957,6 +959,17 @@ const createCalendarEvent = async (req, res) => {
         programId: req.body.programId ? req.body.programId : undefined,
         projectId: req.body.projectId ? req.body.projectId : undefined
       };
+    }
+
+    // ✅ Extract eventDetails for programDetails/etc from JSON string (sent via FormData)
+    if (req.body.eventDetails) {
+      try {
+        eventData.eventDetails = typeof req.body.eventDetails === 'string'
+          ? JSON.parse(req.body.eventDetails)
+          : req.body.eventDetails;
+      } catch (err) {
+        console.error('Failed to parse eventDetails:', err);
+      }
     }
 
     console.log('🟣 Processed event data:', {
@@ -1143,6 +1156,17 @@ const updateCalendarEvent = async (req, res) => {
     // ✅ Parse participants integer if provided
     if (req.body.participants !== undefined) {
       updateData.participants = req.body.participants ? parseInt(req.body.participants) : 0;
+    }
+
+    // ✅ Extract eventDetails for programDetails/etc from JSON string (sent via FormData)
+    if (req.body.eventDetails) {
+      try {
+        updateData.eventDetails = typeof req.body.eventDetails === 'string'
+          ? JSON.parse(req.body.eventDetails)
+          : req.body.eventDetails;
+      } catch (err) {
+        console.error('Failed to parse eventDetails:', err);
+      }
     }
 
     // Dates need parsing

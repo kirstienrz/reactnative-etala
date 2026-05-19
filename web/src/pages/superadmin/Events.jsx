@@ -13,6 +13,7 @@ import {
   Search,
   Filter,
   User,
+  Users,
   Mail,
   MapPin,
   Clock,
@@ -62,7 +63,11 @@ export default function SuperAdminCalendarUI() {
     mode: "online",
     programId: "",
     projectId: "",
-    participants: 0
+    participants: 0,
+    objectives: [],
+    targetAudience: "",
+    requirements: [],
+    expectedOutcomes: []
   });
   const [programs, setPrograms] = useState([]);
   const [eventFiles, setEventFiles] = useState([]);
@@ -364,7 +369,11 @@ export default function SuperAdminCalendarUI() {
           programId: event.programId || event.extendedProps?.programId,
           projectId: event.projectId || event.extendedProps?.projectId,
           attachments: formattedAttachments,
-          source: event.extendedProps?.source || 'calendar'
+          source: event.extendedProps?.source || 'calendar',
+          participants: event.extendedProps?.participants !== undefined 
+            ? event.extendedProps.participants 
+            : (event.participants !== undefined ? event.participants : 0),
+          eventDetails: event.extendedProps?.eventDetails || event.eventDetails || null
         },
         backgroundColor: color,
         borderColor: color,
@@ -445,7 +454,11 @@ export default function SuperAdminCalendarUI() {
       mode: "online",
       programId: "",
       projectId: "",
-      participants: 0
+      participants: 0,
+      objectives: [],
+      targetAudience: "",
+      requirements: [],
+      expectedOutcomes: []
     });
     setShowModal(true);
   };
@@ -471,6 +484,9 @@ export default function SuperAdminCalendarUI() {
     setModalMode("edit");
     setSelectedEvent(event);
     const eventType = event.type || "program_event";
+    // Parse GAD programDetails if present
+    const programDetails = event.eventDetails?.programDetails || event.extendedProps?.eventDetails?.programDetails || {};
+    
     // Parse time from existing event dates
     let startTime = "09:00";
     let endTime = "10:00";
@@ -501,7 +517,11 @@ export default function SuperAdminCalendarUI() {
       mode: event.mode || "online",
       programId: event.programId || "",
       projectId: event.projectId || "",
-      participants: event.participants || 0
+      participants: event.participants || 0,
+      objectives: programDetails.objectives || [],
+      targetAudience: programDetails.targetAudience || "",
+      requirements: programDetails.requirements || [],
+      expectedOutcomes: programDetails.expectedOutcomes || []
     });
     setShowModal(true);
     setShowDetailsModal(false);
@@ -688,6 +708,19 @@ export default function SuperAdminCalendarUI() {
       eventPayload.mode = formData.mode || 'online';
     }
 
+    // Add GAD Program-specific fields
+    if (formData.type === 'program_event') {
+      const details = {
+        programDetails: {
+          objectives: formData.objectives || [],
+          targetAudience: formData.targetAudience?.trim() || '',
+          requirements: formData.requirements || [],
+          expectedOutcomes: formData.expectedOutcomes || []
+        }
+      };
+      eventPayload.eventDetails = JSON.stringify(details);
+    }
+
     Object.entries(eventPayload).forEach(([key, value]) => {
       if (value !== undefined) form.append(key, value);
     });
@@ -767,7 +800,6 @@ export default function SuperAdminCalendarUI() {
     setIsFullscreen(!isFullscreen);
   };
 
-  // Reset form
   const resetForm = () => {
     setFormData({
       title: "",
@@ -786,7 +818,11 @@ export default function SuperAdminCalendarUI() {
       mode: "online",
       programId: "",
       projectId: "",
-      participants: 0
+      participants: 0,
+      objectives: [],
+      targetAudience: "",
+      requirements: [],
+      expectedOutcomes: []
     });
   };
 
@@ -1503,6 +1539,17 @@ export default function SuperAdminCalendarUI() {
                 </div>
               )}
 
+              {/* Number of Participants */}
+              {selectedEvent.type === 'program_event' && selectedEvent.participants !== undefined && (
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                  <Users className="w-5 h-5 text-gray-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Number of Participants</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedEvent.participants}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Description */}
               {selectedEvent.description && (
                 <div className="p-4 bg-gray-50 rounded-lg">
@@ -1518,6 +1565,73 @@ export default function SuperAdminCalendarUI() {
                   <p className="text-sm text-gray-900 break-words whitespace-pre-line">{selectedEvent.notes}</p>
                 </div>
               )}
+
+              {/* GAD Program Event Details (Objectives, Target Audience, Requirements, Expected Outcomes) */}
+              {selectedEvent.type === 'program_event' && (selectedEvent.eventDetails?.programDetails || selectedEvent.extendedProps?.eventDetails?.programDetails) && (() => {
+                const pDetails = selectedEvent.eventDetails?.programDetails || selectedEvent.extendedProps?.eventDetails?.programDetails;
+                const hasObjectives = pDetails.objectives && pDetails.objectives.length > 0;
+                const hasRequirements = pDetails.requirements && pDetails.requirements.length > 0;
+                const hasOutcomes = pDetails.expectedOutcomes && pDetails.expectedOutcomes.length > 0;
+                const hasAudience = !!pDetails.targetAudience;
+
+                if (!hasObjectives && !hasRequirements && !hasOutcomes && !hasAudience) return null;
+
+                return (
+                  <div className="p-5 bg-gradient-to-br from-blue-50/40 to-indigo-50/40 rounded-xl border border-blue-100/50 space-y-4">
+                    <div className="flex items-center gap-2 border-b border-blue-100 pb-2">
+                      <Layers className="w-5 h-5 text-blue-600" />
+                      <h4 className="text-sm font-bold text-gray-900">
+                        GAD Initiative Details
+                      </h4>
+                    </div>
+
+                    {hasAudience && (
+                      <div>
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Target Audience</p>
+                        <p className="text-sm font-semibold text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-blue-100/50 shadow-sm w-fit">{pDetails.targetAudience}</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Objectives */}
+                      {hasObjectives && (
+                        <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-100 pb-1">Objectives</p>
+                          <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside flex-1">
+                            {pDetails.objectives.map((obj, i) => (
+                              <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{obj}</span></li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Requirements */}
+                      {hasRequirements && (
+                        <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-100 pb-1">Requirements</p>
+                          <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside flex-1">
+                            {pDetails.requirements.map((req, i) => (
+                              <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{req}</span></li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Expected Outcomes */}
+                      {hasOutcomes && (
+                        <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-100 pb-1">Expected Outcomes</p>
+                          <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside flex-1">
+                            {pDetails.expectedOutcomes.map((out, i) => (
+                              <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{out}</span></li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Enhanced Attachments Section */}
               {selectedEvent.attachments && selectedEvent.attachments.length > 0 && (
@@ -2058,19 +2172,202 @@ export default function SuperAdminCalendarUI() {
                   </div>
 
                   {formData.type === 'program_event' && (
-                    <div className="animate-fadeIn">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Number of Participants *
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="Enter number of participants"
-                        value={formData.participants || ""}
-                        onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
-                        min="1"
-                        required
-                      />
+                    <div className="space-y-4 animate-fadeIn">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Number of Participants *
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="Enter number of participants"
+                          value={formData.participants || ""}
+                          onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
+                          min="1"
+                          required
+                        />
+                      </div>
+
+                      {/* GAD Program-specific fields */}
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
+                        <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                          <Layers className="w-4 h-4 text-blue-600" />
+                          <p className="text-sm font-bold text-gray-800">GAD Program Details</p>
+                        </div>
+
+                        {/* Target Audience */}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Target Audience
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. All Students & Faculty"
+                            value={formData.targetAudience}
+                            onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white text-gray-900"
+                          />
+                        </div>
+
+                        {/* Objectives */}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Objectives
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              id="objectiveInput"
+                              placeholder="Add objective and press enter..."
+                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 text-sm"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const val = e.target.value.trim();
+                                  if (val && !formData.objectives.includes(val)) {
+                                    setFormData({ ...formData, objectives: [...formData.objectives, val] });
+                                    e.target.value = '';
+                                  }
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const input = document.getElementById('objectiveInput');
+                                const val = input.value.trim();
+                                if (val && !formData.objectives.includes(val)) {
+                                  setFormData({ ...formData, objectives: [...formData.objectives, val] });
+                                  input.value = '';
+                                }
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0"
+                            >
+                              Add
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {formData.objectives.map((obj, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[10px] px-2.5 py-1 rounded border border-blue-100 font-medium">
+                                {obj}
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData({ ...formData, objectives: formData.objectives.filter((_, idx) => idx !== i) })}
+                                  className="text-blue-500 hover:text-blue-700 font-bold ml-1 text-sm leading-none"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Requirements */}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Requirements
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              id="requirementInput"
+                              placeholder="Add requirement and press enter..."
+                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 text-sm"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const val = e.target.value.trim();
+                                  if (val && !formData.requirements.includes(val)) {
+                                    setFormData({ ...formData, requirements: [...formData.requirements, val] });
+                                    e.target.value = '';
+                                  }
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const input = document.getElementById('requirementInput');
+                                const val = input.value.trim();
+                                if (val && !formData.requirements.includes(val)) {
+                                  setFormData({ ...formData, requirements: [...formData.requirements, val] });
+                                  input.value = '';
+                                }
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0"
+                            >
+                              Add
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {formData.requirements.map((req, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[10px] px-2.5 py-1 rounded border border-purple-100 font-medium">
+                                {req}
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData({ ...formData, requirements: formData.requirements.filter((_, idx) => idx !== i) })}
+                                  className="text-purple-500 hover:text-purple-700 font-bold ml-1 text-sm leading-none"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Expected Outcomes */}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Expected Outcomes
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              id="outcomeInput"
+                              placeholder="Add outcome and press enter..."
+                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 text-sm"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const val = e.target.value.trim();
+                                  if (val && !formData.expectedOutcomes.includes(val)) {
+                                    setFormData({ ...formData, expectedOutcomes: [...formData.expectedOutcomes, val] });
+                                    e.target.value = '';
+                                  }
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const input = document.getElementById('outcomeInput');
+                                const val = input.value.trim();
+                                if (val && !formData.expectedOutcomes.includes(val)) {
+                                  setFormData({ ...formData, expectedOutcomes: [...formData.expectedOutcomes, val] });
+                                  input.value = '';
+                                }
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0"
+                            >
+                              Add
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {formData.expectedOutcomes.map((out, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] px-2.5 py-1 rounded border border-emerald-100 font-medium">
+                                {out}
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData({ ...formData, expectedOutcomes: formData.expectedOutcomes.filter((_, idx) => idx !== i) })}
+                                  className="text-emerald-500 hover:text-emerald-700 font-bold ml-1 text-sm leading-none"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
