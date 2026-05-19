@@ -62,7 +62,12 @@ const LandingPage = () => {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [calendarLoading, setCalendarLoading] = useState(true);
 
-  const isApkAccess = Capacitor.isNative;
+  const isApkAccess = 
+    (typeof window !== "undefined" && window.Capacitor && window.Capacitor.isNative) ||
+    Capacitor.isNative || 
+    (Capacitor.getPlatform && Capacitor.getPlatform() !== "web") ||
+    window.location.protocol === "capacitor:" || 
+    (window.location.hostname === "localhost" && !window.location.port);
 
   const getWebUrl = () => {
     if (!isApkAccess) {
