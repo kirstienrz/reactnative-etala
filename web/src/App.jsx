@@ -74,6 +74,7 @@ import Gallery from "./pages/public/Albums";
 import Research from "./pages/public/Research";
 import News from "./pages/public/News";
 import SexDataPublic from "./pages/public/SexDataPublic";
+import DownloadApk from "./pages/public/DownloadApk";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -118,6 +119,7 @@ const App = () => {
             <Route path="/Research" element={<Research />} />
             <Route path="/News" element={<News />} />
             <Route path="/SexDisaggregated" element={<SexDataPublic />} />
+            <Route path="/download" element={<DownloadApk />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/activate/:token" element={<ActivatePage />} />
