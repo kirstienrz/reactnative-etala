@@ -244,31 +244,35 @@ const SuperAdminDashboard = () => {
   ];
 
   return (
-    <div className="content-container py-6 space-y-6">
+    <div className="content-container py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <p className="text-blue-100">Comprehensive analytics and insights</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+            <p className="text-blue-100 text-sm">Comprehensive analytics and insights</p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="hidden sm:flex items-center space-x-4">
             <Calendar className="w-6 h-6" />
-            <span>{new Date().toLocaleDateString('en-US', {
+            <span className="text-sm">{new Date().toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
               day: 'numeric'
             })}</span>
           </div>
+          <div className="sm:hidden text-right">
+            <p className="text-sm font-semibold">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+            <p className="text-xs text-blue-200">{new Date().getFullYear()}</p>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 border-b overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
+      <div className="flex space-x-1 border-b overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 font-medium ${activeTab === 'overview'
+          className={`px-3 sm:px-4 py-2 font-medium text-sm ${activeTab === 'overview'
             ? 'border-b-2 border-blue-600 text-blue-600'
             : 'text-gray-500 hover:text-gray-700'}`}
         >
@@ -276,15 +280,15 @@ const SuperAdminDashboard = () => {
         </button>
         <button
           onClick={() => setActiveTab('reports')}
-          className={`px-4 py-2 font-medium ${activeTab === 'reports'
+          className={`px-3 sm:px-4 py-2 font-medium text-sm ${activeTab === 'reports'
             ? 'border-b-2 border-blue-600 text-blue-600'
             : 'text-gray-500 hover:text-gray-700'}`}
         >
-          Reports Analytics
+          Reports
         </button>
         <button
           onClick={() => setActiveTab('comparison')}
-          className={`px-4 py-2 font-medium ${activeTab === 'comparison'
+          className={`px-3 sm:px-4 py-2 font-medium text-sm ${activeTab === 'comparison'
             ? 'border-b-2 border-blue-600 text-blue-600'
             : 'text-gray-500 hover:text-gray-700'}`}
         >
@@ -292,89 +296,88 @@ const SuperAdminDashboard = () => {
         </button>
         <button
           onClick={() => setActiveTab('heatmap')}
-          className={`px-4 py-2 font-medium ${activeTab === 'heatmap'
+          className={`px-3 sm:px-4 py-2 font-medium text-sm ${activeTab === 'heatmap'
             ? 'border-b-2 border-blue-600 text-blue-600'
             : 'text-gray-500 hover:text-gray-700'}`}
         >
-          Heatmap Analysis
+          Heatmap
         </button>
-
       </div>
 
       {/* Main Content */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Total Reports */}
-            <div className="bg-white rounded-lg shadow border p-6">
+            <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Reports</p>
-                  <p className="text-3xl font-bold text-blue-600">{totalReports}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Total Reports</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-blue-600">{totalReports}</p>
+                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
                     {activeReports} active • {archivedReports} archived
                   </p>
                 </div>
-                <FileText className="w-10 h-10 text-blue-500 opacity-20" />
+                <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 opacity-20" />
               </div>
             </div>
 
             {/* Active Reports */}
-            <div className="bg-white rounded-lg shadow border p-6">
+            <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Active Reports</p>
-                  <p className="text-3xl font-bold text-green-600">{activeReports}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Active Reports</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-green-600">{activeReports}</p>
+                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
                     {todayCount} today • {weekCount} this week
                   </p>
                 </div>
-                <Activity className="w-10 h-10 text-green-500 opacity-20" />
+                <Activity className="w-8 h-8 sm:w-10 sm:h-10 text-green-500 opacity-20" />
               </div>
             </div>
 
             {/* Resolution Rate */}
-            <div className="bg-white rounded-lg shadow border p-6">
+            <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Resolution Rate</p>
-                  <p className="text-3xl font-bold text-purple-600">{resolutionRate}%</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Resolution Rate</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-purple-600">{resolutionRate}%</p>
+                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
                     Avg response: {avgResponseDays} days
                   </p>
                 </div>
-                <Target className="w-10 h-10 text-purple-500 opacity-20" />
+                <Target className="w-8 h-8 sm:w-10 sm:h-10 text-purple-500 opacity-20" />
               </div>
             </div>
 
             {/* Daily Average */}
-            <div className="bg-white rounded-lg shadow border p-6">
+            <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Daily Average</p>
-                  <p className="text-3xl font-bold text-cyan-600">{avgDailyReports}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Daily Average</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-cyan-600">{avgDailyReports}</p>
+                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
                     Peak: {peakMonthCount} in {peakMonth}
                   </p>
                 </div>
-                <TrendingUp className="w-10 h-10 text-cyan-500 opacity-20" />
+                <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-500 opacity-20" />
               </div>
             </div>
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Monthly Trend */}
-            <div className="bg-white rounded-lg shadow border p-6">
-              <h3 className="text-lg font-semibold mb-4">Report Trends (Last 6 Months)</h3>
-              <div className="h-64">
+            <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Report Trends (Last 6 Months)</h3>
+              <div className="h-48 sm:h-64">
                 {monthlyTrendData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={monthlyTrendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip />
                       <Area
                         type="monotone"
@@ -403,9 +406,9 @@ const SuperAdminDashboard = () => {
             </div>
 
             {/* Status Distribution */}
-            <div className="bg-white rounded-lg shadow border p-6">
-              <h3 className="text-lg font-semibold mb-4">Case Status Distribution</h3>
-              <div className="h-64">
+            <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Case Status Distribution</h3>
+              <div className="h-48 sm:h-64">
                 {statusData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
@@ -874,74 +877,6 @@ const SuperAdminDashboard = () => {
         </div>
       )}
 
-      {/* Floating Pending Completion Popup */}
-      {showCompletionPopup && pendingCompletionEvents.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-[99] max-w-sm w-full bg-white rounded-2xl shadow-2xl border border-amber-200 p-6 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-amber-50 rounded-xl text-amber-500">
-                <Clock className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 text-sm">Action Required</h4>
-                <p className="text-[10px] text-gray-500 font-medium">Pending events for today or past</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => {
-                setShowCompletionPopup(false);
-                sessionStorage.setItem('dismissed_completion_popup', 'true');
-              }}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          
-          <div className="space-y-2.5 max-h-40 overflow-y-auto pr-1">
-            {pendingCompletionEvents.slice(0, 3).map((event) => (
-              <div 
-                key={event._id}
-                onClick={() => navigate('/superadmin/events', { state: { openEditModal: true, eventId: event._id } })}
-                className="flex items-center justify-between p-2.5 bg-amber-50/40 hover:bg-amber-50 rounded-xl border border-amber-100/30 cursor-pointer transition-all hover:scale-[1.01] group"
-              >
-                <div className="min-w-0 flex-1 pr-3">
-                  <p className="text-xs font-bold text-gray-800 truncate group-hover:text-amber-700 transition-colors">{event.title}</p>
-                  <p className="text-[9px] text-gray-500 font-semibold">
-                    Date: {new Date(event.start).toLocaleDateString()}
-                  </p>
-                </div>
-                <span className="shrink-0 text-[9px] font-black text-amber-600 uppercase bg-amber-100/60 px-2 py-0.5 rounded-md tracking-wider">
-                  Complete
-                </span>
-              </div>
-            ))}
-            {pendingCompletionEvents.length > 3 && (
-              <p className="text-center text-[10px] text-gray-500 font-semibold pt-1">
-                And {pendingCompletionEvents.length - 3} more event(s)...
-              </p>
-            )}
-          </div>
-          
-          <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-            <button
-              onClick={() => navigate('/superadmin/events')}
-              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold rounded-xl transition-all text-center"
-            >
-              View All
-            </button>
-            <button
-              onClick={() => {
-                const firstEvent = pendingCompletionEvents[0];
-                navigate('/superadmin/events', { state: { openEditModal: true, eventId: firstEvent._id } });
-              }}
-              className="flex-1 py-2 px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[10px] font-bold rounded-xl transition-all shadow-md shadow-amber-100 text-center"
-            >
-              Complete First
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
