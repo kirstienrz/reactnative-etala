@@ -295,7 +295,37 @@ const Header = () => {
 
   return (
     <>
-      <header className={`sticky top-0 z-[9999] transition-all duration-300 ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
+      {/* Mobile App-style Top Bar */}
+      <header className="sm:hidden sticky top-0 z-[9999] bg-white border-b border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 pt-safe">
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/assets/about/logo.png" alt="GAD Logo" className="w-8 h-8 object-contain" onError={(e) => (e.target.style.display = "none")} />
+            <div>
+              <p className="text-xs font-bold text-purple-900 leading-tight">Gender and Development Office</p>
+              <p className="text-[10px] text-gray-400">TUP-Taguig</p>
+            </div>
+          </Link>
+          <div className="flex items-center gap-2">
+            {isLoggedIn && <NotificationCenter />}
+            {isLoggedIn && (
+              <Link
+                to={role === "superadmin" ? "/superadmin/dashboard" : "/user/dashboard"}
+                className="w-8 h-8 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center font-bold text-sm"
+              >
+                {(user?.name || "U")[0]}
+              </Link>
+            )}
+            {!isLoggedIn && (
+              <Link to="/login" className="text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200">
+                Login
+              </Link>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Desktop Header */}
+      <header className={`hidden sm:block sticky top-0 z-[9999] transition-all duration-300 ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
         {/* Top Bar */}
         <div className="bg-gradient-to-r from-purple-900 to-purple-800 text-white py-1.5 pt-safe text-xs">
           <div className="max-w-7xl mx-auto px-4 flex justify-between items-center font-medium tracking-wide">

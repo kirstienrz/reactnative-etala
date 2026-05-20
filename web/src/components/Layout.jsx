@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import MobileBottomNav from "../components/MobileBottomNav";
 import { useDispatch } from "react-redux";
 import { logout } from "../store/authSlice";
 import useUnreadMessages from "../hooks/useUnreadMessages";
@@ -85,19 +86,26 @@ const Layout = ({ children }) => {
         />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Mobile Header for Admin */}
-          <header className="lg:hidden flex items-center justify-between px-4 pb-3 admin-header-pt bg-gray-900 text-white shadow-md">
-            <div className="flex items-center">
+          <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-gray-900 text-white shadow-md">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-2 rounded-md hover:bg-gray-800 transition-colors"
+                className="p-2 rounded-xl hover:bg-gray-800 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
+              <div>
+                <p className="text-sm font-bold leading-tight">GAD Admin Panel</p>
+                <p className="text-[10px] text-gray-400 leading-tight">{user?.name || "Superadmin"}</p>
+              </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               <NotificationCenter />
+              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center font-bold text-sm">
+                {(user?.name || "A")[0]}
+              </div>
             </div>
           </header>
 
@@ -144,8 +152,9 @@ const Layout = ({ children }) => {
   return (
     <>
       <Header />
-      <main className="min-h-[80vh] bg-gray-50">{children}</main>
+      <main className="min-h-[80vh] bg-gray-50 pb-0 sm:pb-0">{children}</main>
       <Footer />
+      <MobileBottomNav />
     </>
   );
 };

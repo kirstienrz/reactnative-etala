@@ -161,27 +161,26 @@ const LoginPage = () => {
 
       {/* Login Card */}
       <div className="relative w-full max-w-md">
-        <div className="bg-white backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-gray-200">
+        <div className="bg-white backdrop-blur-xl rounded-3xl shadow-2xl p-5 sm:p-8 border border-gray-200">
           {/* Logo */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-3 sm:mb-6">
             <img
               src="/assets/logo.jpg"
               alt="Logo"
-              className="w-20 h-20 object-cover"
+              className="w-14 h-14 sm:w-20 sm:h-20 object-cover"
             />
           </div>
 
-
           {/* Title */}
-          <h2 className="text-3xl font-semibold text-center text-gray-900 mb-2">
+          <h2 className="text-xl sm:text-3xl font-semibold text-center text-gray-900 mb-1 sm:mb-2">
             Welcome to the GAD Portal
           </h2>
-          <p className="text-center text-gray-600 mb-8">
+          <p className="text-center text-gray-600 text-xs sm:text-sm mb-4 sm:mb-8">
             Technological University of the Philippines – Taguig
           </p>
 
           {/* User Type Toggle */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-2 mb-4 sm:mb-6">
             <button
               type="button"
               onClick={() => {
@@ -196,19 +195,19 @@ const LoginPage = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-3 sm:space-y-5">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="email"
                   placeholder="username@tup.edu.ph"
                   value={email}
                   onChange={handleEmailChange}
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-sm"
                   autoComplete="email"
                 />
               </div>
@@ -217,9 +216,9 @@ const LoginPage = () => {
             {usePin ? (
               /* PIN Input */
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">6-Digit PIN</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">6-Digit PIN</label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     type="password"
                     inputMode="numeric"
@@ -229,11 +228,11 @@ const LoginPage = () => {
                     onPaste={handlePinPaste}
                     required
                     maxLength={6}
-                    className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-center text-2xl tracking-widest font-mono"
+                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-center text-2xl tracking-widest font-mono"
                     autoComplete="off"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
+                <p className="text-xs text-gray-500 mt-1 text-center">
                   {pin.length}/6 digits entered
                 </p>
               </div>
@@ -241,35 +240,35 @@ const LoginPage = () => {
               <>
                 {/* TUP ID */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">TUP ID</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">TUP ID</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
                       type="text"
                       placeholder="e.g., TUPT-23-0001"
                       value={tupId}
                       onChange={handleTupIdChange}
                       required
-                      className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all font-mono"
+                      className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all font-mono text-sm"
                       autoComplete="off"
                       maxLength={14}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
+                  <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
                 </div>
 
                 {/* Password */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full pl-11 pr-12 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
+                      className="w-full pl-10 pr-12 py-2.5 sm:py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-sm"
                       autoComplete="current-password"
                       minLength={0}
                     />
@@ -278,13 +277,13 @@ const LoginPage = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white text-gray-400 hover:text-gray-600 p-1 rounded-full border border-gray-200 dark:bg-white dark:text-gray-400 dark:hover:text-gray-600"
                     >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  <div className="flex justify-end mt-2">
+                  <div className="flex justify-end mt-1">
                     <span
                       onClick={() => navigate("/forgot-password")}
-                      className="text-sm text-violet-600 hover:text-violet-700 cursor-pointer font-medium"
+                      className="text-xs sm:text-sm text-violet-600 hover:text-violet-700 cursor-pointer font-medium"
                     >
                       Forgot Password?
                     </span>
@@ -293,19 +292,11 @@ const LoginPage = () => {
               </>
             )}
 
-            {/* Error Message */}
-            {/* {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
-                <span className="font-medium">⚠</span>
-                <span>{error}</span>
-              </div>
-            )} */}
-
             {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-2.5 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -322,7 +313,7 @@ const LoginPage = () => {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center text-sm text-gray-500 space-y-2">
+          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500 space-y-1">
             <p>Need help? Contact GAD Office</p>
             <p>
               Don't have an account?{" "}
