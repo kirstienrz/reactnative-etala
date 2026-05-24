@@ -4,6 +4,8 @@ import { useSelector } from "react-redux";
 import { Send, ArrowLeft, Loader2 } from "lucide-react";
 import { getTicketMessages, sendTicketMessage } from "../../api/tickets";
 import socketService from "../../api/socket";
+import { Capacitor } from "@capacitor/core";
+import API from "../../api/config";
 
 const ChatScreen = () => {
   const navigate = useNavigate();
@@ -17,6 +19,51 @@ const ChatScreen = () => {
   const [loading, setLoading] = useState(true);
   const [ticketStatus, setTicketStatus] = useState(null);
   const [typingUser, setTypingUser] = useState(null);
+  const [isNativeApp, setIsNativeApp] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsNativeApp(platform === "android" || platform === "ios");
+    } catch (e) {
+      setIsNativeApp(false);
+    }
+    
+    let maxSeenHeight = window.innerHeight;
+    
+    const checkKeyboard = () => {
+      const currentHeight = window.innerHeight;
+      if (currentHeight > maxSeenHeight) {
+        maxSeenHeight = currentHeight;
+      }
+      
+      const visualViewportHeight = window.visualViewport ? window.visualViewport.height : currentHeight;
+      const isWindowShrunk = maxSeenHeight - currentHeight > 100;
+      const isVisualShrunk = currentHeight - visualViewportHeight > 100;
+      
+      if (isWindowShrunk || isVisualShrunk) {
+        setIsKeyboardOpen(true);
+      } else {
+        // Only set keyboard to closed if input is not focused or heights are normal
+        if (document.activeElement !== inputRef.current || (!isWindowShrunk && !isVisualShrunk)) {
+          setIsKeyboardOpen(false);
+        }
+      }
+    };
+    
+    window.addEventListener("resize", checkKeyboard);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", checkKeyboard);
+    }
+    
+    return () => {
+      window.removeEventListener("resize", checkKeyboard);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", checkKeyboard);
+      }
+    };
+  }, []);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -313,7 +360,7 @@ const ChatScreen = () => {
                         }`}
                     >
                       <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${isMe
+                        className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2 ${isMe
                             ? "bg-purple-600 text-white"
                             : "bg-gray-100 text-gray-900"
                           } ${message.isTemp ? "opacity-60" : ""}`}
@@ -325,39 +372,94 @@ const ChatScreen = () => {
                         {/* Attachments Section */}
                         {message.attachments?.length > 0 && (
                           <div className="mt-3 space-y-2 border-t border-white/20 pt-2">
-                            {message.attachments.map((file, fIdx) => (
-                              <a
-                                key={fIdx}
-                                href={file.uri}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isMe
-                                    ? "bg-white/10 hover:bg-white/20 text-white"
-                                    : "bg-white hover:bg-gray-50 text-purple-600 border border-gray-200 shadow-sm"
-                                  }`}
-                              >
-                                <div className={`p-1.5 rounded ${isMe ? "bg-white/20" : "bg-purple-50"}`}>
-                                  {file.type === "application/pdf" ? (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
-                                  ) : (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 10-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                    </svg>
-                                  )}
+                            {message.attachments.map((file, fIdx) => {
+                              const handleDownload = async (e) => {
+                                e.preventDefault();
+
+                                // ✅ If running inside APK, open file in system browser so it downloads natively
+                                if (Capacitor.isNative) {
+                                  try {
+                                    let absoluteUrl = file.uri;
+                                    if (file.uri.startsWith('/')) {
+                                      const apiBase = API.defaults.baseURL || '';
+                                      const serverBase = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
+                                      absoluteUrl = `${serverBase}${file.uri}`;
+                                    }
+                                    window.open(absoluteUrl, '_system');
+                                    return;
+                                  } catch (err) {
+                                    console.error('System download failed:', err);
+                                  }
+                                }
+
+                                try {
+                                  const token = localStorage.getItem('token');
+                                  const isApiUrl = file.uri && (file.uri.includes('localhost:') || file.uri.startsWith('/'));
+                                  const fetchOptions = isApiUrl && token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+                                  
+                                  const response = await fetch(file.uri, fetchOptions);
+                                  if (!response.ok && !file.uri.startsWith('data:')) {
+                                    throw new Error('Network response was not ok');
+                                  }
+                                  
+                                  const blob = await response.blob();
+                                  
+                                  // Ensure it's explicitly typed as PDF if it's a PDF file
+                                  const isPdf = file.type === 'application/pdf' || file.fileName?.endsWith('.pdf');
+                                  const finalBlob = isPdf ? new Blob([blob], { type: 'application/pdf' }) : blob;
+                                  
+                                  const url = window.URL.createObjectURL(finalBlob);
+
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.download = file.fileName || (isPdf ? 'Document.pdf' : `Attachment_${Date.now()}`);
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  
+                                  setTimeout(() => {
+                                    document.body.removeChild(link);
+                                    window.URL.revokeObjectURL(url);
+                                  }, 100);
+                                } catch (err) {
+                                  console.error('Download failed:', err);
+                                  window.open(file.uri, '_blank');
+                                }
+                              };
+
+                              const isPdfFile = file.type === "application/pdf" || file.fileName?.endsWith('.pdf');
+
+                              return (
+                                <div
+                                  key={fIdx}
+                                  onClick={handleDownload}
+                                  className={`flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer w-full min-w-0 ${isMe
+                                      ? "bg-white/10 hover:bg-white/20 text-white"
+                                      : "bg-white hover:bg-gray-50 text-purple-600 border border-gray-200 shadow-sm"
+                                    }`}
+                                >
+                                  <div className={`p-1.5 rounded ${isMe ? "bg-white/20" : "bg-purple-50"}`}>
+                                    {isPdfFile ? (
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 10-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold truncate">{file.fileName || "File Attachment"}</p>
+                                    <p className={`text-[10px] ${isMe ? "text-purple-200" : "text-gray-400"}`}>
+                                      {file.type?.split('/')[1]?.toUpperCase() || "FILE"}
+                                    </p>
+                                  </div>
+                                  <svg className={`w-3.5 h-3.5 ${isMe ? "text-white/60" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold truncate">{file.fileName || "File Attachment"}</p>
-                                  <p className={`text-[10px] ${isMe ? "text-purple-200" : "text-gray-400"}`}>
-                                    {file.type?.split('/')[1]?.toUpperCase() || "FILE"}
-                                  </p>
-                                </div>
-                                <svg className={`w-3.5 h-3.5 ${isMe ? "text-white/60" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                              </a>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
 
@@ -407,7 +509,7 @@ const ChatScreen = () => {
           </div>
 
           {/* Input */}
-          <div className="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50">
+          <div className={`flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50 ${isNativeApp && !isKeyboardOpen ? 'pb-16' : ''}`}>
             {isTicketClosed ? (
               <div className="text-center py-4">
                 <p className="text-sm text-gray-500">
@@ -421,6 +523,14 @@ const ChatScreen = () => {
                   value={inputText}
                   onChange={handleTyping}
                   onKeyPress={handleKeyPress}
+                  onFocus={() => setIsKeyboardOpen(true)}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      if (document.activeElement !== inputRef.current) {
+                        setIsKeyboardOpen(false);
+                      }
+                    }, 150);
+                  }}
                   placeholder="Type a message..."
                   disabled={sending}
                   rows={1}

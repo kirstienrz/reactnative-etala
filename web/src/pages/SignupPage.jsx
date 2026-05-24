@@ -4,6 +4,7 @@ import { Mail, Lock, User, Eye, EyeOff, Calendar, Shield, X, Info } from "lucide
 import { toast } from "react-toastify";
 import { signup } from "../api/auth"; 
 import PolicyModal from "../components/PolicyModal";
+import { Capacitor } from "@capacitor/core";
 
 const departments = [
   { code: 'BASD', name: 'Basic Arts and Sciences Department' },
@@ -14,6 +15,17 @@ const departments = [
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const [isNativeApp, setIsNativeApp] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsNativeApp(platform === "android" || platform === "ios");
+    } catch (e) {
+      setIsNativeApp(false);
+    }
+  }, []);
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -158,55 +170,57 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className={`${isNativeApp ? 'bg-white w-full px-8 pt-8 pb-32 flex flex-col justify-center min-h-[85vh]' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4 relative overflow-hidden'}`}>
       {/* Background decorations */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-violet-300 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300 rounded-full blur-3xl animate-pulse delay-700"></div>
-        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-violet-200 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
+      {!isNativeApp && (
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-violet-300 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300 rounded-full blur-3xl animate-pulse delay-700"></div>
+          <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-violet-200 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+      )}
 
       {/* Signup Card */}
-      <div className="relative w-full max-w-md">
-        <div className="bg-white backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-gray-200">
+      <div className={`relative w-full ${isNativeApp ? 'max-w-md mx-auto' : 'max-w-md'}`}>
+        <div className={`${isNativeApp ? 'w-full' : 'bg-white backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-gray-200'}`}>
           {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <img src="/assets/logo.jpg" alt="Logo" className="w-20 h-20 object-cover" />
+          <div className={`flex justify-center ${isNativeApp ? 'mb-4' : 'mb-6'}`}>
+            <img src="/assets/logo.jpg" alt="Logo" className={`${isNativeApp ? 'w-16 h-16' : 'w-20 h-20'} object-cover`} />
           </div>
 
-          <h2 className="text-3xl font-semibold text-center text-gray-900 mb-2">
+          <h2 className={`${isNativeApp ? 'text-[26px]' : 'text-3xl'} font-semibold text-center text-gray-900 mb-1`}>
             Create an Account
           </h2>
-          <p className="text-center text-gray-600 mb-8">
+          <p className={`text-center text-gray-600 ${isNativeApp ? 'mb-6 text-sm' : 'mb-8'}`}>
             Technological University of the Philippines – Taguig
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className={isNativeApp ? 'space-y-4' : 'space-y-5'}>
             {/* First & Last Name */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   First Name <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-                />
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    className={`w-full pl-3 pr-3 ${isNativeApp ? 'py-3 text-[15px]' : 'py-3'} bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    className={`w-full pl-3 pr-3 ${isNativeApp ? 'py-3 text-[15px]' : 'py-3'} bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all`}
+                  />
               </div>
             </div>
 
@@ -217,14 +231,14 @@ const SignupPage = () => {
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="email"
-                  placeholder="username@tup.edu.ph"
-                  value={email}
-                  onChange={handleEmailChange}
-                  required
-                  className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-                />
+                  <input
+                    type="email"
+                    placeholder="username@tup.edu.ph"
+                    value={email}
+                    onChange={handleEmailChange}
+                    required
+                    className={`w-full pl-11 pr-4 ${isNativeApp ? 'py-3 text-[15px]' : 'py-3'} bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all`}
+                  />
               </div>
               {(userType === "Student" || userType === "Faculty") && (
                 <p className="flex items-center gap-1 text-[10px] text-gray-500 mt-1 px-1">
@@ -247,7 +261,7 @@ const SignupPage = () => {
                 value={tupId}
                 onChange={handleTupIdChange}
                 required
-                className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+                className={`w-full pl-3 pr-3 ${isNativeApp ? 'py-3 text-[15px]' : 'py-3'} bg-white text-gray-900 border border-gray-300 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all`}
                 maxLength={14}
               />
               <p className="text-xs text-gray-500 mt-1">Format: TUPT-XX-XXXX or XXX-XX-XXXX</p>
@@ -307,7 +321,7 @@ const SignupPage = () => {
             value={birthday}
             onChange={(e) => setBirthday(e.target.value)}
             required
-            className="w-full pl-11 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+            className={`w-full pl-11 pr-3 ${isNativeApp ? 'py-3 text-[15px]' : 'py-3'} bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all`}
           />
         </div>
       </div>
@@ -320,15 +334,15 @@ const SignupPage = () => {
       </label>
       <div className="relative">
         <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-        <input
-          type={showPassword ? "text" : "password"}
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full pl-11 pr-12 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-          minLength={6}
-        />
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className={`w-full pl-11 pr-12 ${isNativeApp ? 'py-3 text-[15px]' : 'py-3'} bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all`}
+            minLength={6}
+          />
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
@@ -345,12 +359,12 @@ const SignupPage = () => {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Department <span className="text-red-500">*</span>
         </label>
-        <select
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-          required
-          className="w-full pl-3 pr-3 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
-        >
+          <select
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            required
+            className={`w-full pl-3 pr-3 ${isNativeApp ? 'py-3 text-[15px]' : 'py-3'} bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all`}
+          >
           <option value="">Select Department</option>
           {departments.map((d) => (
             <option key={d.code} value={d.code}>{d.name}</option>
@@ -375,7 +389,7 @@ const SignupPage = () => {
     <button
       type="submit"
       disabled={loading}
-      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-2"
+      className={`w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-4`}
     >
       {loading ? "Signing up..." : "Create Account"}
     </button>

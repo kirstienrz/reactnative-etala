@@ -8,14 +8,22 @@ class SocketService {
     this.socket = null;
     this.isConnected = false;
     this.currentTicketRoom = null; // Track current ticket room
+    this.currentUserIdRoom = null; // Track current user room
+    this.isAdminRoomJoined = false; // Track admin room status
   }
 
   connect() {
-    if (this.socket?.connected) {
-      console.log("✅ Socket already connected");
+    if (this.socket) {
+      if (!this.socket.connected) {
+        console.log("⏳ Socket initialized but not connected, connecting...");
+        this.socket.connect();
+      } else {
+        console.log("✅ Socket already connected");
+      }
       return this.socket;
     }
 
+    console.log("🔌 Initializing new socket connection to:", SOCKET_URL);
     this.socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
       reconnection: true,
@@ -27,6 +35,20 @@ class SocketService {
     this.socket.on("connect", () => {
       console.log("🟢 Socket connected:", this.socket.id);
       this.isConnected = true;
+
+      // 🔥 Auto re-join rooms upon connection/reconnection
+      if (this.currentTicketRoom) {
+        this.socket.emit("join-ticket", this.currentTicketRoom);
+        console.log(`🎫 Auto-rejoined ticket room on connect: ${this.currentTicketRoom}`);
+      }
+      if (this.currentUserIdRoom) {
+        this.socket.emit("join-user-room", this.currentUserIdRoom);
+        console.log(`👤 Auto-rejoined user room on connect: ${this.currentUserIdRoom}`);
+      }
+      if (this.isAdminRoomJoined) {
+        this.socket.emit("join-admin-room");
+        console.log("👑 Auto-rejoined admin room on connect");
+      }
     });
 
     this.socket.on("disconnect", () => {
@@ -56,47 +78,52 @@ class SocketService {
   }
 
   joinTicket(ticketNumber) {
-    if (this.socket?.connected) {
-      // Leave previous ticket room if exists
-      if (this.currentTicketRoom && this.currentTicketRoom !== ticketNumber) {
+    // Leave previous ticket room if exists and connected
+    if (this.currentTicketRoom && this.currentTicketRoom !== ticketNumber) {
+      if (this.socket?.connected) {
         this.socket.emit("leave-ticket", this.currentTicketRoom);
-        console.log(`🚪 Auto-left previous ticket room: ${this.currentTicketRoom}`);
       }
-      
-      // Join new ticket room
+      console.log(`🚪 Auto-left previous ticket room: ${this.currentTicketRoom}`);
+    }
+    
+    // Set target room state (queued/persisted for connection)
+    this.currentTicketRoom = ticketNumber;
+    
+    if (this.socket?.connected) {
       this.socket.emit("join-ticket", ticketNumber);
-      this.currentTicketRoom = ticketNumber;
       console.log(`🎫 Joined ticket room: ${ticketNumber}`);
     } else {
-      console.warn("⚠️ Cannot join ticket - socket not connected");
+      console.log(`⏳ Socket not connected yet. Ticket room ${ticketNumber} queued for connection.`);
     }
   }
 
   leaveTicket(ticketNumber) {
     if (this.socket?.connected) {
       this.socket.emit("leave-ticket", ticketNumber);
-      if (this.currentTicketRoom === ticketNumber) {
-        this.currentTicketRoom = null;
-      }
-      console.log(`🚪 Left ticket room: ${ticketNumber}`);
     }
+    if (this.currentTicketRoom === ticketNumber) {
+      this.currentTicketRoom = null;
+    }
+    console.log(`🚪 Left ticket room: ${ticketNumber}`);
   }
 
   joinAdminRoom() {
+    this.isAdminRoomJoined = true;
     if (this.socket?.connected) {
       this.socket.emit("join-admin-room");
       console.log("👑 Joined admin room");
     } else {
-      console.warn("⚠️ Cannot join admin room - socket not connected");
+      console.log("⏳ Socket not connected yet. Admin room queued for connection.");
     }
   }
 
   joinUserRoom(userId) {
+    this.currentUserIdRoom = userId;
     if (this.socket?.connected) {
       this.socket.emit("join-user-room", userId);
       console.log(`👤 Joined user room: ${userId}`);
     } else {
-      console.warn("⚠️ Cannot join user room - socket not connected");
+      console.log(`⏳ Socket not connected yet. User room ${userId} queued for connection.`);
     }
   }
 

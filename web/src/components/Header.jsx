@@ -6,17 +6,28 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/authSlice";
 import LogoutModal from "./LogoutModal";
 import NotificationCenter from "./NotificationCenter";
+import { Capacitor } from "@capacitor/core";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState("");
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
   const { isLoggedIn, role, user } = useSelector((state) => state.auth);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsNativeApp(platform === "android" || platform === "ios");
+    } catch (e) {
+      setIsNativeApp(false);
+    }
+  }, []);
 
   // Reference for dropdown to close when clicking outside
   const userDropdownRef = useRef(null);
@@ -189,11 +200,18 @@ const Header = () => {
         aria-label="Mobile menu"
       >
         <div className="flex flex-col h-full bg-white">
-          <div className="px-4 pb-4 drawer-header-h flex items-center justify-between border-b border-gray-50 flex-shrink-0 bg-purple-900 text-white">
-            <span className="font-bold text-lg mt-auto">Menu</span>
+          <div className={`px-4 pb-4 ${isNativeApp ? "pt-safe" : "drawer-header-h"} flex items-center justify-between border-b border-gray-100 flex-shrink-0 ${isNativeApp ? "bg-white text-gray-800" : "bg-purple-900 text-white"}`}>
+            {isNativeApp ? (
+              <div className="flex items-center gap-3 mt-4">
+                <img src="/assets/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full shadow-sm" />
+                <span className="font-black text-lg text-purple-950">eTALA</span>
+              </div>
+            ) : (
+              <span className="font-bold text-lg mt-auto">Menu</span>
+            )}
             <button
               onClick={() => setIsMenuOpen(false)}
-              className="p-1.5 hover:bg-white/20 rounded-full transition-colors mt-auto"
+              className={`p-1.5 rounded-full transition-colors ${isNativeApp ? "hover:bg-gray-100 text-gray-500 mt-4" : "hover:bg-white/20 mt-auto"}`}
               aria-label="Close menu"
             >
               <X size={24} />
@@ -295,49 +313,21 @@ const Header = () => {
 
   return (
     <>
-      {/* Mobile App-style Top Bar */}
-      <header className="sm:hidden sticky top-0 z-[9999] bg-white border-b border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3 pt-safe">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/assets/about/logo.png" alt="GAD Logo" className="w-8 h-8 object-contain" onError={(e) => (e.target.style.display = "none")} />
-            <div>
-              <p className="text-xs font-bold text-purple-900 leading-tight">Gender and Development Office</p>
-              <p className="text-[10px] text-gray-400">TUP-Taguig</p>
+      <header className={`sticky top-0 z-[9999] transition-all duration-300 ${isNativeApp ? "bg-white shadow-sm border-b border-gray-100" : scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
+        {/* Top Bar (Hidden on Native App) */}
+        {!isNativeApp && (
+          <div className="bg-gradient-to-r from-purple-900 to-purple-800 text-white py-1.5 pt-safe text-xs">
+            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center font-medium tracking-wide">
             </div>
-          </Link>
-          <div className="flex items-center gap-2">
-            {isLoggedIn && <NotificationCenter />}
-            {isLoggedIn && (
-              <Link
-                to={role === "superadmin" ? "/superadmin/dashboard" : "/user/dashboard"}
-                className="w-8 h-8 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center font-bold text-sm"
-              >
-                {(user?.name || "U")[0]}
-              </Link>
-            )}
-            {!isLoggedIn && (
-              <Link to="/login" className="text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200">
-                Login
-              </Link>
-            )}
           </div>
-        </div>
-      </header>
-
-      {/* Desktop Header */}
-      <header className={`hidden sm:block sticky top-0 z-[9999] transition-all duration-300 ${scrolled ? "shadow-lg bg-white/95 backdrop-blur-md" : "bg-white"}`}>
-        {/* Top Bar */}
-        <div className="bg-gradient-to-r from-purple-900 to-purple-800 text-white py-1.5 pt-safe text-xs">
-          <div className="max-w-7xl mx-auto px-4 flex justify-between items-center font-medium tracking-wide">
-          </div>
-        </div>
+        )}
 
         {/* Main Header */}
-        <div className="border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 py-3 md:py-4 flex justify-between items-center gap-4">
+        <div className={isNativeApp ? "pt-safe" : "border-b border-gray-100"}>
+          <div className={`max-w-7xl mx-auto ${isNativeApp ? "px-5 py-3" : "px-4 py-3 md:py-4"} flex justify-between items-center gap-4`}>
             {/* Logo Section */}
             <Link to="/" className="flex items-center gap-3 no-underline group flex-shrink-0 min-w-0" onClick={() => handleLinkClick("/")}>
-              <div className="w-12 h-12 md:w-14 md:h-14 flex-shrink-0 overflow-hidden rounded-full shadow-md ring-2 ring-purple-100 group-hover:ring-purple-200 transition-all">
+              <div className={`flex-shrink-0 overflow-hidden rounded-full shadow-sm ring-2 ring-purple-100 group-hover:ring-purple-200 transition-all ${isNativeApp ? "w-9 h-9" : "w-12 h-12 md:w-14 md:h-14"}`}>
                 <img
                   src="/assets/logo.jpg"
                   alt="GAD Logo"
@@ -345,7 +335,7 @@ const Header = () => {
                   onError={(e) => (e.target.style.display = "none")}
                 />
               </div>
-              <div className="hidden sm:block truncate">
+              <div className={isNativeApp ? "block" : "hidden sm:block truncate"}>
                 <h1 className="text-lg md:text-xl font-bold text-purple-950 leading-tight group-hover:text-purple-800 transition-colors">
                   Gender and Development Office
                 </h1>
@@ -353,10 +343,12 @@ const Header = () => {
                   TUP-Taguig
                 </p>
               </div>
-              <div className="sm:hidden">
-                <h1 className="text-sm font-bold text-purple-950 leading-tight">Gender and Development Office</h1>
-                <p className="text-xs text-gray-500 font-medium">TUP-Taguig</p>
-              </div>
+              {!isNativeApp && (
+                <div className="sm:hidden">
+                  <h1 className="text-sm font-bold text-purple-950 leading-tight">Gender and Development Office</h1>
+                  <p className="text-xs text-gray-500 font-medium">TUP-Taguig</p>
+                </div>
+              )}
             </Link>
 
             {/* Desktop Menu */}

@@ -20,6 +20,8 @@ import {
 } from 'date-fns';
 import { useDispatch } from 'react-redux';
 import { setUnreadMessageCount } from '../../store/uiSlice';
+import { Capacitor } from '@capacitor/core';
+import API from '../../api/config';
 
 // ─── Confirmation Modal ───────────────────────────────────────────────────────
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 'info', confirmText = 'Confirm', cancelText = 'Cancel', isLoading = false }) => {
@@ -1044,7 +1046,7 @@ const TicketMessagingSystem = () => {
                       const isAdmin = msg.sender === 'superadmin', isLast = isAdmin && idx === lastAdminIdx, isAppt = msg.metadata?.type === 'appointment_link';
                       return (
                         <div key={idx} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-md rounded-2xl p-3 ${isAppt ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg' : isAdmin ? 'bg-blue-500' : 'bg-white shadow-sm'}`}>
+                          <div className={`max-w-[85%] sm:max-w-md rounded-2xl p-3 ${isAppt ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg' : isAdmin ? 'bg-blue-500' : 'bg-white shadow-sm'}`}>
                             {isAppt && <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30"><Calendar className="w-4 h-4 text-white" /><span className="text-xs font-semibold text-white">Appointment Booking</span></div>}
                             <p className={`text-sm whitespace-pre-line ${isAppt || isAdmin ? 'text-white' : 'text-gray-900'}`}>{msg.content}</p>
 
@@ -1055,43 +1057,52 @@ const TicketMessagingSystem = () => {
                                   const isPdf = file.type === 'application/pdf' || file.fileName?.endsWith('.pdf');
                                   const handleDownload = async (e) => {
                                     e.preventDefault();
+
+                                    // ✅ If running inside APK, open file in system browser so it downloads natively
+                                    if (Capacitor.isNative) {
+                                      try {
+                                        let absoluteUrl = file.uri;
+                                        if (file.uri.startsWith('/')) {
+                                          const apiBase = API.defaults.baseURL || '';
+                                          const serverBase = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
+                                          absoluteUrl = `${serverBase}${file.uri}`;
+                                        }
+                                        window.open(absoluteUrl, '_system');
+                                        return;
+                                      } catch (err) {
+                                        console.error('System download failed:', err);
+                                      }
+                                    }
+
                                     try {
                                       let url;
-                                      if (file.uri.startsWith('data:')) {
-                                        // 1. Manually convert Base64 to Blob (Safer than fetch for very large data URLs)
-                                        const parts = file.uri.split(',');
-                                        const contentType = parts[0].split(':')[1].split(';')[0];
-                                        const b64Data = parts[1];
-
-                                        const byteCharacters = atob(b64Data);
-                                        const byteArrays = [];
-
-                                        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-                                          const slice = byteCharacters.slice(offset, offset + 512);
-                                          const byteNumbers = new Array(slice.length);
-                                          for (let i = 0; i < slice.length; i++) {
-                                            byteNumbers[i] = slice.charCodeAt(i);
-                                          }
-                                          const byteArray = new Uint8Array(byteNumbers);
-                                          byteArrays.push(byteArray);
-                                        }
-
-                                        const blob = new Blob(byteArrays, { type: contentType });
-                                        url = window.URL.createObjectURL(blob);
-                                      } else {
-                                        // 2. Handle remote URL (Cloudinary, etc)
-                                        const response = await fetch(file.uri);
-                                        const blob = await response.blob();
-                                        url = window.URL.createObjectURL(blob);
+                                      const token = localStorage.getItem('token');
+                                      const isApiUrl = file.uri && (file.uri.includes('localhost:') || file.uri.startsWith('/'));
+                                      const fetchOptions = isApiUrl && token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+                                      
+                                      const response = await fetch(file.uri, fetchOptions);
+                                      if (!response.ok && !file.uri.startsWith('data:')) {
+                                        throw new Error('Network response was not ok');
                                       }
+                                      
+                                      const blob = await response.blob();
+                                      
+                                      // Ensure it's explicitly typed as PDF if it's a PDF file
+                                      const isPdf = file.type === 'application/pdf' || file.fileName?.endsWith('.pdf');
+                                      const finalBlob = isPdf ? new Blob([blob], { type: 'application/pdf' }) : blob;
+                                      
+                                      url = window.URL.createObjectURL(finalBlob);
 
                                       const link = document.createElement('a');
                                       link.href = url;
                                       link.download = file.fileName || `Attachment_${Date.now()}`;
                                       document.body.appendChild(link);
                                       link.click();
-                                      document.body.removeChild(link);
-                                      window.URL.revokeObjectURL(url);
+                                      
+                                      setTimeout(() => {
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(url);
+                                      }, 100);
                                     } catch (err) {
                                       console.error('Download failed:', err);
                                       window.open(file.uri, '_blank');
@@ -1101,7 +1112,7 @@ const TicketMessagingSystem = () => {
                                     <div
                                       key={fIdx}
                                       onClick={handleDownload}
-                                      className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer group border shadow-sm ${isAdmin
+                                      className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer group border shadow-sm w-full min-w-0 ${isAdmin
                                         ? "bg-white/10 hover:bg-white/20 text-white border-white/20"
                                         : "bg-white hover:bg-blue-50 text-gray-700 border-gray-200 hover:border-blue-200"
                                         }`}

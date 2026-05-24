@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { getUserAnalytics } from '../../api/user';
 import { getReportAnalytics } from '../../api/report';
@@ -11,13 +12,20 @@ import {
   Users, UserCheck, FileText, AlertTriangle, Shield,
   MessageSquare, Activity, TrendingUp, Clock, CheckCircle,
   AlertCircle, Bell, PieChart as PieChartIcon, Archive,
-  Target, TrendingDown, BarChart3, Calendar, X
+  Target, TrendingDown, BarChart3, Calendar, X, ChevronRight,
+  Menu, LogOut
 } from 'lucide-react';
 import HeatmapTable from '../../components/HeatmapTable';
+import NotificationCenter from '../../components/NotificationCenter';
 import { getAllCalendarEvents } from '../../api/calendar';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../../store/authSlice';
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const [isNativeApp, setIsNativeApp] = useState(false);
   const [userData, setUserData] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +39,15 @@ const SuperAdminDashboard = () => {
   const [pendingCompletionEvents, setPendingCompletionEvents] = useState([]);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
 
+  // Detect native app (Capacitor APK)
+  useEffect(() => {
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsNativeApp(platform === 'android' || platform === 'ios');
+    } catch (e) {
+      setIsNativeApp(false);
+    }
+  }, []);
 
   useEffect(() => {
     const checkPendingEvents = async () => {
@@ -38,7 +55,7 @@ const SuperAdminDashboard = () => {
         const res = await getAllCalendarEvents();
         if (res.success && Array.isArray(res.data)) {
           const now = new Date();
-          
+
           const pending = res.data.filter(event => {
             const eventDate = new Date(event.start);
             const isPastOrToday = eventDate <= now || eventDate.toDateString() === now.toDateString();
@@ -46,7 +63,7 @@ const SuperAdminDashboard = () => {
             const isNotCompleted = event.extendedProps?.status !== 'completed' && event.extendedProps?.status !== 'cancelled';
             return isPastOrToday && isApplicableType && isNotCompleted;
           });
-          
+
           if (pending.length > 0) {
             setPendingCompletionEvents(pending);
             const hasBeenDismissed = sessionStorage.getItem('dismissed_completion_popup');
@@ -213,10 +230,10 @@ const SuperAdminDashboard = () => {
   const peakMonth = performance.peakMonth || "N/A";
   const peakMonthCount = performance.peakMonthCount || 0;
   const agileTestData = [
-    { name: 'Passed', value: 75, color: '#10b981' }, 
-    { name: 'In Progress', value: 15, color: '#3b82f6' }, 
-    { name: 'Pending Review', value: 8, color: '#f59e0b' }, 
-    { name: 'Failed / Bugs', value: 2, color: '#ef4444' } 
+    { name: 'Passed', value: 75, color: '#10b981' },
+    { name: 'In Progress', value: 15, color: '#3b82f6' },
+    { name: 'Pending Review', value: 8, color: '#f59e0b' },
+    { name: 'Failed / Bugs', value: 2, color: '#ef4444' }
   ];
 
   // Formal Agile Dashboard Data
@@ -243,6 +260,387 @@ const SuperAdminDashboard = () => {
     { module: 'PDF Generation', coverage: 65, target: 80 },
   ];
 
+  // =============================================
+  // NATIVE MOBILE APP LAYOUT (Capacitor APK)
+  // =============================================
+  if (isNativeApp) {
+    const displayName = user?.name || user?.firstName || 'Admin';
+    const nativeTabs = [
+      { id: 'overview', label: 'Overview', icon: Activity },
+      { id: 'reports', label: 'Reports', icon: FileText },
+      { id: 'comparison', label: 'Compare', icon: BarChart3 },
+      { id: 'heatmap', label: 'Heatmap', icon: Target },
+    ];
+
+    return (
+      <div className="bg-gray-50 min-h-screen native-admin-content relative">
+        {/* Dark matching header background stripe behind stats cards for overlapping layout */}
+        <div className="bg-gray-900 h-16 w-full absolute top-0 left-0 border-b border-gray-800 z-10" />
+
+        {/* ===== NATIVE STAT CARDS (Horizontal Scroll) ===== */}
+        <div className="px-4 pt-3 relative z-20">
+          <div className="flex gap-3 overflow-x-auto native-scroll-hide pb-2">
+            {[
+              { label: 'Total Reports', value: totalReports, sub: `${activeReports} active`, color: 'from-blue-500 to-blue-600', icon: FileText },
+              { label: 'Active', value: activeReports, sub: `${todayCount} today`, color: 'from-emerald-500 to-emerald-600', icon: Activity },
+              { label: 'Resolution', value: `${resolutionRate}%`, sub: `${avgResponseDays}d avg`, color: 'from-purple-500 to-purple-600', icon: Target },
+              { label: 'Daily Avg', value: avgDailyReports, sub: `Peak: ${peakMonth}`, color: 'from-cyan-500 to-cyan-600', icon: TrendingUp },
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div key={i} className={`flex-shrink-0 w-36 bg-gradient-to-br ${stat.color} rounded-2xl p-4 text-white shadow-lg`}>
+                  <Icon size={18} className="opacity-60 mb-2" />
+                  <p className="text-2xl font-extrabold leading-none">{stat.value}</p>
+                  <p className="text-xs font-medium opacity-90 mt-1">{stat.label}</p>
+                  <p className="text-[10px] opacity-60 mt-0.5">{stat.sub}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ===== NATIVE TAB CONTENT ===== */}
+        <div className="px-4 mt-5 space-y-4">
+          {/* OVERVIEW TAB */}
+          {activeTab === 'overview' && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-800 mb-3">Report Trends</h3>
+                <div className="h-48">
+                  {monthlyTrendData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <AreaChart data={monthlyTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} width={30} />
+                        <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                        <Area type="monotone" dataKey="reports" stroke="#7c3aed" fill="#7c3aed" fillOpacity={0.15} name="Reports" />
+                        <Area type="monotone" dataKey="archived" stroke="#94a3b8" fill="#94a3b8" fillOpacity={0.1} name="Archived" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">No trend data</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-800 mb-3">Case Status</h3>
+                <div className="h-52">
+                  {statusData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <PieChart>
+                        <Pie data={statusData} cx="50%" cy="50%" outerRadius={65} innerRadius={35} dataKey="value" paddingAngle={2}>
+                          {statusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">No status data</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-bold text-gray-800">Recent Reports</h3>
+                  <div className="flex gap-2 text-[10px]">
+                    <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-bold">{todayCount} today</span>
+                    <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded-full font-bold">{weekCount} this week</span>
+                  </div>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {recentReports.length > 0 ? recentReports.map((report, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl native-press">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-gray-900">{report.ticketNumber}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            report.caseStatus === 'Case Closed' ? 'bg-green-100 text-green-700' :
+                            report.caseStatus === 'For Interview' ? 'bg-blue-100 text-blue-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>{report.caseStatus || 'Pending'}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{new Date(report.submittedAt).toLocaleDateString()}</p>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-300" />
+                    </div>
+                  )) : (
+                    <div className="flex items-center justify-center h-32 text-gray-400 text-sm">No recent reports</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* REPORTS TAB */}
+          {activeTab === 'reports' && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-800 mb-3">Top Departments</h3>
+                <div className="h-56">
+                  {topDeptData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <BarChart data={topDeptData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis type="number" tick={{ fontSize: 10 }} />
+                        <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 9 }} />
+                        <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                        <Bar dataKey="value" fill="#7c3aed" radius={[0, 6, 6, 0]} name="Reports" barSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">No department data</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-800 mb-3">Severity Levels</h3>
+                <div className="h-52">
+                  {severityData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <PieChart>
+                        <Pie data={severityData} cx="50%" cy="50%" outerRadius={65} innerRadius={35} dataKey="value" paddingAngle={2}>
+                          {severityData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">No severity data</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-red-50 rounded-2xl p-3 border border-red-100 text-center">
+                  <p className="text-xl font-extrabold text-red-600">{severeReports}</p>
+                  <p className="text-[10px] font-bold text-red-500 uppercase mt-1">Severe</p>
+                </div>
+                <div className="bg-amber-50 rounded-2xl p-3 border border-amber-100 text-center">
+                  <p className="text-xl font-extrabold text-amber-600">{moderateReports}</p>
+                  <p className="text-[10px] font-bold text-amber-500 uppercase mt-1">Moderate</p>
+                </div>
+                <div className="bg-emerald-50 rounded-2xl p-3 border border-emerald-100 text-center">
+                  <p className="text-xl font-extrabold text-emerald-600">{mildReports}</p>
+                  <p className="text-[10px] font-bold text-emerald-500 uppercase mt-1">Mild</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* COMPARISON TAB */}
+          {activeTab === 'comparison' && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-800 mb-3">User Registration</h3>
+                <div className="h-48">
+                  {userTrendData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <LineChart data={userTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} width={30} />
+                        <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                        <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} name="Users" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">No user trend data</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h3 className="text-sm font-bold text-gray-800 mb-3">User Types</h3>
+                <div className="h-48">
+                  {userTypeData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <BarChart data={userTypeData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} width={30} />
+                        <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                        <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} name="Users" barSize={24} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">No user type data</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                  <Users size={18} className="text-blue-400 mb-1" />
+                  <p className="text-xl font-extrabold text-blue-700">{userOverview.totalUsers || 0}</p>
+                  <p className="text-[10px] font-bold text-blue-500 uppercase mt-0.5">Total Users</p>
+                </div>
+                <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
+                  <UserCheck size={18} className="text-green-400 mb-1" />
+                  <p className="text-xl font-extrabold text-green-700">{userOverview.activeUsers || 0}</p>
+                  <p className="text-[10px] font-bold text-green-500 uppercase mt-0.5">Active Users</p>
+                </div>
+                <div className="bg-purple-50 rounded-2xl p-4 border border-purple-100">
+                  <TrendingUp size={18} className="text-purple-400 mb-1" />
+                  <p className="text-xl font-extrabold text-purple-700">
+                    {monthlyTrendData.length > 1
+                      ? `${(((monthlyTrendData[monthlyTrendData.length - 1]?.reports || 0) - (monthlyTrendData[0]?.reports || 0)) / (monthlyTrendData[0]?.reports || 1) * 100).toFixed(1)}%`
+                      : '0%'}
+                  </p>
+                  <p className="text-[10px] font-bold text-purple-500 uppercase mt-0.5">Report Growth</p>
+                </div>
+                <div className="bg-cyan-50 rounded-2xl p-4 border border-cyan-100">
+                  <BarChart3 size={18} className="text-cyan-400 mb-1" />
+                  <p className="text-xl font-extrabold text-cyan-700">{avgDailyReports}</p>
+                  <p className="text-[10px] font-bold text-cyan-500 uppercase mt-0.5">Avg Daily</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* HEATMAP TAB */}
+          {activeTab === 'heatmap' && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">View</label>
+                  <div className="flex bg-gray-100 p-1 rounded-xl">
+                    {[
+                      { id: 'department', label: 'Dept' },
+                      { id: 'gender_role', label: 'Gender/Role' },
+                      { id: 'gender_month', label: 'Gender/Month' },
+                    ].map(v => (
+                      <button
+                        key={v.id}
+                        onClick={() => setHeatmapView(v.id)}
+                        className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+                          heatmapView === v.id ? 'bg-violet-600 text-white shadow-md' : 'text-gray-500'
+                        }`}
+                      >{v.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {heatmapView === 'gender_month' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Whose Gender?</label>
+                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                      {['reporter', 'victim', 'witness', 'mandatory'].map(r => (
+                        <button
+                          key={r}
+                          onClick={() => setHeatmapSubView(r)}
+                          className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all duration-200 capitalize ${
+                            heatmapSubView === r ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-500'
+                          }`}
+                        >{r}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Year</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    className="w-full bg-gray-100 border-0 text-gray-900 text-sm font-bold rounded-xl p-3 focus:ring-2 focus:ring-violet-500"
+                  >
+                    {[0, 1, 2, 3].map(offset => {
+                      const year = new Date().getFullYear() - offset;
+                      return <option key={year} value={year}>{year}</option>;
+                    })}
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 overflow-x-auto">
+                {heatmapView === 'department' && reportAnalytics?.heatmaps?.deptVsMonth && (
+                  <HeatmapTable title="Dept \u00d7 Month" subtitle={`${selectedYear}`} rows={reportAnalytics.heatmaps.deptVsMonth.rows} columns={reportAnalytics.heatmaps.deptVsMonth.columns} data={reportAnalytics.heatmaps.deptVsMonth.data} rowLabel="Department" columnLabel="Month" colorScheme="teal" />
+                )}
+                {heatmapView === 'gender_role' && reportAnalytics?.heatmaps?.genderVsRole && (
+                  <HeatmapTable title="Gender \u00d7 Role" subtitle={`${selectedYear}`} rows={reportAnalytics.heatmaps.genderVsRole.rows} columns={reportAnalytics.heatmaps.genderVsRole.columns} data={reportAnalytics.heatmaps.genderVsRole.data} rowLabel="Gender" columnLabel="Role" colorScheme="vibrant" />
+                )}
+                {heatmapView === 'gender_month' && (
+                  <>
+                    {heatmapSubView === 'reporter' && reportAnalytics?.heatmaps?.reporterGenderVsMonth && (
+                      <HeatmapTable title="Reporter Gender \u00d7 Month" subtitle={`${selectedYear}`} rows={reportAnalytics.heatmaps.reporterGenderVsMonth.rows} columns={reportAnalytics.heatmaps.reporterGenderVsMonth.columns} data={reportAnalytics.heatmaps.reporterGenderVsMonth.data} rowLabel="Gender" columnLabel="Month" colorScheme="indigo" />
+                    )}
+                    {heatmapSubView === 'victim' && reportAnalytics?.heatmaps?.victimGenderVsMonth && (
+                      <HeatmapTable title="Victim Gender \u00d7 Month" subtitle={`${selectedYear}`} rows={reportAnalytics.heatmaps.victimGenderVsMonth.rows} columns={reportAnalytics.heatmaps.victimGenderVsMonth.columns} data={reportAnalytics.heatmaps.victimGenderVsMonth.data} rowLabel="Gender" columnLabel="Month" colorScheme="rose" />
+                    )}
+                    {heatmapSubView === 'witness' && reportAnalytics?.heatmaps?.witnessGenderVsMonth && (
+                      <HeatmapTable title="Witness Gender \u00d7 Month" subtitle={`${selectedYear}`} rows={reportAnalytics.heatmaps.witnessGenderVsMonth.rows} columns={reportAnalytics.heatmaps.witnessGenderVsMonth.columns} data={reportAnalytics.heatmaps.witnessGenderVsMonth.data} rowLabel="Gender" columnLabel="Month" colorScheme="amber" />
+                    )}
+                    {heatmapSubView === 'mandatory' && reportAnalytics?.heatmaps?.mandatoryReporterGenderVsMonth && (
+                      <HeatmapTable title="Mandatory Reporter Gender \u00d7 Month" subtitle={`${selectedYear}`} rows={reportAnalytics.heatmaps.mandatoryReporterGenderVsMonth.rows} columns={reportAnalytics.heatmaps.mandatoryReporterGenderVsMonth.columns} data={reportAnalytics.heatmaps.mandatoryReporterGenderVsMonth.data} rowLabel="Gender" columnLabel="Month" colorScheme="teal" />
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== NATIVE BOTTOM TAB BAR ===== */}
+        <div className="native-admin-tab-bar">
+          <div className="flex items-center justify-around px-2 pt-2 pb-1">
+            {nativeTabs.map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl transition-all duration-200 ${
+                    isActive ? 'bg-violet-100 text-violet-700' : 'text-gray-400'
+                  }`}
+                >
+                  <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                  <span className={`text-[10px] font-bold ${isActive ? 'text-violet-700' : 'text-gray-400'}`}>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Notification Modal (native) */}
+        {showNotification && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
+              <div className="bg-gradient-to-r from-red-600 to-orange-600 p-6 text-white text-center relative">
+                <div className="absolute top-4 right-4 text-white/50" onClick={() => setShowNotification(false)}><X className="w-6 h-6" /></div>
+                <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bell className="w-8 h-8 animate-bounce" />
+                </div>
+                <h2 className="text-xl font-bold">New Reports!</h2>
+                <p className="text-red-100 text-sm">Reports need your review.</p>
+              </div>
+              <div className="p-6 text-center">
+                <p className="text-gray-600 mb-5 text-sm">
+                  <span className="font-bold text-red-600 text-lg">{reportAnalytics?.overview?.pendingReportsCount || 0}</span> pending report{(reportAnalytics?.overview?.pendingReportsCount || 0) > 1 ? 's' : ''}
+                </p>
+                <button onClick={() => { setShowNotification(false); navigate('/superadmin/reports'); }} className="w-full py-3 bg-red-600 text-white rounded-xl font-semibold active:bg-red-700 mb-2">Review Now</button>
+                <button onClick={() => setShowNotification(false)} className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:bg-gray-200">Later</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =============================================
+  // WEB LAYOUT (unchanged below)
+  // =============================================
   return (
     <div className="content-container py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Header */}
@@ -308,14 +706,14 @@ const SuperAdminDashboard = () => {
       {activeTab === 'overview' && (
         <div className="space-y-4 sm:space-y-6">
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Total Reports */}
             <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Total Reports</p>
                   <p className="text-2xl sm:text-3xl font-bold text-blue-600">{totalReports}</p>
-                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                  <p className="text-xs text-gray-500 mt-1">
                     {activeReports} active • {archivedReports} archived
                   </p>
                 </div>
@@ -329,7 +727,7 @@ const SuperAdminDashboard = () => {
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Active Reports</p>
                   <p className="text-2xl sm:text-3xl font-bold text-green-600">{activeReports}</p>
-                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                  <p className="text-xs text-gray-500 mt-1">
                     {todayCount} today • {weekCount} this week
                   </p>
                 </div>
@@ -343,7 +741,7 @@ const SuperAdminDashboard = () => {
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Resolution Rate</p>
                   <p className="text-2xl sm:text-3xl font-bold text-purple-600">{resolutionRate}%</p>
-                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                  <p className="text-xs text-gray-500 mt-1">
                     Avg response: {avgResponseDays} days
                   </p>
                 </div>
@@ -357,7 +755,7 @@ const SuperAdminDashboard = () => {
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Daily Average</p>
                   <p className="text-2xl sm:text-3xl font-bold text-cyan-600">{avgDailyReports}</p>
-                  <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                  <p className="text-xs text-gray-500 mt-1">
                     Peak: {peakMonthCount} in {peakMonth}
                   </p>
                 </div>
@@ -440,10 +838,10 @@ const SuperAdminDashboard = () => {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white rounded-lg shadow border p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Recent Reports Activity</h3>
-              <div className="flex space-x-4 text-sm">
+          <div className="bg-white rounded-lg shadow border p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+              <h3 className="text-base sm:text-lg font-semibold">Recent Reports Activity</h3>
+              <div className="flex flex-wrap gap-3 text-xs sm:text-sm">
                 <span className="text-gray-600">
                   <Bell className="inline w-4 h-4 mr-1" />
                   Today: {todayCount} reports
@@ -681,11 +1079,11 @@ const SuperAdminDashboard = () => {
               <div className="max-w-2xl">
                 <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Heatmap Analysis</h2>
                 <p className="text-gray-500 text-lg leading-relaxed">
-                  Visualize the concentration of incident reports across departments, roles, and time periods. 
+                  Visualize the concentration of incident reports across departments, roles, and time periods.
                   <span className="font-semibold text-violet-600 ml-1">Darker cells represent higher activity.</span>
                 </p>
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-4 bg-gray-50/50 p-4 rounded-[2rem] border border-gray-100 shadow-sm">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">View Perspective</label>
@@ -750,10 +1148,10 @@ const SuperAdminDashboard = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-12">
               {heatmapView === 'department' && reportAnalytics?.heatmaps?.deptVsMonth && (
-                <HeatmapTable 
+                <HeatmapTable
                   title="Monthly Report Volume by Department"
                   subtitle={`Tracking incident distribution across campus departments for ${selectedYear}`}
                   rows={reportAnalytics.heatmaps.deptVsMonth.rows}
@@ -766,7 +1164,7 @@ const SuperAdminDashboard = () => {
               )}
 
               {heatmapView === 'gender_role' && reportAnalytics?.heatmaps?.genderVsRole && (
-                <HeatmapTable 
+                <HeatmapTable
                   title="Incident Distribution by Gender & Role"
                   subtitle={`Analyzing reporter perspectives across different gender identities for ${selectedYear}`}
                   rows={reportAnalytics.heatmaps.genderVsRole.rows}
@@ -781,7 +1179,7 @@ const SuperAdminDashboard = () => {
               {heatmapView === 'gender_month' && (
                 <>
                   {heatmapSubView === 'reporter' && reportAnalytics?.heatmaps?.reporterGenderVsMonth && (
-                    <HeatmapTable 
+                    <HeatmapTable
                       title="General Reporter Gender Distribution by Month"
                       subtitle={`Monthly breakdown of all reporters' gender identities for ${selectedYear}`}
                       rows={reportAnalytics.heatmaps.reporterGenderVsMonth.rows}
@@ -793,7 +1191,7 @@ const SuperAdminDashboard = () => {
                     />
                   )}
                   {heatmapSubView === 'victim' && reportAnalytics?.heatmaps?.victimGenderVsMonth && (
-                    <HeatmapTable 
+                    <HeatmapTable
                       title="Victim Gender Distribution by Month"
                       subtitle={`Monthly breakdown of victims' gender identities for ${selectedYear}`}
                       rows={reportAnalytics.heatmaps.victimGenderVsMonth.rows}
@@ -805,7 +1203,7 @@ const SuperAdminDashboard = () => {
                     />
                   )}
                   {heatmapSubView === 'witness' && reportAnalytics?.heatmaps?.witnessGenderVsMonth && (
-                    <HeatmapTable 
+                    <HeatmapTable
                       title="Witness Gender Distribution by Month"
                       subtitle={`Monthly breakdown of witnesses' gender identities for ${selectedYear}`}
                       rows={reportAnalytics.heatmaps.witnessGenderVsMonth.rows}
@@ -817,7 +1215,7 @@ const SuperAdminDashboard = () => {
                     />
                   )}
                   {heatmapSubView === 'mandatory' && reportAnalytics?.heatmaps?.mandatoryReporterGenderVsMonth && (
-                    <HeatmapTable 
+                    <HeatmapTable
                       title="Mandatory Reporter Gender Distribution by Month"
                       subtitle={`Monthly breakdown of mandatory reporters' gender identities for ${selectedYear}`}
                       rows={reportAnalytics.heatmaps.mandatoryReporterGenderVsMonth.rows}
@@ -833,7 +1231,7 @@ const SuperAdminDashboard = () => {
             </div>
           </div>
         </div>
-        )}
+      )}
 
       {/* New Report Notification Modal */}
       {showNotification && (
