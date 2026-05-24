@@ -203,8 +203,11 @@ export const generateReportPDF = async ({ formData, ticketNumber, isAnonymous })
   link.download = `TUP_GAD_Report_${ticketNumber}.pdf`;
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
 
   // ✅ RETURN PDF BLOB for sending to backend
   return blob;

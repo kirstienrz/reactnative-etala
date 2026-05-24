@@ -4,9 +4,24 @@ import API from "./config"; // axios instance with baseURL & headers
 // 🎠 CAROUSEL MANAGEMENT ROUTES
 // ========================================
 
-// 📋 GET all active carousel images
+let carouselCache = null;
+let carouselCacheTime = 0;
+
 export const getCarouselImages = async () => {
+  const now = Date.now();
+  // Return cache if it's less than 5 minutes old
+  if (carouselCache && now - carouselCacheTime < 300000) {
+    // Fetch in background to update cache for next time
+    API.get("/carousel").then(res => {
+      carouselCache = res.data;
+      carouselCacheTime = Date.now();
+    }).catch(() => {});
+    return carouselCache;
+  }
+  
   const res = await API.get("/carousel");
+  carouselCache = res.data;
+  carouselCacheTime = now;
   return res.data;
 };
 

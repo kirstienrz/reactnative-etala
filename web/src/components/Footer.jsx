@@ -12,7 +12,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="hidden sm:flex bg-gradient-to-r from-violet-950 via-violet-900 to-violet-950 text-white relative overflow-hidden flex-col py-8 md:py-10">
+    <footer className="flex flex-col bg-gradient-to-r from-violet-950 via-violet-900 to-violet-950 text-white relative overflow-hidden py-8 md:py-10">
       {/* Background decoration matching header exactly */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-violet-500 rounded-full blur-3xl"></div>

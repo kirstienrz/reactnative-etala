@@ -111,7 +111,7 @@ export default function UserManagement() {
         lastName: user.lastName || '',
         tupId: user.tupId || '',
         email: user.email || '',
-        role: user.role || 'user',
+        role: (user.role === 'admin' || user.role === 'superadmin') ? 'superadmin' : 'user',
         department: user.department || '',
         birthday: user.birthday ? user.birthday.split('T')[0] : '',
         age: user.age || '',
@@ -255,6 +255,16 @@ export default function UserManagement() {
       case 'Student': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getRoleLabel = (role) => {
+    return (role === 'superadmin' || role === 'admin') ? 'Admin' : 'User';
+  };
+
+  const getRoleBadgeColor = (role) => {
+    return (role === 'superadmin' || role === 'admin')
+      ? 'bg-red-100 text-red-700'
+      : 'bg-blue-100 text-blue-700';
   };
 
   // Remove the client-side filteredUsers variable
@@ -433,6 +443,9 @@ export default function UserManagement() {
                 User Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Role
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -457,6 +470,11 @@ export default function UserManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {user.department || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${getRoleBadgeColor(user.role)} shadow-sm`}>
+                      {getRoleLabel(user.role)}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${user.isActivated ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} shadow-sm items-center gap-1`}>
@@ -700,7 +718,7 @@ export default function UserManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="superadmin">Admin</option>
                   </select>
                 </div>
 

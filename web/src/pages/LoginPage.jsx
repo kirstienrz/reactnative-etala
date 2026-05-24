@@ -1,12 +1,24 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../store/authSlice";
+import { Capacitor } from "@capacitor/core";
 import { useNavigate } from "react-router-dom";
 import { login, verifyPin } from "../api/auth";
 import { Lock, Mail, Key, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "react-toastify";
 
 const LoginPage = () => {
+  const [isNativeApp, setIsNativeApp] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsNativeApp(platform === "android" || platform === "ios");
+    } catch (e) {
+      setIsNativeApp(false);
+    }
+  }, []);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [userType, setUserType] = useState("Student");
@@ -124,7 +136,7 @@ const LoginPage = () => {
 
       toast.success("Login successful!");
 
-      if (data.role === "superadmin") navigate("/superadmin/dashboard");
+      if (data.role === "superadmin" || data.role === "admin") navigate("/superadmin/dashboard");
       else navigate("/user/dashboard");
 
     } catch (err) {
@@ -136,6 +148,8 @@ const LoginPage = () => {
           toast.error("Your account has been deactivated. Please contact the administrator.");
         } else if (status === 403 && data?.msg?.toLowerCase().includes("archived")) {
           toast.error("Your account is archived. Please contact support.");
+        } else if (status === 400 && data?.msg?.toLowerCase().includes("no pin set")) {
+          toast.warning("You don't have an MPIN set up yet. Please log in with your password first and set up your MPIN in your Profile settings.");
         } else if (status === 400) {
           toast.error(data?.msg || "Invalid credentials. Please try again.");
         } else {
@@ -151,31 +165,33 @@ const LoginPage = () => {
     }
   };
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center content-container py-4 relative overflow-hidden">
+    <div className={`${isNativeApp ? 'bg-white w-full px-8 pt-8 pb-32 flex flex-col justify-center min-h-[85vh]' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center content-container py-4 relative overflow-hidden'}`}>
       {/* Animated background elements */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-violet-300 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300 rounded-full blur-3xl animate-pulse delay-700"></div>
-        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-violet-200 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
+      {!isNativeApp && (
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-violet-300 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300 rounded-full blur-3xl animate-pulse delay-700"></div>
+          <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-violet-200 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+      )}
 
       {/* Login Card */}
-      <div className="relative w-full max-w-md">
-        <div className="bg-white backdrop-blur-xl rounded-3xl shadow-2xl p-5 sm:p-8 border border-gray-200">
+      <div className={`relative w-full ${isNativeApp ? 'max-w-md mx-auto' : 'max-w-md'}`}>
+        <div className={`${isNativeApp ? 'w-full' : 'bg-white backdrop-blur-xl rounded-3xl shadow-2xl p-5 sm:p-8 border border-gray-200'}`}>
           {/* Logo */}
-          <div className="flex justify-center mb-3 sm:mb-6">
+          <div className={`flex justify-center ${isNativeApp ? 'mb-4' : 'mb-3 sm:mb-6'}`}>
             <img
               src="/assets/logo.jpg"
               alt="Logo"
-              className="w-14 h-14 sm:w-20 sm:h-20 object-cover"
+              className={`${isNativeApp ? 'w-16 h-16' : 'w-14 h-14 sm:w-20 sm:h-20'} object-cover`}
             />
           </div>
 
           {/* Title */}
-          <h2 className="text-xl sm:text-3xl font-semibold text-center text-gray-900 mb-1 sm:mb-2">
+          <h2 className={`${isNativeApp ? 'text-[26px]' : 'text-xl sm:text-3xl'} font-semibold text-center text-gray-900 mb-1 sm:mb-2`}>
             Welcome to the GAD Portal
           </h2>
-          <p className="text-center text-gray-600 text-xs sm:text-sm mb-4 sm:mb-8">
+          <p className={`text-center text-gray-600 ${isNativeApp ? 'mb-6 text-sm' : 'text-xs sm:text-sm mb-4 sm:mb-8'}`}>
             Technological University of the Philippines – Taguig
           </p>
 
@@ -195,7 +211,7 @@ const LoginPage = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-3 sm:space-y-5">
+          <form onSubmit={handleLogin} className={isNativeApp ? 'space-y-4' : 'space-y-3 sm:space-y-5'}>
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Email Address</label>
@@ -203,11 +219,11 @@ const LoginPage = () => {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="email"
-                  placeholder="username@tup.edu.ph"
+                  placeholder="Enter your email"
                   value={email}
-                  onChange={handleEmailChange}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-sm"
+                  className={`w-full pl-11 pr-4 ${isNativeApp ? 'py-3 text-[15px]' : 'py-2.5 sm:py-3 text-sm'} bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:bg-white transition-all duration-300`}
                   autoComplete="email"
                 />
               </div>
@@ -245,11 +261,11 @@ const LoginPage = () => {
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
                       type="text"
-                      placeholder="e.g., TUPT-23-0001"
+                      placeholder="Enter your TUP ID"
                       value={tupId}
                       onChange={handleTupIdChange}
                       required
-                      className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all font-mono text-sm"
+                      className={`w-full pl-11 pr-4 ${isNativeApp ? 'py-3 text-[15px]' : 'py-2.5 sm:py-3 text-sm'} bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:bg-white transition-all duration-300 font-mono`}
                       autoComplete="off"
                       maxLength={14}
                     />
@@ -264,11 +280,11 @@ const LoginPage = () => {
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder={`Enter your ${usePin ? 'PIN' : 'password'}`}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full pl-10 pr-12 py-2.5 sm:py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all text-sm"
+                      className={`w-full pl-11 pr-12 ${isNativeApp ? 'py-3 text-[15px]' : 'py-2.5 sm:py-3 text-sm'} bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:bg-white transition-all duration-300`}
                       autoComplete="current-password"
                       minLength={0}
                     />
@@ -296,7 +312,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-2.5 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
+              className={`w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold ${isNativeApp ? 'py-4' : 'py-2.5 sm:py-3 text-sm sm:text-base'} rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none mt-4`}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

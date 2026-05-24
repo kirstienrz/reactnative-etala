@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { sendChatbotMessage } from "../api/chatbot";
 import { useLocation } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 
 export default function FloatingChatbot() {
   const location = useLocation();
   const isSuperAdminRoute = location.pathname.startsWith("/superadmin");
+  const isChatRoute = location.pathname.includes("/chat") || location.pathname.includes("/messages");
   
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -13,11 +15,50 @@ export default function FloatingChatbot() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 640 : false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState('100%');
+  const [viewportTop, setViewportTop] = useState(0);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsNativeApp(platform === "android" || platform === "ios");
+    } catch (e) {
+      setIsNativeApp(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onResizeOrScroll = () => {
+      setIsMobile(window.innerWidth < 640);
+      if (window.visualViewport) {
+        setViewportHeight(`${window.visualViewport.height}px`);
+        // Track the offset to know how much Android panned the screen up
+        setViewportTop(window.visualViewport.offsetTop || 0);
+      } else {
+        setViewportHeight(`${window.innerHeight}px`);
+        setViewportTop(0);
+      }
+    };
+    
+    // Initial call
+    onResizeOrScroll();
+
+    window.addEventListener('resize', onResizeOrScroll);
+    window.addEventListener('scroll', onResizeOrScroll);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onResizeOrScroll);
+      window.visualViewport.addEventListener('scroll', onResizeOrScroll);
+    }
+
+    return () => {
+      window.removeEventListener('resize', onResizeOrScroll);
+      window.removeEventListener('scroll', onResizeOrScroll);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', onResizeOrScroll);
+        window.visualViewport.removeEventListener('scroll', onResizeOrScroll);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -121,20 +162,24 @@ All conversations are **confidential**. How can I help you today? 💜`,
     },
     modalOverlay: {
       position: "fixed",
-      inset: 0,
+      top: `${viewportTop}px`,
+      left: 0,
+      right: 0,
+      height: viewportHeight,
       backgroundColor: "rgba(0,0,0,0.22)",
       display: "flex",
       justifyContent: "flex-end",
-      alignItems: isMobile ? "flex-end" : "flex-end",
+      alignItems: "flex-end",
       padding: isMobile ? "8px" : "16px",
       paddingBottom: isMobile ? "calc(env(safe-area-inset-bottom) + 8px)" : "16px",
-      zIndex: 2001,
+      zIndex: 10005, // Higher than Header (9999) and Drawer (10001)
     },
     chatContainer: {
       backgroundColor: "#fff",
       width: isMobile ? "100%" : "360px",
       maxWidth: isMobile ? "100%" : "95vw",
       height: isMobile ? "72vh" : "70vh",
+      maxHeight: "100%", // Ensures it shrinks when keyboard opens instead of overflowing
       borderRadius: isMobile ? "16px 16px 0 0" : "24px",
       boxShadow: "0 12px 35px rgba(0,0,0,0.2)",
       display: "flex",
@@ -231,7 +276,7 @@ All conversations are **confidential**. How can I help you today? 💜`,
     },
   };
 
-  if (isSuperAdminRoute) return null;
+  if (isSuperAdminRoute || isChatRoute) return null;
 
   return (
     <>
@@ -304,7 +349,12 @@ All conversations are **confidential**. How can I help you today? 💜`,
                  onKeyPress={handleKeyPress}
                  placeholder="Type a message..."
                />
-               <button style={styles.sendBtn} onClick={() => sendMessage()}>
+               <button 
+                 style={styles.sendBtn} 
+                 onMouseDown={(e) => e.preventDefault()}
+                 onTouchStart={(e) => e.preventDefault()}
+                 onClick={() => sendMessage()}
+               >
                  Send
                </button>
              </div>

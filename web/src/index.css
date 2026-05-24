@@ -33,7 +33,7 @@
   }
   
   .is-native .admin-header-pt {
-    padding-top: max(env(safe-area-inset-top, 0px), 40px);
+    padding-top: max(env(safe-area-inset-top, 0px), 50px);
   }
   .is-native .sidebar-header-pt {
     padding-top: max(env(safe-area-inset-top, 0px), 48px);
@@ -141,4 +141,57 @@ h6 {
 
 .animate-slide-up {
   animation: slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* ===== Native Admin Dashboard (APK) ===== */
+.native-admin-tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 800;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+}
+.is-native .native-admin-tab-bar {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+}
+
+.native-admin-content {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+.is-native .native-admin-content {
+  padding-bottom: calc(80px + max(env(safe-area-inset-bottom, 0px), 12px));
+}
+
+/* Hide scrollbar but keep scroll for native horizontal stat strip */
+.native-scroll-hide::-webkit-scrollbar {
+  display: none;
+}
+.native-scroll-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth press feedback for native cards */
+.native-press {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.native-press:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* Slim dark-mode styling for the Notification Bell inside GAD Admin mobile header */
+.admin-mobile-header button[aria-label="Notifications"] {
+  color: #e5e7eb !important; /* text-gray-200 */
+}
+.admin-mobile-header button[aria-label="Notifications"]:hover,
+.admin-mobile-header button[aria-label="Notifications"]:active {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
 }

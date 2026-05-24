@@ -3,8 +3,21 @@ import API from "./config";
 // =========================
 // 📰 NEWS API
 // =========================
+let newsCache = null;
+let newsCacheTime = 0;
+
 export const getNews = async () => {
+  const now = Date.now();
+  if (newsCache && now - newsCacheTime < 300000) {
+    API.get("/news").then(res => {
+      newsCache = res.data;
+      newsCacheTime = Date.now();
+    }).catch(() => {});
+    return newsCache;
+  }
   const res = await API.get("/news");
+  newsCache = res.data;
+  newsCacheTime = now;
   return res.data;
 };
 

@@ -62,27 +62,28 @@ const LandingPage = () => {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [calendarLoading, setCalendarLoading] = useState(true);
 
-  const isApkAccess = 
-    (typeof window !== "undefined" && window.Capacitor && window.Capacitor.isNative) ||
-    Capacitor.isNative || 
-    (Capacitor.getPlatform && Capacitor.getPlatform() !== "web") ||
-    window.location.protocol === "capacitor:" || 
-    (window.location.hostname === "localhost" && !window.location.port);
+  // ✅ Use reactive state so Capacitor is fully initialized before checking platform
+  const [isApkAccess, setIsApkAccess] = useState(false);
+
+  useEffect(() => {
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsApkAccess(platform === "android" || platform === "ios");
+    } catch (e) {
+      setIsApkAccess(false);
+    }
+  }, []);
 
   const getWebUrl = () => {
     if (!isApkAccess) {
       return window.location.origin;
-    }
-    const apiUrl = import.meta.env.VITE_API_URL_MOBILE || import.meta.env.VITE_API_URL || "";
-    if (apiUrl.includes("localhost") || apiUrl.includes("127.0.0.1") || apiUrl.includes("192.168")) {
-      return "http://localhost:5173";
     }
     return "https://etala.vercel.app";
   };
 
   const getQrData = () => {
     if (isApkAccess) {
-      return getWebUrl();
+      return "https://etala.vercel.app";
     } else {
       return window.location.origin + "/download";
     }
@@ -275,6 +276,206 @@ const LandingPage = () => {
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
   };
+
+  if (isApkAccess) {
+    return (
+      <main className="bg-gray-50 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
+        <style>
+          {`
+            .hide-scroll::-webkit-scrollbar { display: none; }
+            .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+          `}
+        </style>
+
+        {/* Hero Banner Slider (Full Width) */}
+        <div className="relative w-full h-64 bg-slate-900 shadow-sm">
+          <div className="w-full h-full relative">
+            {heroSlides.map((slide, idx) => (
+              <div
+                key={idx}
+                className={`absolute inset-0 transition-opacity duration-700 ${idx === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+              >
+                {slide.image ? (
+                  <img src={slide.image} alt="Banner" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-violet-800 to-purple-900"></div>
+                )}
+                {/* Optional dark overlay if needed, removed text */}
+                <div className="absolute inset-0 bg-black/10"></div>
+              </div>
+            ))}
+            
+            {/* Dots */}
+            {heroSlides.length > 1 && (
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-20">
+                {heroSlides.map((_, idx) => (
+                  <div key={idx} className={`h-1.5 rounded-full transition-all ${idx === currentSlide ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}></div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Primary Actions (Report/Login) */}
+        <div className="px-4 mt-6 flex gap-3">
+          <button onClick={() => navigate('/login')} className="flex-1 bg-violet-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-[0.98] transition-transform text-center flex items-center justify-center gap-2 text-sm">
+            Get Started <ArrowRight size={16} />
+          </button>
+          <button onClick={() => navigate('/login')} className="flex-1 bg-white text-violet-700 font-bold py-3.5 rounded-xl border border-violet-100 shadow-sm active:scale-[0.98] transition-transform text-center text-sm">
+            Report an Issue
+          </button>
+        </div>
+
+        {/* GAD Agenda Card */}
+        <div className="px-4 mt-6">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 className="text-lg font-black text-slate-900 mb-2">GAD Agenda</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  The GAD Office promotes gender equality and women's empowerment, a unified approach to developing human capital, and initiatives aligned with sustainability goals. It underscores data-driven decisions, global competitiveness through inclusivity, and strong governance.
+                </p>
+            </div>
+        </div>
+
+        {/* Highlights Section */}
+        <div className="mt-6">
+            <HighlightsSection />
+        </div>
+
+        {/* News & Updates (Horizontal Scroll) */}
+        <div className="mt-8 px-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-black text-slate-800">Press Releases</h2>
+            <button onClick={() => navigate('/news')} className="text-violet-600 text-xs font-bold bg-violet-50 px-3 py-1.5 rounded-full active:scale-[0.95] transition-transform">View All</button>
+          </div>
+        </div>
+        
+        <div className="flex overflow-x-auto hide-scroll px-4 pb-4 gap-4 snap-x">
+          {loading ? (
+            <div className="flex justify-center w-full py-8"><div className="animate-spin h-8 w-8 border-4 border-violet-200 border-t-violet-600 rounded-full"></div></div>
+          ) : newsItems.length > 0 ? (
+            newsItems.map(item => (
+              <div key={item._id} onClick={() => setSelectedNews(item)} className="snap-center shrink-0 w-64 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col active:scale-[0.98] transition-transform">
+                <div className="h-32 bg-gray-100 relative">
+                  {item.imageUrl && !isVideo(item.imageUrl) && !isDocument(item.imageUrl) ? (
+                    <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-violet-50 text-violet-300">
+                      <FileText size={32} />
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur text-violet-700 text-[10px] font-black px-2 py-1 rounded shadow-sm">
+                    {item.date ? item.date.split(' ')[0] : 'Update'}
+                  </div>
+                </div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <h3 className="font-bold text-slate-800 text-xs line-clamp-2 mb-2 leading-snug">{item.title}</h3>
+                  <div className="mt-auto flex items-center text-[11px] text-violet-600 font-bold">
+                    Read More <ChevronRight size={12} className="ml-0.5" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-500 text-sm w-full text-center py-4 bg-white rounded-xl border border-gray-100 shadow-sm">No updates available right now.</p>
+          )}
+        </div>
+
+        {/* Case Handling Process */}
+        <div className="mt-6 px-4">
+            <h2 className="text-lg font-black text-slate-800 mb-4">Case Handling Process</h2>
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <p className="text-xs font-semibold text-violet-600 mb-4 bg-violet-50 p-2 rounded-lg inline-block">Before You Proceed</p>
+                <div className="space-y-6 relative">
+                    {/* Timeline Line */}
+                    <div className="absolute top-2 left-[7px] bottom-2 w-0.5 bg-violet-100"></div>
+                    
+                    {[
+                        { step: "First Action", label: "Initial Approach & Appointment", desc: "The concerned student or faculty member will formally approach the office and set an appointment." },
+                        { step: "Second Action", label: "Consultation & Assessment", desc: "A consultation will be conducted to assess the nature of the concern." },
+                        { step: "Third Action", label: "Committee Formation", desc: "Based on the assessment, a formal committee will be constituted when necessary." },
+                        { step: "Final Step", label: "Turnover / Referral", desc: "The case may be officially endorsed to the appropriate office." }
+                    ].map((item, i) => (
+                        <div key={i} className="flex gap-4 relative z-10">
+                            <div className="w-4 h-4 rounded-full bg-violet-600 mt-1 flex-shrink-0 border-4 border-white shadow-sm"></div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-violet-500 mb-0.5">{item.step}</p>
+                                <p className="text-sm font-bold text-slate-800 mb-1">{item.label}</p>
+                                <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        {/* Share/Web Link (formerly Download) */}
+        <div className="mt-8 px-4 pb-12">
+             <div className="bg-gradient-to-br from-violet-600 to-purple-800 rounded-2xl p-6 text-white text-center shadow-lg relative overflow-hidden">
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-white opacity-10 rounded-full"></div>
+                  <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white opacity-10 rounded-full"></div>
+                  <h2 className="text-xl font-black mb-2 relative z-10">Stay Connected</h2>
+                  <p className="text-xs text-violet-200 mb-5 relative z-10">Open portal on another device by scanning this QR code.</p>
+                  
+                  <div className="bg-white p-3 rounded-xl inline-block mx-auto shadow-md relative z-10">
+                       <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getWebUrl())}`} alt="Web Portal" className="w-24 h-24" />
+                  </div>
+                  <p className="mt-3 text-[10px] font-bold tracking-wider uppercase opacity-80 relative z-10">Scan to Share Web</p>
+             </div>
+        </div>
+
+        {/* Modal for Mobile News */}
+        {selectedNews && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedNews(null)}>
+            <div
+              className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-2 right-2 z-20">
+                <button onClick={() => setSelectedNews(null)} className="bg-black/50 text-white p-2 rounded-full backdrop-blur-md">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto pb-6">
+                <div className="w-full h-48 bg-gray-100 relative">
+                  {getYouTubeEmbedUrl(selectedNews.link) ? (
+                    <iframe className="w-full h-full object-cover bg-black" src={getYouTubeEmbedUrl(selectedNews.link)} title={selectedNews.title} frameBorder="0" allowFullScreen />
+                  ) : selectedNews.imageUrl ? (
+                    isVideo(selectedNews.imageUrl) ? (
+                      <video controls autoPlay src={selectedNews.imageUrl} className="w-full h-full object-cover bg-black" />
+                    ) : isDocument(selectedNews.imageUrl) ? (
+                      <iframe src={getEmbedUrl(selectedNews.imageUrl)} className="w-full h-full border-none" />
+                    ) : (
+                      <img src={selectedNews.imageUrl} alt={selectedNews.title} className="w-full h-full object-cover" />
+                    )
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-violet-50 text-violet-300">
+                      <FileText size={48} />
+                    </div>
+                  )}
+                </div>
+                <div className="p-6">
+                  <h2 className="text-xl font-black text-slate-900 mb-3">{selectedNews.title}</h2>
+                  <p className="flex items-center gap-1.5 text-xs text-violet-600 font-bold mb-4">
+                    <Calendar size={14} />
+                    {selectedNews.date ? new Date(selectedNews.date).toLocaleDateString() : "—"}
+                  </p>
+                  <div className="text-slate-600 leading-relaxed whitespace-pre-wrap text-sm">
+                    {selectedNews.content}
+                  </div>
+                  {selectedNews.link && (
+                    <a href={selectedNews.link} target="_blank" rel="noopener noreferrer" className="inline-flex mt-6 w-full justify-center items-center gap-2 px-6 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition shadow-md">
+                      Visit External Link <ArrowRight size={16} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    );
+  }
 
   return (
     <main className="bg-white">
@@ -475,15 +676,17 @@ const LandingPage = () => {
               <p className="text-xl text-violet-100 mb-10 max-w-2xl leading-relaxed">
                 Download the ETALA mobile app to report issues on the go.
               </p>
-              <div className="flex flex-wrap gap-4 items-center">
-                <Link
-                  to="/download"
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-white text-violet-900 hover:bg-violet-100 transition-all duration-300 font-extrabold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 text-lg"
-                >
-                  <Download className="w-5 h-5 text-violet-900" />
-                  Download eTALA APK
-                </Link>
-              </div>
+              {!isApkAccess && (
+                <div className="flex flex-wrap gap-4 items-center">
+                  <Link
+                    to="/download"
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-white text-violet-900 hover:bg-violet-100 transition-all duration-300 font-extrabold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 text-lg"
+                  >
+                    <Download className="w-5 h-5 text-violet-900" />
+                    Download eTALA APK
+                  </Link>
+                </div>
+              )}
             </div>
             <div className="relative group">
               <div className="absolute -inset-4 bg-gradient-to-r from-violet-400 to-purple-400 rounded-[2.5rem] opacity-20 blur-2xl group-hover:opacity-40 transition duration-1000"></div>

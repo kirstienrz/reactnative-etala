@@ -126,7 +126,7 @@ const App = () => {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-            <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>
+            <Route element={<ProtectedRoute allowedRoles={["superadmin", "admin"]} />}>
               <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
               <Route path="/superadmin/profile" element={<ProfilePage />} />
               <Route path="/superadmin/users" element={<UserManagementPage />} />
