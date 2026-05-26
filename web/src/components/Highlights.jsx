@@ -183,9 +183,15 @@ const HighlightsSection = () => {
     try {
       setLoading(true);
       const data = await getCarouselImages();
-      setHighlights(data);
+      if (Array.isArray(data)) {
+        setHighlights(data);
+      } else {
+        console.error('Expected an array of highlights but got:', data);
+        setHighlights([]);
+      }
     } catch (error) {
       console.error('Error fetching highlights:', error);
+      setHighlights([]);
     } finally {
       setLoading(false);
     }
@@ -215,7 +221,7 @@ const HighlightsSection = () => {
     );
   }
 
-  if (highlights.length === 0) return null;
+  if (!Array.isArray(highlights) || highlights.length === 0) return null;
 
   return (
     <section className="py-16 md:py-24 bg-white overflow-hidden">
@@ -230,7 +236,7 @@ const HighlightsSection = () => {
 
         <div className="relative group">
           {/* Decorative Minimalist Space Consumers (Only show when not full) */}
-          {highlights.length < 5 && (
+          {Array.isArray(highlights) && highlights.length < 5 && (
             <div className="absolute inset-0 pointer-events-none hidden xl:block z-0">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-4">
                 <div className="w-32 h-32 border border-slate-100 rounded-3xl backdrop-blur-[1px]" />
@@ -246,14 +252,14 @@ const HighlightsSection = () => {
           <div 
             className={`
               transition-all duration-500 ease-out relative z-10
-              ${highlights.length <= 5 
+              ${Array.isArray(highlights) && highlights.length <= 5 
                 ? 'flex flex-wrap md:flex-nowrap justify-center gap-4' 
                 : 'flex gap-4 overflow-x-auto pb-12 snap-x no-scrollbar'
               }
             `}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {highlights.map((item) => (
+            {Array.isArray(highlights) && highlights.map((item) => (
               <div 
                 key={item._id}
                 onClick={() => setSelectedHighlight(item)}
