@@ -269,7 +269,11 @@ const Layout = ({ children }) => {
     <>
       <Header />
       <main className="min-h-[80vh] bg-gray-50 pb-0 sm:pb-0">{children}</main>
-      {!isNativeApp && <Footer />}
+      {!isNativeApp && (
+        <div className="hidden sm:block">
+          <Footer />
+        </div>
+      )}
       <MobileBottomNav />
     </>
   );
