@@ -62,10 +62,16 @@ export default function CarouselManagement() {
       const data = viewArchived
         ? await getArchivedCarouselImages()
         : await getCarouselImages();
-      setImages(data);
+      if (Array.isArray(data)) {
+        setImages(data);
+      } else {
+        console.error("Expected an array of images but got:", data);
+        setImages([]);
+      }
       setSelectedImages(new Set());
     } catch (err) {
       setError("Failed to load Hightlights images");
+      setImages([]);
     } finally {
       setLoading(false);
     }
@@ -228,7 +234,7 @@ export default function CarouselManagement() {
   };
 
   // Filter and Sort
-  const filteredAndSortedImages = images
+  const filteredAndSortedImages = (Array.isArray(images) ? images : [])
     .filter(img => {
       if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
