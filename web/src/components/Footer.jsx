@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Mail, Phone, MapPin, Globe } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const Footer = () => {
   const location = useLocation();
@@ -9,6 +10,23 @@ const Footer = () => {
     if (path && location.pathname === path) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const handleEmailClick = (e) => {
+    e.preventDefault();
+    const email = "officialgadtupt@gmail.com";
+    navigator.clipboard.writeText(email)
+      .then(() => {
+        toast.success("Email copied! Opening Gmail...", {
+          position: "bottom-right",
+          autoClose: 2000,
+        });
+      })
+      .catch(() => {});
+    
+    // Open Gmail Compose screen directly in a new tab
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}`;
+    window.open(gmailUrl, "_blank");
   };
 
   return (
@@ -109,9 +127,13 @@ const Footer = () => {
                   </div>
                   <div className="flex gap-2 items-center">
                     <Mail size={16} className="text-violet-300 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm text-violet-200 break-all">
+                    <a 
+                      href="mailto:officialgadtupt@gmail.com"
+                      onClick={handleEmailClick}
+                      className="text-xs sm:text-sm text-violet-200 hover:text-white hover:underline transition-colors break-all"
+                    >
                       officialgadtupt@gmail.com
-                    </span>
+                    </a>
                   </div>
                   <div className="flex gap-2 items-center">
                     <Globe size={16} className="text-violet-300 flex-shrink-0" />
