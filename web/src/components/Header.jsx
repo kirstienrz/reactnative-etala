@@ -428,13 +428,15 @@ const Header = () => {
               )}
 
               {/* Hamburger Toggle */}
-              <button
-                onClick={() => setIsMenuOpen(true)}
-                className="xl:hidden bg-purple-50 text-purple-900 p-2.5 hover:bg-purple-100 rounded-full transition-all border border-purple-100 shadow-sm"
-                aria-label="Open menu"
-              >
-                <Menu size={24} />
-              </button>
+              {!isNativeApp && (
+                <button
+                  onClick={() => setIsMenuOpen(true)}
+                  className="xl:hidden bg-purple-50 text-purple-900 p-2.5 hover:bg-purple-100 rounded-full transition-all border border-purple-100 shadow-sm"
+                  aria-label="Open menu"
+                >
+                  <Menu size={24} />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -466,7 +468,7 @@ const Header = () => {
     `}} />
       </header>
 
-      {typeof document !== "undefined" ? createPortal(mobileMenu, document.body) : null}
+      {!isNativeApp && typeof document !== "undefined" ? createPortal(mobileMenu, document.body) : null}
     </>
   );
 };

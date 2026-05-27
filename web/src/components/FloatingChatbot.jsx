@@ -143,7 +143,7 @@ All conversations are **confidential**. How can I help you today? 💜`,
   const styles = {
     floatingBtn: {
       position: "fixed",
-      bottom: isMobile ? "80px" : "24px",
+      bottom: isNativeApp ? "calc(80px + env(safe-area-inset-bottom, 0px))" : "24px",
       right: isMobile ? "16px" : "24px",
       width: isMobile ? "52px" : "60px",
       height: isMobile ? "52px" : "60px",

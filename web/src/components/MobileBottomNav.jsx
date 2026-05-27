@@ -71,9 +71,10 @@ const MobileBottomNav = () => {
 
       {/* Slide-up Drawer */}
       <div
-        className={`fixed bottom-16 left-0 right-0 z-50 sm:hidden bg-white rounded-t-2xl shadow-2xl transition-transform duration-300 ${
+        className={`fixed left-0 right-0 z-50 sm:hidden bg-white rounded-t-2xl shadow-2xl transition-transform duration-300 ${
           showDrawer ? "translate-y-0" : "translate-y-full"
         }`}
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100">
           <span className="text-sm font-bold text-gray-700">All Pages</span>
@@ -106,7 +107,7 @@ const MobileBottomNav = () => {
 
       {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white border-t border-gray-200 shadow-lg">
-        <div className="flex items-center justify-around px-1 py-1 safe-area-pb">
+        <div className="flex items-center justify-around px-1 py-1 pb-safe">
           {/* Left Items */}
           {mainItemsLeft.map((item) => {
             const Icon = item.icon;
