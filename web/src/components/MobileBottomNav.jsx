@@ -27,7 +27,7 @@ const mainItemsLeft = [
 ];
 
 const mainItemsRight = [
-  { label: "Calendar", path: "/Calendar", icon: Calendar },
+  { label: "Projects", path: "/Projects", icon: FileText },
 ];
 
 const MobileBottomNav = () => {

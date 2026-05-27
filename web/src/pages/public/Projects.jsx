@@ -377,9 +377,9 @@ export default function GADProjectsArchive() {
                  `}</style>
                 <FullCalendar
                   plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                  initialView={isMobile ? "dayGridMonth" : "dayGridMonth"}
-                  height={isMobile ? "auto" : "75vh"}
-                  aspectRatio={isMobile ? 0.8 : 1.35}
+                  initialView="dayGridMonth"
+                  height="75vh"
+                  aspectRatio={1.35}
                   events={events}
                   headerToolbar={{
                     left: "prev,next today",
@@ -387,7 +387,7 @@ export default function GADProjectsArchive() {
                     right: "dayGridMonth,timeGridWeek",
                   }}
                   nowIndicator={true}
-                  dayMaxEvents={isMobile ? 2 : true}
+                  dayMaxEvents={true}
                   eventDisplay="block"
                   eventClick={(info) => {
                     const event = events.find(e => (e.id || e._id) === info.event.id);
