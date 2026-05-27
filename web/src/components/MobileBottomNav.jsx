@@ -1,6 +1,8 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, BookOpen, Newspaper, Calendar, Menu, X, Users, FileText, Image, FlaskConical, BarChart2, Lightbulb, MessageSquare, Download } from "lucide-react";
+import { useSelector } from "react-redux";
+import { Capacitor } from "@capacitor/core";
 
 const allMenuItems = [
   { label: "Home", path: "/", icon: Home },
@@ -17,27 +19,40 @@ const allMenuItems = [
   { label: "Accomplishment", path: "/Accomplishment", icon: FileText },
   { label: "Suggestion", path: "/SuggestionBox", icon: MessageSquare },
   { label: "Contact", path: "/Contact", icon: MessageSquare },
-  { label: "Download App", path: "/download", icon: Download },
 ];
 
-// Bottom bar shows only 4 main items + "More" button
-const mainItems = [
+const mainItemsLeft = [
   { label: "Home", path: "/", icon: Home },
   { label: "News", path: "/News", icon: Newspaper },
+];
+
+const mainItemsRight = [
   { label: "Calendar", path: "/Calendar", icon: Calendar },
-  { label: "Gallery", path: "/album", icon: Image },
 ];
 
 const MobileBottomNav = () => {
   const location = useLocation();
   const [showDrawer, setShowDrawer] = React.useState(false);
+  const [isNativeApp, setIsNativeApp] = React.useState(false);
+  const auth = useSelector((state) => state.auth) || {};
+  const isLoggedIn = auth.isLoggedIn;
+  const etalaPath = isLoggedIn ? "/user/report" : "/login";
+
+  React.useEffect(() => {
+    try {
+      const platform = Capacitor.getPlatform();
+      setIsNativeApp(platform === "android" || platform === "ios");
+    } catch (e) {
+      setIsNativeApp(false);
+    }
+  }, []);
 
   // Only show on public routes (not superadmin, not user, not login/signup)
   const hiddenPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/activate"];
   const isAdminOrUser = location.pathname.startsWith("/superadmin") || location.pathname.startsWith("/user");
   const isHidden = isAdminOrUser || hiddenPaths.some(p => location.pathname.startsWith(p));
 
-  if (isHidden) return null;
+  if (!isNativeApp || isHidden) return null;
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
@@ -91,15 +106,52 @@ const MobileBottomNav = () => {
 
       {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white border-t border-gray-200 shadow-lg">
-        <div className="flex items-center justify-around px-2 py-1 safe-area-pb">
-          {mainItems.map((item) => {
+        <div className="flex items-center justify-around px-1 py-1 safe-area-pb">
+          {/* Left Items */}
+          {mainItemsLeft.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-0 flex-1 ${
+                className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all min-w-0 flex-1 ${
+                  active ? "text-violet-700" : "text-gray-500"
+                }`}
+              >
+                <div className={`p-1 rounded-lg transition-all ${active ? "bg-violet-100" : ""}`}>
+                  <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
+                </div>
+                <span className={`text-[10px] font-medium truncate ${active ? "text-violet-700" : "text-gray-500"}`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+
+          {/* Center eTALA Button */}
+          <div className="flex-1 flex justify-center -mt-6 z-10 relative">
+            <Link
+              to={etalaPath}
+              className={`flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300 shadow-lg border-4 border-white ${
+                isActive("/user/report") || isActive("/login")
+                  ? "bg-violet-800 shadow-violet-800/40 transform scale-105"
+                  : "bg-violet-600 shadow-violet-600/30 hover:bg-violet-700"
+              }`}
+            >
+              <span className="font-black text-white text-xs tracking-wider">eTALA</span>
+            </Link>
+          </div>
+
+          {/* Right Items */}
+          {mainItemsRight.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all min-w-0 flex-1 ${
                   active ? "text-violet-700" : "text-gray-500"
                 }`}
               >
