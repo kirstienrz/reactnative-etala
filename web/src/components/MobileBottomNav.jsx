@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, BookOpen, Newspaper, Calendar, Menu, X, Users, FileText, Image, FlaskConical, BarChart2, Lightbulb, MessageSquare, Download } from "lucide-react";
+import { Home, BookOpen, Newspaper, Calendar, Menu, X, Users, FileText, Image, FlaskConical, BarChart2, Lightbulb, MessageSquare, Download, LayoutDashboard } from "lucide-react";
 import { useSelector } from "react-redux";
 import { Capacitor } from "@capacitor/core";
 
@@ -36,7 +36,19 @@ const MobileBottomNav = () => {
   const [isNativeApp, setIsNativeApp] = React.useState(false);
   const auth = useSelector((state) => state.auth) || {};
   const isLoggedIn = auth.isLoggedIn;
-  const etalaPath = isLoggedIn ? "/user/report" : "/login";
+  const role = auth.user?.role;
+  const dashboardPath = role === "superadmin" || role === "admin" ? "/superadmin/dashboard" : "/user/dashboard";
+  const etalaPath = "/user/report";
+
+  const currentAllMenuItems = [
+    ...(isLoggedIn ? [{ label: "Dashboard", path: dashboardPath, icon: LayoutDashboard }] : []),
+    ...allMenuItems
+  ];
+
+  const currentItemsLeft = [
+    isLoggedIn ? { label: "Dashboard", path: dashboardPath, icon: LayoutDashboard } : { label: "Home", path: "/", icon: Home },
+    { label: "News", path: "/News", icon: Newspaper },
+  ];
 
   React.useEffect(() => {
     try {
@@ -47,10 +59,11 @@ const MobileBottomNav = () => {
     }
   }, []);
 
-  // Only show on public routes (not superadmin, not user, not login/signup)
+  // Only show on public and user routes (except report form)
   const hiddenPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/activate"];
-  const isAdminOrUser = location.pathname.startsWith("/superadmin") || location.pathname.startsWith("/user");
-  const isHidden = isAdminOrUser || hiddenPaths.some(p => location.pathname.startsWith(p));
+  const isAdmin = location.pathname.startsWith("/superadmin");
+  const isReportForm = location.pathname === "/user/report";
+  const isHidden = isAdmin || isReportForm || hiddenPaths.some(p => location.pathname.startsWith(p));
 
   if (!isNativeApp || isHidden) return null;
 
@@ -83,7 +96,7 @@ const MobileBottomNav = () => {
           </button>
         </div>
         <div className="grid grid-cols-3 gap-1 p-3 max-h-72 overflow-y-auto">
-          {allMenuItems.map((item) => {
+          {currentAllMenuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -109,7 +122,7 @@ const MobileBottomNav = () => {
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white border-t border-gray-200 shadow-lg">
         <div className="flex items-center justify-around px-1 py-1 pb-safe">
           {/* Left Items */}
-          {mainItemsLeft.map((item) => {
+          {currentItemsLeft.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
