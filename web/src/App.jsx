@@ -16,6 +16,7 @@ import FloatingChatbot from "./components/FloatingChatbot";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 import AutoLogout from "./components/AutoLogout";
+import HardwareBackButton from "./components/HardwareBackButton";
 
 import SuperAdminLayout from "./components/SuperAdminLayout";
 
@@ -96,6 +97,7 @@ const App = () => {
         style={{ zIndex: 99999 }}
       />
       <Router>
+        <HardwareBackButton />
         <AutoLogout />
         <ScrollToTop />
         <Layout>

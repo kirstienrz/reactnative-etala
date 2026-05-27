@@ -7,14 +7,20 @@ import {
   User,
   ChevronRight,
   Calendar,
-  Settings
+  Settings,
+  LogOut
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { useDispatch } from "react-redux";
+import { logout } from "../../store/authSlice";
+import LogoutModal from "../../components/LogoutModal";
 
 export default function Dashboard() {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const [isNativeApp, setIsNativeApp] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     
     useEffect(() => {
         try {
@@ -74,6 +80,14 @@ export default function Dashboard() {
             bgLight: "#FAF5FF",
             path: "/user/profile",
         },
+        ...(isNativeApp ? [{
+            title: "Logout",
+            subtitle: "Sign out of account",
+            icon: LogOut,
+            color: "#DC2626",
+            bgLight: "#FEF2F2",
+            action: "logout",
+        }] : [])
     ];
 
     if (isNativeApp) {
@@ -113,7 +127,13 @@ export default function Dashboard() {
                             return (
                                 <button
                                     key={i}
-                                    onClick={() => navigate(action.path)}
+                                    onClick={() => {
+                                        if (action.action === "logout") {
+                                            setIsLogoutModalOpen(true);
+                                        } else {
+                                            navigate(action.path);
+                                        }
+                                    }}
                                     className={`w-full bg-white rounded-2xl p-4 shadow-sm border ${isPrimary ? 'border-violet-100 shadow-[0_8px_20px_rgb(0,0,0,0.06)] py-5' : 'border-gray-100'} flex items-center gap-4 active:scale-[0.98] transition-transform text-left`}
                                 >
                                     <div 
@@ -149,6 +169,15 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                <LogoutModal
+                    isOpen={isLogoutModalOpen}
+                    onClose={() => setIsLogoutModalOpen(false)}
+                    onConfirm={() => {
+                        dispatch(logout());
+                        setIsLogoutModalOpen(false);
+                        navigate("/");
+                    }}
+                />
             </div>
         );
     }
@@ -242,7 +271,14 @@ export default function Dashboard() {
                             return (
                                 <div
                                     key={i}
-                                    onClick={() => navigate(action.path)}
+                                    onClick={() => {
+                                        if (action.action === "logout") {
+                                            dispatch(logout());
+                                            navigate("/login");
+                                        } else {
+                                            navigate(action.path);
+                                        }
+                                    }}
                                     style={{
                                         backgroundColor: "#FFFFFF",
                                         border: "1px solid #E5E7EB",
@@ -323,6 +359,16 @@ export default function Dashboard() {
                         })}
                     </div>
                 </div>
+                
+                <LogoutModal
+                    isOpen={isLogoutModalOpen}
+                    onClose={() => setIsLogoutModalOpen(false)}
+                    onConfirm={() => {
+                        dispatch(logout());
+                        setIsLogoutModalOpen(false);
+                        navigate("/");
+                    }}
+                />
             </div>
         </div>
     );
