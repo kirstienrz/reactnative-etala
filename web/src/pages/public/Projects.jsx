@@ -48,6 +48,7 @@ export default function GADProjectsArchive() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [visibleEventsCount, setVisibleEventsCount] = useState(5);
 
   useEffect(() => {
     const handleResize = () => {
@@ -354,23 +355,23 @@ export default function GADProjectsArchive() {
                    }
                    @media (max-width: 768px) {
                      .fc .fc-toolbar {
-                       flex-direction: column;
-                       justify-content: center;
+                       flex-direction: row;
+                       justify-content: space-between;
+                       gap: 0.25rem;
                      }
                      .fc .fc-toolbar-chunk {
                        display: flex;
-                       justify-content: center;
-                       width: 100%;
+                       align-items: center;
                      }
                      .fc .fc-toolbar-title {
-                       font-size: 1.1rem !important;
+                       font-size: 0.9rem !important;
                        text-align: center;
-                       margin: 0.5rem 0 !important;
+                       margin: 0 !important;
                      }
                      .fc .fc-button {
-                       padding: 0.4rem 0.6rem !important;
-                       font-size: 0.8rem !important;
-                       border-radius: 8px !important;
+                       padding: 0.3rem 0.5rem !important;
+                       font-size: 0.7rem !important;
+                       border-radius: 6px !important;
                      }
                    }
                  `}</style>
@@ -380,18 +381,11 @@ export default function GADProjectsArchive() {
                   height={isMobile ? "auto" : "75vh"}
                   aspectRatio={isMobile ? 0.8 : 1.35}
                   events={events}
-                  headerToolbar={isMobile ? {
-                    left: "prev,next today",
-                    center: "title",
-                    right: "",
-                  } : {
+                  headerToolbar={{
                     left: "prev,next today",
                     center: "title",
                     right: "dayGridMonth,timeGridWeek",
                   }}
-                  footerToolbar={isMobile ? {
-                    center: "dayGridMonth,timeGridWeek"
-                  } : null}
                   nowIndicator={true}
                   dayMaxEvents={isMobile ? 2 : true}
                   eventDisplay="block"
@@ -435,11 +429,11 @@ export default function GADProjectsArchive() {
                   </div>
                 ) : (
                   <div className="max-h-[450px] overflow-y-auto pr-4 custom-scrollbar">
-                    <div className="space-y-6 relative timeline-line py-2">
-                      {upcomingEvents.map((event) => (
+                    <div className="space-y-4 relative timeline-line py-2">
+                      {upcomingEvents.slice(0, visibleEventsCount).map((event) => (
                         <div
                           key={event.id}
-                          className="relative pl-14 group cursor-pointer"
+                          className="relative pl-12 group cursor-pointer"
                           onClick={() => {
                             setSelectedProject(event);
                             setShowDetailsModal(true);
@@ -490,6 +484,16 @@ export default function GADProjectsArchive() {
                         </div>
                       ))}
                     </div>
+                    {upcomingEvents.length > visibleEventsCount && (
+                      <div className="text-center mt-6 mb-2">
+                        <button 
+                          onClick={() => setVisibleEventsCount(prev => prev + 5)}
+                          className="px-4 py-2 bg-violet-50 text-violet-600 font-bold rounded-lg hover:bg-violet-100 transition-colors text-xs uppercase tracking-wider"
+                        >
+                          Load More Events
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
