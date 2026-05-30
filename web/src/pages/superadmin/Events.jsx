@@ -3,6 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import listPlugin from "@fullcalendar/list";
 import {
   Plus,
   RefreshCcw,
@@ -306,7 +307,7 @@ export default function SuperAdminCalendarUI() {
         const formattedEvents = formatEventsForCalendar(response.data);
         setEvents(formattedEvents);
         calculateStats(formattedEvents);
-        toast.success(`Loaded ${formattedEvents.length} events`);
+        // Removed noisy toast success message for loading events
       } else {
         toast.error(response.message || "Failed to load events");
         setEvents([]);
@@ -905,9 +906,25 @@ export default function SuperAdminCalendarUI() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 font-sans">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* Header */}
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between mb-6 mt-2">
+        <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+            <div className="p-2 bg-blue-100 rounded-xl">
+              <CalendarIcon className="w-6 h-6 text-blue-600" />
+            </div>
+            Calendar
+        </h1>
+        <button
+          onClick={fetchEvents}
+          disabled={loading}
+          className="p-2 bg-white rounded-full shadow-sm text-gray-400 hover:text-blue-600 transition"
+        >
+          <RefreshCcw size={20} className={loading ? "animate-spin" : ""} />
+        </button>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:flex flex-row justify-between items-center gap-6 mb-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-xl">
@@ -948,18 +965,18 @@ export default function SuperAdminCalendarUI() {
       {/* Stats & Pendings side-by-side grid */}
       <div className={pendingEvents.length > 0 ? "grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8 items-start" : "mb-8"}>
         {/* Stats Cards container */}
-        <div className={pendingEvents.length > 0 ? "lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"}>
+        <div className={pendingEvents.length > 0 ? "lg:col-span-3 grid grid-cols-2 gap-3 md:gap-4" : "grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"}>
           {Object.entries(stats).map(([key, value]) => (
             <div key={key} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-colors">
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
                   {key.replace(/([A-Z])/g, ' $1').trim()}
                 </p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-xl md:text-2xl font-bold text-gray-900 mt-1">
                   {value}
                 </p>
               </div>
-              <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${key === 'total' ? 'bg-blue-50 text-blue-600' :
+              <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${key === 'total' ? 'bg-blue-50 text-blue-600' :
                 key === 'thisMonth' ? 'bg-green-50 text-green-600' :
                   key === 'upcoming' ? 'bg-orange-50 text-orange-600' :
                     'bg-gray-50 text-gray-600'
@@ -1083,8 +1100,8 @@ export default function SuperAdminCalendarUI() {
 
       <div className="bg-white p-2 md:p-6 rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
         <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={isMobile ? "dayGridMonth" : "dayGridMonth"}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+          initialView={isMobile ? "listMonth" : "dayGridMonth"}
           headerToolbar={isMobile ? {
             left: 'prev,next today',
             center: 'title',
@@ -1092,10 +1109,10 @@ export default function SuperAdminCalendarUI() {
           } : {
             left: "prev,next today",
             center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay",
+            right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
           }}
           footerToolbar={isMobile ? {
-            center: 'dayGridMonth,timeGridWeek,timeGridDay'
+            center: 'listMonth,dayGridMonth'
           } : null}
           height={isMobile ? "auto" : "70vh"}
           contentHeight={isMobile ? "auto" : "auto"}
@@ -1117,7 +1134,8 @@ export default function SuperAdminCalendarUI() {
             today: "Today",
             month: "Month",
             week: "Week",
-            day: "Day"
+            day: "Day",
+            listMonth: "List"
           }}
           views={{
             timeGrid: {
@@ -1125,11 +1143,28 @@ export default function SuperAdminCalendarUI() {
             },
             dayGridMonth: {
               titleFormat: { year: 'numeric', month: 'long' }
+            },
+            listMonth: {
+              listDayFormat: { weekday: 'long', month: 'short', day: 'numeric' },
+              listDaySideFormat: false
             }
           }}
           eventClassNames="cursor-pointer hover:opacity-90 text-[10px] md:text-xs"
         />
       </div>
+
+      {/* Mobile FAB */}
+      <button
+        onClick={() => {
+          setModalMode("create");
+          setSelectedEvent(null);
+          resetForm();
+          setShowModal(true);
+        }}
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] z-40 active:scale-95 transition-transform"
+      >
+        <Plus size={28} />
+      </button>
 
       {/* Events Table Section */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-8">
