@@ -168,7 +168,7 @@ const LoginPage = () => {
           toast.error(data?.msg || "Login failed. Please try again later.");
         }
       } else {
-        toast.error("Invalid. Please try again");
+        toast.error(err.message || "Network error. Please check your connection and try again.");
       }
 
       setError(err.message || "Invalid credentials");

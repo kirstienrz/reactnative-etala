@@ -184,23 +184,23 @@ export default function SuperAdminCalendarRedux() {
              }
              @media (max-width: 768px) {
                .fc .fc-toolbar {
-                 flex-direction: column;
-                 justify-content: center;
+                 flex-direction: row;
+                 justify-content: space-between;
+                 gap: 0.25rem;
                }
                .fc .fc-toolbar-chunk {
                  display: flex;
-                 justify-content: center;
-                 width: 100%;
+                 align-items: center;
                }
                .fc .fc-toolbar-title {
-                 font-size: 1.1rem !important;
+                 font-size: 0.9rem !important;
                  text-align: center;
-                 margin: 0.5rem 0 !important;
+                 margin: 0 !important;
                }
                .fc .fc-button {
-                 padding: 0.4rem 0.6rem !important;
-                 font-size: 0.8rem !important;
-                 border-radius: 8px !important;
+                 padding: 0.3rem 0.5rem !important;
+                 font-size: 0.7rem !important;
+                 border-radius: 6px !important;
                }
              }
            `}</style>
@@ -210,18 +210,11 @@ export default function SuperAdminCalendarRedux() {
             height={isMobile ? "auto" : "70vh"}
             aspectRatio={isMobile ? 0.8 : 1.35}
             events={events} // filtered by role
-            headerToolbar={isMobile ? {
-              left: "prev,next today",
-              center: "title",
-              right: "",
-            } : {
+            headerToolbar={{
               left: "prev,next today",
               center: "title",
               right: "dayGridMonth,timeGridWeek,timeGridDay",
             }}
-            footerToolbar={isMobile ? {
-              center: "dayGridMonth,timeGridWeek,timeGridDay"
-            } : null}
             nowIndicator={true}
             dayMaxEvents={isMobile ? 2 : true}
             eventDisplay="block"

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getInfographics } from '../../api/infographics';
-import { Download, Eye, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, Eye, Search, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, LayoutGrid, List, Filter } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 const InfographicModal = ({ image, onClose }) => {
@@ -35,9 +35,21 @@ const Infographics = () => {
   const [loading, setLoading] = useState(true);
   const [fullscreenImage, setFullscreenImage] = useState(null);
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [viewMode, setViewMode] = useState('grid');
+  const [collapsedYears, setCollapsedYears] = useState(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+
+  const toggleYearCollapse = (year) => {
+    setCollapsedYears(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(year)) {
+        newSet.delete(year);
+      } else {
+        newSet.add(year);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     const fetchInfographics = async () => {
@@ -63,14 +75,18 @@ const Infographics = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredInfographics.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentInfographics = filteredInfographics.slice(startIndex, startIndex + itemsPerPage);
+  const groupedInfographics = filteredInfographics.reduce((acc, curr) => {
+    const year = curr.academicYear || 'Uncategorized';
+    if (!acc[year]) acc[year] = [];
+    acc[year].push(curr);
+    return acc;
+  }, {});
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory]);
+  const sortedYears = Object.keys(groupedInfographics).sort((a, b) => {
+    if (a === 'Uncategorized') return 1;
+    if (b === 'Uncategorized') return -1;
+    return b.localeCompare(a);
+  });
 
   const handleView = (imageUrl) => setFullscreenImage(imageUrl);
 
@@ -78,21 +94,21 @@ const Infographics = () => {
   return (
     <main className="bg-white min-h-screen relative">
       {/* Hero */}
-      <section className="relative py-24 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
+      <section className="relative py-12 bg-gradient-to-br from-violet-950 via-purple-900 to-slate-900 overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
         <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight select-none">
             Informative <span className="text-violet-400">Infographics</span>
           </h1>
-          <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
-          <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
+          <div className="w-16 h-1.5 bg-violet-500 mx-auto rounded-full mb-6"></div>
+          <p className="text-lg md:text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
             Visual guides and educational materials on fundamental gender and development topics.
           </p>
         </div>
       </section>
 
       {/* Search & Filter */}
-      <section className="py-8 bg-slate-50 border-b border-slate-200">
+      <section className="py-4 bg-slate-50 border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -105,89 +121,133 @@ const Infographics = () => {
             />
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  selectedCategory === category
-                    ? 'bg-violet-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-300 hover:border-violet-400'
-                }`}
-              >
-                {category}
+          <div className="flex gap-2 flex-wrap flex-1 justify-end items-center">
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all ${
+                showFilters || selectedCategory !== 'All' 
+                  ? 'bg-violet-100 text-violet-700 border border-violet-200' 
+                  : 'bg-white text-slate-700 border border-slate-300 hover:border-violet-400'
+              }`}
+            >
+              <Filter size={18} />
+              <span className="hidden sm:inline">Filters {selectedCategory !== 'All' && `(${selectedCategory})`}</span>
+            </button>
+
+            <div className="flex bg-slate-200 rounded-xl p-1 h-fit">
+              <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-violet-600' : 'text-slate-500 hover:text-slate-700'}`} title="Grid View">
+                <LayoutGrid size={18} />
               </button>
-            ))}
+              <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-violet-600' : 'text-slate-500 hover:text-slate-700'}`} title="List View">
+                <List size={18} />
+              </button>
+            </div>
           </div>
         </div>
+
+        {showFilters && (
+          <div className="max-w-6xl mx-auto px-8 mt-4">
+            <div className="flex gap-2 flex-wrap justify-end">
+              {categories.map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    selectedCategory === category
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:border-violet-400'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Gallery Grid */}
-      <section className="py-20 bg-slate-50">
+      <section className="py-8 bg-slate-50">
         <div className="max-w-6xl mx-auto px-8">
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600"></div>
               <p className="mt-4 text-slate-600">Loading infographics...</p>
             </div>
-          ) : currentInfographics.length === 0 ? (
+          ) : sortedYears.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               No infographics found matching your criteria.
             </div>
           ) : (
-            <>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {currentInfographics.map(info => (
-                <div
-                  key={info._id}
-                  className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-violet-400 hover:shadow-xl transition-all duration-300 flex flex-col"
-                >
-                  <div className="h-48 overflow-hidden relative cursor-pointer" onClick={() => handleView(info.imageUrl)}>
-                    <img
-                      src={info.imageUrl}
-                      alt={info.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4 flex flex-col">
-                    <div className="mb-2">
-                      <span className="inline-block px-3 py-1 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-full uppercase tracking-wider">{info.category}</span>
+            <div className="space-y-8">
+              {sortedYears.map(year => (
+                <div key={year} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                  <div 
+                    className="flex justify-between items-center p-5 bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
+                    onClick={() => toggleYearCollapse(year)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-xl font-black text-slate-800">
+                        {year === 'Uncategorized' ? 'Uncategorized' : `A.Y. ${year}`}
+                      </h2>
+                      <span className="px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-bold">
+                        {groupedInfographics[year].length} items
+                      </span>
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 line-clamp-1">{info.title}</h3>
-                    {info.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{info.description}</p>}
-                    {/* No button needed as image is clickable */}
+                    {collapsedYears.has(year) ? (
+                      <ChevronDown className="text-slate-400" />
+                    ) : (
+                      <ChevronUp className="text-slate-400" />
+                    )}
                   </div>
+                  
+                  {!collapsedYears.has(year) && (
+                    <div className="p-5">
+                      <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
+                        {groupedInfographics[year].map(info => (
+                          <div
+                            key={info._id}
+                            className={`group relative bg-white transition-all duration-300 ${viewMode === 'list' ? 'flex flex-row items-center p-3 border border-slate-200 rounded-xl hover:border-violet-300 hover:shadow-md' : 'border border-slate-200 rounded-xl overflow-hidden hover:border-violet-400 hover:shadow-xl flex flex-col'}`}
+                          >
+                            <div className={`${viewMode === 'list' ? 'w-16 h-16 rounded-lg mr-4' : 'h-48'} overflow-hidden relative cursor-pointer flex-shrink-0`} onClick={() => handleView(info.imageUrl)}>
+                              <img
+                                src={info.imageUrl}
+                                alt={info.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            
+                            {viewMode === 'grid' ? (
+                              <div className="p-4 flex flex-col">
+                                <div className="mb-2">
+                                  <span className="inline-block px-3 py-1 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-full uppercase tracking-wider">{info.category}</span>
+                                </div>
+                                <h3 className="text-base font-bold text-slate-900 line-clamp-1">{info.title}</h3>
+                                {info.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{info.description}</p>}
+                              </div>
+                            ) : (
+                              <div className="flex-1 min-w-0 pr-4 flex flex-col justify-center">
+                                <h3 className="font-bold text-slate-900 truncate text-sm">{info.title}</h3>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-widest rounded-md">
+                                    {info.category || 'General'}
+                                  </span>
+                                  {info.description && (
+                                    <span className="text-xs text-slate-500 line-clamp-1">
+                                      {info.description}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 mt-20 pb-12">
-                  <button
-                    onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    disabled={currentPage === 1}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
-                  >
-                    <ChevronLeft size={24} />
-                  </button>
-                  <div className="bg-white px-8 py-4 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 flex items-center gap-4">
-                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Page</span>
-                    <span className="font-black text-slate-900 text-lg">{currentPage}</span>
-                    <span className="text-slate-300 font-bold">/</span>
-                    <span className="font-black text-slate-400 text-lg">{totalPages}</span>
-                  </div>
-                  <button
-                    onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    disabled={currentPage === totalPages}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-violet-50 hover:text-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-slate-200/50"
-                  >
-                    <ChevronRight size={24} />
-                  </button>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
       </section>

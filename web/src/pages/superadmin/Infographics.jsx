@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Edit2, Trash2, Plus, X, Search, Calendar, Image, Archive, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, Edit2, Trash2, Plus, X, Search, Calendar, Image, Archive, RefreshCw, ChevronLeft, ChevronRight, LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
 import {
     getInfographics,
     getArchivedInfographics,
@@ -26,7 +26,19 @@ export default function InfographicsAdmin() {
     const [isDragging, setIsDragging] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8;
+    const [viewMode, setViewMode] = useState('grid');
+    const [collapsedYears, setCollapsedYears] = useState(new Set());
+    
+    const toggleYearCollapse = (year) => {
+        const newCollapsed = new Set(collapsedYears);
+        if (newCollapsed.has(year)) {
+            newCollapsed.delete(year);
+        } else {
+            newCollapsed.add(year);
+        }
+        setCollapsedYears(newCollapsed);
+    };
+    const itemsPerPage = viewMode === 'list' ? 24 : 8;
 
     const handleDragEnter = (e) => {
         e.preventDefault();
@@ -115,7 +127,16 @@ export default function InfographicsAdmin() {
 
     // Pagination calculations
     const totalPages = Math.ceil(filteredAndSortedImages.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
+    
+    // Ensure currentPage doesn't exceed totalPages when switching views or filtering
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+    }, [totalPages, currentPage]);
+
+    const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+    const startIndex = (safeCurrentPage - 1) * itemsPerPage;
     const paginatedImages = filteredAndSortedImages.slice(startIndex, startIndex + itemsPerPage);
 
     const groupedInfographics = paginatedImages.reduce((acc, item) => {
@@ -420,6 +441,15 @@ export default function InfographicsAdmin() {
                             </div>
 
                             <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+                                <div className="flex bg-gray-100 rounded-xl p-1 mr-2">
+                                    <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`} title="Grid View">
+                                        <LayoutGrid size={18} />
+                                    </button>
+                                    <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`} title="List View">
+                                        <List size={18} />
+                                    </button>
+                                </div>
+
                                 {!viewArchived && (
                                     <button
                                         onClick={() => setShowYearModal(true)}
@@ -449,153 +479,221 @@ export default function InfographicsAdmin() {
                     {Object.keys(groupedInfographics).length > 0 ? (
                         <>
                             {Object.keys(groupedInfographics).sort().reverse().map(year => (
-                                <div key={year} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                                            <Calendar size={20} />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-xl font-black text-gray-900 leading-none">AY {year}</h2>
-                                            <p className="text-xs text-gray-500 font-bold mt-1 uppercase tracking-wider">
-                                                {groupedInfographics[year].length} items
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Filters and Selection moved here */}
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {/* Select All integrated here */}
-                                        <button
-                                            onClick={toggleSelectAll}
-                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-bold text-[10px] uppercase tracking-wider whitespace-nowrap"
-                                        >
-                                            {selectedImages.size === filteredAndSortedImages.length ? 'Deselect All' : `Select All (${filteredAndSortedImages.length})`}
-                                        </button>
-
-                                        {/* Bulk Actions when selected */}
-                                        {selectedImages.size > 0 && (
-                                            <div className="flex gap-1 animate-in zoom-in-95 duration-200 mr-2 border-r pr-2 border-gray-200">
-                                                <button
-                                                    onClick={() => handleBulkAction(viewArchived ? 'restore' : 'archive')}
-                                                    className={`p-2 text-white rounded-lg transition shadow-sm ${viewArchived ? 'bg-green-600' : 'bg-yellow-600'}`}
-                                                    title={viewArchived ? 'Restore Selected' : 'Archive Selected'}
-                                                >
-                                                    {viewArchived ? <RefreshCw size={14} /> : <Archive size={14} />}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleBulkAction('delete')}
-                                                    className="p-2 bg-red-600 text-white rounded-lg shadow-sm"
-                                                    title="Delete Selected"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
+                                <div key={year} className="animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+                                    {/* Year Header - Clickable for accordion */}
+                                    <div 
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+                                        onClick={() => toggleYearCollapse(year)}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <button className="p-1 text-gray-400 hover:text-gray-600 transition-transform">
+                                                {collapsedYears.has(year) ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
+                                            </button>
+                                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                                                <Calendar size={20} />
                                             </div>
-                                        )}
+                                            <div>
+                                                <h2 className="text-xl font-black text-gray-900 leading-none">AY {year}</h2>
+                                                <p className="text-xs text-gray-500 font-bold mt-1 uppercase tracking-wider">
+                                                    {groupedInfographics[year].length} items
+                                                </p>
+                                            </div>
+                                        </div>
 
-                                        <select
-                                            value={selectedCategory}
-                                            onChange={(e) => setSelectedCategory(e.target.value)}
-                                            className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-[10px] uppercase tracking-wider outline-none cursor-pointer shadow-sm"
-                                        >
-                                            <option value="All">All Categories</option>
-                                            {categories.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </select>
-
-                                        <select
-                                            value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
-                                            className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-[10px] uppercase tracking-wider outline-none cursor-pointer shadow-sm"
-                                        >
-                                            <option value="newest">Newest First</option>
-                                            <option value="oldest">Oldest First</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                        {groupedInfographics[year].map(item => (
-                                            <div
-                                                key={item._id}
-                                                className={`group relative bg-white rounded-2xl border-2 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${selectedImages.has(item._id) ? 'border-blue-500 ring-4 ring-blue-50' : 'border-gray-100'
-                                                    }`}
+                                        {/* Filters and Selection */}
+                                        <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                            {/* Select All integrated here */}
+                                            <button
+                                                onClick={toggleSelectAll}
+                                                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition font-bold text-[10px] uppercase tracking-wider whitespace-nowrap shadow-sm"
                                             >
-                                                {/* Selection Checkbox */}
-                                                <div className="absolute top-3 left-3 z-20">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedImages.has(item._id)}
-                                                        onChange={() => toggleImageSelection(item._id)}
-                                                        className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-transform group-hover:scale-110"
-                                                    />
-                                                </div>
+                                                {selectedImages.size === filteredAndSortedImages.length ? 'Deselect All' : `Select All (${filteredAndSortedImages.length})`}
+                                            </button>
 
-                                                {/* Image Container */}
-                                                <div className="aspect-[4/3] overflow-hidden bg-gray-100 relative">
-                                                    <img
-                                                        src={item.imageUrl}
-                                                        alt={item.title}
-                                                        onClick={() => setModalImage(item.imageUrl)}
-                                                        className="w-full h-full object-cover cursor-zoom-in transition-transform duration-700 group-hover:scale-110"
-                                                    />
-                                                    
-                                                    {/* Category Badge */}
-                                                    <div className="absolute top-3 right-3 z-10">
-                                                        <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm">
-                                                            {item.category || 'General'}
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Quick Actions Overlay */}
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10">
-                                                        {viewArchived ? (
-                                                            <button
-                                                                onClick={() => handleRestore(item._id)}
-                                                                className="p-3 bg-green-500 hover:bg-green-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
-                                                                title="Restore"
-                                                            >
-                                                                <RefreshCw size={18} />
-                                                            </button>
-                                                        ) : (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => handleEdit(item)}
-                                                                    className="p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
-                                                                    title="Edit"
-                                                                >
-                                                                    <Edit2 size={18} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleArchive(item._id)}
-                                                                    className="p-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
-                                                                    title="Archive"
-                                                                >
-                                                                    <Archive size={18} />
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleDelete(item._id)}
-                                                            className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
-                                                            title="Delete Permanently"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    </div>
+                                            {/* Bulk Actions when selected */}
+                                            {selectedImages.size > 0 && (
+                                                <div className="flex gap-1 animate-in zoom-in-95 duration-200 mr-2 border-r pr-2 border-gray-200">
+                                                    <button
+                                                        onClick={() => handleBulkAction(viewArchived ? 'restore' : 'archive')}
+                                                        className={`p-2 text-white rounded-lg transition shadow-sm ${viewArchived ? 'bg-green-600' : 'bg-yellow-600'}`}
+                                                        title={viewArchived ? 'Restore Selected' : 'Archive Selected'}
+                                                    >
+                                                        {viewArchived ? <RefreshCw size={14} /> : <Archive size={14} />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleBulkAction('delete')}
+                                                        className="p-2 bg-red-600 text-white rounded-lg shadow-sm"
+                                                        title="Delete Selected"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
                                                 </div>
+                                            )}
 
-                                                {/* Content Area */}
-                                                <div className="p-4">
-                                                    <h3 className="font-bold text-gray-900 truncate mb-1">{item.title}</h3>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                        Uploaded {new Date(item.uploadDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            <select
+                                                value={selectedCategory}
+                                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                                className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-[10px] uppercase tracking-wider outline-none cursor-pointer shadow-sm"
+                                            >
+                                                <option value="All">All Categories</option>
+                                                {categories.map(cat => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                            </select>
+
+                                            <select
+                                                value={sortBy}
+                                                onChange={(e) => setSortBy(e.target.value)}
+                                                className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-[10px] uppercase tracking-wider outline-none cursor-pointer shadow-sm"
+                                            >
+                                                <option value="newest">Newest First</option>
+                                                <option value="oldest">Oldest First</option>
+                                            </select>
+                                        </div>
                                     </div>
+
+                                    {/* Accordion Content */}
+                                    {!collapsedYears.has(year) && (
+                                        <div className="p-5">
+                                            <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"}>
+                                                {groupedInfographics[year].map(item => (
+                                                    <div
+                                                        key={item._id}
+                                                        className={`group relative bg-white transition-all duration-300 ${viewMode === 'list' ? 'flex flex-row items-center p-3 border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md ' + (selectedImages.has(item._id) ? 'border-blue-500 ring-2 ring-blue-50' : '') : 'rounded-2xl border-2 overflow-hidden hover:shadow-2xl hover:-translate-y-1 ' + (selectedImages.has(item._id) ? 'border-blue-500 ring-4 ring-blue-50' : 'border-gray-100')}`}
+                                                    >
+                                                        {/* Selection Checkbox */}
+                                                        <div className={`z-20 flex-shrink-0 ${viewMode === 'list' ? 'mr-4' : 'absolute top-3 left-3'}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedImages.has(item._id)}
+                                                                onChange={() => toggleImageSelection(item._id)}
+                                                                className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-transform group-hover:scale-110"
+                                                            />
+                                                        </div>
+
+                                                        {/* Image Container */}
+                                                        <div className={`${viewMode === 'list' ? 'w-12 h-12 rounded-lg mr-4' : 'aspect-[4/3] w-full'} overflow-hidden bg-gray-100 relative flex-shrink-0`}>
+                                                            <img
+                                                                src={item.imageUrl}
+                                                                alt={item.title}
+                                                                onClick={() => setModalImage(item.imageUrl)}
+                                                                className="w-full h-full object-cover cursor-zoom-in transition-transform duration-700 group-hover:scale-110"
+                                                            />
+                                                            
+                                                            {/* Category Badge (Grid Only) */}
+                                                            {viewMode === 'grid' && (
+                                                                <div className="absolute top-3 right-3 z-10">
+                                                                    <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm">
+                                                                        {item.category || 'General'}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Quick Actions Overlay (Grid View Only) */}
+                                                            {viewMode === 'grid' && (
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10">
+                                                                    {viewArchived ? (
+                                                                        <button
+                                                                            onClick={() => handleRestore(item._id)}
+                                                                            className="p-3 bg-green-500 hover:bg-green-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
+                                                                            title="Restore"
+                                                                        >
+                                                                            <RefreshCw size={18} />
+                                                                        </button>
+                                                                    ) : (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => handleEdit(item)}
+                                                                                className="p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
+                                                                                title="Edit"
+                                                                            >
+                                                                                <Edit2 size={18} />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleArchive(item._id)}
+                                                                                className="p-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
+                                                                                title="Archive"
+                                                                            >
+                                                                                <Archive size={18} />
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={() => handleDelete(item._id)}
+                                                                        className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-lg transition-all hover:scale-110"
+                                                                        title="Delete Permanently"
+                                                                    >
+                                                                        <Trash2 size={18} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Content Area */}
+                                                        {viewMode === 'list' ? (
+                                                            <div className="flex-1 min-w-0 pr-4 flex flex-col justify-center">
+                                                                <h3 className="font-bold text-gray-900 truncate text-sm">{item.title}</h3>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-md">
+                                                                        {item.category || 'General'}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest truncate">
+                                                                        {new Date(item.uploadDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="p-4">
+                                                                <h3 className="font-bold text-gray-900 truncate mb-1">{item.title}</h3>
+                                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                                    Uploaded {new Date(item.uploadDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Quick Actions (List View Only) */}
+                                                        {viewMode === 'list' && (
+                                                            <div className="flex flex-shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                {viewArchived ? (
+                                                                    <button
+                                                                        onClick={() => handleRestore(item._id)}
+                                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                                        title="Restore"
+                                                                    >
+                                                                        <RefreshCw size={16} />
+                                                                    </button>
+                                                                ) : (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => handleEdit(item)}
+                                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                                            title="Edit"
+                                                                        >
+                                                                            <Edit2 size={16} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleArchive(item._id)}
+                                                                            className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-all"
+                                                                            title="Archive"
+                                                                        >
+                                                                        <Archive size={16} />
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleDelete(item._id)}
+                                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                    title="Delete Permanently"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
 
@@ -603,8 +701,8 @@ export default function InfographicsAdmin() {
                             {totalPages > 1 && (
                                 <div className="flex justify-center items-center gap-4 mt-12 pb-8">
                                     <button
-                                        onClick={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                                        disabled={currentPage === 1}
+                                        onClick={() => { setCurrentPage(prev => Math.max(Math.min(prev, totalPages) - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                        disabled={safeCurrentPage === 1}
                                         className="p-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                                     >
                                         <ChevronLeft size={20} />
@@ -612,14 +710,14 @@ export default function InfographicsAdmin() {
                                     
                                     <div className="flex items-center gap-2 bg-white px-5 py-2.5 rounded-xl border border-gray-200 shadow-sm">
                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Page</span>
-                                        <span className="font-bold text-gray-900">{currentPage}</span>
+                                        <span className="font-bold text-gray-900">{safeCurrentPage}</span>
                                         <span className="text-gray-300">/</span>
                                         <span className="font-bold text-gray-400">{totalPages}</span>
                                     </div>
 
                                     <button
-                                        onClick={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                                        disabled={currentPage === totalPages}
+                                        onClick={() => { setCurrentPage(prev => Math.min(Math.min(prev, totalPages) + 1, totalPages)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                        disabled={safeCurrentPage === totalPages}
                                         className="p-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                                     >
                                         <ChevronRight size={20} />
@@ -786,21 +884,19 @@ export default function InfographicsAdmin() {
                                     </select>
                                 </div>
 
-                                {editingItem && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Title
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="title"
-                                            value={formData.title}
-                                            onChange={handleInputChange}
-                                            placeholder="Infographic title"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                )}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        value={formData.title || ""}
+                                        onChange={handleInputChange}
+                                        placeholder="Infographic title"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">

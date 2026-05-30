@@ -9,6 +9,11 @@ export default function FloatingChatbot() {
   const isSuperAdminRoute = location.pathname.startsWith("/superadmin");
   const isChatRoute = location.pathname.includes("/chat") || location.pathname.includes("/messages");
   
+  const isReportForm = location.pathname === "/user/report";
+  const hiddenPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/activate"];
+  const isHiddenPath = hiddenPaths.some(p => location.pathname.startsWith(p));
+  const isBottomNavHidden = isSuperAdminRoute || isReportForm || isHiddenPath;
+  
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [visible, setVisible] = useState(false);
@@ -143,7 +148,7 @@ All conversations are **confidential**. How can I help you today? 💜`,
   const styles = {
     floatingBtn: {
       position: "fixed",
-      bottom: isMobile ? "80px" : "24px",
+      bottom: isNativeApp && !isBottomNavHidden ? "calc(80px + env(safe-area-inset-bottom, 0px))" : "24px",
       right: isMobile ? "16px" : "24px",
       width: isMobile ? "52px" : "60px",
       height: isMobile ? "52px" : "60px",
