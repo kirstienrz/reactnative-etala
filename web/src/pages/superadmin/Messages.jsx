@@ -634,6 +634,14 @@ const TicketMessagingSystem = () => {
       if (t) {
         hasHandledNavigationRef.current = true;
         handleSelectTicket(t);
+
+        // ✅ Auto-open booking modal when coming from "For Interview" status update
+        if (state.openBookingModal) {
+          setTimeout(() => {
+            setShowAvailabilityModal(true);
+          }, 800);
+        }
+
         // Clear state immediately to prevent re-triggering
         window.history.replaceState({}, document.title);
       }
