@@ -115,6 +115,18 @@ const LoginPage = () => {
         return; // stop the process
       }
 
+      if (!email.endsWith("@tup.edu.ph")) {
+        let msg = "Email must end with @tup.edu.ph.";
+        if (email.includes("@tupt")) {
+          msg = "Please use @tup.edu.ph instead of @tupt.edu.ph.";
+        } else if (userType === "Faculty" && !email.toLowerCase().includes("ap_")) {
+          msg = "Faculty emails must end with @tup.edu.ph and start with the 'ap_' prefix.";
+        }
+        toast.error(msg);
+        setLoading(false);
+        return;
+      }
+
       let data;
 
       if (usePin) {
@@ -221,7 +233,7 @@ const LoginPage = () => {
                   type="email"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   required
                   className={`w-full pl-11 pr-4 ${isNativeApp ? 'py-3 text-[15px]' : 'py-2.5 sm:py-3 text-sm'} bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:bg-white transition-all duration-300`}
                   autoComplete="email"
