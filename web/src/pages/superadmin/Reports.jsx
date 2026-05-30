@@ -39,6 +39,7 @@ const AdminReports = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [readStatusFilter, setReadStatusFilter] = useState("All");
   const [caseStatusFilter, setCaseStatusFilter] = useState("All");
+  const [internalDepartmentFilter, setInternalDepartmentFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -1002,6 +1003,7 @@ const AdminReports = () => {
     setSearchTerm("");
     setReadStatusFilter("All");
     setCaseStatusFilter("All");
+    setInternalDepartmentFilter("All");
     setCategoryFilter("All");
     setDateFrom("");
     setDateTo("");
@@ -1045,7 +1047,9 @@ const AdminReports = () => {
       (readStatusFilter === "Unread" && !isReportRead(r._id));
 
     const matchesCaseStatus = caseStatusFilter === "All" || 
-      (caseStatusFilter === "Internal" ? r.caseStatus?.startsWith("Internal") : r.caseStatus === caseStatusFilter);
+      (caseStatusFilter === "Internal" 
+        ? (r.caseStatus?.startsWith("Internal") && (internalDepartmentFilter === "All" || r.caseStatus === `Internal - ${internalDepartmentFilter}`)) 
+        : r.caseStatus === caseStatusFilter);
     const matchesCategory = categoryFilter === "All" || r.incidentTypes?.includes(categoryFilter);
 
     const matchesSentiment = sentimentFilter === "All" ||
@@ -1074,6 +1078,7 @@ const AdminReports = () => {
   const activeFilterCount = [
     readStatusFilter !== "All",
     caseStatusFilter !== "All",
+    internalDepartmentFilter !== "All",
     categoryFilter !== "All",
     dateFrom,
     dateTo,
@@ -1291,6 +1296,9 @@ const AdminReports = () => {
                     value={caseStatusFilter}
                     onChange={(e) => {
                       setCaseStatusFilter(e.target.value);
+                      if (e.target.value !== "Internal") {
+                        setInternalDepartmentFilter("All");
+                      }
                       setCurrentPage(1);
                     }}
                   >
@@ -1302,6 +1310,29 @@ const AdminReports = () => {
                     <option>Case Closed</option>
                   </select>
                 </div>
+
+                {caseStatusFilter === "Internal" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Internal Department</label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      value={internalDepartmentFilter}
+                      onChange={(e) => {
+                        setInternalDepartmentFilter(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <option>All</option>
+                      <option>Legal Clinic</option>
+                      <option>Guidance and Counseling</option>
+                      <option>Medical Health Services</option>
+                      <option>Gender and Development</option>
+                      <option>Director's Office</option>
+                      <option>Human Resources (for Employees)</option>
+                      <option>Student Affairs</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Severity Level</label>
@@ -2437,6 +2468,7 @@ const AdminReports = () => {
                         <option value="Legal Clinic">Legal Clinic</option>
                         <option value="Guidance and Counseling">Guidance and Counseling</option>
                         <option value="Medical Health Services">Medical Health Services</option>
+                        <option value="Gender and Development">Gender and Development</option>
                         <option value="Director's Office">Director's Office</option>
                         <option value="Human Resources">Human Resources (for Employees)</option>
                         <option value="Student Affairs">Student Affairs</option>
@@ -2725,6 +2757,7 @@ const AdminReports = () => {
                               <option value="Legal Clinic">Legal Clinic</option>
                               <option value="Guidance and Counseling">Guidance and Counseling</option>
                               <option value="Medical Health Services">Medical Health Services</option>
+                              <option value="Gender and Development">Gender and Development</option>
                               <option value="Director's Office">Director's Office</option>
                               <option value="Human Resources">Human Resources (for Employees)</option>
                               <option value="Student Affairs">Student Affairs</option>
