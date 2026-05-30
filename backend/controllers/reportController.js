@@ -321,6 +321,12 @@ const updateReportStatus = async (req, res) => {
       updateData.resolvedAt = new Date();
     }
 
+    // Auto-archive when case is closed or external
+    if (caseStatus === "Case Closed" || (caseStatus && caseStatus.startsWith("External"))) {
+      updateData.archived = true;
+      updateData.archivedAt = new Date();
+    }
+
     updateData.lastUpdated = new Date();
 
     // Add timeline entry for status update
