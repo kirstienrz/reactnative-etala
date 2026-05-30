@@ -236,11 +236,11 @@ const Layout = ({ children }) => {
             </div>
           </header>
 
-          <main className={`flex-1 overflow-y-auto ${
+          <main className={`flex-1 w-full max-w-full overflow-y-auto ${
+            location.pathname.startsWith("/superadmin/messages") ||
             (isNativeApp && (
               location.pathname === "/superadmin/dashboard" || 
-              location.pathname === "/superadmin" ||
-              location.pathname.startsWith("/superadmin/messages")
+              location.pathname === "/superadmin"
             ))
               ? "" 
               : "p-4 md:p-6 pt-2 md:pt-4"
