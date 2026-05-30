@@ -863,7 +863,7 @@ const TicketMessagingSystem = () => {
       <CalendarReminderModal isOpen={showCalendarReminder} onClose={() => setShowCalendarReminder(false)} onConfirm={handleCalendarConfirmed} />
       <AvailabilityPickerModal isOpen={showAvailabilityModal} onClose={() => setShowAvailabilityModal(false)} onConfirm={handleCalendarConfirmed} adminId={selectedTicket?.adminId || 'me'} />
 
-      <div className="flex bg-white" style={{ height: '100%', overflow: 'hidden' }}>
+      <div className="flex w-full max-w-full bg-white" style={{ height: '100%', overflow: 'hidden' }}>
 
         {/* ── Sidebar ── */}
         <div className={`${showTicketList ? 'flex' : 'hidden'} flex-col w-full md:w-96 border-r border-gray-200 bg-white transition-all duration-300 ease-in-out`} style={{ height: '100%', minHeight: 0 }}>
@@ -985,46 +985,47 @@ const TicketMessagingSystem = () => {
         </div>
 
         {/* ── Chat area ── */}
-        <div className={`${showTicketList ? 'hidden md:flex' : 'flex'} flex-col flex-1`} style={{ height: '100%', minHeight: 0 }}>
+        <div className={`${showTicketList ? 'hidden md:flex' : 'flex'} flex-col flex-1 min-w-0 w-full overflow-hidden`} style={{ height: '100%', minHeight: 0 }}>
           {selectedTicket ? (
             <>
               <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => setShowTicketList(!showTicketList)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={showTicketList ? "Hide Sidebar" : "Show Sidebar"}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button onClick={() => setShowTicketList(!showTicketList)} className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors" title={showTicketList ? "Hide Sidebar" : "Show Sidebar"}>
                       {showTicketList ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
                       {selectedTicket.displayName?.charAt(0).toUpperCase() || 'U'}
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{selectedTicket.displayName || 'Anonymous User'}</h3>
-                      <p className="text-xs text-gray-500">{selectedTicket.reportId?.ticketNumber || selectedTicket.ticketNumber}</p>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{selectedTicket.displayName || 'Anonymous User'}</h3>
+                      <p className="text-xs text-gray-500 truncate">{selectedTicket.reportId?.ticketNumber || selectedTicket.ticketNumber}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={handleSendAppointmentLink} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all text-sm font-medium">
                       <Calendar className="w-4 h-4" />Book Appointment
                     </button>
                     <button onClick={() => handleMarkAsUnread(selectedTicket.ticketNumber)} title="Mark as unread"
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700">
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700 flex-shrink-0">
                       <Mail className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleToggleStatus(selectedTicket)}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${selectedTicket.status === 'Open'
+                      className={`flex items-center gap-1.5 p-2 sm:px-4 sm:py-2 rounded-lg text-sm font-bold transition-all shadow-sm flex-shrink-0 ${selectedTicket.status === 'Open'
                         ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-600 hover:text-white'
                         : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-600 hover:text-white'
                         }`}
+                      title={selectedTicket.status === 'Open' ? 'Archive' : 'Reopen'}
                     >
                       {selectedTicket.status === 'Open' ? (
                         <>
                           <Archive size={16} />
-                          Archive
+                          <span className="hidden sm:inline">Archive</span>
                         </>
                       ) : (
                         <>
                           <RefreshCw size={16} />
-                          Reopen
+                          <span className="hidden sm:inline">Reopen</span>
                         </>
                       )}
                     </button>
@@ -1048,7 +1049,7 @@ const TicketMessagingSystem = () => {
                         <div key={idx} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[85%] sm:max-w-md rounded-2xl p-3 ${isAppt ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg' : isAdmin ? 'bg-blue-500' : 'bg-white shadow-sm'}`}>
                             {isAppt && <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/30"><Calendar className="w-4 h-4 text-white" /><span className="text-xs font-semibold text-white">Appointment Booking</span></div>}
-                            <p className={`text-sm whitespace-pre-line ${isAppt || isAdmin ? 'text-white' : 'text-gray-900'}`}>{msg.content}</p>
+                            <p className={`text-sm whitespace-pre-line break-words ${isAppt || isAdmin ? 'text-white' : 'text-gray-900'}`}>{msg.content}</p>
 
                             {/* Attachments Section */}
                             {msg.attachments?.length > 0 && (
@@ -1162,17 +1163,21 @@ const TicketMessagingSystem = () => {
 
               {selectedTicket.status === 'Open' && (
                 <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4">
-                  <button onClick={handleSendAppointmentLink} className="sm:hidden w-full mb-3 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium">
-                    <Calendar className="w-4 h-4" />Send Booking Link
-                  </button>
                   <div className="flex gap-3 items-end max-w-4xl mx-auto">
+                    <button 
+                      onClick={handleSendAppointmentLink} 
+                      className="sm:hidden flex-shrink-0 w-11 h-11 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-md active:scale-95 hover:from-purple-600 hover:to-indigo-700 transition-all duration-150" 
+                      title="Send Booking Link"
+                    >
+                      <Calendar className="w-5 h-5" />
+                    </button>
                     <div className="flex-1">
                       <textarea value={newMessage} onChange={handleTyping} onKeyPress={handleKeyPress} placeholder="Type a message..." rows="1" disabled={sending}
                         className="w-full px-4 py-3 bg-gray-100 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
                         style={{ minHeight: '44px', maxHeight: '120px', overflowY: 'auto' }} />
                     </div>
                     <button onClick={handleSendMessage} disabled={!newMessage.trim() || sending}
-                      className="flex-shrink-0 w-11 h-11 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center justify-center">
+                      className="flex-shrink-0 w-11 h-11 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center justify-center shadow-md active:scale-95 duration-150">
                       {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
                   </div>
