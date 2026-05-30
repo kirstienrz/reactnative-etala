@@ -30,6 +30,17 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
+    if (!email.endsWith("@tup.edu.ph")) {
+      let msg = "Email must end with @tup.edu.ph.";
+      if (email.includes("@tupt")) {
+        msg = "Please use @tup.edu.ph instead of @tupt.edu.ph.";
+      } else if (tuptId && !tuptId.startsWith("TUPT") && !email.toLowerCase().includes("ap_")) {
+        msg = "Faculty emails must end with @tup.edu.ph and start with the 'ap_' prefix.";
+      }
+      Alert.alert("Invalid Email", msg);
+      return;
+    }
+
     setLoading(true);
 
     try {
