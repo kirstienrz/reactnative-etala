@@ -231,6 +231,7 @@ router.get("/manage/users", auth(), async (req, res) => {
     const search = req.query.search || "";
     const role = req.query.role || "all";
     const department = req.query.department || "all";
+    const archiveStatus = req.query.archiveStatus || "all";
     const isArchived = req.query.isArchived === 'true';
 
     // Build query
@@ -244,13 +245,36 @@ router.get("/manage/users", auth(), async (req, res) => {
       query.department = department;
     }
 
+    const conditions = [];
+
+    if (archiveStatus !== "all") {
+      if (archiveStatus === "Active") {
+        // Support older database documents where archiveStatus is null or undefined
+        conditions.push({
+          $or: [
+            { archiveStatus: "Active" },
+            { archiveStatus: null },
+            { archiveStatus: { $exists: false } }
+          ]
+        });
+      } else {
+        conditions.push({ archiveStatus });
+      }
+    }
+
     if (search) {
-      query.$or = [
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { tupId: { $regex: search, $options: "i" } }
-      ];
+      conditions.push({
+        $or: [
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { tupId: { $regex: search, $options: "i" } }
+        ]
+      });
+    }
+
+    if (conditions.length > 0) {
+      query.$and = conditions;
     }
 
     const totalUsers = await User.countDocuments(query);

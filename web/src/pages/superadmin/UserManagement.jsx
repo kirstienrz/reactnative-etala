@@ -43,8 +43,9 @@ export default function UserManagement() {
   const [modalMode, setModalMode] = useState('create');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'archived' | 'appeals'
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'pending_archive' | 'archived' | 'appeals'
   const [appeals, setAppeals] = useState([]);
+  const [pendingArchiveCount, setPendingArchiveCount] = useState(0);
   const [showArchiveReasonModal, setShowArchiveReasonModal] = useState(false);
   const [archivingUserId, setArchivingUserId] = useState(null);
   const [archiveReasonInput, setArchiveReasonInput] = useState('');
@@ -52,6 +53,7 @@ export default function UserManagement() {
   const [customArchiveReason, setCustomArchiveReason] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterDepartment, setFilterDepartment] = useState('all');
+  const [filterArchiveStatus, setFilterArchiveStatus] = useState('all');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -78,7 +80,7 @@ export default function UserManagement() {
   }, [searchQuery]);
 
   useEffect(() => {
-    fetchAppealsCount();
+    fetchCounts();
   }, []);
 
   useEffect(() => {
@@ -87,14 +89,21 @@ export default function UserManagement() {
     } else {
       fetchUsers();
     }
-  }, [currentPage, debouncedSearch, showArchived, activeTab, filterRole, filterDepartment]);
+  }, [currentPage, debouncedSearch, showArchived, activeTab, filterRole, filterDepartment, filterArchiveStatus]);
 
-  const fetchAppealsCount = async () => {
+  const fetchCounts = async () => {
     try {
-      const data = await getAllAppeals();
-      setAppeals(data);
+      const appealsData = await getAllAppeals();
+      setAppeals(appealsData);
+
+      const pendingResponse = await getAllUsersForManagement({
+        limit: 1,
+        archiveStatus: 'Pending Archive',
+        isArchived: false
+      });
+      setPendingArchiveCount(pendingResponse.totalUsers || 0);
     } catch (err) {
-      console.error("Failed to load appeals count:", err);
+      console.error("Failed to load counts:", err);
     }
   };
 
@@ -121,6 +130,7 @@ export default function UserManagement() {
         search: debouncedSearch,
         role: filterRole,
         department: filterDepartment,
+        archiveStatus: activeTab === 'pending_archive' ? 'Pending Archive' : filterArchiveStatus,
         isArchived: showArchived
       };
       
@@ -129,8 +139,8 @@ export default function UserManagement() {
       setTotalPages(response.totalPages);
       setTotalUsers(response.totalUsers);
       
-      // Keep appeals badge updated
-      fetchAppealsCount();
+      // Keep badges updated
+      fetchCounts();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch users');
     } finally {
@@ -393,6 +403,26 @@ export default function UserManagement() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('pending_archive');
+                setShowArchived(false);
+                setCurrentPage(1);
+                setSelectedUserIds([]);
+              }}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all relative ${
+                activeTab === 'pending_archive' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Pending Archive
+              {pendingArchiveCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white animate-pulse">
+                  {pendingArchiveCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('archived');
                 setShowArchived(true);
                 setCurrentPage(1);
@@ -428,12 +458,12 @@ export default function UserManagement() {
           </div>
         </div>
         <div className="text-sm text-gray-600 font-semibold bg-gray-100 px-4 py-1.5 rounded-full shadow-sm">
-          {activeTab === 'active' ? 'Active' : activeTab === 'archived' ? 'Archived' : 'Appeals under review'}: <span className="text-blue-600 font-bold">{totalUsers}</span>
+          {activeTab === 'active' ? 'Active' : activeTab === 'pending_archive' ? 'Pending Archive' : activeTab === 'archived' ? 'Archived' : 'Appeals under review'}: <span className="text-blue-600 font-bold">{totalUsers}</span>
         </div>
       </div>
 
       {/* Bulk Actions Banner */}
-      {selectedUserIds.length > 0 && activeTab !== 'appeals' && (
+      {selectedUserIds.length > 0 && activeTab === 'active' && (
         <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 animate-modal-zoom">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shadow-inner">
@@ -533,6 +563,25 @@ export default function UserManagement() {
               <option value="BASD">BASD</option>
             </select>
           </div>
+
+          {activeTab === 'active' && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
+              <select
+                value={filterArchiveStatus}
+                onChange={(e) => {
+                  setFilterArchiveStatus(e.target.value);
+                  setCurrentPage(1);
+                  setSelectedUserIds([]);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white min-w-[180px]"
+              >
+                <option value="all">All Statuses</option>
+                <option value="Active">Active Only</option>
+                <option value="Pending Archive">Pending Archive Only</option>
+              </select>
+            </div>
+          )}
           
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Results</label>
@@ -551,13 +600,15 @@ export default function UserManagement() {
             </select>
           </div>
 
-          {(filterRole !== 'all' || filterDepartment !== 'all' || searchQuery) && (
+          {(filterRole !== 'all' || filterDepartment !== 'all' || searchQuery || filterArchiveStatus !== 'all') && (
             <button
               onClick={() => {
                 setFilterRole('all');
                 setFilterDepartment('all');
+                setFilterArchiveStatus('all');
                 setSearchQuery('');
                 setCurrentPage(1);
+                setSelectedUserIds([]);
               }}
               className="px-4 py-2 h-[42px] bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition border border-red-200 font-medium whitespace-nowrap"
             >
@@ -571,7 +622,7 @@ export default function UserManagement() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              {activeTab !== 'appeals' && (
+              {(activeTab === 'active' || activeTab === 'archived') && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                   <input
                     type="checkbox"
@@ -683,7 +734,7 @@ export default function UserManagement() {
               users && users.length > 0 ? (
                 users.map((user) => (
                   <tr key={user._id} className={`${user.isArchived ? 'bg-gray-50' : ''} hover:bg-gray-50 transition-colors`}>
-                    {activeTab !== 'appeals' && (
+                    {(activeTab === 'active' || activeTab === 'archived') && (
                       <td className="px-6 py-4 whitespace-nowrap w-10">
                         <input
                           type="checkbox"
@@ -788,7 +839,7 @@ export default function UserManagement() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={activeTab !== 'appeals' ? 9 : 8} className="px-6 py-12 text-center text-gray-500 italic font-semibold">
+                  <td colSpan={(activeTab === 'active' || activeTab === 'archived') ? 9 : 8} className="px-6 py-12 text-center text-gray-500 italic font-semibold">
                     No users found matching your criteria.
                   </td>
                 </tr>
