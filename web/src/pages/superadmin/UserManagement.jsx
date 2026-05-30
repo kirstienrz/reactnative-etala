@@ -7,7 +7,8 @@ import {
   archiveUser,
   unarchiveUser,
   getAllAppeals,
-  respondToAppeal
+  respondToAppeal,
+  bulkArchiveUsers
 } from '../../api/user';
 import { 
   ChevronLeft, 
@@ -32,6 +33,7 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [limit, setLimit] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
@@ -379,6 +381,7 @@ export default function UserManagement() {
                 setActiveTab('active');
                 setShowArchived(false);
                 setCurrentPage(1);
+                setSelectedUserIds([]);
               }}
               className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
                 activeTab === 'active' 
@@ -393,6 +396,7 @@ export default function UserManagement() {
                 setActiveTab('archived');
                 setShowArchived(true);
                 setCurrentPage(1);
+                setSelectedUserIds([]);
               }}
               className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
                 activeTab === 'archived' 
@@ -406,6 +410,7 @@ export default function UserManagement() {
               onClick={() => {
                 setActiveTab('appeals');
                 setCurrentPage(1);
+                setSelectedUserIds([]);
               }}
               className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all relative ${
                 activeTab === 'appeals' 
@@ -426,6 +431,48 @@ export default function UserManagement() {
           {activeTab === 'active' ? 'Active' : activeTab === 'archived' ? 'Archived' : 'Appeals under review'}: <span className="text-blue-600 font-bold">{totalUsers}</span>
         </div>
       </div>
+
+      {/* Bulk Actions Banner */}
+      {selectedUserIds.length > 0 && activeTab !== 'appeals' && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 animate-modal-zoom">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shadow-inner">
+              {selectedUserIds.length}
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900 text-sm leading-none mb-1">
+                {selectedUserIds.length === 1 ? "1 User Selected" : `${selectedUserIds.length} Users Selected`}
+              </h3>
+              <p className="text-xs text-blue-700 font-semibold leading-relaxed">
+                You can schedule deactivation for all selected users at once.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={() => {
+                setArchivingUserId('bulk');
+                setArchiveReasonInput('');
+                setCustomArchiveReason('');
+                setArchiveGraceDaysInput(7);
+                setShowArchiveReasonModal(true);
+              }}
+              className="flex-1 sm:flex-none px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all font-bold text-xs shadow-md shadow-amber-600/20 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Archive size={14} strokeWidth={2.5} />
+              Bulk Archive
+            </button>
+            
+            <button
+              onClick={() => setSelectedUserIds([])}
+              className="flex-1 sm:flex-none px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-lg transition font-semibold text-xs text-center cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
       
       <div className="mb-6 flex flex-wrap gap-4 items-center bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex-1 min-w-[300px]">
@@ -524,6 +571,35 @@ export default function UserManagement() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              {activeTab !== 'appeals' && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                  <input
+                    type="checkbox"
+                    checked={
+                      users.length > 0 &&
+                      users.filter(u => u.archiveStatus !== 'Pending Archive' && !u.isArchived).length > 0 &&
+                      users.filter(u => u.archiveStatus !== 'Pending Archive' && !u.isArchived).every(u => selectedUserIds.includes(u._id))
+                    }
+                    onChange={() => {
+                      const pageEligible = users.filter(u => u.archiveStatus !== 'Pending Archive' && !u.isArchived);
+                      const pageEligibleIds = pageEligible.map(u => u._id);
+                      const allChecked = pageEligible.length > 0 && pageEligible.every(u => selectedUserIds.includes(u._id));
+                      if (allChecked) {
+                        setSelectedUserIds(prev => prev.filter(id => !pageEligibleIds.includes(id)));
+                      } else {
+                        setSelectedUserIds(prev => {
+                          const newSelections = [...prev];
+                          pageEligibleIds.forEach(id => {
+                            if (!newSelections.includes(id)) newSelections.push(id);
+                          });
+                          return newSelections;
+                        });
+                      }
+                    }}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
+              )}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Name
               </th>
@@ -607,6 +683,25 @@ export default function UserManagement() {
               users && users.length > 0 ? (
                 users.map((user) => (
                   <tr key={user._id} className={`${user.isArchived ? 'bg-gray-50' : ''} hover:bg-gray-50 transition-colors`}>
+                    {activeTab !== 'appeals' && (
+                      <td className="px-6 py-4 whitespace-nowrap w-10">
+                        <input
+                          type="checkbox"
+                          disabled={user.archiveStatus === 'Pending Archive' || user.isArchived}
+                          checked={selectedUserIds.includes(user._id)}
+                          onChange={() => {
+                            if (selectedUserIds.includes(user._id)) {
+                              setSelectedUserIds(prev => prev.filter(id => id !== user._id));
+                            } else {
+                              setSelectedUserIds(prev => [...prev, user._id]);
+                            }
+                          }}
+                          className={`w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer ${
+                            (user.archiveStatus === 'Pending Archive' || user.isArchived) ? 'opacity-30 cursor-not-allowed' : ''
+                          }`}
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
                         {user.firstName} {user.lastName}
@@ -662,16 +757,19 @@ export default function UserManagement() {
                           <div className="w-8 h-8" /> /* Grid placeholder to ensure perfect columns */
                         )}
 
-                        {!user.isArchived ? (
+                        {user.archiveStatus === 'Pending Archive' ? (
+                          <button
+                            onClick={() => handleUnarchive(user._id)}
+                            className="text-emerald-600 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 p-2 rounded-lg transition-all flex items-center justify-center w-8 h-8 shadow-sm hover:shadow active:scale-95"
+                            title="Cancel Scheduled Archiving (Restore)"
+                          >
+                            <RotateCcw size={14} strokeWidth={2.5} />
+                          </button>
+                        ) : !user.isArchived ? (
                           <button
                             onClick={() => handleArchive(user._id)}
-                            className={`p-2 rounded-lg transition-all flex items-center justify-center w-8 h-8 shadow-sm ${
-                              user.archiveStatus === 'Pending Archive'
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-inner'
-                                : 'text-amber-600 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 hover:shadow active:scale-95'
-                            }`}
-                            disabled={user.archiveStatus === 'Pending Archive'}
-                            title={user.archiveStatus === 'Pending Archive' ? 'Scheduled for archiving' : 'Archive User'}
+                            className="text-amber-600 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 p-2 rounded-lg transition-all flex items-center justify-center w-8 h-8 shadow-sm hover:shadow active:scale-95"
+                            title="Archive User"
                           >
                             <Archive size={14} strokeWidth={2.5} />
                           </button>
@@ -690,7 +788,7 @@ export default function UserManagement() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center text-gray-500 italic font-semibold">
+                  <td colSpan={activeTab !== 'appeals' ? 9 : 8} className="px-6 py-12 text-center text-gray-500 italic font-semibold">
                     No users found matching your criteria.
                   </td>
                 </tr>
@@ -1124,8 +1222,14 @@ export default function UserManagement() {
                   try {
                     setLoading(true);
                     setShowArchiveReasonModal(false);
-                    await archiveUser(archivingUserId, { reason: finalReason, graceDays: archiveGraceDaysInput });
-                    setSuccess('User scheduled for archiving successfully!');
+                    if (archivingUserId === 'bulk') {
+                      await bulkArchiveUsers({ userIds: selectedUserIds, reason: finalReason, graceDays: archiveGraceDaysInput });
+                      setSuccess(`Successfully scheduled archiving for ${selectedUserIds.length} users!`);
+                      setSelectedUserIds([]);
+                    } else {
+                      await archiveUser(archivingUserId, { reason: finalReason, graceDays: archiveGraceDaysInput });
+                      setSuccess('User scheduled for archiving successfully!');
+                    }
                     setArchivingUserId(null);
                     setArchiveReasonInput('');
                     setCustomArchiveReason('');
