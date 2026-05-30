@@ -2707,22 +2707,28 @@ const AdminReports = () => {
                       <option disabled={
                         selectedReport?.caseStatus === "For Interview" ||
                         selectedReport?.caseStatus === "For Referral" ||
-                        selectedReport?.caseStatus === "Internal" ||
+                        selectedReport?.caseStatus?.startsWith("Internal") ||
                         selectedReport?.caseStatus === "Referred to Barangay" ||
                         selectedReport?.caseStatus === "Case Closed"
                       }>For Queuing</option>
                       <option disabled={
                         selectedReport?.caseStatus === "For Referral" ||
-                        selectedReport?.caseStatus === "Internal" ||
+                        selectedReport?.caseStatus?.startsWith("Internal") ||
                         selectedReport?.caseStatus === "Referred to Barangay" ||
                         selectedReport?.caseStatus === "Case Closed"
                       }>For Interview</option>
                       <option disabled={
-                        selectedReport?.caseStatus === "Internal" ||
+                        !selectedReport?.caseStatus || 
+                        selectedReport?.caseStatus === "For Queuing" ||
+                        selectedReport?.caseStatus?.startsWith("Internal") ||
                         selectedReport?.caseStatus === "Referred to Barangay" ||
                         selectedReport?.caseStatus === "Case Closed"
                       }>For Referral</option>
-                      <option disabled={selectedReport?.caseStatus === "Case Closed"}>Case Closed</option>
+                      <option disabled={
+                        !selectedReport?.caseStatus || 
+                        selectedReport?.caseStatus === "For Queuing" ||
+                        selectedReport?.caseStatus === "Case Closed"
+                      }>Case Closed</option>
                     </select>
                   </div>
 
