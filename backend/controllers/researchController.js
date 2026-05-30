@@ -132,7 +132,7 @@ const createResearch = async (req, res) => {
 
     // Handle thumbnail upload
     let thumbnailData = {
-      url: 'https://res.cloudinary.com/demo/image/upload/v1570979137/default-research.jpg',
+      url: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=600&auto=format&fit=crop',
       public_id: null,
       format: null,
       bytes: null
