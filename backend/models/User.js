@@ -63,6 +63,15 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: Date,
 
   isArchived: { type: Boolean, default: false },
+  archiveStatus: {
+    type: String,
+    enum: ["Active", "Pending Archive", "Appeal Under Review", "Archived"],
+    default: "Active"
+  },
+  archiveReason: { type: String },
+  archiveGracePeriodEndsAt: { type: Date },
+  archiveAppealReason: { type: String },
+  archiveAppealSubmittedAt: { type: Date },
 },
   // ✅ ADD THIS: Automatically adds createdAt and updatedAt fields
   {
