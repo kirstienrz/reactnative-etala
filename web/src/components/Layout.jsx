@@ -175,15 +175,17 @@ const Layout = ({ children }) => {
   if (isSuperAdminRoute) {
     const pageInfo = getPageInfo(location.pathname, user?.name || user?.firstName);
     return (
-      <div className="flex h-screen w-screen overflow-hidden bg-gray-50">
-        <SuperAdminSidebar
-          userName={user?.name}
-          isOpen={isSidebarOpen}
-          setIsOpen={setIsSidebarOpen}
-        />
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex h-screen w-screen overflow-hidden print:h-auto print:overflow-visible bg-gray-50">
+        <div className="print:hidden h-full">
+          <SuperAdminSidebar
+            userName={user?.name}
+            isOpen={isSidebarOpen}
+            setIsOpen={setIsSidebarOpen}
+          />
+        </div>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible">
           {/* Mobile Header for Admin */}
-          <header className="lg:hidden flex items-center justify-between px-4 admin-header-pt pb-4 bg-gray-900 text-white shadow-md border-b border-gray-800 admin-mobile-header">
+          <header className="lg:hidden print:hidden flex items-center justify-between px-4 admin-header-pt pb-4 bg-gray-900 text-white shadow-md border-b border-gray-800 admin-mobile-header">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsSidebarOpen(true)}
@@ -218,7 +220,7 @@ const Layout = ({ children }) => {
           </header>
 
           {/* Desktop Top Bar for Admin */}
-          <header className="hidden lg:flex items-center justify-between px-8 py-2 bg-white border-b border-gray-200">
+          <header className="hidden lg:flex print:hidden items-center justify-between px-8 py-2 bg-white border-b border-gray-200">
             <div className="flex items-center gap-4">
               {/* Title removed as requested */}
             </div>
@@ -236,7 +238,7 @@ const Layout = ({ children }) => {
             </div>
           </header>
 
-          <main className={`flex-1 w-full max-w-full overflow-y-auto ${location.pathname.startsWith("/superadmin/messages") ||
+          <main className={`flex-1 w-full max-w-full overflow-y-auto print:overflow-visible print:p-0 ${location.pathname.startsWith("/superadmin/messages") ||
             (isNativeApp && (
               location.pathname === "/superadmin/dashboard" ||
               location.pathname === "/superadmin"

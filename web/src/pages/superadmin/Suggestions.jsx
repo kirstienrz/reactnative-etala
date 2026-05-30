@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Archive, Eye, Filter, Search, Calendar, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
 import { getSuggestions, updateSuggestion, toggleArchive } from "../../api/suggestion";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const AdminGADSuggestionBox = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,7 +170,56 @@ const AdminGADSuggestionBox = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const doc = new jsPDF("l", "mm", "a4");
+    const blueTheme = [37, 99, 235];
+
+    doc.setFontSize(22);
+    doc.setTextColor(blueTheme[0], blueTheme[1], blueTheme[2]);
+    doc.text("Suggestion Box Report", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+    
+    const tableColumn = ["ID", "Suggestion", "Date", "Priority", "Status"];
+    const tableRows = [];
+    
+    // Determine which suggestions to print (selected items, or all filtered items)
+    const itemsToPrint = selectedItems.length > 0 
+      ? filteredSuggestions.filter(s => selectedItems.includes(s.id))
+      : filteredSuggestions;
+
+    itemsToPrint.forEach(s => {
+      tableRows.push([
+        `#${s.id}`,
+        s.text,
+        new Date(s.submittedDate).toLocaleDateString(),
+        s.priority.toUpperCase(),
+        s.status.toUpperCase().replace('-', ' ')
+      ]);
+    });
+    
+    autoTable(doc, {
+      startY: 35,
+      head: [tableColumn],
+      body: tableRows,
+      theme: "striped",
+      headStyles: { fillColor: blueTheme, textColor: 255 },
+      styles: { fontSize: 10, cellPadding: 4 },
+      columnStyles: { 
+        0: { cellWidth: 20 },
+        1: { cellWidth: 'auto' }, 
+        2: { cellWidth: 35 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 35 }
+      }
+    });
+    
+    // Auto print using blob URL to show print dialog (or just save it)
+    // To mimic standard print behavior but with PDF styling, we can output a blob url and open it:
+    doc.autoPrint();
+    const blob = doc.output('bloburl');
+    window.open(blob, '_blank');
   };
 
   const handleSort = (key) => {
@@ -1087,33 +1138,7 @@ const AdminGADSuggestionBox = () => {
         </div>
       )}
 
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print\\:block, .print\\:block * {
-            visibility: visible;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-          table {
-            page-break-inside: auto;
-          }
-          tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-          thead {
-            display: table-header-group;
-          }
-          tfoot {
-            display: table-footer-group;
-          }
-        }
-      `}</style>
+      {/* Removed hacky print styles */}
     </div>
   );
 };
