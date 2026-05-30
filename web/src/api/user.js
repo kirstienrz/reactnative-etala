@@ -49,14 +49,30 @@ export const deleteUser = async (userId) => {
 };
 
 // 📦 ARCHIVE user
-export const archiveUser = async (userId) => {
-  const res = await API.put(`/user/manage/users/${userId}/archive`);
+export const archiveUser = async (userId, payload) => {
+  const res = await API.put(`/user/manage/users/${userId}/archive`, payload);
   return res.data;
 };
 
 // 🔄 UNARCHIVE/RESTORE user
 export const unarchiveUser = async (userId) => {
   const res = await API.put(`/user/manage/users/${userId}/unarchive`);
+  return res.data;
+};
+
+// 🛡️ USER ARCHIVE APPEALS
+export const appealArchive = async (payload) => {
+  const res = await API.post("/user/appeal", payload);
+  return res.data;
+};
+
+export const getAllAppeals = async () => {
+  const res = await API.get("/user/manage/appeals");
+  return res.data;
+};
+
+export const respondToAppeal = async (userId, payload) => {
+  const res = await API.put(`/user/manage/appeals/${userId}/respond`, payload);
   return res.data;
 };
 

@@ -563,15 +563,67 @@ router.put("/manage/users/:id/archive", auth(), async (req, res) => {
       return res.status(400).json({ message: "Cannot archive your own account" });
     }
 
+    const { reason, graceDays } = req.body;
+    const days = parseInt(graceDays) || 7;
+
     const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.isArchived = true;
+    user.isArchived = false; // Remains false during grace period
+    user.archiveStatus = "Pending Archive";
+    user.archiveReason = reason || "Inactivity / Administrative Decision";
+    user.archiveGracePeriodEndsAt = Date.now() + days * 24 * 60 * 60 * 1000;
+    
+    // Clear any previous appeals
+    user.archiveAppealReason = undefined;
+    user.archiveAppealSubmittedAt = undefined;
+    
     await user.save();
 
-    res.json({ message: "User archived successfully" });
+    // Send scheduled archive warning email
+    try {
+      const gracePeriodDate = new Date(user.archiveGracePeriodEndsAt).toLocaleDateString("en-US", {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+      await sendEmail({
+        to: user.email,
+        subject: "Notice of Scheduled Account Archiving - eTALA Portal",
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+            <h2 style="color: #ea580c; border-bottom: 2px solid #ea580c; padding-bottom: 10px;">Important Account Status Update</h2>
+            <p>Dear <strong>${user.firstName} ${user.lastName}</strong>,</p>
+            <p>This is an official notice that your eTALA account is scheduled to be <strong>archived and detached</strong> on <strong>${gracePeriodDate}</strong>.</p>
+            
+            <div style="background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 16px; margin: 20px 0; border-radius: 4px;">
+              <strong style="color: #c2410c;">Reason for Archiving:</strong><br/>
+              <p style="margin: 8px 0 0 0; font-style: italic;">"${user.archiveReason}"</p>
+            </div>
+            
+            <p><strong>What does this mean?</strong><br/>
+            After the date above, your account will be fully deactivated and you will no longer be able to log in to the GAD Portal. However, your previous reports and records will remain securely stored in the system database for institutional reference.</p>
+            
+            <h3 style="color: #1e3a8a; margin-top: 24px;">What can you do? (Archive Appeal)</h3>
+            <p>If you believe this is a mistake or you require your account to remain active, you have the right to file an appeal. To do this:</p>
+            <ol>
+              <li>Log in to your account at <a href="https://etala.vercel.app/" style="color: #2563eb; text-decoration: none;">https://etala.vercel.app/</a> before the deadline.</li>
+              <li>You will see a highly visible warning banner at the top of your dashboard.</li>
+              <li>Click <strong>"Submit Appeal"</strong>, state your reason, and send.</li>
+            </ol>
+            <p>Submitting an appeal will temporarily freeze the countdown and notify our GAD officers for manual review.</p>
+            
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;"/>
+            <p style="font-size: 12px; color: #6b7280; text-align: center;">TUP eTALA Gender and Development Portal &bull; Official Institutional Notification</p>
+          </div>
+        `
+      });
+      console.log("✅ Scheduled Archive Notification email sent");
+    } catch (err) {
+      console.error("❌ Failed to send scheduled archive email:", err);
+    }
+
+    res.json({ message: "User archiving scheduled successfully." });
   } catch (err) {
     console.error("❌ Error archiving user:", err);
     res.status(500).json({ message: "Failed to archive user" });
@@ -591,6 +643,12 @@ router.put("/manage/users/:id/unarchive", auth(), async (req, res) => {
     }
 
     user.isArchived = false;
+    user.archiveStatus = "Active";
+    user.archiveReason = undefined;
+    user.archiveGracePeriodEndsAt = undefined;
+    user.archiveAppealReason = undefined;
+    user.archiveAppealSubmittedAt = undefined;
+    
     await user.save();
 
     res.json({ message: "User restored successfully" });
@@ -736,6 +794,212 @@ router.get("/analytics", auth(), async (req, res) => {
   } catch (err) {
     console.error("❌ Error fetching analytics:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ========================================
+// 🛡️ USER ARCHIVE & APPEAL SYSTEM ENDPOINTS (OPTION A)
+// ========================================
+
+// ✍️ SUBMIT APPEAL (Authenticated User)
+router.post("/appeal", auth(), async (req, res) => {
+  try {
+    const { appealReason } = req.body;
+    if (!appealReason || !appealReason.trim()) {
+      return res.status(400).json({ message: "Appeal reason is required." });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.archiveStatus !== "Pending Archive") {
+      return res.status(400).json({ message: "Your account is not currently scheduled for archiving." });
+    }
+
+    user.archiveStatus = "Appeal Under Review";
+    user.archiveAppealReason = appealReason;
+    user.archiveAppealSubmittedAt = Date.now();
+    user.archiveGracePeriodEndsAt = undefined; // Freeze countdown
+    await user.save();
+
+    // Notify Superadmins via email about the appeal submission
+    try {
+      const superadmins = await User.find({ role: "superadmin" });
+      const adminEmails = superadmins.map(admin => admin.email).filter(Boolean);
+
+      if (adminEmails.length > 0) {
+        await sendEmail({
+          to: adminEmails,
+          subject: "ALERT: New Account Archive Appeal Submitted - eTALA Portal",
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+              <h2 style="color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Archive Appeal Submitted</h2>
+              <p>A user has submitted an appeal to keep their account active.</p>
+              
+              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">User Name:</td>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${user.firstName} ${user.lastName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">TUP ID:</td>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${user.tupId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Email:</td>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${user.email}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Original Archiving Reason:</td>
+                  <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">"${user.archiveReason}"</td>
+                </tr>
+              </table>
+
+              <div style="background-color: #f5f3ff; border-left: 4px solid #4f46e5; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                <strong style="color: #4338ca;">User's Appeal Rationale:</strong><br/>
+                <p style="margin: 8px 0 0 0; font-style: italic;">"${user.archiveAppealReason}"</p>
+              </div>
+
+              <p>Please log in to the GAD Admin Panel to review this appeal and respond (Accept or Reject).</p>
+
+              <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;"/>
+              <p style="font-size: 12px; color: #6b7280; text-align: center;">TUP eTALA Gender and Development Portal &bull; Admin Alerts</p>
+            </div>
+          `
+        });
+        console.log("✅ Superadmins notified of new appeal");
+      }
+    } catch (err) {
+      console.error("❌ Failed to notify admins of appeal via email:", err);
+    }
+
+    res.json({ 
+      message: "Appeal submitted successfully! Admin review is now pending.",
+      archiveStatus: user.archiveStatus
+    });
+  } catch (err) {
+    console.error("❌ Error submitting appeal:", err);
+    res.status(500).json({ message: "Failed to submit appeal" });
+  }
+});
+
+// 📋 GET LIST OF APPEALS (Superadmin Only)
+router.get("/manage/appeals", auth(), async (req, res) => {
+  try {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Access denied. Superadmin only." });
+    }
+
+    const appeals = await User.find({ archiveStatus: "Appeal Under Review" })
+      .select("-password -pin")
+      .sort({ archiveAppealSubmittedAt: -1 });
+
+    res.json(appeals);
+  } catch (err) {
+    console.error("❌ Error fetching appeals:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ⚖️ RESPOND TO APPEAL (Superadmin Only)
+router.put("/manage/appeals/:id/respond", auth(), async (req, res) => {
+  try {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Access denied. Superadmin only." });
+    }
+
+    const { action } = req.body;
+    if (!["approve", "reject"].includes(action)) {
+      return res.status(400).json({ message: "Invalid action. Use 'approve' or 'reject'." });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.archiveStatus !== "Appeal Under Review") {
+      return res.status(400).json({ message: "This user does not have an appeal under review." });
+    }
+
+    if (action === "approve") {
+      // Restore user completely
+      user.isArchived = false;
+      user.archiveStatus = "Active";
+      user.archiveReason = undefined;
+      user.archiveGracePeriodEndsAt = undefined;
+      user.archiveAppealReason = undefined;
+      user.archiveAppealSubmittedAt = undefined;
+      await user.save();
+
+      // Send Acceptance Email
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Your Account Appeal Has Been APPROVED - eTALA Portal",
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+              <h2 style="color: #16a34a; border-bottom: 2px solid #16a34a; padding-bottom: 10px;">Appeal Approved</h2>
+              <p>Dear <strong>${user.firstName} ${user.lastName}</strong>,</p>
+              <p>We are pleased to inform you that your appeal to keep your eTALA account active has been **APPROVED** by our Gender and Development administrators.</p>
+              
+              <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                <strong style="color: #15803d;">Status:</strong> Active (Restored)<br/>
+                <p style="margin: 8px 0 0 0;">All scheduled archiving schedules on your account have been cancelled. You can continue to use your account normally.</p>
+              </div>
+
+              <p>Thank you for your active cooperation in promoting GAD and safe community institutional services!</p>
+              <p><a href="https://etala.vercel.app/" style="display: inline-block; background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Log In to GAD Portal</a></p>
+
+              <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;"/>
+              <p style="font-size: 12px; color: #6b7280; text-align: center;">TUP eTALA Gender and Development Portal &bull; Official Account Notifications</p>
+            </div>
+          `
+        });
+      } catch (err) {
+        console.error("❌ Failed to send appeal approval email:", err);
+      }
+
+      res.json({ message: "Appeal approved and user restored successfully." });
+    } else {
+      // Reject appeal and finalize archiving
+      user.isArchived = true;
+      user.archiveStatus = "Archived";
+      user.archiveGracePeriodEndsAt = undefined; // permanently archived
+      await user.save();
+
+      // Send Rejection Email
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Your Account Appeal Has Been REJECTED - eTALA Portal",
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+              <h2 style="color: #dc2626; border-bottom: 2px solid #dc2626; padding-bottom: 10px;">Appeal Rejected & Account Archived</h2>
+              <p>Dear <strong>${user.firstName} ${user.lastName}</strong>,</p>
+              <p>This is to inform you that your appeal to retain account access has been **REJECTED** by our GAD administrators after reviewing the case.</p>
+              
+              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                <strong style="color: #991b1b;">Status:</strong> Archived & Detached<br/>
+                <p style="margin: 8px 0 0 0;">Your account is now deactivated. If you have any inquiries or require institutional records, please contact our physical Gender and Development Center office.</p>
+              </div>
+
+              <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;"/>
+              <p style="font-size: 12px; color: #6b7280; text-align: center;">TUP eTALA Gender and Development Portal &bull; Account Notifications</p>
+            </div>
+          `
+        });
+      } catch (err) {
+        console.error("❌ Failed to send appeal rejection email:", err);
+      }
+
+      res.json({ message: "Appeal rejected and user archived permanently." });
+    }
+  } catch (err) {
+    console.error("❌ Error responding to appeal:", err);
+    res.status(500).json({ message: "Failed to respond to appeal" });
   }
 });
 

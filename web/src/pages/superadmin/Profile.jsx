@@ -77,7 +77,7 @@ const Profile = () => {
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
-                        <p className="text-sm text-gray-500">{profile.email || "GADnganupdateei"} • {profile.role || "superadmin"}</p>
+                        <p className="text-sm text-gray-500">{profile.email || "GADnganupdateei"}</p>
                     </div>
                 </div>
             </div>
@@ -101,7 +101,7 @@ const Profile = () => {
                         <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
                     </div>
                 </div>
-                
+
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>

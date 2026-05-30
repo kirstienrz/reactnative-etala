@@ -170,9 +170,16 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    // ✅ Option A: Self-healing check for pending archive grace period expiration on login
+    if (user.archiveStatus === "Pending Archive" && user.archiveGracePeriodEndsAt && user.archiveGracePeriodEndsAt < Date.now()) {
+      user.isArchived = true;
+      user.archiveStatus = "Archived";
+      await user.save();
+    }
+
     if (user.isArchived) {
       return res.status(403).json({
-        msg: "Your account has been deactivated. Please contact the administrator.",
+        msg: `Your account has been deactivated due to: ${user.archiveReason || 'Policy/Inactivity'}. Please contact the administrator.`,
       });
     }
 
@@ -206,6 +213,9 @@ router.post("/login", async (req, res) => {
       email: user.email,
       gender: user.gender,           // ✅ For auto-fill in report form
       userType: user.userType,       // ✅ For auto-fill in report form (Student/Faculty)
+      archiveStatus: user.archiveStatus || "Active",
+      archiveReason: user.archiveReason || "",
+      archiveGracePeriodEndsAt: user.archiveGracePeriodEndsAt || null,
     });
   } catch (err) {
     console.error("Login error:", err);

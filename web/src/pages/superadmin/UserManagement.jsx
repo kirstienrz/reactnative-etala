@@ -5,7 +5,9 @@ import {
   updateUser, 
   resendActivationLink,
   archiveUser,
-  unarchiveUser
+  unarchiveUser,
+  getAllAppeals,
+  respondToAppeal
 } from '../../api/user';
 import { 
   ChevronLeft, 
@@ -36,6 +38,13 @@ export default function UserManagement() {
   const [modalMode, setModalMode] = useState('create');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'archived' | 'appeals'
+  const [appeals, setAppeals] = useState([]);
+  const [showArchiveReasonModal, setShowArchiveReasonModal] = useState(false);
+  const [archivingUserId, setArchivingUserId] = useState(null);
+  const [archiveReasonInput, setArchiveReasonInput] = useState('');
+  const [archiveGraceDaysInput, setArchiveGraceDaysInput] = useState(7);
+  const [customArchiveReason, setCustomArchiveReason] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [formData, setFormData] = useState({
@@ -64,8 +73,39 @@ export default function UserManagement() {
   }, [searchQuery]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [currentPage, debouncedSearch, showArchived, filterRole, filterDepartment]);
+    fetchAppealsCount();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'appeals') {
+      fetchAppeals();
+    } else {
+      fetchUsers();
+    }
+  }, [currentPage, debouncedSearch, showArchived, activeTab, filterRole, filterDepartment]);
+
+  const fetchAppealsCount = async () => {
+    try {
+      const data = await getAllAppeals();
+      setAppeals(data);
+    } catch (err) {
+      console.error("Failed to load appeals count:", err);
+    }
+  };
+
+  const fetchAppeals = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllAppeals();
+      setAppeals(data);
+      setTotalUsers(data.length);
+      setTotalPages(1);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to fetch appeals');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -83,6 +123,9 @@ export default function UserManagement() {
       setUsers(response.users);
       setTotalPages(response.totalPages);
       setTotalUsers(response.totalUsers);
+      
+      // Keep appeals badge updated
+      fetchAppealsCount();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch users');
     } finally {
@@ -221,18 +264,12 @@ export default function UserManagement() {
     }
   };
 
-  const handleArchive = async (userId) => {
-    if (!window.confirm('Are you sure you want to archive this user?')) return;
-
-    try {
-      await archiveUser(userId);
-      setSuccess('User archived successfully!');
-      fetchUsers();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to archive user');
-      setTimeout(() => setError(''), 3000);
-    }
+  const handleArchive = (userId) => {
+    setArchivingUserId(userId);
+    setArchiveReasonInput('');
+    setCustomArchiveReason('');
+    setArchiveGraceDaysInput(7);
+    setShowArchiveReasonModal(true);
   };
 
   const handleUnarchive = async (userId) => {
@@ -246,6 +283,28 @@ export default function UserManagement() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to restore user');
       setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleRespondToAppeal = async (userId, action) => {
+    const confirmationMsg = action === 'approve'
+      ? "Are you sure you want to approve this user's appeal? Their account will be fully restored."
+      : "Are you sure you want to reject this user's appeal? Their account will be deactivated permanently.";
+    
+    if (!window.confirm(confirmationMsg)) return;
+
+    try {
+      setLoading(true);
+      await respondToAppeal(userId, { action });
+      setSuccess(`Appeal ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
+      fetchAppeals();
+      fetchAppealsCount();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || `Failed to ${action} appeal`);
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -304,29 +363,64 @@ export default function UserManagement() {
       )}
 
       <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <button
             onClick={() => handleOpenModal('create')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm font-medium"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm font-medium mr-2"
           >
             + Add New User
           </button>
-          <button
-            onClick={() => {
-              setShowArchived(!showArchived);
-              setCurrentPage(1);
-            }}
-            className={`px-4 py-2 rounded-lg transition font-medium shadow-sm ${
-              showArchived 
-                ? 'bg-amber-600 text-white hover:bg-amber-700' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {showArchived ? 'Show Active' : 'Show Archived'}
-          </button>
+          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner">
+            <button
+              onClick={() => {
+                setActiveTab('active');
+                setShowArchived(false);
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
+                activeTab === 'active' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('archived');
+                setShowArchived(true);
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
+                activeTab === 'archived' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Archived
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('appeals');
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all relative ${
+                activeTab === 'appeals' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Appeals
+              {appeals.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white animate-pulse">
+                  {appeals.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-        <div className="text-sm text-gray-600 font-medium bg-gray-100 px-3 py-1 rounded-full">
-          {showArchived ? 'Archived' : 'Active'} Users: <span className="text-blue-600">{totalUsers}</span>
+        <div className="text-sm text-gray-600 font-semibold bg-gray-100 px-4 py-1.5 rounded-full shadow-sm">
+          {activeTab === 'active' ? 'Active' : activeTab === 'archived' ? 'Archived' : 'Appeals under review'}: <span className="text-blue-600 font-bold">{totalUsers}</span>
         </div>
       </div>
       
@@ -454,81 +548,148 @@ export default function UserManagement() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users && users.length > 0 ? (
-              users.map((user) => (
-                <tr key={user._id} className={`${user.isArchived ? 'bg-gray-50' : ''} hover:bg-gray-50 transition-colors`}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {user.firstName} {user.lastName}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.tupId}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {user.department || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${getRoleBadgeColor(user.role)} shadow-sm`}>
-                      {getRoleLabel(user.role)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${user.isActivated ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} shadow-sm items-center gap-1`}>
-                      {user.isActivated ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                      {user.isActivated ? 'Activated' : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenModal('edit', user)}
-                        className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-2 rounded-lg transition"
-                        title="Edit User"
-                      >
-                        Edit
-                      </button>
-                      
-                      {!user.isActivated && !user.isArchived && (
+            {activeTab === 'appeals' ? (
+              appeals && appeals.length > 0 ? (
+                appeals.map((user) => (
+                  <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div className="text-xs text-gray-500 font-medium">{user.tupId}</div>
+                    </td>
+                    <td className="px-6 py-4" colSpan="2">
+                      <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Archiving Reason:</div>
+                      <div className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-100 font-semibold max-w-xs truncate" title={user.archiveReason}>
+                        "{user.archiveReason}"
+                      </div>
+                    </td>
+                    <td className="px-6 py-4" colSpan="4">
+                      <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">User's Appeal Reason:</div>
+                      <div className="text-xs text-indigo-700 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 font-semibold max-w-md whitespace-pre-wrap break-words">
+                        "{user.archiveAppealReason}"
+                      </div>
+                      <div className="text-[10px] text-gray-400 mt-1 font-semibold">
+                        Submitted: {new Date(user.archiveAppealSubmittedAt).toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleResendActivation(user._id)}
-                          className="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded-lg transition flex items-center gap-1"
-                          title="Resend Activation Link"
+                          onClick={() => handleRespondToAppeal(user._id, 'approve')}
+                          className="px-3 py-1.5 text-xs font-bold text-white bg-green-600 rounded-lg hover:bg-green-700 shadow transition active:scale-95"
+                          title="Approve Appeal"
                         >
-                          <Mail size={14} />
+                          Accept
                         </button>
-                      )}
-
-                      {!user.isArchived ? (
                         <button
-                          onClick={() => handleArchive(user._id)}
-                          className="text-amber-600 hover:text-amber-900 bg-amber-50 p-2 rounded-lg transition"
-                          title="Archive"
+                          onClick={() => handleRespondToAppeal(user._id, 'reject')}
+                          className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow transition active:scale-95"
+                          title="Reject Appeal"
                         >
-                          Archive
+                          Reject
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => handleUnarchive(user._id)}
-                          className="text-emerald-600 hover:text-emerald-900 bg-emerald-50 p-2 rounded-lg transition"
-                          title="Restore"
-                        >
-                          Restore
-                        </button>
-                      )}
-                    </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" className="px-6 py-12 text-center text-gray-500 italic font-semibold">
+                    No pending appeals under review.
                   </td>
                 </tr>
-              ))
+              )
             ) : (
-              <tr>
-                <td colSpan="6" className="px-6 py-10 text-center text-gray-500 italic">
-                  No users found matching your criteria.
-                </td>
-              </tr>
+              users && users.length > 0 ? (
+                users.map((user) => (
+                  <tr key={user._id} className={`${user.isArchived ? 'bg-gray-50' : ''} hover:bg-gray-50 transition-colors`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </div>
+                      {user.archiveStatus === 'Pending Archive' && (
+                        <span className="inline-block mt-0.5 px-2 py-0.5 text-[9px] font-bold text-amber-800 bg-amber-100 rounded-full border border-amber-200">
+                          Pending Archive
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {user.tupId}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {user.department || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {user.userType || 'Student'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${getRoleBadgeColor(user.role)} shadow-sm`}>
+                        {getRoleLabel(user.role)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${user.isActivated ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} shadow-sm items-center gap-1`}>
+                        {user.isActivated ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                        {user.isActivated ? 'Activated' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenModal('edit', user)}
+                          className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg transition font-semibold text-xs"
+                          title="Edit User"
+                        >
+                          Edit
+                        </button>
+                        
+                        {!user.isActivated && !user.isArchived && (
+                          <button
+                            onClick={() => handleResendActivation(user._id)}
+                            className="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded-lg transition flex items-center justify-center"
+                            title="Resend Activation Link"
+                          >
+                            <Mail size={14} />
+                          </button>
+                        )}
+
+                        {!user.isArchived ? (
+                          <button
+                            onClick={() => handleArchive(user._id)}
+                            className={`px-3 py-1.5 rounded-lg transition font-semibold text-xs ${
+                              user.archiveStatus === 'Pending Archive'
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'text-amber-600 hover:text-amber-900 bg-amber-50'
+                            }`}
+                            disabled={user.archiveStatus === 'Pending Archive'}
+                            title={user.archiveStatus === 'Pending Archive' ? 'Scheduled for archiving' : 'Archive'}
+                          >
+                            {user.archiveStatus === 'Pending Archive' ? 'Scheduled' : 'Archive'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleUnarchive(user._id)}
+                            className="text-emerald-600 hover:text-emerald-900 bg-emerald-50 px-3 py-1.5 rounded-lg transition font-semibold text-xs"
+                            title="Restore"
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" className="px-6 py-12 text-center text-gray-500 italic font-semibold">
+                    No users found matching your criteria.
+                  </td>
+                </tr>
+              )
             )}
           </tbody>
         </table>
@@ -865,6 +1026,118 @@ export default function UserManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Reason Modal (Option A) */}
+      {showArchiveReasonModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative bg-white border border-gray-200 w-full max-w-md shadow-2xl rounded-2xl p-6 transition-all transform scale-100">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-xl font-bold text-gray-900">Schedule Account Archive</h3>
+              <button
+                onClick={() => {
+                  setShowArchiveReasonModal(false);
+                  setArchivingUserId(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl transition"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">Reason for Archiving</label>
+                <select
+                  value={archiveReasonInput}
+                  onChange={(e) => {
+                    setArchiveReasonInput(e.target.value);
+                    if (e.target.value !== 'Other') setCustomArchiveReason('');
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white text-sm"
+                >
+                  <option value="">-- Select a Reason --</option>
+                  <option value="Inactivity (No login for more than 6 months)">💤 Inactivity (No login for &gt;6 months)</option>
+                  <option value="Graduated / Left the Institution">🎓 Graduated / Left Institution</option>
+                  <option value="Policy Violation / Misbehavior">⚠️ Policy Violation / Misbehavior</option>
+                  <option value="Duplicate / Registered by mistake">👥 Duplicate Account</option>
+                  <option value="Other">✏️ Other Reason...</option>
+                </select>
+              </div>
+
+              {archiveReasonInput === 'Other' && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">Custom Reason *</label>
+                  <textarea
+                    value={customArchiveReason}
+                    onChange={(e) => setCustomArchiveReason(e.target.value)}
+                    placeholder="Enter custom reason here..."
+                    rows="3"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none text-sm"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">Grace Period (Days)</label>
+                <select
+                  value={archiveGraceDaysInput}
+                  onChange={(e) => setArchiveGraceDaysInput(parseInt(e.target.value))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white text-sm"
+                >
+                  <option value={3}>3 Days (Urgent)</option>
+                  <option value={7}>7 Days (Recommended)</option>
+                  <option value={14}>14 Days (Two Weeks)</option>
+                  <option value={30}>30 Days (One Month)</option>
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1 font-semibold">
+                  The user can log in and submit an appeal during this window.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+              <button
+                onClick={() => {
+                  setShowArchiveReasonModal(false);
+                  setArchivingUserId(null);
+                }}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const finalReason = archiveReasonInput === 'Other' ? customArchiveReason : archiveReasonInput;
+                  if (!finalReason || !finalReason.trim()) {
+                    alert('Please select or specify a reason.');
+                    return;
+                  }
+                  
+                  try {
+                    setLoading(true);
+                    setShowArchiveReasonModal(false);
+                    await archiveUser(archivingUserId, { reason: finalReason, graceDays: archiveGraceDaysInput });
+                    setSuccess('User scheduled for archiving successfully!');
+                    setArchivingUserId(null);
+                    setArchiveReasonInput('');
+                    setCustomArchiveReason('');
+                    fetchUsers();
+                    setTimeout(() => setSuccess(''), 3000);
+                  } catch (err) {
+                    setError(err.response?.data?.message || 'Failed to archive user');
+                    setTimeout(() => setError(''), 3000);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md shadow-blue-500/20 transition font-bold"
+              >
+                Schedule Archive
+              </button>
+            </div>
           </div>
         </div>
       )}
