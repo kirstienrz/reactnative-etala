@@ -484,9 +484,10 @@ const addReferral = async (req, res) => {
       };
     }
 
-    // If internal referral, automatically set caseStatus to "Internal"
+    // If internal referral, automatically set caseStatus with department name
     if (body.referralType !== "External") {
-      updateData.$set.caseStatus = "Internal";
+      const deptName = body.department || "Internal";
+      updateData.$set.caseStatus = `Internal - ${deptName}`;
     }
 
     const report = await Report.findByIdAndUpdate(

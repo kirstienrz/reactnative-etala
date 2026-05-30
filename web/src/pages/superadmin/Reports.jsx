@@ -1011,6 +1011,7 @@ const AdminReports = () => {
   };
 
   const getCaseStatusColor = (caseStatus) => {
+    if (caseStatus?.startsWith("Internal")) return "bg-purple-100 text-purple-800";
     const colors = {
       "For Queuing": "bg-orange-100 text-orange-800",
       "For Interview": "bg-cyan-100 text-cyan-800",
@@ -1021,6 +1022,7 @@ const AdminReports = () => {
   };
 
   const getCaseStatusIcon = (caseStatus) => {
+    if (caseStatus?.startsWith("Internal")) return <Share2 size={14} />;
     const icons = {
       "For Queuing": <ClipboardList size={14} />,
       "For Interview": <Users size={14} />,
@@ -1042,7 +1044,8 @@ const AdminReports = () => {
       (readStatusFilter === "Read" && isReportRead(r._id)) ||
       (readStatusFilter === "Unread" && !isReportRead(r._id));
 
-    const matchesCaseStatus = caseStatusFilter === "All" || r.caseStatus === caseStatusFilter;
+    const matchesCaseStatus = caseStatusFilter === "All" || 
+      (caseStatusFilter === "Internal" ? r.caseStatus?.startsWith("Internal") : r.caseStatus === caseStatusFilter);
     const matchesCategory = categoryFilter === "All" || r.incidentTypes?.includes(categoryFilter);
 
     const matchesSentiment = sentimentFilter === "All" ||
