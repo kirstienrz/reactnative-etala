@@ -21,7 +21,10 @@ import {
   Search,
   Filter,
   UserPlus,
-  ArrowUpDown
+  ArrowUpDown,
+  Edit2,
+  Archive,
+  RotateCcw
 } from 'lucide-react';
 
 export default function UserManagement() {
@@ -641,42 +644,44 @@ export default function UserManagement() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenModal('edit', user)}
-                          className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-lg transition font-semibold text-xs"
+                          className="text-indigo-600 hover:text-indigo-950 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-lg transition-all flex items-center justify-center w-8 h-8 shadow-sm hover:shadow active:scale-95"
                           title="Edit User"
                         >
-                          Edit
+                          <Edit2 size={14} strokeWidth={2.5} />
                         </button>
                         
-                        {!user.isActivated && !user.isArchived && (
+                        {!user.isActivated && !user.isArchived ? (
                           <button
                             onClick={() => handleResendActivation(user._id)}
-                            className="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded-lg transition flex items-center justify-center"
+                            className="text-blue-600 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition-all flex items-center justify-center w-8 h-8 shadow-sm hover:shadow active:scale-95"
                             title="Resend Activation Link"
                           >
-                            <Mail size={14} />
+                            <Mail size={14} strokeWidth={2.5} />
                           </button>
+                        ) : (
+                          <div className="w-8 h-8" /> /* Grid placeholder to ensure perfect columns */
                         )}
 
                         {!user.isArchived ? (
                           <button
                             onClick={() => handleArchive(user._id)}
-                            className={`px-3 py-1.5 rounded-lg transition font-semibold text-xs ${
+                            className={`p-2 rounded-lg transition-all flex items-center justify-center w-8 h-8 shadow-sm ${
                               user.archiveStatus === 'Pending Archive'
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'text-amber-600 hover:text-amber-900 bg-amber-50'
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-inner'
+                                : 'text-amber-600 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 hover:shadow active:scale-95'
                             }`}
                             disabled={user.archiveStatus === 'Pending Archive'}
-                            title={user.archiveStatus === 'Pending Archive' ? 'Scheduled for archiving' : 'Archive'}
+                            title={user.archiveStatus === 'Pending Archive' ? 'Scheduled for archiving' : 'Archive User'}
                           >
-                            {user.archiveStatus === 'Pending Archive' ? 'Scheduled' : 'Archive'}
+                            <Archive size={14} strokeWidth={2.5} />
                           </button>
                         ) : (
                           <button
                             onClick={() => handleUnarchive(user._id)}
-                            className="text-emerald-600 hover:text-emerald-900 bg-emerald-50 px-3 py-1.5 rounded-lg transition font-semibold text-xs"
-                            title="Restore"
+                            className="text-emerald-600 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 p-2 rounded-lg transition-all flex items-center justify-center w-8 h-8 shadow-sm hover:shadow active:scale-95"
+                            title="Restore User"
                           >
-                            Restore
+                            <RotateCcw size={14} strokeWidth={2.5} />
                           </button>
                         )}
                       </div>
