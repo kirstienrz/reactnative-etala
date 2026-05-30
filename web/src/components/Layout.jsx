@@ -89,11 +89,11 @@ const Layout = ({ children }) => {
     const handleOpen = () => setIsSidebarOpen(true);
     const handleClose = () => setIsSidebarOpen(false);
     const handleToggle = () => setIsSidebarOpen(prev => !prev);
-    
+
     window.addEventListener("open-admin-sidebar", handleOpen);
     window.addEventListener("close-admin-sidebar", handleClose);
     window.addEventListener("toggle-admin-sidebar", handleToggle);
-    
+
     return () => {
       window.removeEventListener("open-admin-sidebar", handleOpen);
       window.removeEventListener("close-admin-sidebar", handleClose);
@@ -128,7 +128,7 @@ const Layout = ({ children }) => {
   useUnreadMessages(isSuperAdmin || isSuperAdminRoute);
 
   const dispatch = useDispatch();
-  
+
   // Close sidebar on route change
   React.useEffect(() => {
     setIsSidebarOpen(false);
@@ -145,7 +145,7 @@ const Layout = ({ children }) => {
     const resetTimer = () => {
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        console.log(`🕒 Idle timeout reached (${TIMEOUT_MS/60000} mins). Logging out...`);
+        console.log(`🕒 Idle timeout reached (${TIMEOUT_MS / 60000} mins). Logging out...`);
         dispatch(logout());
         window.location.href = "/login"; // Force redirect to login
       }, TIMEOUT_MS);
@@ -153,7 +153,7 @@ const Layout = ({ children }) => {
 
     // Events to monitor for activity
     const activityEvents = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
-    
+
     // Add event listeners
     activityEvents.forEach((event) => {
       window.addEventListener(event, resetTimer);
@@ -193,7 +193,7 @@ const Layout = ({ children }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              
+
               {/* Page Title (Only on Dashboard) */}
               {(location.pathname === "/superadmin/dashboard" || location.pathname === "/superadmin") && (
                 <div>
@@ -202,14 +202,14 @@ const Layout = ({ children }) => {
                 </div>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <div className="hidden xs:block text-right mr-1">
                 <p className="text-white text-xs font-semibold">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                 <p className="text-gray-400 text-[10px]">{new Date().toLocaleDateString('en-US', { weekday: 'short' })}</p>
               </div>
               <NotificationCenter />
-              
+
               {/* Profile Icon on the Right */}
               <div className="w-9 h-9 rounded-full bg-violet-600 border border-violet-500 flex items-center justify-center text-white text-sm font-bold shadow-md ml-1">
                 {(user?.name || "A")[0]?.toUpperCase()}
@@ -226,8 +226,8 @@ const Layout = ({ children }) => {
               <NotificationCenter />
               <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
                 <div className="text-right">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Welcome,</p>
                   <p className="text-sm font-bold text-gray-900">{user?.name || "Admin"}</p>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{user?.role || "Superadmin"}</p>
                 </div>
                 <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold">
                   {(user?.name || "A")[0]}
@@ -236,15 +236,14 @@ const Layout = ({ children }) => {
             </div>
           </header>
 
-          <main className={`flex-1 w-full max-w-full overflow-y-auto ${
-            location.pathname.startsWith("/superadmin/messages") ||
+          <main className={`flex-1 w-full max-w-full overflow-y-auto ${location.pathname.startsWith("/superadmin/messages") ||
             (isNativeApp && (
-              location.pathname === "/superadmin/dashboard" || 
+              location.pathname === "/superadmin/dashboard" ||
               location.pathname === "/superadmin"
             ))
-              ? "" 
-              : "p-4 md:p-6 pt-2 md:pt-4"
-          }`}>
+            ? ""
+            : "p-4 md:p-6 pt-2 md:pt-4"
+            }`}>
             {children}
           </main>
         </div>
