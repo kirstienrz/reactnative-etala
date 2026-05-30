@@ -1111,40 +1111,15 @@ export default function UserManagement() {
                 </label>
                 <select
                   name="gender"
-                  value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.gender) ? formData.gender : (formData.gender ? "Other" : "")}
-                  onChange={(e) => {
-                    const { value } = e.target;
-                    if (value === "Other") {
-                      setFormData({ ...formData, gender: "Other" });
-                    } else {
-                      setFormData({ ...formData, gender: value });
-                    }
-                  }}
+                  value={formData.gender}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
-                  <option value="Gay">Gay</option>
-                  <option value="Lesbian">Lesbian</option>
-                  <option value="Bisexual">Bisexual</option>
-                  <option value="Transgender">Transgender</option>
-                  <option value="Queer">Queer/Questioning</option>
-                  <option value="Non-binary">Non-binary</option>
-                  <option value="Prefer not to say">Prefer not to say</option>
-                  <option value="Other">Other (Please specify)</option>
                 </select>
-
-                {(formData.gender === "Other" || (!["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.gender))) && (
-                  <input
-                    type="text"
-                    placeholder="Please specify your gender"
-                    value={formData.gender === "Other" ? "" : formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                )}
               </div>
 
               {/* Activation Toggle (Edit only) */}

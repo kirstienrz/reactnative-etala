@@ -154,39 +154,14 @@ const Profile = () => {
                             </label>
                             <select
                                 name="gender"
-                                value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(form.gender) ? form.gender : (form.gender ? "Other" : "")}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === "Other") {
-                                        setForm({ ...form, gender: "Other" });
-                                    } else {
-                                        setForm({ ...form, gender: val });
-                                    }
-                                }}
+                                value={form.gender}
+                                onChange={(e) => setForm({ ...form, gender: e.target.value })}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                             >
                                 <option value="">Select Gender</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
-                                <option value="Gay">Gay</option>
-                                <option value="Lesbian">Lesbian</option>
-                                <option value="Bisexual">Bisexual</option>
-                                <option value="Transgender">Transgender</option>
-                                <option value="Queer">Queer/Questioning</option>
-                                <option value="Non-binary">Non-binary</option>
-                                <option value="Prefer not to say">Prefer not to say</option>
-                                <option value="Other">Other (Please specify)</option>
                             </select>
-
-                            {(form.gender === "Other" || (!["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(form.gender))) && (
-                                <input
-                                    type="text"
-                                    placeholder="Please specify your gender"
-                                    value={form.gender === "Other" ? "" : form.gender}
-                                    onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                                    className="w-full mt-2 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
-                                />
-                            )}
                         </div>
                     </div>
                 </div>

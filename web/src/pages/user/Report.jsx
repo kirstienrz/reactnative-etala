@@ -1885,38 +1885,14 @@ const ReportForm = () => {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <select
-                    style={currentStyles.selectInput}
-                    value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.reporterGender) ? formData.reporterGender : (formData.reporterGender ? "Other" : "")}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "Other") {
-                        setFormData(prev => ({ ...prev, reporterGender: "Other" }));
-                      } else {
-                        setFormData(prev => ({ ...prev, reporterGender: val }));
-                      }
-                    }}
+                    value={formData.reporterGender}
+                    onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 transition-shadow appearance-none"
                   >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
-                    <option value="Gay">Gay</option>
-                    <option value="Lesbian">Lesbian</option>
-                    <option value="Bisexual">Bisexual</option>
-                    <option value="Transgender">Transgender</option>
-                    <option value="Queer">Queer/Questioning</option>
-                    <option value="Non-binary">Non-binary</option>
-                    <option value="Prefer not to say">Prefer not to say</option>
-                    <option value="Other">Other (Please specify)</option>
                   </select>
-
-                  {(formData.reporterGender === "Other" || (formData.reporterGender && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.reporterGender))) && (
-                    <input
-                      style={currentStyles.input}
-                      placeholder="Please specify your gender"
-                      value={formData.reporterGender === "Other" ? "" : formData.reporterGender}
-                      onChange={(e) => setFormData(prev => ({ ...prev, reporterGender: e.target.value }))}
-                    />
-                  )}
                 </div>
               )}
             </div>
@@ -2130,38 +2106,14 @@ const ReportForm = () => {
                 <label style={currentStyles.inputLabel}>Gender</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <select
-                    style={currentStyles.selectInput}
-                    value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.perpSex) ? formData.perpSex : (formData.perpSex ? "Other" : "")}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "Other") {
-                        setFormData(prev => ({ ...prev, perpSex: "Other" }));
-                      } else {
-                        setFormData(prev => ({ ...prev, perpSex: val }));
-                      }
-                    }}
+                    value={formData.perpSex}
+                    onChange={(e) => setFormData(prev => ({ ...prev, perpSex: e.target.value }))}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 transition-shadow appearance-none"
                   >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
-                    <option value="Gay">Gay</option>
-                    <option value="Lesbian">Lesbian</option>
-                    <option value="Bisexual">Bisexual</option>
-                    <option value="Transgender">Transgender</option>
-                    <option value="Queer">Queer/Questioning</option>
-                    <option value="Non-binary">Non-binary</option>
-                    <option value="Prefer not to say">Prefer not to say</option>
-                    <option value="Other">Other (Please specify)</option>
                   </select>
-
-                  {(formData.perpSex === "Other" || (formData.perpSex && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.perpSex))) && (
-                    <input
-                      style={currentStyles.input}
-                      placeholder="Please specify"
-                      value={formData.perpSex === "Other" ? "" : formData.perpSex}
-                      onChange={(e) => setFormData(prev => ({ ...prev, perpSex: e.target.value }))}
-                    />
-                  )}
                 </div>
               </div>
               <div style={currentStyles.inputGroup}>
@@ -2227,38 +2179,14 @@ const ReportForm = () => {
                   <label style={currentStyles.inputLabel}>Gender</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <select
-                      style={currentStyles.selectInput}
-                      value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.sex) ? formData.sex : (formData.sex ? "Other" : "")}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "Other") {
-                          setFormData(prev => ({ ...prev, sex: "Other" }));
-                        } else {
-                          setFormData(prev => ({ ...prev, sex: val }));
-                        }
-                      }}
+                      value={formData.sex}
+                      onChange={(e) => setFormData(prev => ({ ...prev, sex: e.target.value }))}
+                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 transition-shadow appearance-none"
                     >
                       <option value="">Select Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
-                      <option value="Gay">Gay</option>
-                      <option value="Lesbian">Lesbian</option>
-                      <option value="Bisexual">Bisexual</option>
-                      <option value="Transgender">Transgender</option>
-                      <option value="Queer">Queer/Questioning</option>
-                      <option value="Non-binary">Non-binary</option>
-                      <option value="Prefer not to say">Prefer not to say</option>
-                      <option value="Other">Other (Please specify)</option>
                     </select>
-
-                    {(formData.sex === "Other" || (formData.sex && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.sex))) && (
-                      <input
-                        style={currentStyles.input}
-                        placeholder="Please specify"
-                        value={formData.sex === "Other" ? "" : formData.sex}
-                        onChange={(e) => setFormData(prev => ({ ...prev, sex: e.target.value }))}
-                      />
-                    )}
                   </div>
                 </div>
                 <div style={currentStyles.inputGroup}>
@@ -2305,37 +2233,13 @@ const ReportForm = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <select
                     style={currentStyles.selectInput}
-                    value={["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.witnessGender) ? formData.witnessGender : (formData.witnessGender ? "Other" : "")}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "Other") {
-                        setFormData(prev => ({ ...prev, witnessGender: "Other" }));
-                      } else {
-                        setFormData(prev => ({ ...prev, witnessGender: val }));
-                      }
-                    }}
+                    value={formData.witnessGender}
+                    onChange={(e) => setFormData(prev => ({ ...prev, witnessGender: e.target.value }))}
                   >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
-                    <option value="Gay">Gay</option>
-                    <option value="Lesbian">Lesbian</option>
-                    <option value="Bisexual">Bisexual</option>
-                    <option value="Transgender">Transgender</option>
-                    <option value="Queer">Queer/Questioning</option>
-                    <option value="Non-binary">Non-binary</option>
-                    <option value="Prefer not to say">Prefer not to say</option>
-                    <option value="Other">Other (Please specify)</option>
                   </select>
-
-                  {(formData.witnessGender === "Other" || (formData.witnessGender && !["Male", "Female", "Gay", "Lesbian", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say", ""].includes(formData.witnessGender))) && (
-                    <input
-                      style={currentStyles.input}
-                      placeholder="Please specify witness gender"
-                      value={formData.witnessGender === "Other" ? "" : formData.witnessGender}
-                      onChange={(e) => setFormData(prev => ({ ...prev, witnessGender: e.target.value }))}
-                    />
-                  )}
                 </div>
               </div>
               <div style={currentStyles.inputGroup}>
