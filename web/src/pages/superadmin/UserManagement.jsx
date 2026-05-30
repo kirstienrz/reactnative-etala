@@ -359,7 +359,7 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="w-full max-w-[98%] mx-auto px-4 sm:px-8 py-6">
+    <div className="w-full max-w-[100vw] overflow-x-hidden mx-auto px-4 sm:px-8 py-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
         <p className="text-gray-600">Manage all users, admins, and their roles</p>
@@ -633,7 +633,8 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-white shadow-md rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -862,6 +863,148 @@ export default function UserManagement() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden flex flex-col gap-4 mt-2">
+        {activeTab === 'appeals' ? (
+          appeals && appeals.length > 0 ? (
+            appeals.map((user) => (
+              <div key={user._id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-sm font-bold text-gray-900">{user.firstName} {user.lastName}</div>
+                    <div className="text-xs text-gray-500 font-medium">{user.tupId}</div>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-2">Archiving Reason:</div>
+                <div className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-100 font-semibold truncate" title={user.archiveReason}>
+                  "{user.archiveReason}"
+                </div>
+
+                <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-2">User's Appeal Reason:</div>
+                <div className="text-xs text-indigo-700 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 font-semibold max-w-md whitespace-pre-wrap break-words">
+                  "{user.archiveAppealReason}"
+                </div>
+                <div className="text-[10px] text-gray-400 mt-1 font-semibold">
+                  Submitted: {new Date(user.archiveAppealSubmittedAt).toLocaleString()}
+                </div>
+
+                <div className="flex items-center gap-2 mt-2 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => handleRespondToAppeal(user._id, 'approve')}
+                    className="flex-1 px-3 py-2 text-xs font-bold text-white bg-green-600 rounded-lg hover:bg-green-700 shadow transition active:scale-95 text-center"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleRespondToAppeal(user._id, 'reject')}
+                    className="flex-1 px-3 py-2 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 shadow transition active:scale-95 text-center"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500 italic text-sm">No pending appeals under review.</div>
+          )
+        ) : (
+          users && users.length > 0 ? (
+            users.map((user) => (
+              <div key={user._id} className={`bg-white p-4 rounded-xl shadow-sm border ${user.isArchived ? 'bg-gray-50 border-gray-200' : 'border-gray-200'} flex flex-col gap-3 relative`}>
+                <div className="flex justify-between items-start">
+                  <div className="flex items-start gap-3">
+                    {(activeTab === 'active' || activeTab === 'archived') && (
+                      <input
+                        type="checkbox"
+                        disabled={user.archiveStatus === 'Pending Archive' || user.isArchived}
+                        checked={selectedUserIds.includes(user._id)}
+                        onChange={() => {
+                          if (selectedUserIds.includes(user._id)) {
+                            setSelectedUserIds(prev => prev.filter(id => id !== user._id));
+                          } else {
+                            setSelectedUserIds(prev => [...prev, user._id]);
+                          }
+                        }}
+                        className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer flex-shrink-0 ${
+                          (user.archiveStatus === 'Pending Archive' || user.isArchived) ? 'opacity-30 cursor-not-allowed' : ''
+                        }`}
+                      />
+                    )}
+                    <div>
+                      <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div className="text-xs text-gray-500 font-medium">{user.tupId} • {user.department || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-bold rounded-full ${getRoleBadgeColor(user.role)} shadow-sm`}>
+                      {getRoleLabel(user.role)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {user.archiveStatus === 'Pending Archive' && (
+                    <span className="px-2 py-0.5 text-[9px] font-bold text-amber-800 bg-amber-100 rounded-full border border-amber-200">
+                      Pending Archive
+                    </span>
+                  )}
+                  <span className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-bold rounded-full ${user.isActivated ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} shadow-sm items-center gap-1`}>
+                    {user.isActivated ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                    {user.isActivated ? 'Activated' : 'Pending'}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 mt-2 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => handleOpenModal('edit', user)}
+                    className="flex-1 min-w-[70px] text-indigo-600 hover:text-indigo-950 bg-indigo-50 hover:bg-indigo-100 py-1.5 rounded-lg transition-all flex items-center justify-center shadow-sm active:scale-95 gap-1 text-xs font-bold"
+                  >
+                    <Edit2 size={14} /> Edit
+                  </button>
+                  
+                  {!user.isActivated && !user.isArchived && (
+                    <button
+                      onClick={() => handleResendActivation(user._id)}
+                      className="flex-1 min-w-[70px] text-blue-600 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 py-1.5 rounded-lg transition-all flex items-center justify-center shadow-sm active:scale-95 gap-1 text-xs font-bold"
+                    >
+                      <Mail size={14} /> Resend
+                    </button>
+                  )}
+
+                  {user.archiveStatus === 'Pending Archive' ? (
+                    <button
+                      onClick={() => handleUnarchive(user._id)}
+                      className="flex-1 min-w-[70px] text-emerald-600 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 py-1.5 rounded-lg transition-all flex items-center justify-center shadow-sm active:scale-95 gap-1 text-xs font-bold"
+                    >
+                      <RotateCcw size={14} /> Restore
+                    </button>
+                  ) : !user.isArchived ? (
+                    <button
+                      onClick={() => handleArchive(user._id)}
+                      className="flex-1 min-w-[70px] text-amber-600 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 py-1.5 rounded-lg transition-all flex items-center justify-center shadow-sm active:scale-95 gap-1 text-xs font-bold"
+                    >
+                      <Archive size={14} /> Archive
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleUnarchive(user._id)}
+                      className="flex-1 min-w-[70px] text-emerald-600 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 py-1.5 rounded-lg transition-all flex items-center justify-center shadow-sm active:scale-95 gap-1 text-xs font-bold"
+                    >
+                      <RotateCcw size={14} /> Restore
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500 italic text-sm">No users found matching your criteria.</div>
+          )
+        )}
       </div>
 
       {/* Styled Pagination Controls copied from Reports.jsx */}
