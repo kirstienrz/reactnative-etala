@@ -712,7 +712,7 @@ export default function ResearchAdmin() {
 
                     <div className="relative">
                       <img
-                        src={research.thumbnail?.url || 'https://via.placeholder.com/400x300'}
+                        src={(research.thumbnail?.url && !research.thumbnail.url.includes('default-research.jpg')) ? research.thumbnail.url : 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=600&auto=format&fit=crop'}
                         alt={research.title}
                         className="w-full h-48 object-cover rounded-lg mb-4"
                       />
@@ -964,7 +964,7 @@ export default function ResearchAdmin() {
                         ) : editingResearch?.thumbnail?.url ? (
                           <div className="space-y-2">
                             <img
-                              src={editingResearch.thumbnail.url}
+                              src={(editingResearch.thumbnail?.url && !editingResearch.thumbnail.url.includes('default-research.jpg')) ? editingResearch.thumbnail.url : 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=600&auto=format&fit=crop'}
                               alt="Current thumbnail"
                               className="w-32 h-32 object-cover rounded-lg mx-auto"
                             />
@@ -1084,7 +1084,7 @@ export default function ResearchAdmin() {
             <div className="p-6">
               <div className="mb-6">
                 <img
-                  src={previewResearch.thumbnail?.url || 'https://via.placeholder.com/800x600'}
+                  src={(previewResearch.thumbnail?.url && !previewResearch.thumbnail.url.includes('default-research.jpg')) ? previewResearch.thumbnail.url : 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=600&auto=format&fit=crop'}
                   alt={previewResearch.title}
                   className="w-full h-64 object-cover rounded-lg"
                 />
