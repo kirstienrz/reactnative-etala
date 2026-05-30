@@ -484,6 +484,11 @@ const addReferral = async (req, res) => {
       };
     }
 
+    // If internal referral, automatically set caseStatus to "Internal"
+    if (body.referralType !== "External") {
+      updateData.$set.caseStatus = "Internal";
+    }
+
     const report = await Report.findByIdAndUpdate(
       id,
       updateData,

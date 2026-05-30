@@ -30,9 +30,11 @@ const AdminReports = () => {
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [sentimentResults, setSentimentResults] = useState({});
-  const [showSentimentModal, setShowSentimentModal] = useState(false);
+  const [showAnalysisConfirmModal, setShowAnalysisConfirmModal] = useState(false);
+  const [pendingAnalysis, setPendingAnalysis] = useState(null);
   const [selectedReportForAnalysis, setSelectedReportForAnalysis] = useState(null);
   const [sentimentFilter, setSentimentFilter] = useState("All");
+  const [selectedReportIds, setSelectedReportIds] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [readStatusFilter, setReadStatusFilter] = useState("All");
@@ -167,6 +169,10 @@ const AdminReports = () => {
   useEffect(() => {
     fetchReports();
   }, []);
+
+  useEffect(() => {
+    setSelectedReportIds([]);
+  }, [activeTab]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -403,6 +409,12 @@ const AdminReports = () => {
     return doc;
   };
 
+  // AI Analysis Trigger with Confirmation Modal
+  const triggerAnalysis = (type, reportId = null, reportData = null) => {
+    setPendingAnalysis({ type, reportId, reportData });
+    setShowAnalysisConfirmModal(true);
+  };
+
   // Sentiment Analysis Function
   const analyzeSentiment = async (reportId, reportData) => {
     setAnalyzing(true);
@@ -443,6 +455,16 @@ const AdminReports = () => {
         setSentimentResults(newSentimentResults);
         showToast(`Severity analysis complete: ${res.data.severity}`, "success");
         localStorage.setItem('reportSentiments', JSON.stringify(newSentimentResults));
+        
+        // Save report severity to database immediately!
+        try {
+          await saveReportSeverity(reportId, res.data.severity);
+          const localizedSeverity = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
+          setReports(prev => prev.map(r => r._id === reportId ? { ...r, severity: localizedSeverity } : r));
+          setArchivedReports(prev => prev.map(r => r._id === reportId ? { ...r, severity: localizedSeverity } : r));
+        } catch (dbErr) {
+          console.error("Failed to save severity to DB:", dbErr);
+        }
       } else {
         showToast(res.message || "Failed to analyze severity", "error");
       }
@@ -453,6 +475,127 @@ const AdminReports = () => {
       setAnalyzing(false);
       setSelectedReportForAnalysis(null);
     }
+  };
+
+  // Bulk Analyze All Pending Reports
+  const handleAnalyzeAllPending = async () => {
+    const combined = [...reports, ...archivedReports];
+    const unanalyzed = combined.filter(r => !sentimentResults[r._id] || r.severity === 'Unanalyzed');
+    
+    if (unanalyzed.length === 0) {
+      showToast("All reports are already analyzed!", "success");
+      return;
+    }
+
+    setAnalyzing(true);
+    showToast(`Starting AI analysis for ${unanalyzed.length} reports...`, "info");
+
+    let successCount = 0;
+    
+    for (let i = 0; i < unanalyzed.length; i++) {
+      const report = unanalyzed[i];
+      const description = report.incidentDescription || 
+                          report.incidentStatement || 
+                          report.salaysay || 
+                          "No incident description provided.";
+                          
+      try {
+        const res = await analyzeReportSeverity({
+          incidentDescription: description,
+          reportId: report._id,
+          additionalContext: {
+            timestamp: report.submittedAt,
+            location: report.placeOfIncident || 'Not specified',
+          }
+        });
+
+        if (res.success) {
+          successCount++;
+          
+          setSentimentResults(prev => {
+            const updated = {
+              ...prev,
+              [report._id]: {
+                ...res.data,
+                analyzedAt: new Date().toISOString()
+              }
+            };
+            localStorage.setItem('reportSentiments', JSON.stringify(updated));
+            return updated;
+          });
+
+          await saveReportSeverity(report._id, res.data.severity);
+
+          const localizedSeverity = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
+          setReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
+          setArchivedReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
+        }
+      } catch (err) {
+        console.error(`Failed to analyze report ${report._id}:`, err);
+      }
+    }
+
+    setAnalyzing(false);
+    showToast(`Analysis complete: ${successCount}/${unanalyzed.length} reports analyzed successfully.`, "success");
+  };
+
+  // Bulk Analyze Checked Reports
+  const handleBulkAnalyze = async () => {
+    if (selectedReportIds.length === 0) return;
+    
+    setAnalyzing(true);
+    showToast(`Starting bulk severity analysis for ${selectedReportIds.length} reports...`, "info");
+    
+    let successCount = 0;
+    const combined = [...reports, ...archivedReports];
+    const targets = combined.filter(r => selectedReportIds.includes(r._id));
+    
+    for (let i = 0; i < targets.length; i++) {
+      const report = targets[i];
+      const description = report.incidentDescription || 
+                          report.incidentStatement || 
+                          report.salaysay || 
+                          "No incident description provided.";
+                          
+      try {
+        const res = await analyzeReportSeverity({
+          incidentDescription: description,
+          reportId: report._id,
+          additionalContext: {
+            timestamp: report.submittedAt,
+            location: report.placeOfIncident || 'Not specified',
+          }
+        });
+
+        if (res.success) {
+          successCount++;
+          
+          setSentimentResults(prev => {
+            const updated = {
+              ...prev,
+              [report._id]: {
+                ...res.data,
+                analyzedAt: new Date().toISOString()
+              }
+            };
+            localStorage.setItem('reportSentiments', JSON.stringify(updated));
+            return updated;
+          });
+
+          await saveReportSeverity(report._id, res.data.severity);
+
+          const localizedSeverity = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
+          setReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
+          setArchivedReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
+        }
+      } catch (err) {
+        console.error(`Failed to analyze report ${report._id}:`, err);
+      }
+    }
+
+    setAnalyzing(false);
+    setSelectedReportIds([]); // Clear selection
+    showToast(`Bulk analysis complete: ${successCount}/${targets.length} reports successfully analyzed.`, "success");
   };
 
   // Get severity color
@@ -518,7 +661,7 @@ const AdminReports = () => {
       if (savedSentiments) {
         try {
           Object.assign(localSentiments, JSON.parse(savedSentiments));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       [...activeList, ...archivedList].forEach(r => {
@@ -528,10 +671,10 @@ const AdminReports = () => {
             dbSentiments[r._id] = localSentiments[r._id];
           } else {
             // Realistic fallback confidence (e.g. 85%) instead of an extreme 100%
-            dbSentiments[r._id] = { 
-              severity: r.severity.toUpperCase(), 
-              confidence: 0.85, 
-              explanation: "Loaded from secure GAD database records." 
+            dbSentiments[r._id] = {
+              severity: r.severity.toUpperCase(),
+              confidence: 0.85,
+              explanation: "Loaded from secure GAD database records."
             };
           }
         }
@@ -714,7 +857,7 @@ const AdminReports = () => {
         try {
           const statusMessages = {
             "For Queuing": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay nasa status na: For Queuing.\n\nMalapit na itong ma-review ng aming team.`,
-            "For Interview": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay nasa status na: For Interview.\n\nMaaring ka naming i-contact para sa isang interview o consultation. Abangan ang aming mensahe.`,
+            "For Interview": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay nasa status na: For Interview.\n\n📅 Nagpadala na kami ng booking link sa iyong email para makapag-schedule ka ng iyong consultation appointment. Paki-check ang iyong email inbox.`,
             "Internal": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay ni-refer sa isang internal department para sa karagdagang aksyon.\n\nReferral Type: Internal`,
             "Case Closed": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay opisyal nang isinara (Case Closed).\n\nKung may mga katanungan ka pa, huwag mag-atubiling mag-mensahe.`
           };
@@ -727,6 +870,20 @@ const AdminReports = () => {
         } catch (msgError) {
           console.error("❌ Failed to send chat notification for status update:", msgError);
           showToast("Chat notification failed: " + (msgError.response?.data?.message || msgError.message), "error");
+        }
+
+        // ✅ NAVIGATE TO MESSAGES & OPEN BOOKING MODAL when status is "For Interview"
+        if (finalStatus === "For Interview" && selectedReport.ticketNumber) {
+          showToast("📅 Redirecting to Messages to set your availability and send booking link...", "success");
+          setTimeout(() => {
+            navigate('/superadmin/messages', {
+              state: {
+                selectedTicketNumber: selectedReport.ticketNumber,
+                reportId: selectedReport._id,
+                openBookingModal: true
+              }
+            });
+          }, 1500);
         }
       } else {
         showToast(res.message || "Failed to update case status", "error");
@@ -980,14 +1137,6 @@ const AdminReports = () => {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Report Management</h1>
               <p className="text-gray-600 text-sm md:text-base">Monitor and manage incident reports with AI-powered severity analysis</p>
             </div>
-            <button
-              onClick={() => setShowSentimentModal(true)}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md group"
-            >
-              <Brain size={20} className="group-hover:rotate-12 transition-transform" />
-              <span className="font-bold">Severity Analysis</span>
-              <BarChart size={20} />
-            </button>
           </div>
 
 
@@ -1268,6 +1417,31 @@ const AdminReports = () => {
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                          <input
+                            type="checkbox"
+                            checked={
+                              paginatedReports.length > 0 &&
+                              paginatedReports.every(r => selectedReportIds.includes(r._id))
+                            }
+                            onChange={() => {
+                              const pageIds = paginatedReports.map(r => r._id);
+                              const allChecked = pageIds.every(id => selectedReportIds.includes(id));
+                              if (allChecked) {
+                                setSelectedReportIds(prev => prev.filter(id => !pageIds.includes(id)));
+                              } else {
+                                setSelectedReportIds(prev => {
+                                  const newSelections = [...prev];
+                                  pageIds.forEach(id => {
+                                    if (!newSelections.includes(id)) newSelections.push(id);
+                                  });
+                                  return newSelections;
+                                });
+                              }
+                            }}
+                            className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                          />
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 
                         </th>
@@ -1296,6 +1470,20 @@ const AdminReports = () => {
                             key={report._id}
                             className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
                           >
+                            <td className="px-6 py-4 whitespace-nowrap w-10">
+                              <input
+                                type="checkbox"
+                                checked={selectedReportIds.includes(report._id)}
+                                onChange={() => {
+                                  if (selectedReportIds.includes(report._id)) {
+                                    setSelectedReportIds(prev => prev.filter(id => id !== report._id));
+                                  } else {
+                                    setSelectedReportIds(prev => [...prev, report._id]);
+                                  }
+                                }}
+                                className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                              />
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {!isReportRead(report._id) && (
                                 <div className="flex items-center">
@@ -1332,9 +1520,8 @@ const AdminReports = () => {
                               ) : (
                                 <button
                                   onClick={() => {
-                                    setSelectedReportForAnalysis(report._id);
-                                    analyzeSentiment(report._id, {
-                                      salaysay: report.salaysay,
+                                    triggerAnalysis('single', report._id, {
+                                      salaysay: report.salaysay || report.incidentDescription || report.incidentStatement,
                                       timestamp: report.submittedAt
                                     });
                                   }}
@@ -1443,13 +1630,12 @@ const AdminReports = () => {
 
                                 {!sentimentResults[report._id] && (
                                   <button
-                                    onClick={() => {
-                                      setSelectedReportForAnalysis(report._id);
-                                      analyzeSentiment(report._id, {
-                                        salaysay: report.salaysay,
-                                        timestamp: report.submittedAt
-                                      });
-                                    }}
+                                  onClick={() => {
+                                    triggerAnalysis('single', report._id, {
+                                      salaysay: report.salaysay || report.incidentDescription || report.incidentStatement,
+                                      timestamp: report.submittedAt
+                                    });
+                                  }}
                                     disabled={analyzing}
                                     className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     title="Analyze Severity"
@@ -1560,192 +1746,111 @@ const AdminReports = () => {
           </div>
         </div>
 
-        {/* Sentiment Analysis Modal */}
-        {showSentimentModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* AI Severity Analysis Explanation & Confirmation Modal */}
+        {showAnalysisConfirmModal && pendingAnalysis && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col border border-gray-100 animate-in zoom-in-95 duration-200">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <Brain className="text-purple-600" size={24} />
-                    AI Severity Analysis Dashboard
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">Analyze report severity using OpenAI</p>
+              <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                    <Brain size={24} className="animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 leading-tight">
+                      AI Severity Analysis
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Understand how the AI processes reports before proceeding
+                    </p>
+                  </div>
                 </div>
                 <button
-                  onClick={() => setShowSentimentModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  onClick={() => {
+                    setShowAnalysisConfirmModal(false);
+                    setPendingAnalysis(null);
+                  }}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <X size={24} className="text-gray-500" />
+                  <X size={20} className="text-gray-400 hover:text-gray-600" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="space-y-6">
-                  {/* Stats Overview */}
-                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <BarChart size={20} className="text-purple-600" />
-                      Analysis Summary
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-red-600">{severityStats.severe}</div>
-                        <div className="text-sm text-gray-600">Severe</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-yellow-600">{severityStats.moderate}</div>
-                        <div className="text-sm text-gray-600">Moderate</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-green-600">{severityStats.mild}</div>
-                        <div className="text-sm text-gray-600">Mild</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-gray-600">{severityStats.unanalyzed}</div>
-                        <div className="text-sm text-gray-600">Pending</div>
-                      </div>
+              <div className="p-6 space-y-6">
+                {/* How It Works Container */}
+                <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-5 space-y-4">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    How It Works
+                  </h3>
+                  
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm border border-blue-100 shadow-sm">
+                      1
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">AI analyzes incident descriptions</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Uses OpenAI to understand context and severity</p>
                     </div>
                   </div>
 
-                  {/* How It Works */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4">How It Works</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 font-bold">1</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">AI analyzes incident descriptions</p>
-                          <p className="text-sm text-gray-600">Uses OpenAI to understand context and severity</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 font-bold">2</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">Classifies severity level</p>
-                          <p className="text-sm text-gray-600">Categorizes as Severe, Moderate, or Mild</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 font-bold">3</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">Extracts key insights</p>
-                          <p className="text-sm text-gray-600">Identifies keywords and provides confidence scores</p>
-                        </div>
-                      </div>
+                  <div className="flex items-start gap-4 border-t border-gray-100/60 pt-4">
+                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm border border-blue-100 shadow-sm">
+                      2
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">Classifies severity level</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Categorizes as Severe, Moderate, or Mild</p>
                     </div>
                   </div>
 
-                  {/* Analysis Controls */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <button
-                        onClick={async () => {
-                          // Analyze all unanalyzed reports
-                          const unanalyzed = reports.filter(r => !sentimentResults[r._id]);
-                          if (unanalyzed.length > 0) {
-                            setAnalyzing(true);
-                            showToast(`Analyzing ${unanalyzed.length} reports...`, "info");
-
-                            let successCount = 0;
-                            for (const report of unanalyzed) {
-                              try {
-                                const res = await analyzeReportSeverity({
-                                  incidentDescription: report.incidentDescription || report.incidentStatement || report.salaysay,
-                                  reportId: report._id,
-                                  additionalContext: {
-                                    timestamp: report.submittedAt,
-                                    location: report.placeOfIncident || 'Not specified',
-                                  }
-                                });
-
-                                if (res.success) {
-                                  successCount++;
-                                  setSentimentResults(prev => ({
-                                    ...prev,
-                                    [report._id]: {
-                                      ...res.data,
-                                      analyzedAt: new Date().toISOString()
-                                    }
-                                  }));
-                                }
-                              } catch (err) {
-                                console.error(`Failed to analyze report ${report._id}:`, err);
-                              }
-                            }
-                            setAnalyzing(false);
-                            showToast(`Batch analysis complete: ${successCount}/${unanalyzed.length} successfully analyzed.`, "success");
-                          } else {
-                            showToast("All reports have been analyzed", "success");
-                          }
-                        }}
-                        disabled={analyzing || reports.filter(r => !sentimentResults[r._id]).length === 0}
-                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                      >
-                        <Brain size={20} />
-                        {analyzing ? "Analyzing..." : "Analyze All Pending"}
-                        <span className="bg-white/20 px-2 py-1 rounded text-xs">
-                          {reports.filter(r => !sentimentResults[r._id]).length}
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSentimentResults({});
-                          localStorage.removeItem('reportSentiments');
-                          showToast("Analysis results cleared", "success");
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        <RefreshCw size={20} />
-                        Clear All Analysis
-                      </button>
+                  <div className="flex items-start gap-4 border-t border-gray-100/60 pt-4">
+                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm border border-blue-100 shadow-sm">
+                      3
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">Extracts key insights</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Identifies keywords and provides confidence scores</p>
                     </div>
                   </div>
+                </div>
 
-                  {/* Legend */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4">Severity Legend</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className={`flex items-center gap-3 p-4 rounded-lg ${getSeverityColor('Severe')}`}>
-                        <AlertTriangle size={24} className="text-red-600" />
-                        <div>
-                          <p className="font-semibold">Severe</p>
-                          <p className="text-sm opacity-80">Requires immediate attention</p>
-                        </div>
-                      </div>
-                      <div className={`flex items-center gap-3 p-4 rounded-lg ${getSeverityColor('Moderate')}`}>
-                        <Activity size={24} className="text-yellow-600" />
-                        <div>
-                          <p className="font-semibold">Moderate</p>
-                          <p className="text-sm opacity-80">Needs prompt follow-up</p>
-                        </div>
-                      </div>
-                      <div className={`flex items-center gap-3 p-4 rounded-lg ${getSeverityColor('Mild')}`}>
-                        <Shield size={24} className="text-green-600" />
-                        <div>
-                          <p className="font-semibold">Mild</p>
-                          <p className="text-sm opacity-80">Standard procedure required</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex gap-3">
+                  <AlertCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                    This action will request OpenAI to analyze the content of the selected {pendingAnalysis.type === 'bulk' ? `${selectedReportIds.length} reports` : 'report'}. The severity results will be saved and visible to all administrators.
+                  </p>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="border-t border-gray-200 p-6 bg-white">
-                <p className="text-sm text-gray-600 text-center">
-                  Powered by OpenAI • Analysis helps prioritize reports based on severity
-                </p>
+              <div className="border-t border-gray-100 p-6 bg-gray-50/50 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowAnalysisConfirmModal(false);
+                    setPendingAnalysis(null);
+                  }}
+                  className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-xl font-bold text-sm transition active:scale-95 duration-200 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAnalysisConfirmModal(false);
+                    if (pendingAnalysis.type === 'single') {
+                      analyzeSentiment(pendingAnalysis.reportId, pendingAnalysis.reportData);
+                    } else if (pendingAnalysis.type === 'bulk') {
+                      handleBulkAnalyze();
+                    }
+                    setPendingAnalysis(null);
+                  }}
+                  className="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 duration-200 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Brain size={16} />
+                  <span>
+                    Confirm & Analyze {pendingAnalysis.type === 'bulk' ? `(${selectedReportIds.length} Reports)` : '(1 Report)'}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
@@ -1789,9 +1894,8 @@ const AdminReports = () => {
                   onClick={() => {
                     const report = paginatedReports.find(r => r._id === openDropdown);
                     if (report) {
-                      setSelectedReportForAnalysis(report._id);
-                      analyzeSentiment(report._id, {
-                        incidentDescription: report.incidentDescription,
+                      triggerAnalysis('single', report._id, {
+                        incidentDescription: report.incidentDescription || report.incidentStatement || report.salaysay,
                         incidentTypes: report.incidentTypes,
                         timestamp: report.submittedAt
                       });
@@ -1921,8 +2025,8 @@ const AdminReports = () => {
                     <button
                       onClick={() => setModalTab("details")}
                       className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${modalTab === "details"
-                          ? "border-indigo-600 text-indigo-600 bg-white"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
+                        ? "border-indigo-600 text-indigo-600 bg-white"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
                         }`}
                     >
                       Incident Details
@@ -1930,8 +2034,8 @@ const AdminReports = () => {
                     <button
                       onClick={() => setModalTab("history")}
                       className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${modalTab === "history"
-                          ? "border-indigo-600 text-indigo-600 bg-white"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
+                        ? "border-indigo-600 text-indigo-600 bg-white"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
                         }`}
                     >
                       Case History & Referrals
@@ -2179,7 +2283,7 @@ const AdminReports = () => {
                             {selectedReport.timeline?.map((t, i) => (
                               <div key={i} className="relative pl-8 border-l-2 border-gray-100 pb-2">
                                 <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${t.action.includes("Referral") ? "bg-indigo-600" :
-                                    t.action.includes("Closed") ? "bg-gray-800" : "bg-blue-500"
+                                  t.action.includes("Closed") ? "bg-gray-800" : "bg-blue-500"
                                   }`}></div>
 
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
@@ -2229,8 +2333,7 @@ const AdminReports = () => {
                       {!sentimentResults[selectedReport._id] && (
                         <button
                           onClick={() => {
-                            setSelectedReportForAnalysis(selectedReport._id);
-                            analyzeSentiment(selectedReport._id, {
+                            triggerAnalysis('single', selectedReport._id, {
                               salaysay: selectedReport.salaysay || selectedReport.incidentDescription || selectedReport.incidentStatement,
                               timestamp: selectedReport.submittedAt
                             });
@@ -2932,6 +3035,42 @@ const AdminReports = () => {
                     Restore
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Floating Bulk Actions Bar */}
+          {selectedReportIds.length > 0 && (
+            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[60] p-4 bg-white/95 backdrop-blur-md border border-indigo-100 rounded-2xl shadow-2xl flex items-center justify-between gap-6 animate-in slide-in-from-bottom-6 duration-300 w-[90%] max-w-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shadow-inner">
+                  {selectedReportIds.length}
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm leading-none mb-1">
+                    {selectedReportIds.length === 1 ? "1 Report Selected" : `${selectedReportIds.length} Reports Selected`}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium leading-none mt-1">
+                    Analyze severity in bulk with AI.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => triggerAnalysis('bulk')}
+                  disabled={analyzing}
+                  className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-all font-bold text-xs shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer transform active:scale-95 duration-200"
+                >
+                  <Brain size={14} className={analyzing ? "animate-pulse" : ""} />
+                  {analyzing ? "Analyzing..." : "Bulk Analyze"}
+                </button>
+                <button
+                  onClick={() => setSelectedReportIds([])}
+                  className="px-4 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-bold text-xs transition cursor-pointer"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}
