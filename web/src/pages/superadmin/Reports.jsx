@@ -1128,7 +1128,7 @@ const AdminReports = () => {
 
   return (
     <>
-      <div id="admin-reports-main-v2" className="min-h-screen bg-gray-50 p-6">
+      <div id="admin-reports-main-v2" className="min-h-screen bg-gray-50 p-4 sm:p-6 overflow-x-hidden max-w-[100vw]">
         {/* Toast Notification */}
         {toast.show && (
           <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 rounded-2xl px-6 py-4 shadow-2xl animate-in slide-in-from-top-4 duration-300 border ${toast.type === "error" ? "bg-red-600 border-red-500" : "bg-emerald-600 border-emerald-500"
@@ -1257,9 +1257,9 @@ const AdminReports = () => {
           {/* Advanced Filters */}
           {showFilters && (
             <div className="pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Sort By Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Sort By Date</label>
                   <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     value={sortOrder}
@@ -1274,7 +1274,7 @@ const AdminReports = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Read Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Read Status</label>
                   <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     value={readStatusFilter}
@@ -1290,7 +1290,7 @@ const AdminReports = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Case Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Case Status</label>
                   <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     value={caseStatusFilter}
@@ -1312,8 +1312,8 @@ const AdminReports = () => {
                 </div>
 
                 {caseStatusFilter === "Internal" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Internal Department</label>
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Internal Department</label>
                     <select
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       value={internalDepartmentFilter}
@@ -1335,7 +1335,7 @@ const AdminReports = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Severity Level</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Severity Level</label>
                   <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     value={sentimentFilter}
@@ -1367,7 +1367,7 @@ const AdminReports = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">To Date</label>
                   <input
                     type="date"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1399,13 +1399,13 @@ const AdminReports = () => {
           {/* Tabs and Summary */}
           <div className="border-b border-gray-200">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between p-4 md:p-6 gap-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 w-full lg:w-auto">
                 <button
                   onClick={() => {
                     setActiveTab("active");
                     setCurrentPage(1);
                   }}
-                  className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "active"
+                  className={`flex-1 lg:flex-none whitespace-nowrap px-3 sm:px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "active"
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                     : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                     }`}
@@ -1417,7 +1417,7 @@ const AdminReports = () => {
                     setActiveTab("archived");
                     setCurrentPage(1);
                   }}
-                  className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "archived"
+                  className={`flex-1 lg:flex-none whitespace-nowrap px-3 sm:px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "archived"
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                     : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                     }`}
@@ -1447,7 +1447,8 @@ const AdminReports = () => {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
@@ -1688,6 +1689,116 @@ const AdminReports = () => {
                       })}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden flex flex-col gap-4">
+                  {paginatedReports.map((report) => {
+                    const sentiment = sentimentResults[report._id];
+                    return (
+                      <div key={report._id} className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col gap-3 relative ${!isReportRead(report._id) ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
+                        {/* Header: Ticket & Date */}
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedReportIds.includes(report._id)}
+                              onChange={() => {
+                                if (selectedReportIds.includes(report._id)) {
+                                  setSelectedReportIds(prev => prev.filter(id => id !== report._id));
+                                } else {
+                                  setSelectedReportIds(prev => [...prev, report._id]);
+                                }
+                              }}
+                              className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                            />
+                            {!isReportRead(report._id) && (
+                              <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
+                            )}
+                            <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                              {report.ticketNumber}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                            {new Date(report.submittedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+
+                        {/* Badges: Severity & Case Status */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {sentiment ? (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
+                              {getSeverityIcon(sentiment.severity)}
+                              {sentiment.severity}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                triggerAnalysis('single', report._id, {
+                                  salaysay: report.salaysay || report.incidentDescription || report.incidentStatement,
+                                  timestamp: report.submittedAt
+                                });
+                              }}
+                              disabled={analyzing}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50"
+                            >
+                              {analyzing && (selectedReportForAnalysis === report._id || selectedReportForAnalysis?._id === report._id) ? (
+                                <RefreshCw size={12} className="animate-spin text-purple-600" />
+                              ) : (
+                                <Brain size={12} />
+                              )}
+                              {analyzing && (selectedReportForAnalysis === report._id || selectedReportForAnalysis?._id === report._id) ? "Analyzing..." : "Analyze"}
+                            </button>
+                          )}
+
+                          {report.caseStatus ? (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
+                              {getCaseStatusIcon(report.caseStatus)}
+                              {report.caseStatus}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">No Status</span>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-1">
+                          <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                            <button onClick={() => handleViewDetails(report._id)} className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors flex-shrink-0" title="View Details">
+                              <Eye size={18} />
+                            </button>
+                            <button onClick={() => handleMessageUser(report)} className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors flex-shrink-0" title="Message User">
+                              <MessageSquare size={18} />
+                            </button>
+                            {isReportRead(report._id) ? (
+                              <button onClick={() => markAsUnread(report._id)} className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors flex-shrink-0">
+                                <Mail size={18} />
+                              </button>
+                            ) : (
+                              <button onClick={() => markAsRead(report._id)} className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors flex-shrink-0">
+                                <CheckCircle size={18} />
+                              </button>
+                            )}
+                            <button onClick={() => { setSelectedReport(report); setNewCaseStatus(report.caseStatus || ""); setShowCaseStatusModal(true); }} className="p-2 hover:bg-purple-50 text-purple-600 rounded-lg transition-colors flex-shrink-0">
+                              <Edit size={18} />
+                            </button>
+                          </div>
+                          
+                          <div className="pl-2 border-l border-gray-100 flex-shrink-0">
+                            {activeTab === "active" ? (
+                              <button onClick={() => { setSelectedReport(report); setShowArchiveModal(true); }} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
+                                <Archive size={14} /> Archive
+                              </button>
+                            ) : (
+                              <button onClick={() => { handleRestore(report._id); }} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
+                                <RotateCcw size={14} /> Restore
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Pagination Controls */}
