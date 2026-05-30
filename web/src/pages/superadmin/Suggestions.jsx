@@ -350,25 +350,25 @@ const AdminGADSuggestionBox = () => {
         {/* Main Content */}
         <div className="flex-1">
           {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="mb-4 md:mb-6">
+            <div className="flex items-center gap-3 mb-2">
               {!showSidebar && (
                 <button 
                   onClick={() => setShowSidebar(true)}
-                  className="p-2 hover:bg-white rounded-lg print:hidden"
+                  className="p-2 bg-white hover:bg-gray-50 rounded-xl shadow-sm print:hidden"
                 >
                   <Menu size={20} />
                 </button>
               )}
-              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">
-                GAD Suggestion Box
+              <h1 className="text-2xl md:text-4xl font-black text-gray-900 leading-tight">
+                Suggestions
               </h1>
             </div>
-            <p className="text-gray-600">Manage user-submitted suggestions for Gender and Development initiatives</p>
+            <p className="text-sm md:text-base text-gray-500 font-medium">Manage user-submitted initiatives</p>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
             <div className="bg-white rounded-lg shadow-sm p-5 border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
                 <div>
@@ -419,30 +419,30 @@ const AdminGADSuggestionBox = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 mb-4 print:hidden">
+          <div className="flex overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:pb-0 gap-2 mb-4 print:hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <button
               onClick={() => setShowAnalytics(true)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm hover:bg-gray-50 border border-gray-100 font-semibold text-sm text-gray-700"
             >
-              <BarChart3 size={18} /> Analytics
+              <BarChart3 size={18} className="text-blue-600" /> Analytics
             </button>
             <button
               onClick={handleExportCSV}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm hover:bg-gray-50 border border-gray-100 font-semibold text-sm text-gray-700"
             >
-              <Download size={18} /> Export CSV
+              <Download size={18} className="text-green-600" /> Export CSV
             </button>
             <button
               onClick={handlePrint}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-lg hover:bg-gray-50 border"
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm hover:bg-gray-50 border border-gray-100 font-semibold text-sm text-gray-700"
             >
-              <Printer size={18} /> Print
+              <Printer size={18} className="text-purple-600" /> Print
             </button>
             {selectedItems.length > 0 && (
               <>
                 <button
                   onClick={handleBulkArchive}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-xl shadow-sm hover:bg-gray-900 font-semibold text-sm"
                 >
                   <Archive size={18} /> Archive ({selectedItems.length})
                 </button>
@@ -453,7 +453,7 @@ const AdminGADSuggestionBox = () => {
                       e.target.value = '';
                     }
                   }}
-                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex-shrink-0 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 shadow-sm outline-none"
                 >
                   <option value="">Bulk Status Change</option>
                   <option value="pending">Pending</option>
@@ -467,23 +467,23 @@ const AdminGADSuggestionBox = () => {
           </div>
 
           {/* View Toggle */}
-          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <div className="flex bg-gray-200/60 p-1 rounded-xl mb-4 print:hidden">
             <button
               onClick={() => setViewMode("active")}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
                 viewMode === "active"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Active Suggestions
             </button>
             <button
               onClick={() => setViewMode("archived")}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
                 viewMode === "archived"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Archived
