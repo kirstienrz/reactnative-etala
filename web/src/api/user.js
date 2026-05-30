@@ -54,6 +54,12 @@ export const archiveUser = async (userId, payload) => {
   return res.data;
 };
 
+// 📦 BULK ARCHIVE users
+export const bulkArchiveUsers = async (payload) => {
+  const res = await API.put("/user/manage/users/bulk-archive", payload);
+  return res.data;
+};
+
 // 🔄 UNARCHIVE/RESTORE user
 export const unarchiveUser = async (userId) => {
   const res = await API.put(`/user/manage/users/${userId}/unarchive`);

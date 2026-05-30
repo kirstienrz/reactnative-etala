@@ -359,6 +359,95 @@ router.post("/manage/users", auth(), async (req, res) => {
     res.status(500).json({ message: "Failed to create user" });
   }
 });
+
+// 📦 BULK ARCHIVE users (superadmin only)
+router.put("/manage/users/bulk-archive", auth(), async (req, res) => {
+  try {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Access denied. Superadmin only." });
+    }
+
+    const { userIds, reason, graceDays } = req.body;
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: "A list of valid user IDs is required." });
+    }
+
+    // Filter out the superadmin's own ID if included
+    const targetIds = userIds.filter(id => id !== req.user.id);
+    if (targetIds.length === 0) {
+      return res.status(400).json({ message: "Cannot archive your own account." });
+    }
+
+    const days = parseInt(graceDays) || 7;
+    const endsAt = Date.now() + days * 24 * 60 * 60 * 1000;
+    const archiveReason = reason || "Inactivity / Administrative Decision";
+
+    // Find target users to send emails
+    const targetUsers = await User.find({ _id: { $in: targetIds } });
+
+    // Update in bulk
+    await User.updateMany(
+      { _id: { $in: targetIds } },
+      {
+        $set: {
+          isArchived: false,
+          archiveStatus: "Pending Archive",
+          archiveReason: archiveReason,
+          archiveGracePeriodEndsAt: endsAt
+        },
+        $unset: {
+          archiveAppealReason: "",
+          archiveAppealSubmittedAt: ""
+        }
+      }
+    );
+
+    // Send emails asynchronously
+    const gracePeriodDate = new Date(endsAt).toLocaleDateString("en-US", {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    targetUsers.forEach(user => {
+      sendEmail({
+        to: user.email,
+        subject: "Notice of Scheduled Account Archiving - eTALA Portal",
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+            <h2 style="color: #ea580c; border-bottom: 2px solid #ea580c; padding-bottom: 10px;">Important Account Status Update</h2>
+            <p>Dear <strong>${user.firstName} ${user.lastName}</strong>,</p>
+            <p>This is an official notice that your eTALA account is scheduled to be <strong>archived and detached</strong> on <strong>${gracePeriodDate}</strong>.</p>
+            
+            <div style="background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 16px; margin: 20px 0; border-radius: 4px;">
+              <strong style="color: #c2410c;">Reason for Archiving:</strong><br/>
+              <p style="margin: 8px 0 0 0; font-style: italic;">"${archiveReason}"</p>
+            </div>
+            
+            <p><strong>What does this mean?</strong><br/>
+            After the date above, your account will be fully deactivated and you will no longer be able to log in to the GAD Portal. However, your previous reports and records will remain securely stored in the system database for institutional reference.</p>
+            
+            <h3 style="color: #1e3a8a; margin-top: 24px;">What can you do? (Archive Appeal)</h3>
+            <p>If you believe this is a mistake or you require your account to remain active, you have the right to file an appeal. To do this:</p>
+            <ol>
+              <li>Log in to your account at <a href="https://etala.vercel.app/" style="color: #2563eb; text-decoration: none;">https://etala.vercel.app/</a> before the deadline.</li>
+              <li>You will see a highly visible warning banner at the top of your dashboard.</li>
+              <li>Click <strong>"Submit Appeal"</strong>, state your reason, and send.</li>
+            </ol>
+            <p>Submitting an appeal will temporarily freeze the countdown and notify our GAD officers for manual review.</p>
+            
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;"/>
+            <p style="font-size: 12px; color: #6b7280; text-align: center;">TUP eTALA Gender and Development Portal &bull; Official Institutional Notification</p>
+          </div>
+        `
+      }).catch(err => console.error("❌ Failed to send bulk archive email:", err));
+    });
+
+    res.json({ message: `Successfully scheduled archiving for ${targetIds.length} users.` });
+  } catch (err) {
+    console.error("❌ Error bulk archiving users:", err);
+    res.status(500).json({ message: "Failed to bulk archive users." });
+  }
+});
+
 // 📝 UPDATE user (superadmin only)
 router.put("/manage/users/:id", auth(), async (req, res) => {
   try {
@@ -650,6 +739,35 @@ router.put("/manage/users/:id/unarchive", auth(), async (req, res) => {
     user.archiveAppealSubmittedAt = undefined;
     
     await user.save();
+
+    // Send Restoration Confirmation Email
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Your eTALA Account Has Been RESTORED - GAD Portal",
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+            <h2 style="color: #16a34a; border-bottom: 2px solid #16a34a; padding-bottom: 10px;">Account Successfully Restored</h2>
+            <p>Dear <strong>${user.firstName} ${user.lastName}</strong>,</p>
+            <p>We are writing to let you know that your eTALA account has been **restored to Active status** by our GAD administrators.</p>
+            
+            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; margin: 20px 0; border-radius: 4px;">
+              <strong style="color: #15803d;">Current Status:</strong> Active & Enabled<br/>
+              <p style="margin: 8px 0 0 0;">All scheduled deactivations or archive locks have been removed. You can now log in and access your portal normally.</p>
+            </div>
+            
+            <p>Thank you for your active participation in promoting GAD community safe services!</p>
+            <p><a href="https://etala.vercel.app/" style="display: inline-block; background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Log In to GAD Portal</a></p>
+            
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;"/>
+            <p style="font-size: 12px; color: #6b7280; text-align: center;">TUP eTALA Gender and Development Portal &bull; Official Account Notifications</p>
+          </div>
+        `
+      });
+      console.log("✅ Restoration email sent successfully to " + user.email);
+    } catch (err) {
+      console.error("❌ Failed to send restoration email:", err);
+    }
 
     res.json({ message: "User restored successfully" });
   } catch (err) {
