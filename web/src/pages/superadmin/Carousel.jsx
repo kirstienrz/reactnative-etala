@@ -131,7 +131,7 @@ export default function CarouselManagement() {
       const formData = new FormData();
       formData.append("title", highlightTitle);
       formData.append("description", highlightDescription);
-      
+
       selectedFiles.forEach((file) => {
         formData.append("media", file);
       });
@@ -369,11 +369,10 @@ export default function CarouselManagement() {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`relative group border-2 border-dashed rounded-2xl px-4 h-[56px] flex items-center transition-all duration-300 text-center flex-1 min-w-[160px] ${
-                  isDragging
+                className={`relative group border-2 border-dashed rounded-2xl px-4 h-[56px] flex items-center transition-all duration-300 text-center flex-1 min-w-[160px] ${isDragging
                     ? "border-violet-500 bg-violet-50"
                     : "border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-slate-100/50"
-                }`}
+                  }`}
               >
                 <input
                   type="file"
@@ -427,7 +426,7 @@ export default function CarouselManagement() {
                   </div>
                 ))}
               </div>
-              <button type="button" onClick={() => {setSelectedFiles([]); setPreviews([]);}} className="px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest transition-colors">
+              <button type="button" onClick={() => { setSelectedFiles([]); setPreviews([]); }} className="px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 rounded-xl uppercase tracking-widest transition-colors">
                 Clear Selection
               </button>
             </div>
@@ -511,9 +510,8 @@ export default function CarouselManagement() {
           filteredAndSortedImages.map((img) => (
             <div
               key={img._id}
-              className={`group relative bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-slate-200 transition-all duration-500 ${
-                selectedImages.has(img._id) ? "ring-4 ring-violet-500 border-transparent" : ""
-              }`}
+              className={`group relative bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-slate-200 transition-all duration-500 ${selectedImages.has(img._id) ? "ring-4 ring-violet-500 border-transparent" : ""
+                }`}
             >
               {/* Selection Checkbox */}
               <div className="absolute top-4 left-4 z-20">
@@ -560,10 +558,10 @@ export default function CarouselManagement() {
                     crossOrigin="anonymous"
                   />
                 )}
-                
+
                 {/* Overlays */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
-                
+
                 {/* Content Overlay */}
                 <div className="absolute inset-x-0 bottom-0 p-4">
                   <div className="flex items-end justify-between gap-4">

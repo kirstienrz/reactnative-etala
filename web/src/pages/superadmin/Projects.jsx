@@ -667,7 +667,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Calendar, Users, Target, Plus, Edit2, Archive, X, Save, CheckCircle, Clock, Play, Search, BarChart3, Filter, Menu, Kanban, List, Trash2, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronLeft, Calendar, Users, Target, Plus, Edit2, Archive, X, Save, CheckCircle, Clock, Play, Search, BarChart3, Filter, Menu, Kanban, List, Trash2, Loader2 } from 'lucide-react';
 import {
   getAllPrograms,
   createProgram,
@@ -718,7 +718,7 @@ const GADProgramsHybrid = () => {
         } : {}),
         getAllCalendarEvents()
       ]);
-      
+
       if (calendarRes.success) {
         setCalendarEvents(calendarRes.data);
       }
@@ -861,7 +861,7 @@ const GADProgramsHybrid = () => {
     if (!window.confirm("Are you sure you want to permanently delete this event? This action cannot be undone.")) return;
     try {
       setDeleting(prev => ({ ...prev, [eventId]: true }));
-      
+
       if (source === 'calendar') {
         await deleteCalendarEvent(eventId);
       } else {
@@ -932,12 +932,12 @@ const GADProgramsHybrid = () => {
     const completedProjects = projects.filter(p => p.status === 'completed').length;
 
     const events = projects.flatMap(p => p.events || []);
-    
+
     // Add linked calendar events
     const linkedCalendarEvents = calendarEvents.filter(e => e.extendedProps?.programId === program._id);
     const totalEvents = events.length + linkedCalendarEvents.length;
-    const completedEvents = events.filter(e => e.status === 'completed').length + 
-                            linkedCalendarEvents.filter(e => e.extendedProps?.status === 'completed').length;
+    const completedEvents = events.filter(e => e.status === 'completed').length +
+      linkedCalendarEvents.filter(e => e.extendedProps?.status === 'completed').length;
 
     return { totalProjects, completedProjects, totalEvents, completedEvents };
   };
@@ -991,19 +991,12 @@ const GADProgramsHybrid = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden relative">
-      {/* Sidebar Overlay for Mobile */}
-      {!sidebarCollapsed && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setSidebarCollapsed(true)}
-        />
-      )}
+      {/* Sidebar Overlay for Mobile (Removed for native mobile feel) */}
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 md:relative md:z-auto
-        bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shadow-xl md:shadow-none
-        ${sidebarCollapsed ? '-translate-x-full md:translate-x-0 md:w-0' : 'translate-x-0 w-80'}
+        bg-white border-gray-200 flex flex-col transition-all duration-300 md:shadow-none flex-shrink-0
+        ${!selectedProgram ? 'w-full flex-1' : 'hidden'} md:flex md:w-80 md:border-r
       `}>
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-200">
@@ -1014,7 +1007,7 @@ const GADProgramsHybrid = () => {
             </div>
             <button
               onClick={() => setSidebarCollapsed(true)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors md:hidden"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -1092,7 +1085,10 @@ const GADProgramsHybrid = () => {
                   {programsByYear[year].map(program => (
                     <button
                       key={program._id}
-                      onClick={() => setSelectedProgram(program)}
+                      onClick={() => {
+                        setSelectedProgram(program);
+                        // On mobile, selecting a program automatically moves to the detail view (handled by CSS)
+                      }}
                       className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${selectedProgram?._id === program._id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
                         }`}
                     >
@@ -1135,21 +1131,22 @@ const GADProgramsHybrid = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`
+        flex-col min-w-0 overflow-hidden bg-gray-50
+        ${selectedProgram ? 'flex w-full flex-1' : 'hidden'} md:flex md:flex-1
+      `}>
         {/* Top Bar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center space-x-3">
-                {(sidebarCollapsed || true) && (
-                  <button
-                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${!sidebarCollapsed ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}
-                  >
-                    <Menu className="w-5 h-5" />
-                  </button>
-                )}
-                <div className="min-w-0">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+              <div className="flex items-center space-x-2 md:space-x-3 min-w-0 w-full">
+                <button
+                  onClick={() => setSelectedProgram(null)}
+                  className="md:hidden p-1.5 -ml-1.5 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors flex-shrink-0"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <div className="min-w-0 flex-1">
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
                     {selectedProgram?.name || 'Select a Program'}
                   </h1>
@@ -1164,87 +1161,81 @@ const GADProgramsHybrid = () => {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
-            {!selectedProgram ? (
-              <div className="h-full flex items-center justify-center p-6 text-gray-500">
-                <div className="text-center max-w-sm">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Target className="w-10 h-10 text-gray-400" />
+          {!selectedProgram ? (
+            <div className="h-full flex items-center justify-center p-6 text-gray-500">
+              <div className="text-center max-w-sm">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Target className="w-10 h-10 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Program Selected</h3>
+                <p className="text-sm">Explore and manage your programs by selecting one from the catalog sidebar.</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Stats Cards */}
+              {stats && (
+                <div className="grid grid-cols-1 gap-4 mb-8">
+                  <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Year</div>
+                    <div className="text-2xl font-bold text-gray-900">{selectedProgram.year}</div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">No Program Selected</h3>
-                  <p className="text-sm">Explore and manage your programs by selecting one from the catalog sidebar.</p>
+                </div>
+              )}
+
+              {/* Projects Section */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">Projects</h2>
                   <button
-                    onClick={() => setSidebarCollapsed(false)}
-                    className="mt-6 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm md:hidden"
+                    onClick={() => {
+                      setShowModal(true);
+                      setModalType('project');
+                      setFormData({ status: 'ongoing', year: selectedProgram?.year || new Date().getFullYear() });
+                    }}
+                    className="bg-blue-600 text-white px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm font-bold sm:font-semibold flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors w-full sm:w-auto shadow-sm"
                   >
-                    Open Catalog
+                    <Plus className="w-4 h-4 sm:w-4 sm:h-4" />
+                    <span>Add Project</span>
                   </button>
                 </div>
-              </div>
-            ) : (
-              <>
-                {/* Stats Cards */}
-                {stats && (
-                  <div className="grid grid-cols-1 gap-4 mb-8">
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Year</div>
-                      <div className="text-2xl font-bold text-gray-900">{selectedProgram.year}</div>
-                    </div>
+
+                {!selectedProgram.projects || selectedProgram.projects.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No projects yet. Add your first project to get started.</p>
                   </div>
-                )}
+                ) : (
+                  <div className="space-y-4">
+                    {selectedProgram.projects.map(project => {
+                      const projectCalendarEvents = calendarEvents.filter(e => e.extendedProps?.projectId === project._id);
+                      const totalProjectEvents = (project.events?.length || 0) + projectCalendarEvents.length;
+                      const completedProjectEvents = (project.events?.filter(e => e.status === 'completed').length || 0) +
+                        projectCalendarEvents.filter(e => e.extendedProps?.status === 'completed').length;
 
-                {/* Projects Section */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-900">Projects</h2>
-                    <button
-                      onClick={() => {
-                        setShowModal(true);
-                        setModalType('project');
-                        setFormData({ status: 'ongoing', year: selectedProgram?.year || new Date().getFullYear() });
-                      }}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:bg-blue-700 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Add Project</span>
-                    </button>
-                  </div>
-
-                  {!selectedProgram.projects || selectedProgram.projects.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
-                      <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>No projects yet. Add your first project to get started.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {selectedProgram.projects.map(project => {
-                        const projectCalendarEvents = calendarEvents.filter(e => e.extendedProps?.projectId === project._id);
-                        const totalProjectEvents = (project.events?.length || 0) + projectCalendarEvents.length;
-                        const completedProjectEvents = (project.events?.filter(e => e.status === 'completed').length || 0) +
-                                                      projectCalendarEvents.filter(e => e.extendedProps?.status === 'completed').length;
-
-                        return (
-                          <div key={project._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                            <div
-                              className="bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors"
-                              onClick={() => toggleProject(project._id)}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-start space-x-3 flex-1">
-                                  {expandedProjects[project._id] ?
-                                    <ChevronDown className="w-5 h-5 text-gray-600 mt-0.5" /> :
-                                    <ChevronRight className="w-5 h-5 text-gray-600 mt-0.5" />
-                                  }
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-3 mb-2">
-                                      <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                                      <span className="text-xs text-gray-500">{project.year}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                      <span>{totalProjectEvents} events</span>
-                                      <span>{completedProjectEvents} completed</span>
-                                    </div>
+                      return (
+                        <div key={project._id} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div
+                            className="bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() => toggleProject(project._id)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start space-x-3 flex-1">
+                                {expandedProjects[project._id] ?
+                                  <ChevronDown className="w-5 h-5 text-gray-600 mt-0.5" /> :
+                                  <ChevronRight className="w-5 h-5 text-gray-600 mt-0.5" />
+                                }
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-3 mb-2">
+                                    <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                                    <span className="text-xs text-gray-500">{project.year}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                    <span>{totalProjectEvents} events</span>
+                                    <span>{completedProjectEvents} completed</span>
                                   </div>
                                 </div>
+                              </div>
                               <div className="flex items-center space-x-2">
                                 <button
                                   onClick={(e) => {
@@ -1341,18 +1332,18 @@ const GADProgramsHybrid = () => {
                                               </span>
                                             )}
                                           </div>
-                                        <div className="text-sm text-gray-600 space-y-1">
-                                          <p className="flex items-center">
-                                            <Calendar className="w-4 h-4 mr-2 text-blue-600" />
-                                            {event.date}
-                                          </p>
-                                          <p className="flex items-center">
-                                            <Users className="w-4 h-4 mr-2 text-blue-600" />
-                                            {event.participants} participants
-                                          </p>
-                                          <p className="text-gray-600">📍 {event.venue}</p>
+                                          <div className="text-sm text-gray-600 space-y-1">
+                                            <p className="flex items-center">
+                                              <Calendar className="w-4 h-4 mr-2 text-blue-600" />
+                                              {event.date}
+                                            </p>
+                                            <p className="flex items-center">
+                                              <Users className="w-4 h-4 mr-2 text-blue-600" />
+                                              {event.participants} participants
+                                            </p>
+                                            <p className="text-gray-600">📍 {event.venue}</p>
+                                          </div>
                                         </div>
-                                      </div>
                                         <div className="flex items-center space-x-1">
                                           {event.source === 'program' ? (
                                             <button
@@ -1415,221 +1406,222 @@ const GADProgramsHybrid = () => {
                             </div>
                           )}
                         </div>
-                      )})}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {formData._id ? 'Edit' : 'Add'} {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
-                  </h3>
-                  <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {modalType === 'program' && (
-                    <>
-                      <input
-                        type="text"
-                        placeholder="Program Name"
-                        value={formData.name || ''}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                      <textarea
-                        placeholder="Description"
-                        value={formData.description || ''}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        rows="3"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Year"
-                        value={formData.year || ''}
-                        onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </>
-                  )}
-
-                  {modalType === 'project' && (
-                    <>
-                      <input
-                        type="text"
-                        placeholder="Project Name"
-                        value={formData.name || ''}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </>
-                  )}
-
-                  {modalType === 'event' && (
-                    <>
-                      <input
-                        type="text"
-                        placeholder="Event Title"
-                        value={formData.title || ''}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                      <div className="grid grid-cols-2 gap-3">
-                        <select
-                          value={formData.month || ''}
-                          onChange={(e) => {
-                            const newMonth = e.target.value;
-                            const today = new Date();
-                            const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
-                            const currentDay = today.getDate().toString();
-                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
-                            const eventYear = project?.year || selectedProgram?.year || today.getFullYear();
-
-                            let newDay = formData.day;
-                            // If switching to current month/year, ensure day isn't in the past
-                            if (parseInt(eventYear) === today.getFullYear() && newMonth === currentMonth) {
-                              if (!formData.day || parseInt(formData.day) < today.getDate()) {
-                                newDay = currentDay;
-                              }
-                            }
-
-                            setFormData({ ...formData, month: newMonth, day: newDay });
-                            setDateError('');
-                          }}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        >
-                          <option value="">Month</option>
-                          {(() => {
-                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
-                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
-                            const today = new Date();
-                            const currentYear = today.getFullYear();
-                            const currentMonth = today.getMonth() + 1; // 1-based
-                            const months = [
-                              { value: '01', label: 'January' },
-                              { value: '02', label: 'February' },
-                              { value: '03', label: 'March' },
-                              { value: '04', label: 'April' },
-                              { value: '05', label: 'May' },
-                              { value: '06', label: 'June' },
-                              { value: '07', label: 'July' },
-                              { value: '08', label: 'August' },
-                              { value: '09', label: 'September' },
-                              { value: '10', label: 'October' },
-                              { value: '11', label: 'November' },
-                              { value: '12', label: 'December' },
-                            ];
-                            return months.map(m => {
-                              const isPast = parseInt(eventYear) < currentYear ||
-                                (parseInt(eventYear) === currentYear && parseInt(m.value) < currentMonth);
-                              return (
-                                <option key={m.value} value={m.value} disabled={isPast}>
-                                  {m.label}{isPast ? ' (past)' : ''}
-                                </option>
-                              );
-                            });
-                          })()}
-                        </select>
-                        <input
-                          type="number"
-                          placeholder="Day"
-                          min={(() => {
-                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
-                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
-                            const today = new Date();
-                            if (
-                              parseInt(eventYear) === today.getFullYear() &&
-                              parseInt(formData.month) === today.getMonth() + 1
-                            ) {
-                              return today.getDate();
-                            }
-                            return 1;
-                          })()}
-                          max={(() => {
-                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
-                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
-                            return new Date(parseInt(eventYear), parseInt(formData.month), 0).getDate() || 31;
-                          })()}
-                          value={formData.day || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData({ ...formData, day: val });
-
-                            const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
-                            const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
-                            const today = new Date();
-                            const minDay = (
-                              parseInt(eventYear) === today.getFullYear() &&
-                              parseInt(formData.month) === today.getMonth() + 1
-                            ) ? today.getDate() : 1;
-
-                            // Calculate max days in selected month
-                            const maxDays = new Date(parseInt(eventYear), parseInt(formData.month), 0).getDate();
-
-                            if (val && parseInt(val) < minDay) {
-                              setDateError(`Day cannot be earlier than ${minDay} for this month.`);
-                            } else if (val && parseInt(val) > maxDays) {
-                              setDateError(`Day cannot be greater than ${maxDays} for this month.`);
-                            } else {
-                              setDateError('');
-                            }
-                          }}
-                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none ${dateError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                        />
-                      </div>
-                      {dateError && (
-                        <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                          {dateError}
-                        </p>
-                      )}
-                      <input
-                        type="number"
-                        placeholder="Participants"
-                        value={formData.participants || ''}
-                        onChange={(e) => setFormData({ ...formData, participants: parseInt(e.target.value) })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Venue"
-                        value={formData.venue || ''}
-                        onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </>
-                  )}
-
-                  <div className="flex space-x-3 pt-4">
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>Save</span>
-                    </button>
+                      )
+                    })}
                   </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {formData._id ? 'Edit' : 'Add'} {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
+                </h3>
+                <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                {modalType === 'program' && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Program Name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <textarea
+                      placeholder="Description"
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      rows="3"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Year"
+                      value={formData.year || ''}
+                      onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </>
+                )}
+
+                {modalType === 'project' && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Project Name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </>
+                )}
+
+                {modalType === 'event' && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Event Title"
+                      value={formData.title || ''}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <select
+                        value={formData.month || ''}
+                        onChange={(e) => {
+                          const newMonth = e.target.value;
+                          const today = new Date();
+                          const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+                          const currentDay = today.getDate().toString();
+                          const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                          const eventYear = project?.year || selectedProgram?.year || today.getFullYear();
+
+                          let newDay = formData.day;
+                          // If switching to current month/year, ensure day isn't in the past
+                          if (parseInt(eventYear) === today.getFullYear() && newMonth === currentMonth) {
+                            if (!formData.day || parseInt(formData.day) < today.getDate()) {
+                              newDay = currentDay;
+                            }
+                          }
+
+                          setFormData({ ...formData, month: newMonth, day: newDay });
+                          setDateError('');
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Month</option>
+                        {(() => {
+                          const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                          const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                          const today = new Date();
+                          const currentYear = today.getFullYear();
+                          const currentMonth = today.getMonth() + 1; // 1-based
+                          const months = [
+                            { value: '01', label: 'January' },
+                            { value: '02', label: 'February' },
+                            { value: '03', label: 'March' },
+                            { value: '04', label: 'April' },
+                            { value: '05', label: 'May' },
+                            { value: '06', label: 'June' },
+                            { value: '07', label: 'July' },
+                            { value: '08', label: 'August' },
+                            { value: '09', label: 'September' },
+                            { value: '10', label: 'October' },
+                            { value: '11', label: 'November' },
+                            { value: '12', label: 'December' },
+                          ];
+                          return months.map(m => {
+                            const isPast = parseInt(eventYear) < currentYear ||
+                              (parseInt(eventYear) === currentYear && parseInt(m.value) < currentMonth);
+                            return (
+                              <option key={m.value} value={m.value} disabled={isPast}>
+                                {m.label}{isPast ? ' (past)' : ''}
+                              </option>
+                            );
+                          });
+                        })()}
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Day"
+                        min={(() => {
+                          const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                          const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                          const today = new Date();
+                          if (
+                            parseInt(eventYear) === today.getFullYear() &&
+                            parseInt(formData.month) === today.getMonth() + 1
+                          ) {
+                            return today.getDate();
+                          }
+                          return 1;
+                        })()}
+                        max={(() => {
+                          const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                          const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                          return new Date(parseInt(eventYear), parseInt(formData.month), 0).getDate() || 31;
+                        })()}
+                        value={formData.day || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData({ ...formData, day: val });
+
+                          const project = selectedProgram?.projects?.find(p => p._id === formData.projectId);
+                          const eventYear = project?.year || selectedProgram?.year || new Date().getFullYear();
+                          const today = new Date();
+                          const minDay = (
+                            parseInt(eventYear) === today.getFullYear() &&
+                            parseInt(formData.month) === today.getMonth() + 1
+                          ) ? today.getDate() : 1;
+
+                          // Calculate max days in selected month
+                          const maxDays = new Date(parseInt(eventYear), parseInt(formData.month), 0).getDate();
+
+                          if (val && parseInt(val) < minDay) {
+                            setDateError(`Day cannot be earlier than ${minDay} for this month.`);
+                          } else if (val && parseInt(val) > maxDays) {
+                            setDateError(`Day cannot be greater than ${maxDays} for this month.`);
+                          } else {
+                            setDateError('');
+                          }
+                        }}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none ${dateError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                      />
+                    </div>
+                    {dateError && (
+                      <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        {dateError}
+                      </p>
+                    )}
+                    <input
+                      type="number"
+                      placeholder="Participants"
+                      value={formData.participants || ''}
+                      onChange={(e) => setFormData({ ...formData, participants: parseInt(e.target.value) })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Venue"
+                      value={formData.venue || ''}
+                      onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </>
+                )}
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Save</span>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
     </div>
   );
