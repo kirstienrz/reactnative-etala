@@ -377,15 +377,26 @@ export default function UserManagement() {
         </div>
       )}
 
-      <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
-        <div className="flex gap-2 items-center">
-          <button
-            onClick={() => handleOpenModal('create')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm font-medium mr-2"
-          >
-            + Add New User
-          </button>
-          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
+        
+        {/* Desktop Add User Button */}
+        <button
+          onClick={() => handleOpenModal('create')}
+          className="hidden md:flex px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm font-medium items-center gap-2"
+        >
+          <UserPlus size={18} /> Add New User
+        </button>
+
+        {/* Mobile FAB for Add User */}
+        <button
+          onClick={() => handleOpenModal('create')}
+          className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl flex items-center justify-center z-50 hover:bg-blue-700 active:scale-95 transition-transform"
+        >
+          <UserPlus size={24} />
+        </button>
+
+        <div className="w-full md:w-auto">
+          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner overflow-x-auto w-full scroll-smooth snap-x">
             <button
               onClick={() => {
                 setActiveTab('active');
@@ -393,7 +404,7 @@ export default function UserManagement() {
                 setCurrentPage(1);
                 setSelectedUserIds([]);
               }}
-              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
+              className={`px-4 py-2 snap-center whitespace-nowrap rounded-md text-sm font-semibold transition-all ${
                 activeTab === 'active' 
                   ? 'bg-white text-blue-600 shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900'
@@ -408,7 +419,7 @@ export default function UserManagement() {
                 setCurrentPage(1);
                 setSelectedUserIds([]);
               }}
-              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all relative ${
+              className={`px-4 py-2 snap-center whitespace-nowrap rounded-md text-sm font-semibold transition-all relative ${
                 activeTab === 'pending_archive' 
                   ? 'bg-white text-blue-600 shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900'
@@ -428,7 +439,7 @@ export default function UserManagement() {
                 setCurrentPage(1);
                 setSelectedUserIds([]);
               }}
-              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
+              className={`px-4 py-2 snap-center whitespace-nowrap rounded-md text-sm font-semibold transition-all ${
                 activeTab === 'archived' 
                   ? 'bg-white text-blue-600 shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900'
@@ -442,7 +453,7 @@ export default function UserManagement() {
                 setCurrentPage(1);
                 setSelectedUserIds([]);
               }}
-              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all relative ${
+              className={`px-4 py-2 snap-center whitespace-nowrap rounded-md text-sm font-semibold transition-all relative ${
                 activeTab === 'appeals' 
                   ? 'bg-white text-blue-600 shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900'
@@ -504,21 +515,24 @@ export default function UserManagement() {
         </div>
       )}
       
-      <div className="mb-6 flex flex-wrap gap-4 items-center bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex-1 min-w-[300px]">
+      <div className="mb-6 flex flex-col md:flex-row flex-wrap gap-4 md:items-center bg-gray-50 p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm">
+        
+        {/* Search Bar - Full width on all devices */}
+        <div className="w-full md:flex-1 md:min-w-[300px]">
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search Users</label>
           <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Search name, TUP ID, or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+              className="w-full pl-10 pr-10 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none text-sm md:text-base bg-white"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
               >
                 &times;
               </button>
@@ -526,16 +540,17 @@ export default function UserManagement() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Role</label>
+        {/* Dropdowns - 2 columns on mobile, row on desktop */}
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-3 md:gap-4 items-end w-full md:w-auto">
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">Role</label>
             <select
               value={filterRole}
               onChange={(e) => {
                 setFilterRole(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white min-w-[140px]"
+              className="w-full md:min-w-[140px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white"
             >
               <option value="all">All Roles</option>
               <option value="user">User</option>
@@ -544,15 +559,15 @@ export default function UserManagement() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Department</label>
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">Department</label>
             <select
               value={filterDepartment}
               onChange={(e) => {
                 setFilterDepartment(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white min-w-[180px]"
+              className="w-full md:min-w-[180px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white"
             >
               <option value="all">All Departments</option>
               <option value="System">System</option>
@@ -565,8 +580,8 @@ export default function UserManagement() {
           </div>
 
           {activeTab === 'active' && (
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
+            <div className="w-full col-span-2 md:col-span-1 md:w-auto">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">Status</label>
               <select
                 value={filterArchiveStatus}
                 onChange={(e) => {
@@ -574,7 +589,7 @@ export default function UserManagement() {
                   setCurrentPage(1);
                   setSelectedUserIds([]);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white min-w-[180px]"
+                className="w-full md:min-w-[180px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white"
               >
                 <option value="all">All Statuses</option>
                 <option value="Active">Active Only</option>
@@ -583,15 +598,15 @@ export default function UserManagement() {
             </div>
           )}
           
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Results</label>
+          <div className="w-full col-span-2 md:col-span-1 md:w-auto">
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">Results</label>
             <select
               value={limit}
               onChange={(e) => {
                 setLimit(parseInt(e.target.value));
                 setCurrentPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white"
+              className="w-full md:min-w-[100px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
