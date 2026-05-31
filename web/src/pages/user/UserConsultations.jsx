@@ -551,18 +551,7 @@ export default function UserConsultations() {
                     </div>
                   </section>
 
-                  {/* Description Section */}
-                  <section className="bg-white border border-gray-200 rounded-xl p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-2 h-8 bg-blue-600 rounded-full"></div>
-                      <h3 className="text-xl font-semibold text-gray-900">Description</h3>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-900 whitespace-pre-line">
-                        {selectedConsultation.description || selectedConsultation.extendedProps?.description || "No description provided"}
-                      </p>
-                    </div>
-                  </section>
+
 
                 </div>
               </div>

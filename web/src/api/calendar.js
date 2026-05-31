@@ -262,7 +262,8 @@ export const sendBookingLinkEmail = async (data) => {
     return {
       success: true,
       message: res.data.message || 'Booking link sent successfully',
-      expiresAt: res.data.expiresAt
+      expiresAt: res.data.expiresAt,
+      bookingLink: res.data.bookingLink
     };
   } catch (error) {
     console.error("❌ Failed to send booking link:", error);

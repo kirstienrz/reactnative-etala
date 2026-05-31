@@ -293,6 +293,7 @@ router.post("/verify-pin", async (req, res) => {
     console.log("✅ PIN verified for:", email);
     res.json({
       msg: "PIN verified successfully",
+      _id: user._id,
       token,
       role: user.role,
       department: user.department,
@@ -302,6 +303,13 @@ router.post("/verify-pin", async (req, res) => {
       email: user.email,
       gender: user.gender,           // ✅ For auto-fill in report form
       userType: user.userType,       // ✅ For auto-fill in report form
+      user: {
+        _id: user._id,
+        role: user.role,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      }
     });
   } catch (err) {
     console.error("💥 Server error:", err);

@@ -107,6 +107,41 @@ router.put("/me", auth(), async (req, res) => {
   }
 });
 
+// PUT /api/user/me/pin → securely update MPIN
+router.put("/me/pin", auth(), async (req, res) => {
+  try {
+    const { currentPassword, newPin } = req.body;
+    
+    if (!currentPassword || !newPin) {
+      return res.status(400).json({ message: "Password and new PIN are required" });
+    }
+
+    if (!/^\d{6}$/.test(newPin)) {
+      return res.status(400).json({ message: "PIN must be exactly 6 digits" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Verify password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect password" });
+    }
+
+    // Hash and save new PIN
+    const hashedPin = await bcrypt.hash(newPin, 10);
+    user.pin = hashedPin;
+    user.hasPin = true;
+    await user.save();
+
+    res.json({ message: "MPIN updated successfully" });
+  } catch (err) {
+    console.error("Error setting PIN:", err);
+    res.status(500).json({ message: "Server error while updating MPIN" });
+  }
+});
+
 
 router.get("/all", auth(), async (req, res) => {
   try {

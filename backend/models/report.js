@@ -204,6 +204,7 @@ const reportSchema = new mongoose.Schema({
   submittedAt: { type: Date, default: Date.now },
   lastUpdated: { type: Date, default: Date.now },
   archived: { type: Boolean, default: false },
+  archivedAt: { type: Date },
 });
 
 module.exports = mongoose.model("Report", reportSchema);
