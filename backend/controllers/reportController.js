@@ -229,7 +229,7 @@ const getAllReports = async (req, res) => {
   try {
     const { status, incidentType, search, sortBy = "createdAt" } = req.query;
 
-    let query = { archived: false };
+    let query = { archived: { $ne: true } };
 
     if (status) query.status = status;
     if (incidentType) query.incidentType = incidentType;

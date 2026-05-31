@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Mail, Building2, Calendar, Hash, Lock, Save, UserCircle, Shield, IdCard, AlertCircle, Key, Eye, EyeOff, CheckCircle } from "lucide-react";
-import { getUserProfile, updateUserProfile } from "../../api/user";
-import { setPin, getToken } from "../../api/auth";
+import { getUserProfile, updateUserProfile, updateUserPin } from "../../api/user";
 
 const EditProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -30,6 +29,9 @@ const EditProfile = () => {
   const [pinSuccess, setPinSuccess] = useState("");
   const [pinError, setPinError] = useState("");
   const [showPin, setShowPin] = useState(false);
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinPassword, setPinPassword] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -126,6 +128,11 @@ const EditProfile = () => {
     setPinError("");
     setPinSuccess("");
 
+    if (!pinPassword) {
+      setPinError("Current password is required.");
+      return;
+    }
+
     if (pin.length !== 6) {
       setPinError("PIN must be exactly 6 digits.");
       return;
@@ -139,20 +146,21 @@ const EditProfile = () => {
     setPinLoading(true);
 
     try {
-      const token = getToken();
-      await setPin(email, pin, token);
+      await updateUserPin({ currentPassword: pinPassword, newPin: pin });
       setHasPin(true);
       setPinSuccess("MPIN updated successfully!");
       setPin("");
       setConfirmPin("");
+      setPinPassword("");
       
-      // Auto-hide success message
+      // Auto-hide success message and modal
       setTimeout(() => {
         setPinSuccess("");
-      }, 3000);
+        setShowPinModal(false);
+      }, 2000);
     } catch (err) {
       console.error(err);
-      setPinError(err.response?.data?.msg || err.response?.data?.message || "Failed to set MPIN. Please try again.");
+      setPinError(err.response?.data?.message || err.response?.data?.msg || "Failed to set MPIN. Please try again.");
     } finally {
       setPinLoading(false);
     }
@@ -175,7 +183,7 @@ const EditProfile = () => {
         newPassword: newPassword || undefined,
       };
 
-      const res = await updateUserProfile(userId, payload);
+      await updateUserProfile(userId, payload);
       
       // Show success message
       setErrors({ success: "Profile updated successfully!" });
@@ -502,7 +510,7 @@ const EditProfile = () => {
 
             {/* MPIN Security Section */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Key className="w-6 h-6 text-purple-600" />
                   <h2 className="text-lg font-semibold text-gray-900">MPIN Security</h2>
@@ -515,83 +523,17 @@ const EditProfile = () => {
                   {hasPin ? 'Active' : 'Not Configured'}
                 </span>
               </div>
-
-              <div className="space-y-6">
-                {pinSuccess && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-700 text-sm font-medium">
-                    <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-                    <span>{pinSuccess}</span>
-                  </div>
-                )}
-
-                {pinError && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm font-medium">
-                    <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-                    <span>{pinError}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    New 6-Digit MPIN
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type={showPin ? "text" : "password"}
-                      inputMode="numeric"
-                      value={pin}
-                      onChange={handlePinChange}
-                      placeholder="Enter 6-digit PIN"
-                      maxLength={6}
-                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent tracking-widest font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPin(!showPin)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                    >
-                      {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm 6-Digit MPIN
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type={showPin ? "text" : "password"}
-                      inputMode="numeric"
-                      value={confirmPin}
-                      onChange={handleConfirmPinChange}
-                      placeholder="Confirm 6-digit PIN"
-                      maxLength={6}
-                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent tracking-widest font-mono"
-                    />
-                  </div>
-                </div>
-
+              
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Set up a 6-digit MPIN for faster and secure login. You will need your current password to configure or change your PIN.
+                </p>
                 <button
                   type="button"
-                  onClick={handleSavePin}
-                  disabled={pinLoading || !pin || !confirmPin}
-                  className={`w-full py-3 px-6 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-                    pinLoading || !pin || !confirmPin
-                      ? 'bg-purple-300 cursor-not-allowed text-white'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg'
-                  }`}
+                  onClick={() => setShowPinModal(true)}
+                  className="px-4 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg font-medium transition-colors"
                 >
-                  {pinLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Updating MPIN...</span>
-                    </>
-                  ) : (
-                    <span>Update MPIN</span>
-                  )}
+                  {hasPin ? "Change MPIN" : "Configure MPIN"}
                 </button>
               </div>
             </div>
@@ -628,6 +570,122 @@ const EditProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* MPIN Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">{hasPin ? "Change MPIN" : "Configure MPIN"}</h3>
+              <button onClick={() => setShowPinModal(false)} className="text-gray-400 hover:text-gray-600">
+                &times;
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {pinSuccess && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-700 text-sm font-medium">
+                  <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <span>{pinSuccess}</span>
+                </div>
+              )}
+
+              {pinError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm font-medium">
+                  <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <span>{pinError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Password <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="password"
+                    value={pinPassword}
+                    onChange={(e) => setPinPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New 6-Digit MPIN <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type={showPin ? "text" : "password"}
+                    inputMode="numeric"
+                    value={pin}
+                    onChange={handlePinChange}
+                    placeholder="Enter 6-digit PIN"
+                    maxLength={6}
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent tracking-widest font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(!showPin)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm 6-Digit MPIN <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type={showPin ? "text" : "password"}
+                    inputMode="numeric"
+                    value={confirmPin}
+                    onChange={handleConfirmPinChange}
+                    placeholder="Confirm 6-digit PIN"
+                    maxLength={6}
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent tracking-widest font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowPinModal(false)}
+                className="px-6 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePin}
+                disabled={pinLoading || !pin || !confirmPin || !pinPassword}
+                className={`px-6 py-2.5 font-medium rounded-lg flex items-center justify-center gap-2 transition-all ${
+                  pinLoading || !pin || !confirmPin || !pinPassword
+                    ? 'bg-purple-300 cursor-not-allowed text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white shadow-md'
+                }`}
+              >
+                {pinLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>Save MPIN</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

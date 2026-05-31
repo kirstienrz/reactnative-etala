@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getUserReportsWithParams } from "../../api/report";
+import { UserCheck, ClipboardList, Shield, Users, FileText, Download, Share2, Clock, X } from "lucide-react";
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
@@ -9,6 +10,7 @@ export default function Reports() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [modalTab, setModalTab] = useState("details");
 
   const limit = 5;
 
@@ -44,11 +46,16 @@ export default function Reports() {
     fetchReports();
   }, [page, search, statusFilter]);
 
-  const formatField = (value, fallback = "N/A") => {
-    if (value === null || value === undefined || value === "") return fallback;
-    if (Array.isArray(value) && value.length === 0) return fallback;
-    if (Array.isArray(value)) return value.join(", ");
-    return value;
+  const InfoItem = ({ label, value, fallback = null }) => {
+    const displayValue = value === undefined || value === null || value === '' || (typeof value === 'string' && value.trim() === '') ? fallback : value;
+    return (
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
+        <p className={`text-sm font-medium ${displayValue === fallback ? 'text-gray-400 italic' : 'text-gray-900'}`}>
+          {displayValue || '—'}
+        </p>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -58,6 +65,7 @@ export default function Reports() {
       if (modalContainer) {
         modalContainer.style.zIndex = '9999';
       }
+      setModalTab("details"); // Reset tab when opening new report
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -138,19 +146,15 @@ export default function Reports() {
                       <div className="flex items-center gap-3 mb-3">
                         <span className="font-semibold text-gray-900 text-lg">#{report.ticketNumber}</span>
                         <span className={`px-3 py-1 text-sm rounded-full font-medium ${
-                          report.status === 'Resolved' ? 'bg-green-100 text-green-800' :
-                          report.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                          report.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                          report.status === 'Closed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-purple-100 text-purple-800'
+                          report.caseStatus === 'For Queuing' ? 'bg-orange-100 text-orange-800' :
+                          report.caseStatus === 'For Interview' ? 'bg-cyan-100 text-cyan-800' :
+                          report.caseStatus === 'For Referral' ? 'bg-pink-100 text-pink-800' :
+                          report.caseStatus === 'Case Closed' ? 'bg-gray-100 text-gray-800' :
+                          report.caseStatus?.startsWith("Internal") ? 'bg-purple-100 text-purple-800' :
+                          'bg-yellow-100 text-yellow-800' // Default / Pending fallback
                         }`}>
-                          {report.status}
+                          {report.caseStatus || report.status}
                         </span>
-                        {report.isAnonymous && (
-                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                            Anonymous
-                          </span>
-                        )}
                       </div>
                       <div className="text-gray-600 text-sm">
                         Submitted on {new Date(report.submittedAt).toLocaleDateString('en-US', {
@@ -216,422 +220,302 @@ export default function Reports() {
         )}
 
         {selectedReport && (
-          <div className="fixed inset-0 z-[9999] modal-container">
-            <div
-              className="absolute inset-0 bg-black/60"
-              onClick={() => setSelectedReport(null)}
-            ></div>
-
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-              <div
-                className="bg-white w-full max-w-6xl h-full max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="bg-white border-b border-gray-200 px-6 py-5">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-2xl font-bold text-gray-900 truncate">
-                          Report #{selectedReport.ticketNumber}
-                        </h2>
-                        <span className={`px-3 py-1 text-sm rounded-full font-medium ${
-                          selectedReport.status === 'Resolved' ? 'bg-green-100 text-green-800' :
-                          selectedReport.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                          selectedReport.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                          selectedReport.status === 'Closed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-purple-100 text-purple-800'
-                        }`}>
-                          {selectedReport.status}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <p className="text-gray-500 text-sm">
-                          Submitted: {new Date(selectedReport.submittedAt).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                        {selectedReport.isAnonymous && (
-                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                            Anonymous Report
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
-                      onClick={() => setSelectedReport(null)}
-                      aria-label="Close modal"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 modal-container">
+            <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">#{selectedReport.ticketNumber}</p>
                 </div>
+                <button
+                  onClick={() => setSelectedReport(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={24} className="text-gray-500" />
+                </button>
+              </div>
 
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-6 space-y-6">
+              {/* Tab Navigation */}
+              <div className="flex border-b border-gray-100 bg-gray-50/50 px-6">
+                <button
+                  onClick={() => setModalTab("details")}
+                  className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${modalTab === "details"
+                      ? "border-purple-600 text-purple-600 bg-white"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  Incident Details
+                </button>
+                <button
+                  onClick={() => setModalTab("history")}
+                  className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${modalTab === "history"
+                      ? "border-purple-600 text-purple-600 bg-white"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  Case History & Referrals
+                </button>
+              </div>
 
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-purple-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Victim-Survivor Information</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
-                          <p className="text-gray-900 font-semibold">{formatField(`${selectedReport.firstName || ''} ${selectedReport.middleName || ''} ${selectedReport.lastName || ''}`.trim())}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Age / Sex</label>
-                          <p className="text-gray-900">{formatField(selectedReport.age)} / {formatField(selectedReport.sex)}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Civil Status</label>
-                          <p className="text-gray-900">{formatField(selectedReport.civilStatus)}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Department</label>
-                          <p className="text-gray-900">{formatField(selectedReport.reporterDepartment || selectedReport.anonymousDepartment)}</p>
-                        </div>
-                      </div>
-                    </section>
-
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-red-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Perpetrator Information</h3>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Full Name</label>
-                          <p className="text-gray-900 font-semibold">{formatField(`${selectedReport.perpFirstName || ''} ${selectedReport.perpMiddleName || ''} ${selectedReport.perpLastName || ''}`.trim())}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Alias</label>
-                          <p className="text-gray-900">{formatField(selectedReport.perpAlias)}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Age / Sex</label>
-                          <p className="text-gray-900">{formatField(selectedReport.perpAge)} / {formatField(selectedReport.perpSex)}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Relationship to Victim</label>
-                          <p className="text-gray-900">{formatField(selectedReport.perpRelationship)}</p>
-                        </div>
-                      </div>
-                    </section>
-
-                    {/* Incident Details Section - Enhanced with all fields */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-orange-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Incident Details</h3>
-                      </div>
-                      
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Incident Types</label>
-                            <p className="text-gray-900">{formatField(selectedReport.incidentTypes)}</p>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                {modalTab === "details" ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Reporter Info */}
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <UserCheck size={14} /> Reporter Information
+                        </h3>
+                        {selectedReport.isAnonymous ? (
+                          <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
+                            <p className="text-sm font-bold text-purple-900 mb-2">Anonymous Submission</p>
+                            <div className="grid grid-cols-2 gap-y-3">
+                              <InfoItem label="Role" value={selectedReport.reporterRole} />
+                              <InfoItem label="Gender" value={selectedReport.anonymousGender} />
+                              <InfoItem label="Affiliation" value={selectedReport.tupRole} />
+                              <InfoItem label="Dept" value={selectedReport.reporterDepartment} />
+                            </div>
                           </div>
-                          {selectedReport.otherIncidentType && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Other Incident Type Details</label>
-                              <p className="text-gray-900">{formatField(selectedReport.otherIncidentType)}</p>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                              <div className="w-12 h-12 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                                {selectedReport.createdBy?.firstName?.charAt(0) || "U"}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900">
+                                  {selectedReport.createdBy?.firstName} {selectedReport.createdBy?.lastName}
+                                </p>
+                                <p className="text-xs text-gray-500">{selectedReport.createdBy?.tupId}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </section>
+
+                      {/* Basic Info */}
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <ClipboardList size={14} /> Case Overview
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <InfoItem label="Status" value={selectedReport.caseStatus || selectedReport.status} />
+                          <InfoItem label="Category" value={selectedReport.incidentTypes?.join(", ") || "General"} />
+                          <InfoItem label="Submitted" value={new Date(selectedReport.submittedAt).toLocaleDateString()} />
+                          <InfoItem label="Time" value={new Date(selectedReport.submittedAt).toLocaleTimeString()} />
+                        </div>
+                      </section>
+                    </div>
+
+                    {/* Location Details */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Shield size={14} /> Location Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InfoItem label="Place of Incident" value={selectedReport.placeOfIncident} />
+                        <InfoItem label="Address Details" value={`${selectedReport.incidentBarangay || ''} ${selectedReport.incidentCityMun || ''} ${selectedReport.incidentProvince || ''}`.trim() || 'N/A'} />
+                      </div>
+                    </section>
+
+                    {/* Incident Statement */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4">Incident Statement</h3>
+                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {selectedReport.salaysay || selectedReport.incidentDescription || selectedReport.incidentStatement || "No statement provided"}
+                        </p>
+                      </div>
+                    </section>
+
+                    {/* Victim & Perpetrator Details */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4">Victim Details</h3>
+                        <div className="grid grid-cols-2 gap-y-4">
+                          <InfoItem label="Full Name" value={selectedReport.isAnonymous ? "Anonymous Reporter" : `${selectedReport.firstName || ''} ${selectedReport.lastName || ''}`.trim() || 'N/A'} />
+                          <InfoItem label="Gender" value={selectedReport.isAnonymous ? (selectedReport.reporterGender || selectedReport.anonymousGender) : selectedReport.sex} />
+                          <InfoItem label="Address" value={`${selectedReport.barangay || ''} ${selectedReport.cityMun || ''}`.trim() || 'N/A'} />
+                          <InfoItem label="Occupation" value={selectedReport.occupation} />
+                        </div>
+                      </section>
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4">Perpetrator Details</h3>
+                        <div className="grid grid-cols-2 gap-y-4">
+                          <InfoItem label="Name" value={`${selectedReport.perpFirstName || ''} ${selectedReport.perpLastName || ''}`.trim() || 'N/A'} fallback="Not provided" />
+                          <InfoItem label="Gender" value={selectedReport.perpSex} fallback="Not provided" />
+                          <InfoItem label="Relationship" value={selectedReport.perpRelationship} fallback="Not provided" />
+                          <InfoItem label="Occupation" value={selectedReport.perpOccupation} fallback="Not provided" />
+                          <InfoItem label="Address" value={selectedReport.perpBarangay} fallback="Not provided" />
+                        </div>
+                      </section>
+                    </div>
+
+                    {/* Witness Information */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Users size={14} /> Witness Information
+                      </h3>
+                      {selectedReport.witnessName ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <InfoItem label="Witness Name" value={selectedReport.witnessName} fallback="Not provided" />
+                            <InfoItem label="Gender" value={selectedReport.witnessGender} fallback="Not provided" />
+                            <InfoItem label="Contact Info" value={selectedReport.witnessContact} fallback="Not provided" />
+                            <InfoItem label="Address" value={selectedReport.witnessAddress} fallback="Not provided" />
+                          </div>
+                          {selectedReport.witnessAccount && (
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                              <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-1">Witness Statement</label>
+                              <p className="text-sm text-gray-800 leading-relaxed italic">"{selectedReport.witnessAccount}"</p>
                             </div>
                           )}
                         </div>
-
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-2">Description</label>
-                          <div className="mt-2 bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-900 whitespace-pre-line">
-                              {formatField(selectedReport.incidentDescription)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Latest Incident Date</label>
-                            <p className="text-gray-900">{formatField(selectedReport.latestIncidentDate)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 block mb-2">Place of Incident</label>
-                            <p className="text-gray-900">{formatField(selectedReport.placeOfIncident)}</p>
-                          </div>
-                        </div>
-
-
-                        {/* Witness Information */}
-                        <div>
-                          <h4 className="text-md font-medium text-gray-700 mb-4">Witness Information</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Witness Name</label>
-                              <p className="text-gray-900">{formatField(selectedReport.witnessName)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Witness Address</label>
-                              <p className="text-gray-900">{formatField(selectedReport.witnessAddress)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Witness Contact</label>
-                              <p className="text-gray-900">{formatField(selectedReport.witnessContact)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Witness Account</label>
-                              <p className="text-gray-900">{formatField(selectedReport.witnessAccount)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Witness Date</label>
-                              <p className="text-gray-900">{formatField(selectedReport.witnessDate)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No witnesses provided</p>
+                      )}
                     </section>
 
-                    {/* Services & Referrals Section - Enhanced with all fields */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-green-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Services & Referrals</h3>
-                      </div>
-
-                      {/* Basic Services */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-4 h-4 rounded-full flex-shrink-0 mt-1 ${selectedReport.crisisIntervention ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-1">Crisis Intervention</label>
-                              <p className="text-gray-900">{selectedReport.crisisIntervention ? 'Yes' : 'No'}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <div className={`w-4 h-4 rounded-full flex-shrink-0 mt-1 ${selectedReport.protectionOrder ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-1">Protection Order</label>
-                              <p className="text-gray-900">{selectedReport.protectionOrder ? 'Yes' : 'No'}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* SWDO Referral */}
-                      {selectedReport.referToSWDO && (
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                          <h4 className="text-md font-medium text-gray-700 mb-4">SWDO Referral</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Date</label>
-                              <p className="text-gray-900">{formatField(selectedReport.swdoDate)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Services</label>
-                              <p className="text-gray-900">{formatField(selectedReport.swdoServices)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Healthcare Referral */}
-                      {selectedReport.referToHealthcare && (
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                          <h4 className="text-md font-medium text-gray-700 mb-4">Healthcare Referral</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Date</label>
-                              <p className="text-gray-900">{formatField(selectedReport.healthcareDate)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Provider</label>
-                              <p className="text-gray-900">{formatField(selectedReport.healthcareProvider)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Services</label>
-                              <p className="text-gray-900">{formatField(selectedReport.healthcareServices)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Law Enforcement Referral */}
-                      {selectedReport.referToLawEnforcement && (
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                          <h4 className="text-md font-medium text-gray-700 mb-4">Law Enforcement Referral</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Date</label>
-                              <p className="text-gray-900">{formatField(selectedReport.lawDate)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Agency</label>
-                              <p className="text-gray-900">{formatField(selectedReport.lawAgency)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Other Referral */}
-                      {selectedReport.referToOther && (
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                          <h4 className="text-md font-medium text-gray-700 mb-4">Other Referral</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Date</label>
-                              <p className="text-gray-900">{formatField(selectedReport.otherDate)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Provider</label>
-                              <p className="text-gray-900">{formatField(selectedReport.otherProvider)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 block mb-2">Service</label>
-                              <p className="text-gray-900">{formatField(selectedReport.otherService)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Dynamic Referrals */}
-                      {selectedReport.referrals && selectedReport.referrals.length > 0 && (
-                        <div className="mb-6">
-                          <h4 className="text-md font-medium text-gray-700 mb-4">Referral History</h4>
-                          <div className="space-y-4">
-                            {selectedReport.referrals.map((referral, idx) => (
-                              <div key={idx} className="p-4 border border-gray-200 rounded-lg">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500 block mb-1">Department</label>
-                                    <p className="text-gray-900">{formatField(referral.department)}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500 block mb-1">Date</label>
-                                    <p className="text-gray-900">{new Date(referral.date).toLocaleDateString()}</p>
-                                  </div>
-                                  {referral.note && (
-                                    <div className="col-span-2">
-                                      <label className="text-sm font-medium text-gray-500 block mb-1">Note</label>
-                                      <p className="text-gray-900">{referral.note}</p>
-                                    </div>
-                                  )}
-                                </div>
+                    {/* Attachments */}
+                    {selectedReport.attachments?.length > 0 && (
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4">Evidence & Attachments</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                          {selectedReport.attachments.map((att, i) => (
+                            <a
+                              key={i}
+                              href={att.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-purple-50 rounded-xl border border-gray-200 hover:border-purple-200 transition-all group"
+                            >
+                              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-gray-400 group-hover:text-purple-600 transition-colors shadow-sm">
+                                <FileText size={16} />
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </section>
-
-                    {/* Additional Notes */}
-                    {selectedReport.additionalNotes && (
-                      <section className="bg-white border border-gray-200 rounded-xl p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="w-2 h-8 bg-gray-600 rounded-full"></div>
-                          <h3 className="text-xl font-semibold text-gray-900">Additional Notes</h3>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-gray-900 whitespace-pre-line">{selectedReport.additionalNotes}</p>
+                              <span className="text-[11px] font-bold text-gray-700 truncate flex-1">{att.fileName}</span>
+                              <Download size={14} className="text-gray-400" />
+                            </a>
+                          ))}
                         </div>
                       </section>
                     )}
 
-                    {/* Timeline & Attachments */}
-                    <section className="bg-white border border-gray-200 rounded-xl p-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-2 h-8 bg-blue-600 rounded-full"></div>
-                        <h3 className="text-xl font-semibold text-gray-900">Timeline & Attachments</h3>
-                      </div>
-
-                      {/* Timeline */}
-                      <div className="mb-8">
-                        <h4 className="font-semibold text-gray-900 mb-4">Timeline Updates</h4>
-                        {selectedReport.timeline?.length > 0 ? (
-                          <div className="space-y-6">
-                            {selectedReport.timeline.map((t, idx) => (
-                              <div key={idx} className="flex gap-4">
-                                <div className="flex flex-col items-center flex-shrink-0">
-                                  <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                                  {idx < selectedReport.timeline.length - 1 && (
-                                    <div className="w-0.5 h-full bg-gray-300 mt-2"></div>
-                                  )}
-                                </div>
-                                <div className="flex-1 pb-6 min-w-0">
-                                  <p className="text-gray-900 font-medium">{t.action}</p>
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    By {typeof t.performedBy === 'object' ? `${t.performedBy.firstName} ${t.performedBy.lastName}` : (t.performedBy || 'System')} • {new Date(t.timestamp).toLocaleString()}
-                                  </p>
-                                  {t.remarks && (
-                                    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                      <p className="text-gray-700 text-sm">{t.remarks}</p>
-                                    </div>
-                                  )}
+                    {/* Additional Notes */}
+                    {selectedReport.additionalNotes && (
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4">Additional Notes</h3>
+                        <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100">
+                          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
+                            {selectedReport.additionalNotes}
+                          </p>
+                        </div>
+                      </section>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Referral Tracking Section */}
+                    {selectedReport.referrals?.length > 0 && (
+                      <section className="bg-purple-600 rounded-2xl p-6 text-white shadow-xl">
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                            <Share2 size={18} /> Formal Referrals Issued
+                          </h3>
+                          <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold">
+                            {selectedReport.referrals.length} {selectedReport.referrals.length === 1 ? 'Referral' : 'Referrals'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedReport.referrals.map((ref, idx) => (
+                            <div key={idx} className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                    {ref.referralType === "External" ? <Shield size={20} /> : <Users size={20} />}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold leading-tight">
+                                      {ref.referralType === "External" ? ref.barangayName : ref.department}
+                                    </p>
+                                    <p className="text-[10px] opacity-70 uppercase font-bold tracking-tighter">
+                                      {ref.referralType} Referral
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500">No timeline available</p>
-                        )}
-                      </div>
-
-                      {/* Attachments */}
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-4">Attachments</h4>
-                        {selectedReport.attachments && selectedReport.attachments.length > 0 ? (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {selectedReport.attachments.map((file, idx) => (
-                              <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                                {file.type === "image" ? (
-                                  <div className="aspect-square relative overflow-hidden bg-gray-100">
-                                    <img
-                                      src={file.uri}
-                                      alt={file.fileName}
-                                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                                      loading="lazy"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="aspect-square bg-gray-50 flex flex-col items-center justify-center p-4">
-                                    <svg className="w-10 h-10 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span className="text-xs text-gray-500 text-center truncate w-full px-2">
-                                      {file.fileName}
-                                    </span>
-                                  </div>
-                                )}
+                              <div className="text-[10px] opacity-80 flex items-center gap-1">
+                                <Clock size={10} /> Issued on {new Date(ref.date).toLocaleDateString()}
                               </div>
-                            ))}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Unified Timeline */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <Clock size={16} /> Activity Log & Audit Trail
+                      </h3>
+                      <div className="space-y-6">
+                        {selectedReport.timeline?.map((t, i) => (
+                          <div key={i} className="relative pl-8 border-l-2 border-gray-100 pb-2">
+                            <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${t.action.includes("Referral") ? "bg-purple-600" :
+                                t.action.includes("Closed") ? "bg-gray-800" : "bg-blue-500"
+                              }`}></div>
+
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+                              <p className="text-sm font-bold text-gray-900">{t.action}</p>
+                              <time className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                                {new Date(t.timestamp).toLocaleString()}
+                              </time>
+                            </div>
+
+                            <div className="flex items-center gap-4 mt-2">
+                              <div className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                                <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <UserCheck size={10} className="text-gray-400" />
+                                </div>
+                                <span className="font-bold text-gray-700">
+                                  {selectedReport.isAnonymous &&
+                                    (t.performedBy && typeof t.performedBy === 'object'
+                                      ? (t.performedBy._id === (selectedReport.createdBy?._id || selectedReport.createdBy))
+                                      : (t.performedBy === (selectedReport.createdBy?._id || selectedReport.createdBy)))
+                                    ? "Anonymous Reporter"
+                                    : (t.performedBy && typeof t.performedBy === 'object'
+                                      ? `${t.performedBy.firstName || ''} ${t.performedBy.lastName || ''}`.trim() || 'System'
+                                      : (t.performedBy || 'System'))
+                                  }
+                                </span>
+                              </div>
+                            </div>
+
+                            {t.remarks && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <p className="text-[11px] text-gray-600 italic leading-relaxed">
+                                  "{t.remarks}"
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <p className="text-gray-500">No attachments</p>
-                        )}
+                        ))}
                       </div>
                     </section>
-
                   </div>
-                </div>
+                )}
+              </div>
 
-                <div className="border-t border-gray-200 bg-gray-50 px-6 py-5">
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => setSelectedReport(null)}
-                      className="px-8 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-bold shadow-sm"
-                    >
-                      Close Report Details
-                    </button>
-                  </div>
+              {/* Footer Actions for Details Modal */}
+              <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setSelectedReport(null)}
+                    className="px-8 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-bold shadow-sm"
+                  >
+                    Close Report Details
+                  </button>
                 </div>
               </div>
             </div>

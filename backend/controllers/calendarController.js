@@ -655,23 +655,29 @@ const sendInterviewBookingLink = async (req, res) => {
       </html>
     `;
 
-    await sendEmail({
-      to: userEmail,
-      subject: `🔔 Consultation Booking Link - ${ticketNumber} (Valid for 24 Hours)`,
-      html
-    });
+    try {
+      await sendEmail({
+        to: userEmail,
+        subject: `🔔 Consultation Booking Link - ${ticketNumber} (Valid for 24 Hours)`,
+        html
+      });
+    } catch (emailError) {
+      console.error('⚠️ Could not send email, but booking link was generated:', emailError);
+      // We don't throw here, we just continue so the link is returned
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Booking link sent successfully',
-      expiresAt
+      message: 'Booking link generated successfully',
+      expiresAt,
+      bookingLink
     });
 
   } catch (error) {
     console.error('Error sending booking link:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to send booking link',
+      message: 'Failed to generate booking link',
       error: error.message
     });
   }

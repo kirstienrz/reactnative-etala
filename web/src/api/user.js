@@ -9,8 +9,13 @@ export const getUserProfile = async () => {
   return res.data;
 };
 
-export const updateUserProfile = async (payload) => {
-  const res = await API.put("/user/me", payload);
+export const updateUserProfile = async (userId, payload) => {
+  const res = await API.put(`/user/${userId}`, payload);
+  return res.data;
+};
+
+export const updateUserPin = async (payload) => {
+  const res = await API.put(`/user/me/pin`, payload);
   return res.data;
 };
 

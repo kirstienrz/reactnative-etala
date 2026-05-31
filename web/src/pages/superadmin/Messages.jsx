@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, Calendar, AlertCircle, CheckCircle, Mail, Search, Trash2, PlusCircle, Copy, Undo2, Archive, RefreshCw, Info, FileText, Download } from 'lucide-react';
+import { Send, Loader2, Paperclip, Clock, X, ChevronLeft, ChevronRight, Calendar, AlertCircle, CheckCircle, Mail, Search, Trash2, PlusCircle, Copy, Undo2, Archive, RefreshCw, Info, FileText, Download, Filter } from 'lucide-react';
 import {
   getAllTickets,
   getTicketMessages,
@@ -14,6 +14,7 @@ import socketService from '../../api/socket';
 import { sendBookingLinkEmail } from '../../api/calendar';
 import { getAdminAvailability, setAdminAvailabilityBulk } from '../../api/adminAvailability';
 import { getAllCalendarEvents } from '../../api/calendar';
+import { updateReportStatus } from '../../api/report';
 import {
   addMonths, format, startOfMonth, endOfMonth,
   eachDayOfInterval, getDay, isBefore, startOfDay, isToday,
@@ -444,7 +445,10 @@ const TicketMessagingSystem = () => {
   const [typingUser, setTypingUser] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('open');
+  const [activeTab, setActiveTab] = useState("active");
+  const [readStatusFilter, setReadStatusFilter] = useState("All");
+  const [caseStatusFilter, setCaseStatusFilter] = useState("All");
+  const [showFilters, setShowFilters] = useState(false);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCalendarReminder, setShowCalendarReminder] = useState(false);
@@ -811,13 +815,26 @@ const TicketMessagingSystem = () => {
       if (response.success) {
         showModal({
           title: 'Link Sent Successfully',
-          message: '✅ Booking link sent!\n\nThe user has been notified via email. The link expires in 24 hours.',
+          message: '✅ Booking link generated!\n\nThe user has been notified. The link expires in 24 hours.',
           type: 'success',
           confirmText: 'Great',
           onConfirm: () => setShowConfirmModal(false)
         });
-        try { await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been sent to your email.\n\nPlease check your inbox and book your preferred consultation date.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } }); }
-        catch { console.error("⚠️ Failed to send chat message"); }
+        try { 
+          await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been created for you.\n\nPlease check your email inbox to book your preferred consultation schedule.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } });
+
+          // Update the report's caseStatus to "For Interview"
+          const reportIdStr = ticket.reportId?._id || ticket.reportId;
+          if (reportIdStr) {
+            await updateReportStatus(reportIdStr, null, "Sent booking link", "For Interview");
+            
+            // Also optionally update the local ticket.reportId.caseStatus if it's an object to instantly reflect in UI
+            if (ticket.reportId && typeof ticket.reportId === 'object') {
+              ticket.reportId.caseStatus = "For Interview";
+            }
+          }
+        }
+        catch { console.error("⚠️ Failed to send chat message or update report status"); }
       } else {
         showModal({ title: 'Failed to Send', message: response.message || "Failed to send booking link. Please try again.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
       }
@@ -857,17 +874,27 @@ const TicketMessagingSystem = () => {
   const filteredTickets = tickets.filter(ticket => {
     const q = searchQuery.toLowerCase();
     const matchSearch = !q || ticket.displayName?.toLowerCase().includes(q) || ticket.ticketNumber?.toLowerCase().includes(q) || ticket.reportId?.ticketNumber?.toLowerCase().includes(q);
-    const matchFilter = filterStatus === 'all' ? true
-      : filterStatus === 'open' ? ticket.status === 'Open'
-        : filterStatus === 'archived' ? (ticket.status === 'Closed' || ticket.reportId?.caseStatus === 'For Referral' || ticket.reportId?.caseStatus === 'Case Closed')
-          : filterStatus === 'unread' ? isUnread(ticket.ticketNumber)
-            : true;
-    return matchSearch && matchFilter;
+    
+    const isArchived = ticket.status === 'Closed' || ticket.reportId?.caseStatus === 'For Referral' || ticket.reportId?.caseStatus === 'Case Closed';
+    const matchTab = activeTab === 'archived' ? isArchived : !isArchived;
+
+    const matchRead = readStatusFilter === 'All' ? true
+      : readStatusFilter === 'Read' ? !isUnread(ticket.ticketNumber)
+        : isUnread(ticket.ticketNumber);
+
+    const matchCaseStatus = caseStatusFilter === 'All' ? true : ticket.reportId?.caseStatus === caseStatusFilter;
+
+    return matchSearch && matchTab && matchRead && matchCaseStatus;
   });
+
+  const activeFilterCount = [
+    readStatusFilter !== "All",
+    caseStatusFilter !== "All"
+  ].filter(Boolean).length;
 
   return (
     <>
-      <ConfirmationModal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} confirmText={modalConfig.confirmText} cancelText={modalConfig.cancelText} isLoading={sending} />
+      <ConfirmationModal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} confirmText={modalConfig.confirmText} cancelText={modalConfig.cancelText} isLoading={sending || isSending} />
       <CalendarReminderModal isOpen={showCalendarReminder} onClose={() => setShowCalendarReminder(false)} onConfirm={handleCalendarConfirmed} />
       <AvailabilityPickerModal isOpen={showAvailabilityModal} onClose={() => setShowAvailabilityModal(false)} onConfirm={handleCalendarConfirmed} adminId={selectedTicket?.adminId || 'me'} />
 
@@ -876,12 +903,8 @@ const TicketMessagingSystem = () => {
         {/* ── Sidebar ── */}
         <div className={`${showTicketList ? 'flex' : 'hidden'} flex-col w-full md:w-96 border-r border-gray-200 bg-white transition-all duration-300 ease-in-out`} style={{ height: '100%', minHeight: 0 }}>
           <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              {/* ── Header: pulsing badge REMOVED, plain unread count text lang ── */}
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-              </div>
-              <button onClick={() => setShowTicketList(false)} className="md:hidden p-2 hover:bg-gray-100 rounded-lg">
+            <div className="flex justify-end md:hidden mb-2">
+              <button onClick={() => setShowTicketList(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
@@ -892,18 +915,89 @@ const TicketMessagingSystem = () => {
                 className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
 
-            <div className="flex gap-2 overflow-x-auto">
-              {['all', 'unread', 'open', 'archived'].map(filter => (
-                <button key={filter} onClick={() => setFilterStatus(filter)}
-                  className={`relative px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === filter ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                  {filter === 'archived' ? 'Archived' : filter.charAt(0).toUpperCase() + filter.slice(1)}
-                  {filter === 'unread' && unreadCount > 0 && (
-                    <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full ${filterStatus === 'unread' ? 'bg-white text-blue-600' : 'bg-red-500 text-white'}`}>
-                      {unreadCount}
-                    </span>
-                  )}
+            <div className="flex flex-col gap-3">
+              {/* Active / Archived Tabs */}
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={() => setActiveTab("active")}
+                  className={`flex-1 whitespace-nowrap px-3 py-2 rounded-xl font-bold transition-all duration-200 ${activeTab === "active"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                    }`}
+                >
+                  Active
                 </button>
-              ))}
+                <button
+                  onClick={() => setActiveTab("archived")}
+                  className={`flex-1 whitespace-nowrap px-3 py-2 rounded-xl font-bold transition-all duration-200 ${activeTab === "archived"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                    }`}
+                >
+                  Archived
+                </button>
+              </div>
+
+              {/* Filter Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors w-full ${showFilters || activeFilterCount > 0
+                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                  : "bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200"
+                  }`}
+              >
+                <Filter size={16} />
+                <span className="text-sm">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-white text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold border border-blue-200">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Advanced Filters */}
+              {showFilters && (
+                <div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Read Status</label>
+                    <select
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                      value={readStatusFilter}
+                      onChange={(e) => setReadStatusFilter(e.target.value)}
+                    >
+                      <option value="All">All</option>
+                      <option value="Unread">Unread</option>
+                      <option value="Read">Read</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Case Status</label>
+                    <select
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                      value={caseStatusFilter}
+                      onChange={(e) => setCaseStatusFilter(e.target.value)}
+                    >
+                      <option value="All">All</option>
+                      <option value="For Queuing">For Queuing</option>
+                      <option value="For Interview">For Interview</option>
+                      <option value="Internal">Internal</option>
+                      <option value="External">External</option>
+                      <option value="Case Closed">Case Closed</option>
+                    </select>
+                  </div>
+                  {activeFilterCount > 0 && (
+                    <button
+                      onClick={() => {
+                        setReadStatusFilter("All");
+                        setCaseStatusFilter("All");
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium text-left mt-1"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -912,7 +1006,7 @@ const TicketMessagingSystem = () => {
               <div className="flex items-center justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
             ) : filteredTickets.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                <p className="text-sm">{searchQuery || filterStatus !== 'all' ? 'No tickets match your search' : 'No tickets found'}</p>
+                <p className="text-sm">{searchQuery || activeFilterCount > 0 || activeTab === 'archived' ? 'No tickets match your search' : 'No tickets found'}</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
