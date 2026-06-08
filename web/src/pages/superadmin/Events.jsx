@@ -122,7 +122,6 @@ export default function SuperAdminCalendarUI() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const eventTypes = getEventTypes();
 
-  // Window resize handler for responsiveness
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
@@ -133,75 +132,43 @@ export default function SuperAdminCalendarUI() {
   const isTablet = windowWidth < 1024;
   const isLocationDescriptionRequired = formData.type === 'program_event' || formData.type === 'consultation';
 
-  // Get event color based on type
   const getEventColor = (type) => {
     const eventType = eventTypes.find(et => et.value === type);
     return eventType?.color || "#3b82f6";
   };
 
-  // Get file icon based on file type
   const getFileIcon = (filename, fileType, mimeType) => {
-    // Check mimeType first
     if (mimeType) {
-      if (mimeType.startsWith('image/')) {
-        return <ImageIcon className="w-5 h-5" />;
-      } else if (mimeType.startsWith('video/')) {
-        return <Video className="w-5 h-5" />;
-      } else if (mimeType === 'application/pdf') {
-        return <FileText className="w-5 h-5" />;
-      }
+      if (mimeType.startsWith('image/')) return <ImageIcon className="w-5 h-5" />;
+      if (mimeType.startsWith('video/')) return <Video className="w-5 h-5" />;
+      if (mimeType === 'application/pdf') return <FileText className="w-5 h-5" />;
     }
-
-    // Check fileType from database
-    if (fileType === 'image') {
-      return <ImageIcon className="w-5 h-5" />;
-    } else if (fileType === 'video') {
-      return <Video className="w-5 h-5" />;
-    }
-
-    // Fallback to extension check
+    if (fileType === 'image') return <ImageIcon className="w-5 h-5" />;
+    if (fileType === 'video') return <Video className="w-5 h-5" />;
     if (!filename) return <File className="w-5 h-5" />;
     const ext = filename.split('.').pop().toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
-      return <ImageIcon className="w-5 h-5" />;
-    } else if (['mp4', 'avi', 'mov', 'wmv', 'webm'].includes(ext)) {
-      return <Video className="w-5 h-5" />;
-    } else if (['pdf'].includes(ext)) {
-      return <FileText className="w-5 h-5" />;
-    } else {
-      return <File className="w-5 h-5" />;
-    }
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return <ImageIcon className="w-5 h-5" />;
+    if (['mp4', 'avi', 'mov', 'wmv', 'webm'].includes(ext)) return <Video className="w-5 h-5" />;
+    if (['pdf'].includes(ext)) return <FileText className="w-5 h-5" />;
+    return <File className="w-5 h-5" />;
   };
 
-  // Check if file is an image
   const isImageFile = (filename, fileType, mimeType) => {
-    // Check mimeType first
     if (mimeType && mimeType.startsWith('image/')) return true;
-
-    // Check fileType from database
     if (fileType === 'image') return true;
-
-    // Fallback to extension check
     if (!filename) return false;
     const ext = filename.split('.').pop().toLowerCase();
     return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
   };
 
-  // Check if file is a video
   const isVideoFile = (filename, fileType, mimeType) => {
-    // Check mimeType first
     if (mimeType && mimeType.startsWith('video/')) return true;
-
-    // Check fileType from database
     if (fileType === 'video') return true;
-
-    // Fallback to extension check
     if (!filename) return false;
     const ext = filename.split('.').pop().toLowerCase();
     return ['mp4', 'avi', 'mov', 'wmv', 'webm'].includes(ext);
   };
 
-  // Format file size
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) return 'N/A';
     if (bytes < 1024) return bytes + ' B';
@@ -209,18 +176,15 @@ export default function SuperAdminCalendarUI() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // Fetch events on mount
   useEffect(() => {
     fetchEvents();
     fetchPrograms();
   }, []);
 
-  // ✅ Auto-open Add Modal or Edit Modal when navigating from Projects page
   useEffect(() => {
     if (location.state?.openAddModal && location.state?.prefill) {
       const prefill = location.state.prefill;
       const today = new Date().toISOString().split('T')[0];
-
       setModalMode("create");
       setSelectedEvent(null);
       setFormData({
@@ -240,17 +204,18 @@ export default function SuperAdminCalendarUI() {
         mode: "online",
         programId: prefill.programId || "",
         projectId: prefill.projectId || "",
-        participants: 0
+        participants: 0,
+        objectives: [],
+        targetAudience: "",
+        requirements: [],
+        expectedOutcomes: []
       });
       setShowModal(true);
-
-      // Clear the location state to avoid re-triggering on back navigation
       window.history.replaceState({}, document.title);
     } else if (location.state?.openEditModal && location.state?.eventId && events.length > 0) {
       const targetEventId = location.state.eventId;
       const eventObj = events.find(e => e.id === targetEventId);
       if (eventObj) {
-        // Prepare mock calendar event context to pass to handleEditEvent
         const mockCalendarEvent = {
           id: eventObj.id,
           title: eventObj.title,
@@ -262,11 +227,8 @@ export default function SuperAdminCalendarUI() {
         };
         handleEditEvent(mockCalendarEvent);
       }
-      
-      // Clear the location state to avoid re-triggering on back navigation
       window.history.replaceState({}, document.title);
     } else if (location.state?.openDetailsModal && location.state?.eventId && events.length > 0) {
-      // Open details modal (view only) for booking notifications
       const targetEventId = location.state.eventId;
       const eventObj = events.find(e => e.id === targetEventId);
       if (eventObj) {
@@ -281,8 +243,6 @@ export default function SuperAdminCalendarUI() {
         });
         setShowDetailsModal(true);
       }
-      
-      // Clear the location state to avoid re-triggering on back navigation
       window.history.replaceState({}, document.title);
     }
   }, [location.state, events]);
@@ -291,10 +251,11 @@ export default function SuperAdminCalendarUI() {
     try {
       const res = await getAllPrograms();
       if (res.success) {
-        setPrograms(res.data);
+        setPrograms(res.data ?? []);
       }
     } catch (err) {
       console.error("Error fetching programs:", err);
+      setPrograms([]);
     }
   };
 
@@ -302,12 +263,10 @@ export default function SuperAdminCalendarUI() {
     try {
       setLoading(true);
       const response = await getAllCalendarEvents();
-
       if (response.success) {
         const formattedEvents = formatEventsForCalendar(response.data);
         setEvents(formattedEvents);
         calculateStats(formattedEvents);
-        // Removed noisy toast success message for loading events
       } else {
         toast.error(response.message || "Failed to load events");
         setEvents([]);
@@ -321,45 +280,34 @@ export default function SuperAdminCalendarUI() {
     }
   };
 
-  // Format events for calendar
   const formatEventsForCalendar = (apiEvents) => {
+    if (!Array.isArray(apiEvents)) return [];
     return apiEvents.map(event => {
       const eventType = event.extendedProps?.type || event.type || 'program_event';
       const color = getEventColor(eventType);
-
-      // Map 'scheduled' to 'upcoming' for display consistency
       const displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
 
-      // Get attachments - check multiple possible locations
       let attachments = [];
-
-      // Try to get attachments from various possible locations in the data structure
-      if (event.attachments && Array.isArray(event.attachments)) {
+      if (Array.isArray(event.attachments)) {
         attachments = event.attachments;
-      } else if (event.extendedProps?.attachments && Array.isArray(event.extendedProps.attachments)) {
+      } else if (Array.isArray(event.extendedProps?.attachments)) {
         attachments = event.extendedProps.attachments;
-      } else if (event.files && Array.isArray(event.files)) {
+      } else if (Array.isArray(event.files)) {
         attachments = event.files;
       }
 
-      // Format attachments
-      const formattedAttachments = attachments.map(attachment => {
-        return {
-          url: attachment.url || attachment.secure_url || '',
-          originalname: attachment.originalName || attachment.originalname || attachment.name || 'File',
-          filename: attachment.filename || attachment.name || 'File',
-          mimetype: attachment.mimeType || attachment.mimetype || attachment.format || 'application/octet-stream',
-          size: attachment.size || attachment.bytes || 0,
-          type: attachment.type || (attachment.mimetype?.startsWith('image/') ? 'image' :
-            attachment.mimetype?.startsWith('video/') ? 'video' : 'other'),
-          public_id: attachment.public_id,
-          uploadedAt: attachment.uploadedAt || attachment.createdAt,
-          _id: attachment._id
-        };
-      });
+      const formattedAttachments = attachments.map(attachment => ({
+        url: attachment.url || attachment.secure_url || '',
+        originalname: attachment.originalName || attachment.originalname || attachment.name || 'File',
+        filename: attachment.filename || attachment.name || 'File',
+        mimetype: attachment.mimeType || attachment.mimetype || attachment.format || 'application/octet-stream',
+        size: attachment.size || attachment.bytes || 0,
+        type: attachment.type || (attachment.mimetype?.startsWith('image/') ? 'image' : attachment.mimetype?.startsWith('video/') ? 'video' : 'other'),
+        public_id: attachment.public_id,
+        uploadedAt: attachment.uploadedAt || attachment.createdAt,
+        _id: attachment._id
+      }));
 
-      // FullCalendar expects exclusive end dates for allDay events.
-      // If an event spans 1 day (start == end), we add 1 day solely for rendering to fix visual collapsing.
       let originalEnd = event.end || event.start;
       let renderEnd = originalEnd;
       if (event.allDay || event.allDay === undefined) {
@@ -375,7 +323,7 @@ export default function SuperAdminCalendarUI() {
         end: renderEnd,
         allDay: event.allDay !== undefined ? event.allDay : true,
         extendedProps: {
-          originalEnd: originalEnd,
+          originalEnd,
           type: eventType,
           description: event.description || event.extendedProps?.description || "",
           location: event.location || event.extendedProps?.location || "",
@@ -390,8 +338,8 @@ export default function SuperAdminCalendarUI() {
           projectId: event.projectId || event.extendedProps?.projectId,
           attachments: formattedAttachments,
           source: event.extendedProps?.source || 'calendar',
-          participants: event.extendedProps?.participants !== undefined 
-            ? event.extendedProps.participants 
+          participants: event.extendedProps?.participants !== undefined
+            ? event.extendedProps.participants
             : (event.participants !== undefined ? event.participants : 0),
           eventDetails: event.extendedProps?.eventDetails || event.eventDetails || null
         },
@@ -405,55 +353,32 @@ export default function SuperAdminCalendarUI() {
   };
 
   const calculateStats = (eventData) => {
+    if (!Array.isArray(eventData)) return;
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-
     const total = eventData.length;
     const thisMonth = eventData.filter(event => {
       const eventDate = new Date(event.start);
       return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
     }).length;
-
-    const upcoming = eventData.filter(event => {
-      const eventDate = new Date(event.start);
-      return eventDate >= now;
-    }).length;
-
-    const completed = eventData.filter(event => {
-      const eventDate = new Date(event.end || event.start);
-      return eventDate < now;
-    }).length;
-
+    const upcoming = eventData.filter(event => new Date(event.start) >= now).length;
+    const completed = eventData.filter(event => new Date(event.end || event.start) < now).length;
     setStats({ total, thisMonth, upcoming, completed });
   };
 
-  // Filter events for table
   const filteredEvents = events.filter((event) => {
     const searchText = search.toLowerCase();
-    const name = event.extendedProps?.userName?.toLowerCase() || "";
-    const email = event.extendedProps?.userEmail?.toLowerCase() || "";
-    const title = event.title?.toLowerCase() || "";
-    const location = event.extendedProps?.location?.toLowerCase() || "";
-
     const matchesSearch =
-      name.includes(searchText) ||
-      email.includes(searchText) ||
-      title.includes(searchText) ||
-      location.includes(searchText);
-
-    const matchesType =
-      typeFilter === "all" ||
-      event.extendedProps?.type === typeFilter;
-
-    const matchesStatus =
-      statusFilter === "all" ||
-      event.extendedProps?.status === statusFilter;
-
+      (event.extendedProps?.userName?.toLowerCase() || "").includes(searchText) ||
+      (event.extendedProps?.userEmail?.toLowerCase() || "").includes(searchText) ||
+      (event.title?.toLowerCase() || "").includes(searchText) ||
+      (event.extendedProps?.location?.toLowerCase() || "").includes(searchText);
+    const matchesType = typeFilter === "all" || event.extendedProps?.type === typeFilter;
+    const matchesStatus = statusFilter === "all" || event.extendedProps?.status === statusFilter;
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  // Event Handlers
   const handleDateClick = (info) => {
     setModalMode("create");
     setSelectedEvent(null);
@@ -485,18 +410,15 @@ export default function SuperAdminCalendarUI() {
 
   const handleEventClick = (info) => {
     const event = info.event;
-    const extendedProps = event.extendedProps;
-
     setSelectedEvent({
       id: event.id,
       title: event.title,
-      ...extendedProps,
+      ...event.extendedProps,
       start: event.startStr,
       end: event.endStr,
       allDay: event.allDay,
       backgroundColor: event.backgroundColor
     });
-
     setShowDetailsModal(true);
   };
 
@@ -504,10 +426,7 @@ export default function SuperAdminCalendarUI() {
     setModalMode("edit");
     setSelectedEvent(event);
     const eventType = event.type || "program_event";
-    // Parse GAD programDetails if present
     const programDetails = event.eventDetails?.programDetails || event.extendedProps?.eventDetails?.programDetails || {};
-    
-    // Parse time from existing event dates
     let startTime = "09:00";
     let endTime = "10:00";
     if (event.start && !event.allDay) {
@@ -519,7 +438,7 @@ export default function SuperAdminCalendarUI() {
       endTime = `${String(eDate.getHours()).padStart(2, '0')}:${String(eDate.getMinutes()).padStart(2, '0')}`;
     }
     setFormData({
-      title: event.title,
+      title: event.title || "",
       type: eventType,
       start: (event.start || "").split('T')[0],
       end: event.originalEnd
@@ -538,10 +457,10 @@ export default function SuperAdminCalendarUI() {
       programId: event.programId || "",
       projectId: event.projectId || "",
       participants: event.participants || 0,
-      objectives: programDetails.objectives || [],
-      targetAudience: programDetails.targetAudience || "",
-      requirements: programDetails.requirements || [],
-      expectedOutcomes: programDetails.expectedOutcomes || []
+      objectives: programDetails?.objectives ?? [],
+      targetAudience: programDetails?.targetAudience || "",
+      requirements: programDetails?.requirements ?? [],
+      expectedOutcomes: programDetails?.expectedOutcomes ?? []
     });
     setShowModal(true);
     setShowDetailsModal(false);
@@ -549,24 +468,16 @@ export default function SuperAdminCalendarUI() {
 
   const handleDeleteEvent = async (eventObj) => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
-
-    // Get ID from either string parameter or event object
     const eventId = typeof eventObj === 'object' ? (eventObj.id || eventObj._id) : eventObj;
-    // Check source directly - either from top level (table spread) or extendedProps (FullCalendar object)
     const source = typeof eventObj === 'object' ? (eventObj.source || eventObj.extendedProps?.source) : 'calendar';
     const isProgramSource = source === 'program';
-
-    console.log("Deleting event:", { eventId, source, isProgramSource, eventObj });
 
     try {
       let response;
       if (isProgramSource) {
-        // Look for IDs in multiple possible locations
         const programId = eventObj.programId || eventObj.extendedProps?.programId;
         const projectId = eventObj.projectId || eventObj.extendedProps?.projectId;
-
         if (!programId || !projectId) {
-          console.warn("Missing metadata for program event:", eventObj);
           toast.error("Missing program or project data for this event. Please refresh the page.");
           return;
         }
@@ -591,48 +502,33 @@ export default function SuperAdminCalendarUI() {
   const handleBulkDelete = async () => {
     if (selectedEvents.size === 0) return;
     if (!window.confirm(`Are you sure you want to permanently delete ${selectedEvents.size} selected event(s)?`)) return;
-
     setLoading(true);
     const results = { success: 0, failed: 0 };
 
     try {
       for (let eventId of selectedEvents) {
-        // Find the event to check its source
         const eventObj = events.find(e => e.id === eventId);
         const source = eventObj?.extendedProps?.source || 'calendar';
         const isProgramSource = source === 'program';
-
         try {
           let response;
           if (isProgramSource) {
             const programId = eventObj.extendedProps?.programId;
             const projectId = eventObj.extendedProps?.projectId;
-            if (programId && projectId) {
-              response = await deleteProgramEvent(programId, projectId, eventId);
-            } else {
-              response = { success: false };
-            }
+            response = (programId && projectId)
+              ? await deleteProgramEvent(programId, projectId, eventId)
+              : { success: false };
           } else {
             response = await deleteCalendarEvent(eventId);
           }
-
-          if (response.success) {
-            results.success++;
-          } else {
-            results.failed++;
-          }
-        } catch (err) {
+          if (response.success) results.success++;
+          else results.failed++;
+        } catch {
           results.failed++;
         }
       }
-
-      if (results.success > 0) {
-        toast.success(`Successfully deleted ${results.success} event(s)`);
-      }
-      if (results.failed > 0) {
-        toast.error(`Failed to delete ${results.failed} event(s)`);
-      }
-
+      if (results.success > 0) toast.success(`Successfully deleted ${results.success} event(s)`);
+      if (results.failed > 0) toast.error(`Failed to delete ${results.failed} event(s)`);
       setSelectedEvents(new Set());
       fetchEvents();
     } catch (error) {
@@ -645,11 +541,8 @@ export default function SuperAdminCalendarUI() {
 
   const toggleEventSelection = (id) => {
     const newSelected = new Set(selectedEvents);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
+    if (newSelected.has(id)) newSelected.delete(id);
+    else newSelected.add(id);
     setSelectedEvents(newSelected);
   };
 
@@ -662,83 +555,57 @@ export default function SuperAdminCalendarUI() {
   };
 
   const handleSaveEvent = async () => {
-    if (!formData.title.trim()) {
-      toast.error("Please enter event title");
-      return;
-    }
-    if (!formData.start) {
-      toast.error("Please select start date");
-      return;
-    }
-    if (!formData.type || !formData.type.trim()) {
-      toast.error("Please select event type");
-      return;
-    }
-    if (isLocationDescriptionRequired && (!formData.location || !formData.location.trim())) {
-      toast.error("Please enter event location");
-      return;
-    }
-    if (isLocationDescriptionRequired && (!formData.description || !formData.description.trim())) {
-      toast.error("Please enter event description");
-      return;
-    }
+    if (!formData.title.trim()) { toast.error("Please enter event title"); return; }
+    if (!formData.start) { toast.error("Please select start date"); return; }
+    if (!formData.type?.trim()) { toast.error("Please select event type"); return; }
+    if (isLocationDescriptionRequired && !formData.location?.trim()) { toast.error("Please enter event location"); return; }
+    if (isLocationDescriptionRequired && !formData.description?.trim()) { toast.error("Please enter event description"); return; }
     if (formData.type === 'program_event' && (!formData.participants || parseInt(formData.participants) <= 0)) {
-      toast.error("Please enter a valid number of participants (minimum 1)");
-      return;
+      toast.error("Please enter a valid number of participants (minimum 1)"); return;
     }
     if (formData.type === 'consultation' && !formData.reportTicketNumber?.trim()) {
-      toast.error("Please enter report ticket number for consultation");
-      return;
+      toast.error("Please enter report ticket number for consultation"); return;
     }
 
-    // Get current user for userId
     const userStr = localStorage.getItem('user');
     let userId = null;
     if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        userId = user._id || user.id || null;
-      } catch (e) {
-        userId = null;
-      }
+      try { const user = JSON.parse(userStr); userId = user._id || user.id || null; }
+      catch { userId = null; }
     }
 
-    // Use FormData for file uploads
     const form = new FormData();
     const eventPayload = {
       title: formData.title.trim(),
       type: formData.type.trim(),
       start: formData.allDay ? formData.start : `${formData.start}T${formData.startTime || '09:00'}:00`,
       end: formData.allDay ? (formData.end || formData.start) : `${formData.end || formData.start}T${formData.endTime || '10:00'}:00`,
-      location: formData.location.trim() || undefined,
-      description: formData.description.trim() || undefined,
-      notes: formData.notes.trim() || undefined,
+      location: formData.location?.trim() || undefined,
+      description: formData.description?.trim() || undefined,
+      notes: formData.notes?.trim() || undefined,
       allDay: formData.allDay,
       color: getEventColor(formData.type),
       status: formData.status,
-      userId: userId,
+      userId,
       programId: formData.programId || undefined,
       projectId: formData.projectId || undefined,
       participants: formData.type === 'program_event' ? parseInt(formData.participants || 0) : undefined
     };
 
-    // Add consultation-specific fields
     if (formData.type === 'consultation') {
       eventPayload.reportTicketNumber = formData.reportTicketNumber?.trim() || '';
       eventPayload.mode = formData.mode || 'online';
     }
 
-    // Add GAD Program-specific fields
     if (formData.type === 'program_event') {
-      const details = {
+      eventPayload.eventDetails = JSON.stringify({
         programDetails: {
-          objectives: formData.objectives || [],
+          objectives: formData.objectives ?? [],
           targetAudience: formData.targetAudience?.trim() || '',
-          requirements: formData.requirements || [],
-          expectedOutcomes: formData.expectedOutcomes || []
+          requirements: formData.requirements ?? [],
+          expectedOutcomes: formData.expectedOutcomes ?? []
         }
-      };
-      eventPayload.eventDetails = JSON.stringify(details);
+      });
     }
 
     Object.entries(eventPayload).forEach(([key, value]) => {
@@ -747,12 +614,9 @@ export default function SuperAdminCalendarUI() {
     eventFiles.forEach(file => form.append('attachments', file));
 
     try {
-      let response;
-      if (modalMode === "edit" && selectedEvent) {
-        response = await updateCalendarEvent(selectedEvent.id, form);
-      } else {
-        response = await createCalendarEvent(form);
-      }
+      const response = modalMode === "edit" && selectedEvent
+        ? await updateCalendarEvent(selectedEvent.id, form)
+        : await createCalendarEvent(form);
 
       if (response.success) {
         toast.success(response.message || "Event saved successfully");
@@ -762,24 +626,14 @@ export default function SuperAdminCalendarUI() {
         setSelectedEvent(null);
         setEventFiles([]);
       } else {
-        if (response.errors && response.errors.length > 0) {
-          response.errors.forEach(err => toast.error(err));
-        } else {
-          toast.error(response.message || "Failed to save event");
-        }
+        if (response.errors?.length > 0) response.errors.forEach(err => toast.error(err));
+        else toast.error(response.message || "Failed to save event");
       }
     } catch (error) {
       console.error("Error saving event:", error);
-      if (error.response && error.response.data) {
-        const errData = error.response.data;
-        if (errData.errors && errData.errors.length > 0) {
-          errData.errors.forEach(err => toast.error(err));
-        } else {
-          toast.error(errData.message || errData.error || "Failed to save event. Please try again.");
-        }
-      } else {
-        toast.error(error.message || "Failed to save event. Please try again.");
-      }
+      const errData = error.response?.data;
+      if (errData?.errors?.length > 0) errData.errors.forEach(err => toast.error(err));
+      else toast.error(errData?.message || errData?.error || error.message || "Failed to save event. Please try again.");
     }
   };
 
@@ -816,9 +670,7 @@ export default function SuperAdminCalendarUI() {
     document.body.removeChild(link);
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  const toggleFullscreen = () => setIsFullscreen(prev => !prev);
 
   const resetForm = () => {
     setFormData({
@@ -846,33 +698,20 @@ export default function SuperAdminCalendarUI() {
     });
   };
 
-  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
     });
   };
 
-  // Format date and time
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
 
-  // Pending completion calculation
   const now = new Date();
   const pendingEvents = events.filter(event => {
     const eventDate = new Date(event.start);
@@ -882,15 +721,16 @@ export default function SuperAdminCalendarUI() {
     return isPastOrToday && isApplicableType && isNotCompleted;
   });
 
-  // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredEvents.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
-
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  // Loading State
+  // Derived data for project dropdown — safe even if projects is undefined
+  const selectedProgram = programs.find(p => p._id === formData.programId);
+  const availableProjects = selectedProgram?.projects ?? [];
+
   if (loading && events.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -909,10 +749,10 @@ export default function SuperAdminCalendarUI() {
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between mb-6 mt-2">
         <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-            <div className="p-2 bg-blue-100 rounded-xl">
-              <CalendarIcon className="w-6 h-6 text-blue-600" />
-            </div>
-            Calendar
+          <div className="p-2 bg-blue-100 rounded-xl">
+            <CalendarIcon className="w-6 h-6 text-blue-600" />
+          </div>
+          Calendar
         </h1>
         <button
           onClick={fetchEvents}
@@ -936,7 +776,6 @@ export default function SuperAdminCalendarUI() {
             Manage Programs, Projects, Events, Holidays & Consultations
           </p>
         </div>
-
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <button
             onClick={fetchEvents}
@@ -946,14 +785,8 @@ export default function SuperAdminCalendarUI() {
             <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
             <span className="md:inline">{loading ? "Refreshing..." : "Refresh"}</span>
           </button>
-
           <button
-            onClick={() => {
-              setModalMode("create");
-              setSelectedEvent(null);
-              resetForm();
-              setShowModal(true);
-            }}
+            onClick={() => { setModalMode("create"); setSelectedEvent(null); resetForm(); setShowModal(true); }}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl transition-all duration-200 font-bold shadow-sm"
           >
             <Plus size={18} />
@@ -962,9 +795,8 @@ export default function SuperAdminCalendarUI() {
         </div>
       </div>
 
-      {/* Stats & Pendings side-by-side grid */}
+      {/* Stats & Pendings */}
       <div className={pendingEvents.length > 0 ? "grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8 items-start" : "mb-8"}>
-        {/* Stats Cards container */}
         <div className={pendingEvents.length > 0 ? "lg:col-span-3 grid grid-cols-2 gap-3 md:gap-4" : "grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"}>
           {Object.entries(stats).map(([key, value]) => (
             <div key={key} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-colors">
@@ -972,34 +804,31 @@ export default function SuperAdminCalendarUI() {
                 <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
                   {key.replace(/([A-Z])/g, ' $1').trim()}
                 </p>
-                <p className="text-xl md:text-2xl font-bold text-gray-900 mt-1">
-                  {value}
-                </p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900 mt-1">{value}</p>
               </div>
-              <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${key === 'total' ? 'bg-blue-50 text-blue-600' :
+              <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                key === 'total' ? 'bg-blue-50 text-blue-600' :
                 key === 'thisMonth' ? 'bg-green-50 text-green-600' :
-                  key === 'upcoming' ? 'bg-orange-50 text-orange-600' :
-                    'bg-gray-50 text-gray-600'
-                }`}>
+                key === 'upcoming' ? 'bg-orange-50 text-orange-600' :
+                'bg-gray-50 text-gray-600'
+              }`}>
                 <CalendarIcon size={24} />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Scrollable Widget for Pending Completion Events */}
         {pendingEvents.length > 0 && (
-          <div className="lg:col-span-1 bg-white rounded-2xl border border-amber-200 shadow-sm p-4 w-full animate-in fade-in duration-300">
+          <div className="lg:col-span-1 bg-white rounded-2xl border border-amber-200 shadow-sm p-4 w-full">
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-100">
               <Clock size={16} className="text-amber-500 animate-pulse" />
               <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">
                 Pending Completion ({pendingEvents.length})
               </h4>
             </div>
-            
             <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
               {pendingEvents.map((event) => (
-                <div 
+                <div
                   key={event.id}
                   onClick={() => handleEditEvent({
                     id: event.id,
@@ -1017,12 +846,8 @@ export default function SuperAdminCalendarUI() {
                   className="flex items-center justify-between gap-3 p-2 bg-amber-50/30 hover:bg-amber-50 border border-amber-100/30 hover:border-amber-200/50 rounded-xl cursor-pointer transition-all duration-200 group"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-gray-800 truncate group-hover:text-amber-800 transition-colors">
-                      {event.title}
-                    </p>
-                    <p className="text-[10px] text-gray-500 font-semibold">
-                      {formatDate(event.start)}
-                    </p>
+                    <p className="text-xs font-bold text-gray-800 truncate group-hover:text-amber-800 transition-colors">{event.title}</p>
+                    <p className="text-[10px] text-gray-500 font-semibold">{formatDate(event.start)}</p>
                   </div>
                   <span className="shrink-0 text-[9px] font-black text-amber-600 uppercase bg-amber-100/60 px-2 py-0.5 rounded-md tracking-wider group-hover:bg-amber-200/80 transition-colors">
                     Complete
@@ -1034,7 +859,7 @@ export default function SuperAdminCalendarUI() {
         )}
       </div>
 
-      {/* Legend for Color Coding */}
+      {/* Legend */}
       <div className="bg-white p-4 md:p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
         <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Event Color Legend</h3>
         <div className="flex flex-wrap gap-4 md:gap-6">
@@ -1044,58 +869,24 @@ export default function SuperAdminCalendarUI() {
                 className="w-4 h-4 rounded-md shadow-sm transition-transform group-hover:scale-110"
                 style={{ backgroundColor: type.color }}
               ></div>
-              <span className="text-xs font-bold text-gray-600 capitalize">
-                {type.label}
-              </span>
+              <span className="text-xs font-bold text-gray-600 capitalize">{type.label}</span>
             </div>
           ))}
         </div>
       </div>
 
-
-
-      {/* Calendar Container */}
+      {/* Calendar */}
       <style>{`
-        .fc .fc-toolbar {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.75rem;
-          justify-content: space-between;
-          align-items: center;
-        }
+        .fc .fc-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; align-items: center; }
         @media (max-width: 768px) {
-          .fc .fc-toolbar {
-            flex-direction: column;
-            justify-content: center;
-          }
-          .fc .fc-toolbar-chunk {
-            display: flex;
-            justify-content: center;
-            width: 100%;
-          }
-          .fc .fc-toolbar-title {
-            font-size: 1.2rem !important;
-            text-align: center;
-          }
-          .fc .fc-button {
-            padding: 0.4rem 0.6rem !important;
-            font-size: 0.85rem !important;
-          }
+          .fc .fc-toolbar { flex-direction: column; justify-content: center; }
+          .fc .fc-toolbar-chunk { display: flex; justify-content: center; width: 100%; }
+          .fc .fc-toolbar-title { font-size: 1.2rem !important; text-align: center; }
+          .fc .fc-button { padding: 0.4rem 0.6rem !important; font-size: 0.85rem !important; }
         }
-        /* Fix for scrollbar hiding in table */
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        /* Mobile specific table adjustments */
-        @media (max-width: 640px) {
-          .mobile-hide {
-            display: none;
-          }
-        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @media (max-width: 640px) { .mobile-hide { display: none; } }
       `}</style>
 
       <div className="bg-white p-2 md:p-6 rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
@@ -1103,17 +894,11 @@ export default function SuperAdminCalendarUI() {
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
           initialView={isMobile ? "listMonth" : "dayGridMonth"}
           headerToolbar={isMobile ? {
-            left: 'prev,next today',
-            center: 'title',
-            right: ''
+            left: 'prev,next today', center: 'title', right: ''
           } : {
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
+            left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
           }}
-          footerToolbar={isMobile ? {
-            center: 'listMonth,dayGridMonth'
-          } : null}
+          footerToolbar={isMobile ? { center: 'listMonth,dayGridMonth' } : null}
           height={isMobile ? "auto" : "70vh"}
           contentHeight={isMobile ? "auto" : "auto"}
           aspectRatio={isMobile ? 0.8 : 1.35}
@@ -1130,24 +915,11 @@ export default function SuperAdminCalendarUI() {
           selectable={true}
           dayHeaderClassNames="text-gray-700 font-semibold text-[10px] md:text-sm"
           dayCellClassNames="hover:bg-blue-50 transition-colors"
-          buttonText={{
-            today: "Today",
-            month: "Month",
-            week: "Week",
-            day: "Day",
-            listMonth: "List"
-          }}
+          buttonText={{ today: "Today", month: "Month", week: "Week", day: "Day", listMonth: "List" }}
           views={{
-            timeGrid: {
-              dayHeaderFormat: { weekday: 'short', day: 'numeric' }
-            },
-            dayGridMonth: {
-              titleFormat: { year: 'numeric', month: 'long' }
-            },
-            listMonth: {
-              listDayFormat: { weekday: 'long', month: 'short', day: 'numeric' },
-              listDaySideFormat: false
-            }
+            timeGrid: { dayHeaderFormat: { weekday: 'short', day: 'numeric' } },
+            dayGridMonth: { titleFormat: { year: 'numeric', month: 'long' } },
+            listMonth: { listDayFormat: { weekday: 'long', month: 'short', day: 'numeric' }, listDaySideFormat: false }
           }}
           eventClassNames="cursor-pointer hover:opacity-90 text-[10px] md:text-xs"
         />
@@ -1155,42 +927,33 @@ export default function SuperAdminCalendarUI() {
 
       {/* Mobile FAB */}
       <button
-        onClick={() => {
-          setModalMode("create");
-          setSelectedEvent(null);
-          resetForm();
-          setShowModal(true);
-        }}
+        onClick={() => { setModalMode("create"); setSelectedEvent(null); resetForm(); setShowModal(true); }}
         className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgb(37,99,235,0.4)] z-40 active:scale-95 transition-transform"
       >
         <Plus size={28} />
       </button>
 
-      {/* Events Table Section */}
+      {/* Events Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-8">
         <div className="px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               Event Catalog
-              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 text-xs font-black rounded-full">
-                {filteredEvents.length}
-              </span>
+              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 text-xs font-black rounded-full">{filteredEvents.length}</span>
             </h2>
-            <p className="text-sm text-gray-500 mt-1 font-medium">
-              View and manage all registered events
-            </p>
+            <p className="text-sm text-gray-500 mt-1 font-medium">View and manage all registered events</p>
           </div>
           {selectedEvents.size > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium shadow-sm animate-in fade-in slide-in-from-right-4"
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium shadow-sm"
             >
               <Trash2 size={16} /> Delete Selected ({selectedEvents.size})
             </button>
           )}
         </div>
 
-        {/* Integrated Search & Filters inside Catalog Panel */}
+        {/* Search & Filters */}
         <div className="px-6 pb-6 border-b border-gray-100 flex flex-col xl:flex-row gap-4 xl:items-center justify-between">
           <div className="flex-1 w-full relative">
             <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1198,32 +961,28 @@ export default function SuperAdminCalendarUI() {
               type="text"
               placeholder="Search by title, location, or user..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium transition-all"
             />
           </div>
-
           <div className="flex flex-wrap gap-2 w-full xl:w-auto">
             <div className="flex-1 xl:flex-none relative">
               <select
                 value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
+                onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
                 className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
               >
                 <option value="all">All Types</option>
                 {eventTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
+                  <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
               </select>
               <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
-
             <div className="flex-1 xl:flex-none relative">
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                 className="w-full xl:w-40 appearance-none px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 font-medium text-sm pr-10"
               >
                 <option value="all">All Status</option>
@@ -1231,9 +990,7 @@ export default function SuperAdminCalendarUI() {
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                <ChevronDown size={16} />
-              </div>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
           </div>
         </div>
@@ -1247,7 +1004,7 @@ export default function SuperAdminCalendarUI() {
                     type="checkbox"
                     checked={selectedEvents.size === filteredEvents.length && filteredEvents.length > 0}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+                    className="w-4 h-4 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                 </th>
                 <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest">Event Information</th>
@@ -1258,11 +1015,10 @@ export default function SuperAdminCalendarUI() {
                 <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
-
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredEvents.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                     <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-lg font-medium">No events found</p>
                     <p className="text-sm mt-1">
@@ -1285,102 +1041,63 @@ export default function SuperAdminCalendarUI() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div
-                          className="h-3 w-3 rounded-full mr-3 flex-shrink-0"
-                          style={{
-                            backgroundColor: event.backgroundColor || getEventColor('default')
-                          }}
-                        ></div>
+                        <div className="h-3 w-3 rounded-full mr-3 flex-shrink-0" style={{ backgroundColor: event.backgroundColor || getEventColor('default') }}></div>
                         <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">
-                            {event.title}
-                          </div>
+                          <div className="text-sm font-medium text-gray-900 truncate">{event.title}</div>
                           {event.extendedProps?.description && (
-                            <div className="text-sm text-gray-500 truncate">
-                              {event.extendedProps.description}
-                            </div>
+                            <div className="text-sm text-gray-500 truncate">{event.extendedProps.description}</div>
                           )}
                           {event.extendedProps?.location && (
                             <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-                              <MapPin size={12} />
-                              {event.extendedProps.location}
+                              <MapPin size={12} />{event.extendedProps.location}
                             </div>
                           )}
                         </div>
                       </div>
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap mobile-hide">
                       <div className="flex flex-col">
-                        <div className="text-sm text-gray-900">
-                          {formatDate(event.start)}
-                        </div>
+                        <div className="text-sm text-gray-900">{formatDate(event.start)}</div>
                         {!event.allDay && (
                           <div className="flex items-center gap-1 text-sm text-gray-500">
                             <Clock size={12} />
-                            {new Date(event.start).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         )}
                       </div>
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap mobile-hide">
                       <div className="flex items-center">
-                        <div
-                          className="w-2 h-2 rounded-full mr-2"
-                          style={{ backgroundColor: getEventColor(event.extendedProps?.type) }}
-                        ></div>
-                        <span className="text-sm text-gray-900 capitalize">
-                          {event.extendedProps?.type?.replace('_', ' ') || 'event'}
-                        </span>
+                        <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: getEventColor(event.extendedProps?.type) }}></div>
+                        <span className="text-sm text-gray-900 capitalize">{event.extendedProps?.type?.replace('_', ' ') || 'event'}</span>
                       </div>
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${event.extendedProps?.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : event.extendedProps?.status === 'cancelled'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                        <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          event.extendedProps?.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          event.extendedProps?.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
                           {event.extendedProps?.status || 'upcoming'}
                         </span>
-                        <div className="sm:hidden text-[10px] text-gray-500">
-                          {formatDate(event.start)}
-                        </div>
+                        <div className="sm:hidden text-[10px] text-gray-500">{formatDate(event.start)}</div>
                       </div>
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap mobile-hide">
-                      {event.extendedProps?.attachments?.length > 0 ? (
+                      {(event.extendedProps?.attachments?.length ?? 0) > 0 ? (
                         <div className="flex items-center gap-1">
                           <div className="flex -space-x-2">
                             {event.extendedProps.attachments.slice(0, 3).map((file, idx) => {
-                              const isImage = isImageFile(
-                                file.originalname || file.filename,
-                                file.type,
-                                file.mimetype
-                              );
-
+                              const isImage = isImageFile(file.originalname || file.filename, file.type, file.mimetype);
                               return isImage ? (
                                 <div
                                   key={idx}
                                   className="relative w-8 h-8 rounded-full border-2 border-white overflow-hidden cursor-pointer hover:z-10 transition-transform hover:scale-110"
                                   onClick={() => handleFilePreview(file, event.extendedProps.attachments)}
                                 >
-                                  <img
-                                    src={file.url}
-                                    alt={file.originalname}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      e.target.onerror = null;
-                                      e.target.src = 'https://via.placeholder.com/32?text=Image';
-                                    }}
-                                  />
+                                  <img src={file.url} alt={file.originalname} className="w-full h-full object-cover"
+                                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/32?text=Image'; }} />
                                 </div>
                               ) : (
                                 <div
@@ -1394,30 +1111,18 @@ export default function SuperAdminCalendarUI() {
                             })}
                           </div>
                           {event.extendedProps.attachments.length > 3 && (
-                            <span className="text-xs text-gray-500 ml-1">
-                              +{event.extendedProps.attachments.length - 3}
-                            </span>
+                            <span className="text-xs text-gray-500 ml-1">+{event.extendedProps.attachments.length - 3}</span>
                           )}
                         </div>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>
                       )}
                     </td>
-
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => {
-                            const eventData = {
-                              id: event.id,
-                              title: event.title,
-                              ...event.extendedProps,
-                              start: event.start,
-                              end: event.end,
-                              allDay: event.allDay,
-                              backgroundColor: event.backgroundColor
-                            };
-                            setSelectedEvent(eventData);
+                            setSelectedEvent({ id: event.id, title: event.title, ...event.extendedProps, start: event.start, end: event.end, allDay: event.allDay, backgroundColor: event.backgroundColor });
                             setShowDetailsModal(true);
                           }}
                           className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
@@ -1427,17 +1132,14 @@ export default function SuperAdminCalendarUI() {
                         </button>
                         <button
                           onClick={() => handleEditEvent({
-                            id: event.id,
-                            title: event.title,
-                            type: event.extendedProps?.type,
-                            start: event.start,
-                            end: event.end,
-                            allDay: event.allDay,
-                            location: event.extendedProps?.location,
-                            description: event.extendedProps?.description,
-                            notes: event.extendedProps?.notes,
-                            status: event.extendedProps?.status,
-                            color: event.backgroundColor
+                            id: event.id, title: event.title, type: event.extendedProps?.type,
+                            start: event.start, end: event.end, allDay: event.allDay,
+                            location: event.extendedProps?.location, description: event.extendedProps?.description,
+                            notes: event.extendedProps?.notes, status: event.extendedProps?.status,
+                            color: event.backgroundColor, participants: event.extendedProps?.participants,
+                            programId: event.extendedProps?.programId, projectId: event.extendedProps?.projectId,
+                            reportTicketNumber: event.extendedProps?.reportTicketNumber, mode: event.extendedProps?.mode,
+                            originalEnd: event.extendedProps?.originalEnd, eventDetails: event.extendedProps?.eventDetails
                           })}
                           className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
                           title="Edit event"
@@ -1445,11 +1147,7 @@ export default function SuperAdminCalendarUI() {
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => handleDeleteEvent({
-                            id: event.id,
-                            title: event.title,
-                            ...event.extendedProps
-                          })}
+                          onClick={() => handleDeleteEvent({ id: event.id, title: event.title, ...event.extendedProps })}
                           className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
                           title="Delete event"
                         >
@@ -1471,30 +1169,18 @@ export default function SuperAdminCalendarUI() {
               Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredEvents.length)} of {filteredEvents.length} events
             </div>
             <div className="flex gap-2 order-1 sm:order-2">
-              <button
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                 Previous
               </button>
               {[...Array(totalPages)].map((_, index) => (
-                <button
-                  key={index + 1}
-                  onClick={() => paginate(index + 1)}
-                  className={`px-3 py-1 border rounded-lg text-sm font-medium ${currentPage === index + 1
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                >
+                <button key={index + 1} onClick={() => paginate(index + 1)}
+                  className={`px-3 py-1 border rounded-lg text-sm font-medium ${currentPage === index + 1 ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                   {index + 1}
                 </button>
               ))}
-              <button
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                 Next
               </button>
             </div>
@@ -1502,87 +1188,54 @@ export default function SuperAdminCalendarUI() {
         )}
       </div>
 
-      {/* Enhanced Event Details Modal */}
+      {/* Event Details Modal */}
       {showDetailsModal && selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden my-8">
-            {/* Sticky header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="text-2xl font-bold text-gray-900">
-                Event Details
-              </h3>
-              <button
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setSelectedEvent(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-              >
+              <h3 className="text-2xl font-bold text-gray-900">Event Details</h3>
+              <button onClick={() => { setShowDetailsModal(false); setSelectedEvent(null); }} className="text-gray-500 hover:text-gray-700 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
-            {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {/* Event Title */}
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className="w-4 h-4 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: selectedEvent.backgroundColor || '#3b82f6' }}
-                  ></div>
-                  <h4 className="text-xl font-semibold text-gray-900">
-                    {selectedEvent.title}
-                  </h4>
-                </div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: selectedEvent.backgroundColor || '#3b82f6' }}></div>
+                <h4 className="text-xl font-semibold text-gray-900">{selectedEvent.title}</h4>
               </div>
 
-              {/* Type and Status */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Type</p>
-                  <p className="text-sm font-medium text-gray-900 capitalize">
-                    {selectedEvent.type?.replace('_', ' ') || 'N/A'}
-                  </p>
+                  <p className="text-sm font-medium text-gray-900 capitalize">{selectedEvent.type?.replace('_', ' ') || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Status</p>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedEvent.status === 'completed'
-                    ? 'bg-green-100 text-green-800'
-                    : selectedEvent.status === 'cancelled'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    selectedEvent.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    selectedEvent.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
                     {selectedEvent.status || 'upcoming'}
                   </span>
                 </div>
               </div>
 
-              {/* Date and Time */}
               <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
                 <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatDate(selectedEvent.start)}
-                  </p>
-                  {!selectedEvent.allDay && (
+                  <p className="text-sm font-medium text-gray-900">{formatDate(selectedEvent.start)}</p>
+                  {!selectedEvent.allDay ? (
                     <p className="text-sm text-gray-600 mt-1">
-                      {new Date(selectedEvent.start).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                      {selectedEvent.end && ` - ${new Date(selectedEvent.end).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}`}
+                      {new Date(selectedEvent.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {selectedEvent.end && ` - ${new Date(selectedEvent.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                     </p>
-                  )}
-                  {selectedEvent.allDay && (
+                  ) : (
                     <p className="text-sm text-gray-600 mt-1">All Day Event</p>
                   )}
                 </div>
               </div>
 
-              {/* Location */}
               {selectedEvent.location && (
                 <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
                   <MapPin className="w-5 h-5 text-gray-600 mt-0.5" />
@@ -1593,7 +1246,6 @@ export default function SuperAdminCalendarUI() {
                 </div>
               )}
 
-              {/* Number of Participants */}
               {selectedEvent.type === 'program_event' && selectedEvent.participants !== undefined && (
                 <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
                   <Users className="w-5 h-5 text-gray-600 mt-0.5" />
@@ -1604,7 +1256,6 @@ export default function SuperAdminCalendarUI() {
                 </div>
               )}
 
-              {/* Description */}
               {selectedEvent.description && (
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-xs text-gray-500 mb-2">Description</p>
@@ -1612,7 +1263,6 @@ export default function SuperAdminCalendarUI() {
                 </div>
               )}
 
-              {/* Notes */}
               {selectedEvent.notes && (
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-xs text-gray-500 mb-2">Notes</p>
@@ -1620,65 +1270,48 @@ export default function SuperAdminCalendarUI() {
                 </div>
               )}
 
-              {/* GAD Program Event Details (Objectives, Target Audience, Requirements, Expected Outcomes) */}
-              {selectedEvent.type === 'program_event' && (selectedEvent.eventDetails?.programDetails || selectedEvent.extendedProps?.eventDetails?.programDetails) && (() => {
+              {selectedEvent.type === 'program_event' && (() => {
                 const pDetails = selectedEvent.eventDetails?.programDetails || selectedEvent.extendedProps?.eventDetails?.programDetails;
-                const hasObjectives = pDetails.objectives && pDetails.objectives.length > 0;
-                const hasRequirements = pDetails.requirements && pDetails.requirements.length > 0;
-                const hasOutcomes = pDetails.expectedOutcomes && pDetails.expectedOutcomes.length > 0;
+                if (!pDetails) return null;
+                const hasObjectives = pDetails.objectives?.length > 0;
+                const hasRequirements = pDetails.requirements?.length > 0;
+                const hasOutcomes = pDetails.expectedOutcomes?.length > 0;
                 const hasAudience = !!pDetails.targetAudience;
-
                 if (!hasObjectives && !hasRequirements && !hasOutcomes && !hasAudience) return null;
-
                 return (
                   <div className="p-5 bg-gradient-to-br from-blue-50/40 to-indigo-50/40 rounded-xl border border-blue-100/50 space-y-4">
                     <div className="flex items-center gap-2 border-b border-blue-100 pb-2">
                       <Layers className="w-5 h-5 text-blue-600" />
-                      <h4 className="text-sm font-bold text-gray-900">
-                        GAD Initiative Details
-                      </h4>
+                      <h4 className="text-sm font-bold text-gray-900">GAD Initiative Details</h4>
                     </div>
-
                     {hasAudience && (
                       <div>
                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Target Audience</p>
                         <p className="text-sm font-semibold text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-blue-100/50 shadow-sm w-fit">{pDetails.targetAudience}</p>
                       </div>
                     )}
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Objectives */}
                       {hasObjectives && (
                         <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
                           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-100 pb-1">Objectives</p>
                           <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside flex-1">
-                            {pDetails.objectives.map((obj, i) => (
-                              <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{obj}</span></li>
-                            ))}
+                            {pDetails.objectives.map((obj, i) => <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{obj}</span></li>)}
                           </ul>
                         </div>
                       )}
-
-                      {/* Requirements */}
                       {hasRequirements && (
                         <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
                           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-100 pb-1">Requirements</p>
                           <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside flex-1">
-                            {pDetails.requirements.map((req, i) => (
-                              <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{req}</span></li>
-                            ))}
+                            {pDetails.requirements.map((req, i) => <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{req}</span></li>)}
                           </ul>
                         </div>
                       )}
-
-                      {/* Expected Outcomes */}
                       {hasOutcomes && (
                         <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
                           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-100 pb-1">Expected Outcomes</p>
                           <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside flex-1">
-                            {pDetails.expectedOutcomes.map((out, i) => (
-                              <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{out}</span></li>
-                            ))}
+                            {pDetails.expectedOutcomes.map((out, i) => <li key={i} className="leading-relaxed"><span className="text-gray-800 font-medium">{out}</span></li>)}
                           </ul>
                         </div>
                       )}
@@ -1687,49 +1320,23 @@ export default function SuperAdminCalendarUI() {
                 );
               })()}
 
-              {/* Enhanced Attachments Section */}
-              {selectedEvent.attachments && selectedEvent.attachments.length > 0 && (
+              {(selectedEvent.attachments?.length ?? 0) > 0 && (
                 <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                      <h4 className="text-sm font-semibold text-gray-900">
-                        Attachments ({selectedEvent.attachments.length})
-                      </h4>
-                    </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <h4 className="text-sm font-semibold text-gray-900">Attachments ({selectedEvent.attachments.length})</h4>
                   </div>
-
-                  {/* Image Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {selectedEvent.attachments.map((file, idx) => {
-                      const isImage = isImageFile(
-                        file.originalname || file.filename,
-                        file.type,
-                        file.mimetype
-                      );
-                      const isVideo = isVideoFile(
-                        file.originalname || file.filename,
-                        file.type,
-                        file.mimetype
-                      );
-
+                      const isImage = isImageFile(file.originalname || file.filename, file.type, file.mimetype);
+                      const isVideo = isVideoFile(file.originalname || file.filename, file.type, file.mimetype);
                       return (
-                        <div
-                          key={idx}
-                          className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-lg transition-all"
-                          onClick={() => handleFilePreview(file, selectedEvent.attachments)}
-                        >
+                        <div key={idx} className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:shadow-lg transition-all"
+                          onClick={() => handleFilePreview(file, selectedEvent.attachments)}>
                           {isImage ? (
                             <div className="aspect-square">
-                              <img
-                                src={file.url}
-                                alt={file.originalname}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = 'https://via.placeholder.com/150?text=Image+Error';
-                                }}
-                              />
+                              <img src={file.url} alt={file.originalname} className="w-full h-full object-cover"
+                                onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150?text=Image+Error'; }} />
                             </div>
                           ) : isVideo ? (
                             <div className="aspect-square bg-gray-900 flex items-center justify-center">
@@ -1740,13 +1347,9 @@ export default function SuperAdminCalendarUI() {
                               {getFileIcon(file.originalname || file.filename, file.type, file.mimetype)}
                             </div>
                           )}
-
-                          {/* Overlay */}
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                             <Eye className="w-6 h-6 text-white" />
                           </div>
-
-                          {/* File type badge */}
                           <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
                             {isImage ? 'Image' : isVideo ? 'Video' : 'File'}
                           </div>
@@ -1757,7 +1360,6 @@ export default function SuperAdminCalendarUI() {
                 </div>
               )}
 
-              {/* Consultation Link / Mode */}
               {(selectedEvent.type === 'consultation' || selectedEvent.mode) && (
                 <div className="border-t border-gray-200 pt-4 space-y-3">
                   {selectedEvent.reportTicketNumber && (
@@ -1770,61 +1372,45 @@ export default function SuperAdminCalendarUI() {
                         onClick={() => navigate(`/superadmin/reports?ticket=${selectedEvent.reportTicketNumber}`)}
                         className="flex items-center gap-1 bg-white border border-purple-200 text-purple-700 px-3 py-1.5 rounded text-sm font-medium hover:bg-purple-100 transition-colors shadow-sm"
                       >
-                        <ExternalLink size={16} />
-                        View Report
+                        <ExternalLink size={16} /> View Report
                       </button>
                     </div>
                   )}
-
                   {selectedEvent.mode && (
                     <div className="flex items-center gap-3">
                       <CalendarIcon className="w-5 h-5 text-gray-400" />
                       <div>
                         <p className="text-xs text-gray-500">Mode</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {selectedEvent.mode}
-                        </p>
+                        <p className="text-sm font-medium text-gray-900">{selectedEvent.mode}</p>
                       </div>
                     </div>
                   )}
                 </div>
               )}
             </div>
-            {/* Sticky footer for actions */}
             <div className="border-t border-gray-200 p-4 flex space-x-3 sticky bottom-0 bg-white z-10">
-              <button
-                onClick={() => handleEditEvent(selectedEvent)}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                <Edit size={16} />
-                Edit Event
+              <button onClick={() => handleEditEvent(selectedEvent)}
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                <Edit size={16} /> Edit Event
               </button>
-              <button
-                onClick={() => handleDeleteEvent(selectedEvent)}
-                className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors"
-              >
-                <Trash2 size={16} />
-                Delete
+              <button onClick={() => handleDeleteEvent(selectedEvent)}
+                className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors">
+                <Trash2 size={16} /> Delete
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Enhanced File Preview Modal */}
+      {/* File Preview Modal */}
       {showFilePreview && selectedFile && (
         <div className={`fixed inset-0 bg-black ${isFullscreen ? 'bg-black' : 'bg-opacity-90'} flex items-center justify-center z-[9999] p-4 transition-all`}>
-          {/* Info bar for ALL file types */}
           <div className="absolute top-8 left-0 w-full flex items-center justify-between z-30">
             <div className="flex-1 flex items-center bg-black bg-opacity-75 text-white px-6 py-3 rounded-lg max-w-2xl ml-8">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {selectedFile.originalname || selectedFile.filename || 'File'}
-                </p>
+                <p className="text-sm font-medium truncate">{selectedFile.originalname || selectedFile.filename || 'File'}</p>
                 <div className="flex items-center gap-4 mt-1 text-xs text-gray-300">
-                  {selectedFile.size && selectedFile.size > 0 && (
-                    <span>{formatFileSize(selectedFile.size)}</span>
-                  )}
+                  {selectedFile.size > 0 && <span>{formatFileSize(selectedFile.size)}</span>}
                   {selectedFile.mimetype && (
                     <span className="uppercase bg-gray-700 px-2 py-0.5 rounded">
                       {selectedFile.mimetype.includes('/') ? selectedFile.mimetype.split('/')[1] : selectedFile.mimetype}
@@ -1832,90 +1418,48 @@ export default function SuperAdminCalendarUI() {
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => handleFileDownload(selectedFile)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap"
-              >
-                <Download size={16} />
-                Download
+              <button onClick={() => handleFileDownload(selectedFile)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm ml-4 whitespace-nowrap">
+                <Download size={16} /> Download
               </button>
             </div>
-            {/* Action buttons */}
             <div className="flex gap-2 mr-8">
-              <button
-                onClick={() => {
-                  setShowFilePreview(false);
-                  setSelectedFile(null);
-                  setPreviewFiles([]);
-                  setIsFullscreen(false);
-                }}
-                className="pointer-events-auto text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
-                style={{ position: 'relative' }}
-              >
+              <button onClick={() => { setShowFilePreview(false); setSelectedFile(null); setPreviewFiles([]); setIsFullscreen(false); }}
+                className="text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2">
                 <X className="w-6 h-6" />
               </button>
-              <button
-                onClick={toggleFullscreen}
-                className="pointer-events-auto text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2"
-                style={{ position: 'relative' }}
-              >
+              <button onClick={toggleFullscreen} className="text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2">
                 {isFullscreen ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
               </button>
             </div>
           </div>
           <div className={`relative ${isFullscreen ? 'w-screen h-screen' : 'max-w-6xl w-full max-h-[90vh]'}`}>
-            {/* Navigation buttons */}
             {previewFiles.length > 1 && (
               <>
-                <button
-                  onClick={handlePrevPreview}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 z-10"
-                >
+                <button onClick={handlePrevPreview} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 z-10">
                   <ChevronLeft className="w-6 h-6" />
                 </button>
-                <button
-                  onClick={handleNextPreview}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 z-10"
-                >
+                <button onClick={handleNextPreview} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 z-10">
                   <ChevronRight className="w-6 h-6" />
                 </button>
               </>
             )}
-
-            {/* File counter */}
             {previewFiles.length > 1 && (
               <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded-full text-sm z-10">
                 {currentPreviewIndex + 1} / {previewFiles.length}
               </div>
             )}
-
-            {/* Media display */}
             <div className="flex items-center justify-center h-full">
               {isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) && (
-                <img
-                  src={selectedFile.url}
-                  alt={selectedFile.originalname}
+                <img src={selectedFile.url} alt={selectedFile.originalname}
                   className={`${isFullscreen ? 'w-full h-full object-contain' : 'max-w-full max-h-[85vh] object-contain'} rounded-lg`}
-                  onError={(e) => {
-                    console.error('Image preview error:', selectedFile.url);
-                    e.target.onerror = null;
-                    e.target.parentElement.innerHTML = '<p class="text-white">Failed to load image</p>';
-                  }}
-                />
+                  onError={(e) => { e.target.onerror = null; e.target.parentElement.innerHTML = '<p class="text-white">Failed to load image</p>'; }} />
               )}
-
               {isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) && (
-                <video
-                  controls
-                  autoPlay
-                  className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[85vh]'} rounded-lg`}
-                >
+                <video controls autoPlay className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[85vh]'} rounded-lg`}>
                   <source src={selectedFile.url} type={selectedFile.mimetype} />
-                  Your browser does not support the video tag.
                 </video>
               )}
-
-              {/* PDF Preview - Google Docs viewer, Events style */}
               {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
                 !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
                 (['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
@@ -1923,23 +1467,18 @@ export default function SuperAdminCalendarUI() {
                     src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedFile.url)}&embedded=true`}
                     title={selectedFile.originalname}
                     className={`${isFullscreen ? 'w-full h-full' : 'max-w-full max-h-[90vh]'} rounded-lg bg-white`}
-                    style={{ minHeight: '70vh', width: '100%', border: 'none', background: 'white' }}
+                    style={{ minHeight: '70vh', width: '100%', border: 'none' }}
                   />
                 )}
-
-              {/* Other file types */}
               {!isImageFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
                 !isVideoFile(selectedFile.originalname, selectedFile.type, selectedFile.mimetype) &&
                 !(['application/pdf', 'pdf'].includes(selectedFile.mimetype) || ['application/pdf', 'pdf'].includes(selectedFile.type)) && (
                   <div className="text-center text-white">
                     <File className="w-20 h-20 mx-auto mb-4 opacity-50" />
                     <p>Preview not available for this file type</p>
-                    <button
-                      onClick={() => handleFileDownload(selectedFile)}
-                      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto"
-                    >
-                      <Download size={18} />
-                      Download File
+                    <button onClick={() => handleFileDownload(selectedFile)}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 mx-auto">
+                      <Download size={18} /> Download File
                     </button>
                   </div>
                 )}
@@ -1948,48 +1487,35 @@ export default function SuperAdminCalendarUI() {
         </div>
       )}
 
-      {/* Modal for Adding/Editing Event */}
+      {/* Create / Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {modalMode === "edit" ? "Edit Event" : "Create New Event"}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowModal(false);
-                    setSelectedEvent(null);
-                    setEventFiles([]);
-                  }}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
-                >
+                <h3 className="text-xl font-bold text-gray-900">{modalMode === "edit" ? "Edit Event" : "Create New Event"}</h3>
+                <button onClick={() => { setShowModal(false); setSelectedEvent(null); setEventFiles([]); }} className="text-gray-500 hover:text-gray-700 transition-colors">
                   <X className="w-6 h-6" />
                 </button>
               </div>
+
               <div className="space-y-4">
-                {/* Event Title */}
+                {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Event Title *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Event Title *</label>
                   <input
                     type="text"
                     placeholder="Enter event title"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
-                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
                   />
                 </div>
 
-                {/* Event Type and Status */}
+                {/* Type & Status */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Event Type *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Event Type *</label>
                     <select
                       value={formData.type}
                       onChange={(e) => {
@@ -1998,30 +1524,23 @@ export default function SuperAdminCalendarUI() {
                           ...formData,
                           type: newType,
                           color: getEventColor(newType),
-                          // Consultation: force allDay off so time fields show. Other types: restore allDay.
                           allDay: newType === 'consultation' ? false : true,
-                          // Reset consultation fields when switching away
                           ...(newType !== 'consultation' ? { reportTicketNumber: '', mode: 'online' } : {})
                         });
                       }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
-                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white text-gray-900"
                     >
                       <option value="program_event">Program Event</option>
-                      {/* <option value="consultation">Consultation</option> */}
                       <option value="holiday">Holiday</option>
                       <option value="not_available">Not Available</option>
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900 dark:bg-gray-900 dark:text-white"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white text-gray-900"
                     >
                       <option value="upcoming">Upcoming</option>
                       <option value="completed">Completed</option>
@@ -2030,174 +1549,106 @@ export default function SuperAdminCalendarUI() {
                   </div>
                 </div>
 
-                {/* Auto Color Indicator */}
+                {/* Color indicator */}
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium text-gray-700">Color:</span>
-                  <div
-                    className="w-6 h-6 rounded-full border border-gray-300"
-                    style={{ backgroundColor: getEventColor(formData.type) }}
-                  ></div>
-                  <span className="text-sm text-gray-500 capitalize">
-                    Auto-assigned ({formData.type?.replace('_', ' ')})
-                  </span>
+                  <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: getEventColor(formData.type) }}></div>
+                  <span className="text-sm text-gray-500 capitalize">Auto-assigned ({formData.type?.replace('_', ' ')})</span>
                 </div>
 
-                {/* Restructured Date, Time & All Day Section */}
+                {/* Date & Time */}
                 <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-4">
                   <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                     <h4 className="text-sm font-bold text-gray-800">Date & Time</h4>
                     {formData.type !== 'consultation' && (
                       <div className="flex items-center gap-2">
                         <input
-                          type="checkbox"
-                          id="allDay"
-                          checked={formData.allDay}
+                          type="checkbox" id="allDay" checked={formData.allDay}
                           onChange={(e) => setFormData({ ...formData, allDay: e.target.checked })}
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                         />
-                        <label htmlFor="allDay" className="text-sm font-medium text-gray-700 cursor-pointer">
-                          All Day Event
-                        </label>
+                        <label htmlFor="allDay" className="text-sm font-medium text-gray-700 cursor-pointer">All Day Event</label>
                       </div>
                     )}
                   </div>
-
                   <div className="grid grid-cols-2 gap-6">
-                    {/* Start Selection */}
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                          Start Date *
-                        </label>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Start Date *</label>
                         <input
-                          type="date"
-                          value={formData.start}
+                          type="date" value={formData.start}
                           onChange={(e) => {
                             const newStart = e.target.value;
-                            setFormData({
-                              ...formData,
-                              start: newStart,
-                              // Automatically set End Date if it's empty or behind the new Start Date
-                              end: (!formData.end || formData.end < newStart) ? newStart : formData.end
-                            });
+                            setFormData({ ...formData, start: newStart, end: (!formData.end || formData.end < newStart) ? newStart : formData.end });
                           }}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
-                          required
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                         />
                       </div>
                       {(!formData.allDay || formData.type === 'consultation') && (
-                        <div className="animate-fadeIn">
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            Start Time *
-                          </label>
-                          <input
-                            type="time"
-                            value={formData.startTime}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Start Time *</label>
+                          <input type="time" value={formData.startTime}
                             onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
-                            required
-                          />
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
                         </div>
                       )}
                     </div>
-
-                    {/* End Selection */}
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                          End Date
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.end}
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">End Date</label>
+                        <input type="date" value={formData.end} min={formData.start}
                           onChange={(e) => setFormData({ ...formData, end: e.target.value })}
-                          min={formData.start}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
-                        />
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
                       </div>
                       {(!formData.allDay || formData.type === 'consultation') && (
-                        <div className="animate-fadeIn">
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            End Time *
-                          </label>
-                          <input
-                            type="time"
-                            value={formData.endTime}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">End Time *</label>
+                          <input type="time" value={formData.endTime}
                             onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition outline-none bg-white"
-                            required
-                          />
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Consultation-specific fields */}
+                {/* Consultation fields */}
                 {formData.type === 'consultation' && (
                   <div className="space-y-4 p-5 bg-purple-50 rounded-xl border border-purple-200">
                     <p className="text-sm font-bold text-purple-800 border-b border-purple-200 pb-2">Consultation Details</p>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Report Ticket Number *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. RPT-2026-0001"
-                        value={formData.reportTicketNumber}
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Report Ticket Number *</label>
+                      <input type="text" placeholder="e.g. RPT-2026-0001" value={formData.reportTicketNumber}
                         onChange={(e) => setFormData({ ...formData, reportTicketNumber: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition bg-white text-gray-900"
-                        required
-                      />
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-white text-gray-900" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Consultation Mode
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Mode</label>
                       <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, mode: 'online' })}
-                          className={`p-3 rounded-xl border-2 text-center transition-all ${formData.mode === 'online'
-                            ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
-                            : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
-                            }`}
-                        >
-                          <span className="text-xl mb-1 block">💻</span>
-                          <span className="text-sm font-medium">Online</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, mode: 'face_to_face' })}
-                          className={`p-3 rounded-xl border-2 text-center transition-all ${formData.mode === 'face_to_face'
-                            ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
-                            : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'
-                            }`}
-                        >
-                          <span className="text-xl mb-1 block">🏢</span>
-                          <span className="text-sm font-medium">Face-to-Face</span>
-                        </button>
+                        {['online', 'face_to_face'].map((m) => (
+                          <button key={m} type="button" onClick={() => setFormData({ ...formData, mode: m })}
+                            className={`p-3 rounded-xl border-2 text-center transition-all ${formData.mode === m ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm' : 'border-white bg-white text-gray-600 hover:border-purple-200 shadow-sm'}`}>
+                            <span className="text-xl mb-1 block">{m === 'online' ? '💻' : '🏢'}</span>
+                            <span className="text-sm font-medium">{m === 'online' ? 'Online' : 'Face-to-Face'}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Details (Location, Description, Notes) */}
+                {/* Location, Description, Notes */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {isLocationDescriptionRequired ? "Location *" : "Location"}
                     </label>
-                    <input
-                      type="text"
+                    <input type="text"
                       placeholder={isLocationDescriptionRequired ? "Enter event location" : "Enter location (optional)"}
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
-                      required={isLocationDescriptionRequired}
-                    />
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" />
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {isLocationDescriptionRequired ? "Description *" : "Description"}
@@ -2206,43 +1657,29 @@ export default function SuperAdminCalendarUI() {
                       placeholder={isLocationDescriptionRequired ? "Enter event description" : "Enter description (optional)"}
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900"
-                      rows="3"
-                      required={isLocationDescriptionRequired}
-                    />
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white text-gray-900"
+                      rows="3" />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notes
-                    </label>
-                    <textarea
-                      placeholder="Enter notes (optional)"
-                      value={formData.notes}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea placeholder="Enter notes (optional)" value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none bg-white text-gray-900"
-                      rows="2"
-                    />
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white text-gray-900"
+                      rows="2" />
                   </div>
 
+                  {/* Program event extras */}
                   {formData.type === 'program_event' && (
-                    <div className="space-y-4 animate-fadeIn">
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Number of Participants *
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="Enter number of participants"
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Number of Participants *</label>
+                        <input type="number" placeholder="Enter number of participants"
                           value={formData.participants || ""}
                           onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white text-gray-900"
-                          min="1"
-                          required
-                        />
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
+                          min="1" />
                       </div>
 
-                      {/* GAD Program-specific fields */}
                       <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
                         <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
                           <Layers className="w-4 h-4 text-blue-600" />
@@ -2251,200 +1688,81 @@ export default function SuperAdminCalendarUI() {
 
                         {/* Target Audience */}
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            Target Audience
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. All Students & Faculty"
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Target Audience</label>
+                          <input type="text" placeholder="e.g. All Students & Faculty"
                             value={formData.targetAudience}
                             onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white text-gray-900"
-                          />
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" />
                         </div>
 
                         {/* Objectives */}
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            Objectives
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              id="objectiveInput"
-                              placeholder="Add objective and press enter..."
-                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 text-sm"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const val = e.target.value.trim();
-                                  if (val && !formData.objectives.includes(val)) {
-                                    setFormData({ ...formData, objectives: [...formData.objectives, val] });
-                                    e.target.value = '';
+                        {[
+                          { key: 'objectives', label: 'Objectives', inputId: 'objectiveInput', color: 'blue' },
+                          { key: 'requirements', label: 'Requirements', inputId: 'requirementInput', color: 'purple' },
+                          { key: 'expectedOutcomes', label: 'Expected Outcomes', inputId: 'outcomeInput', color: 'emerald' }
+                        ].map(({ key, label, inputId, color }) => (
+                          <div key={key}>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
+                            <div className="flex gap-2">
+                              <input type="text" id={inputId}
+                                placeholder={`Add ${label.toLowerCase().slice(0, -1)} and press enter...`}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 text-sm"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const val = e.target.value.trim();
+                                    if (val && !(formData[key] ?? []).includes(val)) {
+                                      setFormData({ ...formData, [key]: [...(formData[key] ?? []), val] });
+                                      e.target.value = '';
+                                    }
                                   }
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const input = document.getElementById('objectiveInput');
-                                const val = input.value.trim();
-                                if (val && !formData.objectives.includes(val)) {
-                                  setFormData({ ...formData, objectives: [...formData.objectives, val] });
-                                  input.value = '';
-                                }
-                              }}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0"
-                            >
-                              Add
-                            </button>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {formData.objectives.map((obj, i) => (
-                              <span key={i} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[10px] px-2.5 py-1 rounded border border-blue-100 font-medium">
-                                {obj}
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData({ ...formData, objectives: formData.objectives.filter((_, idx) => idx !== i) })}
-                                  className="text-blue-500 hover:text-blue-700 font-bold ml-1 text-sm leading-none"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Requirements */}
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            Requirements
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              id="requirementInput"
-                              placeholder="Add requirement and press enter..."
-                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 text-sm"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const val = e.target.value.trim();
-                                  if (val && !formData.requirements.includes(val)) {
-                                    setFormData({ ...formData, requirements: [...formData.requirements, val] });
-                                    e.target.value = '';
+                                }}
+                              />
+                              <button type="button"
+                                onClick={() => {
+                                  const input = document.getElementById(inputId);
+                                  const val = input.value.trim();
+                                  if (val && !(formData[key] ?? []).includes(val)) {
+                                    setFormData({ ...formData, [key]: [...(formData[key] ?? []), val] });
+                                    input.value = '';
                                   }
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const input = document.getElementById('requirementInput');
-                                const val = input.value.trim();
-                                if (val && !formData.requirements.includes(val)) {
-                                  setFormData({ ...formData, requirements: [...formData.requirements, val] });
-                                  input.value = '';
-                                }
-                              }}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0"
-                            >
-                              Add
-                            </button>
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0">
+                                Add
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {(formData[key] ?? []).map((item, i) => (
+                                <span key={i} className={`inline-flex items-center gap-1 bg-${color}-50 text-${color}-700 text-[10px] px-2.5 py-1 rounded border border-${color}-100 font-medium`}>
+                                  {item}
+                                  <button type="button"
+                                    onClick={() => setFormData({ ...formData, [key]: (formData[key] ?? []).filter((_, idx) => idx !== i) })}
+                                    className={`text-${color}-500 hover:text-${color}-700 font-bold ml-1 text-sm leading-none`}>
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {formData.requirements.map((req, i) => (
-                              <span key={i} className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[10px] px-2.5 py-1 rounded border border-purple-100 font-medium">
-                                {req}
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData({ ...formData, requirements: formData.requirements.filter((_, idx) => idx !== i) })}
-                                  className="text-purple-500 hover:text-purple-700 font-bold ml-1 text-sm leading-none"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Expected Outcomes */}
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            Expected Outcomes
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              id="outcomeInput"
-                              placeholder="Add outcome and press enter..."
-                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 text-sm"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const val = e.target.value.trim();
-                                  if (val && !formData.expectedOutcomes.includes(val)) {
-                                    setFormData({ ...formData, expectedOutcomes: [...formData.expectedOutcomes, val] });
-                                    e.target.value = '';
-                                  }
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const input = document.getElementById('outcomeInput');
-                                const val = input.value.trim();
-                                if (val && !formData.expectedOutcomes.includes(val)) {
-                                  setFormData({ ...formData, expectedOutcomes: [...formData.expectedOutcomes, val] });
-                                  input.value = '';
-                                }
-                              }}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0"
-                            >
-                              Add
-                            </button>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {formData.expectedOutcomes.map((out, i) => (
-                              <span key={i} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] px-2.5 py-1 rounded border border-emerald-100 font-medium">
-                                {out}
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData({ ...formData, expectedOutcomes: formData.expectedOutcomes.filter((_, idx) => idx !== i) })}
-                                  className="text-emerald-500 hover:text-emerald-700 font-bold ml-1 text-sm leading-none"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Program & Project Linking */}
+                {/* Program & Project linking */}
                 <div className="bg-blue-50 p-5 rounded-xl border border-blue-200 space-y-4">
                   <div className="flex items-center gap-2 border-b border-blue-200 pb-2">
                     <Layers className="w-4 h-4 text-blue-600" />
                     <p className="text-sm font-bold text-blue-800">Link to Project (Optional)</p>
                   </div>
-
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        GAD Program
-                      </label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">GAD Program</label>
                       <select
                         value={formData.programId}
-                        onChange={(e) => {
-                          const progId = e.target.value;
-                          setFormData({ ...formData, programId: progId, projectId: "" });
-                        }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white"
+                        onChange={(e) => setFormData({ ...formData, programId: e.target.value, projectId: "" })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                       >
                         <option value="">-- No Program --</option>
                         {programs.map(p => (
@@ -2453,18 +1771,17 @@ export default function SuperAdminCalendarUI() {
                       </select>
                     </div>
 
-                    {formData.programId && (
+                    {/* ✅ FIXED: uses availableProjects which is always an array */}
+                    {formData.programId && availableProjects.length > 0 && (
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                          Specific Project
-                        </label>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Specific Project</label>
                         <select
                           value={formData.projectId}
                           onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                         >
                           <option value="">-- No Project --</option>
-                          {programs.find(p => p._id === formData.programId)?.projects?.map(proj => (
+                          {availableProjects.map(proj => (
                             <option key={proj._id} value={proj._id}>{proj.name}</option>
                           ))}
                         </select>
@@ -2475,23 +1792,15 @@ export default function SuperAdminCalendarUI() {
 
                 {/* File Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Attach Files (photos, videos, documents)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Attach Files (photos, videos, documents)</label>
                   <div
-                    onDragEnter={handleDragEnter}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragging
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                      }`}
+                    onDragEnter={handleDragEnter} onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave} onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
                   >
                     <input
-                      type="file"
-                      multiple
-                      accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                      type="file" multiple
+                      accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                       onChange={e => setEventFiles(Array.from(e.target.files))}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                     />
@@ -2518,28 +1827,24 @@ export default function SuperAdminCalendarUI() {
                   )}
                 </div>
 
-                {/* Action Buttons */}
+                {/* Actions */}
                 <div className="flex space-x-3 pt-4">
                   <button
-                    onClick={() => {
-                      setShowModal(false);
-                      setSelectedEvent(null);
-                      setEventFiles([]);
-                    }}
+                    onClick={() => { setShowModal(false); setSelectedEvent(null); setEventFiles([]); }}
                     className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveEvent}
-                    className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={
-                      !formData.title.trim() || 
-                      !formData.start || 
-                      (isLocationDescriptionRequired && !formData.location.trim()) || 
-                      (isLocationDescriptionRequired && !formData.description.trim()) ||
+                      !formData.title.trim() ||
+                      !formData.start ||
+                      (isLocationDescriptionRequired && !formData.location?.trim()) ||
+                      (isLocationDescriptionRequired && !formData.description?.trim()) ||
                       (formData.type === 'program_event' && (!formData.participants || parseInt(formData.participants) <= 0))
                     }
+                    className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {modalMode === "edit" ? "Update Event" : "Create Event"}
                   </button>

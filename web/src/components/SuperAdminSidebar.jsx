@@ -153,6 +153,7 @@ const SuperAdminSidebar = ({ isOpen, setIsOpen }) => {
             {/* REPORT HANDLING */}
             <SidebarSection title="Report Handling" isCollapsed={isCollapsed && !isOpen}>
               <SidebarItem icon={<FileText size={18} />} label="Report Management" to="/superadmin/reports" isCollapsed={isCollapsed && !isOpen} onClick={() => setIsOpen(false)} />
+              <SidebarItem icon={<CalendarDays size={18} />} label="Appointments" to="/superadmin/appointments" isCollapsed={isCollapsed && !isOpen} onClick={() => setIsOpen(false)} />
               <SidebarItem
                 icon={<MessageSquare size={18} />}
                 label="Messaging System"

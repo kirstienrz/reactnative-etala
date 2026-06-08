@@ -11,14 +11,7 @@ import {
   reopenTicket,
 } from '../../api/tickets';
 import socketService from '../../api/socket';
-import { sendBookingLinkEmail } from '../../api/calendar';
-import { getAdminAvailability, setAdminAvailabilityBulk } from '../../api/adminAvailability';
 import { getAllCalendarEvents } from '../../api/calendar';
-import { updateReportStatus } from '../../api/report';
-import {
-  addMonths, format, startOfMonth, endOfMonth,
-  eachDayOfInterval, getDay, isBefore, startOfDay, isToday,
-} from 'date-fns';
 import { useDispatch } from 'react-redux';
 import { setUnreadMessageCount } from '../../store/uiSlice';
 import { Capacitor } from '@capacitor/core';
@@ -58,380 +51,6 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 
   );
 };
 
-// ─── Identity Disclosure Modal ────────────────────────────────────────────────
-const IdentityDisclosureModal = ({ isOpen, onClose, ticketNumber }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full animate-fadeIn">
-        <div className="p-6">
-          <div className="flex flex-col items-center text-center mb-6">
-            <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">User Must Disclose Identity First</h3>
-            <p className="text-gray-600 mb-4">This user is currently anonymous and cannot book appointments until they disclose their identity.</p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left w-full">
-              <p className="text-sm text-gray-700 mb-2"><strong>User needs to:</strong></p>
-              <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
-                <li>Go to <strong>My Reports</strong> page</li>
-                <li>Find ticket: <strong>{ticketNumber}</strong></li>
-                <li>Click <strong>View Details</strong></li>
-                <li>Click <strong>Disclose Identity</strong></li>
-                <li>Fill in their personal information</li>
-              </ol>
-            </div>
-          </div>
-          <button onClick={onClose} className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">Got it</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─── Calendar Reminder Modal ──────────────────────────────────────────────────
-const CalendarReminderModal = ({ isOpen, onClose, onConfirm }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full animate-fadeIn">
-        <div className="p-6">
-          <div className="flex flex-col items-center text-center mb-6">
-            <div className="bg-yellow-100 rounded-full p-4 mb-4">
-              <Calendar className="w-12 h-12 text-yellow-600" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Update Your Calendar First</h3>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left w-full">
-              <p className="text-sm font-semibold text-gray-900 mb-2">⚠️ Important Reminder:</p>
-              <ul className="text-sm text-gray-700 space-y-2">
-                <li>• Check if there are any new events or meetings</li>
-                <li>• Update your calendar with blocked time slots</li>
-                <li>• Mark any unavailable dates or times</li>
-              </ul>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">Cancel</button>
-            <button onClick={onConfirm} className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">Calendar is Updated, Proceed</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─── Availability Picker Modal ────────────────────────────────────────────────
-const AvailabilityPickerModal = ({ isOpen, onClose, onConfirm, adminId }) => {
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
-  const [selectedDay, setSelectedDay] = useState(null);
-  const [slotDuration, setSlotDuration] = useState(60);
-  const [customDuration, setCustomDuration] = useState('60');
-  const [workStart, setWorkStart] = useState('08:00');
-  const [workEnd, setWorkEnd] = useState('17:00');
-  const [lunchStart, setLunchStart] = useState('12:00');
-  const [lunchEnd, setLunchEnd] = useState('13:00');
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [configLoaded, setConfigLoaded] = useState(false);
-  const [daySlots, setDaySlots] = useState({});
-  const [customizedDays, setCustomizedDays] = useState(new Set());
-  const [calendarEvents, setCalendarEvents] = useState([]);
-  const [editingSlot, setEditingSlot] = useState(null);
-  const [showAddSlot, setShowAddSlot] = useState(false);
-  const [newSlotStart, setNewSlotStart] = useState('');
-  const [newSlotEnd, setNewSlotEnd] = useState('');
-  const [copyUndoSnapshot, setCopyUndoSnapshot] = useState(null);
-  const [showInfo, setShowInfo] = useState(false);
-
-  const durationPresets = [{ label: '30m', value: 30 }, { label: '1h', value: 60 }, { label: '1.5h', value: 90 }, { label: '2h', value: 120 }];
-  const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
-  const minToTime = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-  const sortSlots = (slots) => [...slots].sort((a, b) => timeToMin(a.start) - timeToMin(b.start));
-
-  const generateSlots = (duration, wStart, wEnd, lStart, lEnd) => {
-    const slots = [];
-    let current = timeToMin(wStart);
-    const endMin = timeToMin(wEnd), ls = timeToMin(lStart), le = timeToMin(lEnd);
-    while (current + duration <= endMin) {
-      const slotEnd = current + duration;
-      if (current < le && slotEnd > ls) { current = current < ls ? le : le; continue; }
-      slots.push({ start: minToTime(current), end: minToTime(slotEnd), available: true, booked: false, custom: false });
-      current = slotEnd;
-    }
-    return slots;
-  };
-
-  const getOverlappingEvent = (dateStr, slotStart, slotEnd, events) => {
-    const ss = timeToMin(slotStart), se = timeToMin(slotEnd);
-    for (const evt of events) {
-      if (evt.type === 'consultation') continue;
-      const evtStart = new Date(evt.start), evtEnd = new Date(evt.end);
-      const evtDateStr = format(evtStart, 'yyyy-MM-dd'), evtEndDateStr = format(evtEnd, 'yyyy-MM-dd');
-      if (evt.allDay) { if (dateStr >= evtDateStr && dateStr <= evtEndDateStr) return evt; continue; }
-      if (evtDateStr === dateStr) {
-        const esm = evtStart.getHours() * 60 + evtStart.getMinutes(), eem = evtEnd.getHours() * 60 + evtEnd.getMinutes();
-        if (ss < eem && se > esm) return evt;
-      }
-      if (dateStr > evtDateStr && dateStr < evtEndDateStr) return evt;
-    }
-    return null;
-  };
-
-  const applyEventOverlaps = (slots, dateStr, events) => slots.map(s => {
-    const ov = getOverlappingEvent(dateStr, s.start, s.end, events);
-    return ov ? { ...s, available: false, booked: true, eventTitle: ov.title || ov.type } : { ...s, eventTitle: s.eventTitle || null };
-  });
-
-  useEffect(() => { if (isOpen) { setConfigLoaded(false); setCopyUndoSnapshot(null); } }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const fetchMonth = async () => {
-      setLoading(true);
-      const monthStr = format(currentMonth, 'yyyy-MM');
-      const start = startOfMonth(currentMonth), end = endOfMonth(currentMonth);
-      const daysArr = eachDayOfInterval({ start, end });
-      let events = [];
-      try { const evtRes = await getAllCalendarEvents({ startDate: format(start, 'yyyy-MM-dd'), endDate: format(end, 'yyyy-MM-dd') }); events = evtRes.data || []; setCalendarEvents(events); } catch { setCalendarEvents([]); }
-      try {
-        const res = await getAdminAvailability(adminId, monthStr);
-        const fd = res.slotDuration || 60;
-        if (res.slotConfig && !configLoaded) {
-          setWorkStart(res.slotConfig.workStart || '08:00'); setWorkEnd(res.slotConfig.workEnd || '17:00');
-          setLunchStart(res.slotConfig.lunchStart || '12:00'); setLunchEnd(res.slotConfig.lunchEnd || '13:00');
-          setSlotDuration(res.slotConfig.slotDuration || fd); setCustomDuration(String(res.slotConfig.slotDuration || fd));
-          setConfigLoaded(true);
-        } else if (!configLoaded) { setSlotDuration(fd); setCustomDuration(String(fd)); setConfigLoaded(true); }
-        const dur = res.slotConfig?.slotDuration || fd, ws = res.slotConfig?.workStart || workStart, we = res.slotConfig?.workEnd || workEnd, ls = res.slotConfig?.lunchStart || lunchStart, le = res.slotConfig?.lunchEnd || lunchEnd;
-        const defSlots = generateSlots(dur, ws, we, ls, le);
-        const slotsMap = {}, customDaysSet = new Set();
-        daysArr.forEach(d => {
-          const dateStr = format(d, 'yyyy-MM-dd'), found = res.availabilities?.find(a => a.date === dateStr);
-          let slots = found?.slots?.length > 0
-            ? found.slots.map(s => ({ start: s.start, end: s.end, available: !s.booked ? (s.available ?? true) : false, booked: !!s.booked, custom: !!s.custom, eventTitle: null }))
-            : defSlots.map(s => ({ ...s, eventTitle: null }));
-          if (found?.customSlots) customDaysSet.add(dateStr);
-          slots = applyEventOverlaps(slots, dateStr, events);
-          slotsMap[dateStr] = sortSlots(slots);
-        });
-        setDaySlots(slotsMap); setCustomizedDays(customDaysSet);
-      } catch {
-        const defSlots = generateSlots(slotDuration, workStart, workEnd, lunchStart, lunchEnd), slotsMap = {};
-        daysArr.forEach(d => { const dateStr = format(d, 'yyyy-MM-dd'); slotsMap[dateStr] = sortSlots(applyEventOverlaps(defSlots.map(s => ({ ...s, eventTitle: null })), dateStr, events)); });
-        setDaySlots(slotsMap);
-      } finally { setLoading(false); }
-    };
-    fetchMonth();
-  }, [isOpen, currentMonth, adminId]);
-
-  const handleRegenerate = () => {
-    const dur = parseInt(customDuration) || 60; setSlotDuration(dur);
-    const newSlots = generateSlots(dur, workStart, workEnd, lunchStart, lunchEnd);
-    setDaySlots(prev => {
-      const updated = { ...prev };
-      for (const dateStr of Object.keys(updated)) {
-        if (customizedDays.has(dateStr) || updated[dateStr].some(s => s.booked && !s.eventTitle)) continue;
-        updated[dateStr] = sortSlots(applyEventOverlaps(newSlots.map(s => ({ ...s, eventTitle: null })), dateStr, calendarEvents));
-      }
-      return updated;
-    });
-  };
-
-  const handleConfirm = async () => {
-    setSaving(true);
-    try {
-      const slotConfig = { workStart, workEnd, lunchStart, lunchEnd, slotDuration: parseInt(customDuration) || slotDuration };
-      const days = Object.entries(daySlots).map(([date, slots]) => ({ date, customSlots: customizedDays.has(date), slots: slots.map(s => ({ start: s.start, end: s.end, booked: s.booked && !s.eventTitle, available: s.available, custom: !!s.custom })) }));
-      await setAdminAvailabilityBulk(adminId, days, slotDuration, slotConfig);
-      onConfirm(days, format(currentMonth, 'yyyy-MM')); onClose();
-    } catch { alert('Failed to save availability. Please try again.'); } finally { setSaving(false); }
-  };
-
-  if (!isOpen) return null;
-  const monthStart = startOfMonth(currentMonth), monthEnd = endOfMonth(currentMonth);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const startDayOfWeek = getDay(monthStart), dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const today = startOfDay(new Date());
-  const formatSlotTime = (time) => { const [h, m] = time.split(':'); const hour = parseInt(h); return `${hour === 0 ? 12 : hour > 12 ? hour - 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`; };
-  const getSlotSummary = (dateStr) => {
-    const slots = daySlots[dateStr];
-    if (!slots) return { available: 0, booked: 0, unavailable: 0, events: 0, custom: false };
-    return { available: slots.filter(s => s.available && !s.booked).length, booked: slots.filter(s => s.booked && !s.eventTitle).length, unavailable: slots.filter(s => !s.available && !s.booked).length, events: slots.filter(s => s.booked && s.eventTitle).length, custom: customizedDays.has(dateStr) };
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col animate-fadeIn">
-        <div className="flex-shrink-0 p-5 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-gray-900">Set Your Availability</h2>
-              <button onClick={() => setShowInfo(!showInfo)} className="p-1 hover:bg-blue-50 rounded-full transition-colors text-blue-500" title="Instructions">
-                <Info className="w-5 h-5" />
-              </button>
-            </div>
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
-          </div>
-
-          {showInfo && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-fadeIn">
-              <h3 className="text-sm font-bold text-blue-900 mb-2">How it works:</h3>
-              <ul className="text-xs text-blue-800 space-y-1.5 list-disc list-inside">
-                <li>Set your standard work hours and slot duration above, then click <strong>Apply</strong> to regenerate the month.</li>
-                <li><strong>Available slots (Green)</strong> will be sent to the user via a booking link.</li>
-                <li><strong>Booked slots (Red)</strong> are consultations already scheduled by users.</li>
-                <li><strong>Events (Purple)</strong> are imported from your calendar (e.g. meetings) and automatically block slots.</li>
-                <li>You can manually toggle slots for specific days by clicking them on the calendar.</li>
-              </ul>
-            </div>
-          )}
-          <div className="flex flex-wrap items-end gap-3 bg-gray-50 rounded-lg p-3">
-            {[['Work Start', workStart, setWorkStart], ['Work End', workEnd, setWorkEnd], ['Lunch Start', lunchStart, setLunchStart], ['Lunch End', lunchEnd, setLunchEnd]].map(([label, val, setter]) => (
-              <div key={label}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                <input type="time" value={val} onChange={e => setter(e.target.value)} className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 w-28" />
-              </div>
-            ))}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Duration (min)</label>
-              <input type="number" value={customDuration} onChange={e => setCustomDuration(e.target.value)} min="15" max="480" step="5" className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 w-20" />
-            </div>
-            <div className="flex gap-1">
-              {durationPresets.map(opt => (
-                <button key={opt.value} onClick={() => setCustomDuration(String(opt.value))} className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${customDuration === String(opt.value) ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>{opt.label}</button>
-              ))}
-            </div>
-            <button onClick={handleRegenerate} className="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 font-medium">Apply</button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5">
-          {loading ? <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div> : (
-            <div className="flex flex-col lg:flex-row gap-5">
-              <div className="flex-1 min-w-0">
-                {copyUndoSnapshot && (
-                  <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 mb-3">
-                    <p className="text-xs text-indigo-700"><span className="font-medium">Copied to {copyUndoSnapshot.affectedDays.length} weekday(s).</span></p>
-                    <button onClick={() => { setDaySlots(prev => { const u = { ...prev }; copyUndoSnapshot.affectedDays.forEach(d => { if (copyUndoSnapshot.slots[d]) u[d] = copyUndoSnapshot.slots[d]; }); return u; }); setCustomizedDays(copyUndoSnapshot.customized); setCopyUndoSnapshot(null); }} className="flex items-center gap-1 px-2.5 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 font-medium"><Undo2 className="w-3 h-3" /> Undo All</button>
-                  </div>
-                )}
-                <div className="flex items-center justify-between mb-4">
-                  <button onClick={() => { setCurrentMonth(prev => addMonths(prev, -1)); setSelectedDay(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
-                  <h3 className="text-lg font-semibold text-gray-900">{format(currentMonth, 'MMMM yyyy')}</h3>
-                  <button onClick={() => { setCurrentMonth(prev => addMonths(prev, 1)); setSelectedDay(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
-                </div>
-                <div className="grid grid-cols-7 gap-1 mb-1">{dayNames.map(d => <div key={d} className="text-center text-xs font-semibold text-gray-500 py-1">{d}</div>)}</div>
-                <div className="grid grid-cols-7 gap-1">
-                  {Array.from({ length: startDayOfWeek }).map((_, i) => <div key={i} />)}
-                  {daysInMonth.map(day => {
-                    const dateStr = format(day, 'yyyy-MM-dd'), isPast = isBefore(day, today) && !isToday(day), isSelected = selectedDay === dateStr, summary = getSlotSummary(dateStr), isWeekend = getDay(day) === 0 || getDay(day) === 6;
-                    const isFullyBooked = summary.booked > 0 && summary.available === 0 && summary.events === 0;
-                    return (
-                      <button key={dateStr} onClick={() => { if (!isPast) { setSelectedDay(isSelected ? null : dateStr); setEditingSlot(null); setShowAddSlot(false); } }} disabled={isPast}
-                        className={`relative p-1.5 rounded-lg text-center transition-all min-h-[64px] flex flex-col items-center justify-start ${isPast ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : isSelected ? 'bg-blue-500 text-white ring-2 ring-blue-300' : isFullyBooked ? 'bg-red-50 hover:bg-red-100 border border-red-200' : isWeekend ? 'bg-orange-50 hover:bg-orange-100 text-gray-700' : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'}`}>
-                        <span className={`text-sm font-semibold ${isToday(day) && !isSelected ? 'text-blue-600' : ''}`}>{format(day, 'd')}</span>
-                        {!isPast && (
-                          <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
-                            {summary.custom && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-blue-100 text-blue-600'}`}>✏️</span>}
-                            {isFullyBooked ? (
-                              <span className={`text-[9px] font-bold px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-red-500 text-white'}`}>FULL</span>
-                            ) : (
-                              <>
-                                {summary.available > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-green-100 text-green-700'}`}>{summary.available}</span>}
-                                {summary.booked > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-red-100 text-red-600'}`}>{summary.booked}</span>}
-                                {summary.events > 0 && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white/30 text-white' : 'bg-purple-100 text-purple-600'}`}>{summary.events}📅</span>}
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              {selectedDay && (
-                <div className="lg:w-96 flex-shrink-0">
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">{format(new Date(selectedDay + 'T00:00:00'), 'EEE, MMM d, yyyy')}</h4>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      <button onClick={() => { const slots = daySlots[selectedDay]; const allAvail = slots.filter(s => !s.booked).every(s => s.available); setDaySlots(prev => ({ ...prev, [selectedDay]: prev[selectedDay].map(s => s.booked ? s : { ...s, available: !allAvail }) })); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 hover:bg-blue-50 rounded">Toggle All</button>
-                      <button onClick={() => setShowAddSlot(v => !v)} className="text-xs text-green-600 hover:text-green-800 font-medium px-2 py-1 hover:bg-green-50 rounded flex items-center gap-0.5"><PlusCircle className="w-3 h-3" /> Add Slot</button>
-                      <button onClick={() => {
-                        const sourceSlots = daySlots[selectedDay]; if (!sourceSlots) return;
-                        const affectedDays = Object.keys(daySlots).filter(d => { if (d === selectedDay) return false; const dd = new Date(d + 'T00:00:00'); if (isBefore(dd, today) && !isToday(dd)) return false; const dow = getDay(dd); if (dow === 0 || dow === 6) return false; return !daySlots[d].some(s => s.booked && !s.eventTitle); });
-                        if (!affectedDays.length) return;
-                        const snapshotSlots = {}; affectedDays.forEach(d => { snapshotSlots[d] = daySlots[d].map(s => ({ ...s })); });
-                        setCopyUndoSnapshot({ slots: snapshotSlots, customized: new Set(customizedDays), affectedDays });
-                        setDaySlots(prev => { const u = { ...prev }; affectedDays.forEach(d => { u[d] = sortSlots(applyEventOverlaps(sourceSlots.map(s => ({ start: s.start, end: s.end, available: s.available, booked: false, custom: s.custom, eventTitle: null })), d, calendarEvents)); }); return u; });
-                        setCustomizedDays(prev => { const ns = new Set(prev); affectedDays.forEach(d => ns.add(d)); return ns; });
-                      }} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 hover:bg-indigo-50 rounded flex items-center gap-0.5"><Copy className="w-3 h-3" /> Copy to Weekdays</button>
-                      {customizedDays.has(selectedDay) && (
-                        <button onClick={() => {
-                          const dur = parseInt(customDuration) || slotDuration;
-                          const defSlots = generateSlots(dur, workStart, workEnd, lunchStart, lunchEnd);
-                          setDaySlots(prev => ({ ...prev, [selectedDay]: sortSlots(applyEventOverlaps(defSlots.map(s => ({ ...s, eventTitle: null })), selectedDay, calendarEvents)) }));
-                          setCustomizedDays(prev => { const ns = new Set(prev); ns.delete(selectedDay); return ns; });
-                        }} className="text-xs text-orange-600 hover:text-orange-800 font-medium px-2 py-1 hover:bg-orange-50 rounded">Reset</button>
-                      )}
-                    </div>
-                    {showAddSlot && (
-                      <div className="bg-white border border-green-200 rounded-lg p-3 mb-3 space-y-2">
-                        <p className="text-xs font-semibold text-gray-700">Add Custom Slot</p>
-                        <div className="flex items-center gap-2">
-                          <div><label className="block text-[10px] text-gray-500">Start</label><input type="time" value={newSlotStart} onChange={e => setNewSlotStart(e.target.value)} className="px-2 py-1 text-sm border border-gray-300 rounded w-28" /></div>
-                          <div><label className="block text-[10px] text-gray-500">End</label><input type="time" value={newSlotEnd} onChange={e => setNewSlotEnd(e.target.value)} className="px-2 py-1 text-sm border border-gray-300 rounded w-28" /></div>
-                          <button onClick={() => {
-                            if (!newSlotStart || !newSlotEnd || timeToMin(newSlotStart) >= timeToMin(newSlotEnd)) { alert('Invalid time range.'); return; }
-                            const existing = daySlots[selectedDay] || [];
-                            if (existing.some(s => timeToMin(newSlotStart) < timeToMin(s.end) && timeToMin(newSlotEnd) > timeToMin(s.start))) { alert('Overlaps with existing slot.'); return; }
-                            const newSlot = { start: newSlotStart, end: newSlotEnd, available: true, booked: false, custom: true, eventTitle: null };
-                            const ov = getOverlappingEvent(selectedDay, newSlotStart, newSlotEnd, calendarEvents);
-                            if (ov) { newSlot.available = false; newSlot.booked = true; newSlot.eventTitle = ov.title || ov.type; }
-                            setDaySlots(prev => ({ ...prev, [selectedDay]: sortSlots([...(prev[selectedDay] || []), newSlot]) }));
-                            setCustomizedDays(prev => new Set([...prev, selectedDay]));
-                            setNewSlotStart(''); setNewSlotEnd(''); setShowAddSlot(false);
-                          }} className="mt-3 px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 font-medium">Add</button>
-                          <button onClick={() => setShowAddSlot(false)} className="mt-3 px-2 py-1 bg-gray-200 text-gray-600 text-xs rounded hover:bg-gray-300">Cancel</button>
-                        </div>
-                      </div>
-                    )}
-                    <div className="space-y-1.5 max-h-[45vh] overflow-y-auto pr-1">
-                      {(daySlots[selectedDay] || []).map((slot, idx) => (
-                        <div key={idx} className={`flex items-center gap-2 p-2 rounded-lg ${slot.booked && slot.eventTitle ? 'bg-purple-50 border border-purple-200' : slot.booked ? 'bg-red-50 border border-red-200' : slot.available ? 'bg-green-50 border border-green-200' : 'bg-gray-100 border border-gray-200'}`}>
-                          <input type="checkbox" checked={slot.available} onChange={() => { if (!slot.booked) setDaySlots(prev => { const u = { ...prev }, sl = [...u[selectedDay]]; sl[idx] = { ...sl[idx], available: !sl[idx].available }; u[selectedDay] = sl; return u; }); }} disabled={slot.booked} className="w-4 h-4 rounded border-gray-300 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1">
-                              {editingSlot?.idx === idx && editingSlot?.field === 'start'
-                                ? <input type="time" value={editingSlot.value} onChange={e => setEditingSlot(p => ({ ...p, value: e.target.value }))} onBlur={() => setEditingSlot(null)} autoFocus className="w-24 px-1 py-0.5 text-xs border border-blue-400 rounded" />
-                                : <button onClick={() => { if (!(slot.booked && !slot.eventTitle)) setEditingSlot({ idx, field: 'start', value: slot.start }); }} className={`text-sm font-medium ${slot.booked && !slot.eventTitle ? 'cursor-not-allowed text-red-600' : 'cursor-pointer hover:underline text-gray-900'}`}>{formatSlotTime(slot.start)}</button>}
-                              <span className="text-xs text-gray-400">–</span>
-                              {editingSlot?.idx === idx && editingSlot?.field === 'end'
-                                ? <input type="time" value={editingSlot.value} onChange={e => setEditingSlot(p => ({ ...p, value: e.target.value }))} onBlur={() => setEditingSlot(null)} autoFocus className="w-24 px-1 py-0.5 text-xs border border-blue-400 rounded" />
-                                : <button onClick={() => { if (!(slot.booked && !slot.eventTitle)) setEditingSlot({ idx, field: 'end', value: slot.end }); }} className={`text-sm font-medium ${slot.booked && !slot.eventTitle ? 'cursor-not-allowed text-red-600' : 'cursor-pointer hover:underline text-gray-900'}`}>{formatSlotTime(slot.end)}</button>}
-                            </div>
-                            {slot.eventTitle && <p className="text-xs text-purple-600 mt-0.5 truncate">📅 {slot.eventTitle}</p>}
-                          </div>
-                          <button onClick={() => { if (slot.booked && !slot.eventTitle) return; setDaySlots(prev => { const u = { ...prev }, sl = [...u[selectedDay]]; sl.splice(idx, 1); u[selectedDay] = sl; return u; }); setCustomizedDays(prev => new Set([...prev, selectedDay])); }} disabled={slot.booked && !slot.eventTitle} className={`p-1 rounded flex-shrink-0 ${slot.booked && !slot.eventTitle ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`}><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
-                      <Clock className="w-3.5 h-3.5" />{formatSlotTime(lunchStart)} – {formatSlotTime(lunchEnd)} Lunch Break
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex-shrink-0 border-t border-gray-200 p-4 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm">Cancel</button>
-          <button onClick={handleConfirm} disabled={saving} className="px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 font-medium text-sm flex items-center gap-2">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : 'Confirm & Send Link'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 const TicketMessagingSystem = () => {
   const location = useLocation();
@@ -443,7 +62,6 @@ const TicketMessagingSystem = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [typingUser, setTypingUser] = useState(null);
-  const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState("active");
   const [readStatusFilter, setReadStatusFilter] = useState("All");
@@ -451,8 +69,6 @@ const TicketMessagingSystem = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showCalendarReminder, setShowCalendarReminder] = useState(false);
-  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', message: '', type: 'info', onConfirm: () => { } });
 
   const messagesEndRef = useRef(null);
@@ -611,42 +227,29 @@ const TicketMessagingSystem = () => {
 
   useEffect(() => {
     if (selectedTicket) {
-      // Leave previous ticket room first before joining new one
       const currentTicketNumber = selectedTicket.ticketNumber;
       socketService.joinTicket(currentTicketNumber);
 
       return () => {
-        // Only leave if we're still on the same ticket
         socketService.leaveTicket(currentTicketNumber);
       };
     }
-  }, [selectedTicket?.ticketNumber]); // Only depend on ticketNumber, not entire object
+  }, [selectedTicket?.ticketNumber]);
 
   useEffect(() => {
     loadTickets();
   }, []);
 
-  // Handle navigation state (select ticket from notification) - separate from tickets loading
   const hasHandledNavigationRef = useRef(false);
 
   useEffect(() => {
     const state = location.state;
 
-    // Only handle once and only if we have tickets loaded
     if (state?.selectedTicketNumber && tickets.length > 0 && !hasHandledNavigationRef.current) {
       const t = tickets.find(t => t.ticketNumber === state.selectedTicketNumber);
       if (t) {
         hasHandledNavigationRef.current = true;
         handleSelectTicket(t);
-
-        // ✅ Auto-open booking modal when coming from "For Interview" status update
-        if (state.openBookingModal) {
-          setTimeout(() => {
-            setShowAvailabilityModal(true);
-          }, 800);
-        }
-
-        // Clear state immediately to prevent re-triggering
         window.history.replaceState({}, document.title);
       }
     }
@@ -684,7 +287,6 @@ const TicketMessagingSystem = () => {
   };
 
   const handleSelectTicket = useCallback(async (ticket) => {
-    // Prevent selecting the same ticket multiple times
     if (selectedTicketRef.current?.ticketNumber === ticket.ticketNumber) {
       return;
     }
@@ -709,7 +311,7 @@ const TicketMessagingSystem = () => {
     }, 3000);
 
     await loadMessages(ticket.ticketNumber);
-  }, [removeUnread]); // Only depend on removeUnread which is already memoized
+  }, [removeUnread]);
 
   const handleMarkAsUnread = async (ticketNumber) => {
     manuallyUnreadRef.current.add(ticketNumber);
@@ -775,76 +377,6 @@ const TicketMessagingSystem = () => {
 
   const showModal = (config) => { setModalConfig(config); setShowConfirmModal(true); };
 
-  const handleSendAppointmentLink = () => {
-    setShowAvailabilityModal(true);
-  };
-
-  const handleCalendarConfirmed = () => {
-    setShowCalendarReminder(false);
-    const userEmail = selectedTicket.reportId?.personalInfo?.email || 'the user';
-    const userName = selectedTicket.displayName || 'User';
-    showModal({
-      title: 'Send Appointment Booking Link?',
-      message: `An email will be sent to the user with a link to book an appointment.\n\nThe user will be able to:\n• View your available time slots\n• Choose their preferred date and time\n• Book the appointment`,
-      type: 'info', confirmText: 'Send Link', onConfirm: handleConfirmSendLink,
-    });
-  };
-
-  const handleConfirmSendLink = async () => {
-    try {
-      setIsSending(true);
-      const ticket = selectedTicket;
-      if (!ticket) {
-        showModal({ title: 'Error', message: 'No ticket selected.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
-        return;
-      }
-      const userId = ticket.userId?._id || ticket.userId;
-      const userEmail = ticket.userId?.email || ticket.reportId?.email || ticket.email;
-      const userName = ticket.displayName && ticket.displayName !== "Anonymous User" ? ticket.displayName
-        : ticket.userId?.firstName ? `${ticket.userId.firstName} ${ticket.userId.lastName}`
-          : ticket.reportId?.firstName ? `${ticket.reportId.firstName} ${ticket.reportId.lastName}`
-            : "Anonymous User";
-      const ticketNumber = ticket.reportId?.ticketNumber || ticket.ticketNumber;
-
-      if (!userId || !userEmail || !ticketNumber) {
-        showModal({ title: 'Error', message: 'Missing required information to send the link.', type: 'error', onConfirm: () => setShowConfirmModal(false) });
-        return;
-      }
-
-      const response = await sendBookingLinkEmail({ userId, userEmail, userName, ticketNumber });
-      if (response.success) {
-        showModal({
-          title: 'Link Sent Successfully',
-          message: '✅ Booking link generated!\n\nThe user has been notified. The link expires in 24 hours.',
-          type: 'success',
-          confirmText: 'Great',
-          onConfirm: () => setShowConfirmModal(false)
-        });
-        try { 
-          await sendTicketMessage(ticket.ticketNumber, { content: `📅 An appointment booking link has been created for you.\n\nPlease check your email inbox to book your preferred consultation schedule.\n\n⏰ Important: The link is valid for 24 hours only.\n\n✅ Once booked, you will receive a confirmation.`, metadata: { type: 'appointment_link' } });
-
-          // Update the report's caseStatus to "For Interview"
-          const reportIdStr = ticket.reportId?._id || ticket.reportId;
-          if (reportIdStr) {
-            await updateReportStatus(reportIdStr, null, "Sent booking link", "For Interview");
-            
-            // Also optionally update the local ticket.reportId.caseStatus if it's an object to instantly reflect in UI
-            if (ticket.reportId && typeof ticket.reportId === 'object') {
-              ticket.reportId.caseStatus = "For Interview";
-            }
-          }
-        }
-        catch { console.error("⚠️ Failed to send chat message or update report status"); }
-      } else {
-        showModal({ title: 'Failed to Send', message: response.message || "Failed to send booking link. Please try again.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
-      }
-    } catch (error) {
-      showModal({ title: 'Error', message: error.message || "An unexpected error occurred while sending the link.", type: 'error', onConfirm: () => setShowConfirmModal(false) });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
   useEffect(() => {
     dispatch(setUnreadMessageCount(unreadCount));
   }, [unreadCount]);
@@ -874,7 +406,7 @@ const TicketMessagingSystem = () => {
   const filteredTickets = tickets.filter(ticket => {
     const q = searchQuery.toLowerCase();
     const matchSearch = !q || ticket.displayName?.toLowerCase().includes(q) || ticket.ticketNumber?.toLowerCase().includes(q) || ticket.reportId?.ticketNumber?.toLowerCase().includes(q);
-    
+
     const isArchived = ticket.status === 'Closed' || ticket.reportId?.caseStatus === 'For Referral' || ticket.reportId?.caseStatus === 'Case Closed';
     const matchTab = activeTab === 'archived' ? isArchived : !isArchived;
 
@@ -894,9 +426,7 @@ const TicketMessagingSystem = () => {
 
   return (
     <>
-      <ConfirmationModal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} confirmText={modalConfig.confirmText} cancelText={modalConfig.cancelText} isLoading={sending || isSending} />
-      <CalendarReminderModal isOpen={showCalendarReminder} onClose={() => setShowCalendarReminder(false)} onConfirm={handleCalendarConfirmed} />
-      <AvailabilityPickerModal isOpen={showAvailabilityModal} onClose={() => setShowAvailabilityModal(false)} onConfirm={handleCalendarConfirmed} adminId={selectedTicket?.adminId || 'me'} />
+      <ConfirmationModal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} onConfirm={modalConfig.onConfirm} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} confirmText={modalConfig.confirmText} cancelText={modalConfig.cancelText} isLoading={sending} />
 
       <div className="flex w-full max-w-full bg-white" style={{ height: '100%', overflow: 'hidden' }}>
 
@@ -1023,7 +553,6 @@ const TicketMessagingSystem = () => {
                           : 'hover:bg-gray-50 border-l-4 border-transparent'
                         }`}>
                       <div className="flex items-start gap-3">
-                        {/* ── Avatar: UnreadDot REMOVED, color change lang ang indicator ── */}
                         <div className="relative flex-shrink-0">
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg transition-colors duration-200 ${ticketUnread ? 'bg-blue-500' : 'bg-gray-400'}`}>
                             {ticket.displayName?.charAt(0).toUpperCase() || 'U'}
@@ -1033,7 +562,9 @@ const TicketMessagingSystem = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-0.5">
                             <span className={`text-sm truncate transition-all duration-150 ${ticketUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
-                              {ticket.displayName || 'Anonymous User'}
+                              {ticket.reportId?.identifiedUserId
+                                ? `${ticket.reportId.identifiedUserId.firstName} ${ticket.reportId.identifiedUserId.lastName}`
+                                : (ticket.displayName || 'Anonymous User')}
                             </span>
                             <span className={`text-xs ml-2 flex-shrink-0 transition-colors duration-150 ${ticketUnread ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
                               {formatDate(ticket.lastMessageAt)}
@@ -1105,9 +636,6 @@ const TicketMessagingSystem = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={handleSendAppointmentLink} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all text-sm font-medium">
-                      <Calendar className="w-4 h-4" />Book Appointment
-                    </button>
                     <button onClick={() => handleMarkAsUnread(selectedTicket.ticketNumber)} title="Mark as unread"
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700 flex-shrink-0">
                       <Mail className="w-4 h-4" />
@@ -1161,7 +689,6 @@ const TicketMessagingSystem = () => {
                                   const handleDownload = async (e) => {
                                     e.preventDefault();
 
-                                    // ✅ If running inside APK, open file in system browser so it downloads natively
                                     if (Capacitor.isNative) {
                                       try {
                                         let absoluteUrl = file.uri;
@@ -1182,18 +709,15 @@ const TicketMessagingSystem = () => {
                                       const token = localStorage.getItem('token');
                                       const isApiUrl = file.uri && (file.uri.includes('localhost:') || file.uri.startsWith('/'));
                                       const fetchOptions = isApiUrl && token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-                                      
+
                                       const response = await fetch(file.uri, fetchOptions);
                                       if (!response.ok && !file.uri.startsWith('data:')) {
                                         throw new Error('Network response was not ok');
                                       }
-                                      
+
                                       const blob = await response.blob();
-                                      
-                                      // Ensure it's explicitly typed as PDF if it's a PDF file
                                       const isPdf = file.type === 'application/pdf' || file.fileName?.endsWith('.pdf');
                                       const finalBlob = isPdf ? new Blob([blob], { type: 'application/pdf' }) : blob;
-                                      
                                       url = window.URL.createObjectURL(finalBlob);
 
                                       const link = document.createElement('a');
@@ -1201,7 +725,7 @@ const TicketMessagingSystem = () => {
                                       link.download = file.fileName || `Attachment_${Date.now()}`;
                                       document.body.appendChild(link);
                                       link.click();
-                                      
+
                                       setTimeout(() => {
                                         document.body.removeChild(link);
                                         window.URL.revokeObjectURL(url);
@@ -1266,13 +790,6 @@ const TicketMessagingSystem = () => {
               {selectedTicket.status === 'Open' && (
                 <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4">
                   <div className="flex gap-3 items-end max-w-4xl mx-auto">
-                    <button 
-                      onClick={handleSendAppointmentLink} 
-                      className="sm:hidden flex-shrink-0 w-11 h-11 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-md active:scale-95 hover:from-purple-600 hover:to-indigo-700 transition-all duration-150" 
-                      title="Send Booking Link"
-                    >
-                      <Calendar className="w-5 h-5" />
-                    </button>
                     <div className="flex-1">
                       <textarea value={newMessage} onChange={handleTyping} onKeyPress={handleKeyPress} placeholder="Type a message..." rows="1" disabled={sending}
                         className="w-full px-4 py-3 bg-gray-100 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"

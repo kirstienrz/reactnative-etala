@@ -8,7 +8,7 @@ const defaultBaseURL = window.location.origin.includes("localhost")
 
 const baseURL = (isMobileApp
   ? import.meta.env.VITE_API_URL_MOBILE
-  : import.meta.env.VITE_API_URL) || defaultBaseURL;
+  : (window.location.origin.includes("localhost") ? null : import.meta.env.VITE_API_URL)) || defaultBaseURL;
 
 const API = axios.create({
   baseURL,

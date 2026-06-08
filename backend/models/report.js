@@ -53,6 +53,11 @@ const reportSchema = new mongoose.Schema({
 
   ticketNumber: { type: String, required: true, unique: true },
   isAnonymous: { type: Boolean, required: true },
+  identifiedUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // For revealed anonymous users
+  identifiedAt: { type: Date }, // When the reporter was identified
+  identifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Who identified the reporter
+  identificationReason: { type: String }, // Reason for identification (e.g., "Referral", "Case Closure")
+  caseClosureReason: { type: String, enum: ["successful", "no_show"] }, // Reason for case closure
 
   // Victim / Reporter Info
   lastName: String,

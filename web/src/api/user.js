@@ -97,3 +97,8 @@ export const getUserAnalytics = async () => {
   const res = await API.get("/user/analytics");
   return res.data;
 };
+
+export const searchUsers = async (query) => {
+  const res = await API.get(`/user/manage/users?search=${query}&limit=20`);
+  return res.data;
+};

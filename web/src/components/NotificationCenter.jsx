@@ -15,13 +15,17 @@ const NotificationCenter = () => {
   const userRole = user?.role?.toLowerCase();
 
   const fetchNotifications = async () => {
-    if (!isLoggedIn) return;
+    const token = localStorage.getItem("token");
+    if (!isLoggedIn || !token) return;
+    
     setLoading(true);
     try {
       const data = await getNotifications();
       setNotifications(data);
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      if (error.response?.status !== 401) {
+        console.error('Failed to fetch notifications:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -96,21 +100,27 @@ const NotificationCenter = () => {
 
   const handleNotificationClick = async (notification) => {
     setIsOpen(false);
-    
+
     // Prepare navigation state based on notification type
     let navigationState = {};
-    
+
     if (notification.metadata?.ticketNumber) {
       // For ticket/message notifications
       navigationState = { selectedTicketNumber: notification.metadata.ticketNumber };
     } else if (notification.metadata?.eventId) {
       // For booking/event notifications - open the event details (view only)
-      navigationState = { 
-        openDetailsModal: true, 
-        eventId: notification.metadata.eventId 
+      navigationState = {
+        openDetailsModal: true,
+        eventId: notification.metadata.eventId
+      };
+    } else if (notification.actionData) {
+      // For appointment actions with actionData (reschedule, cancel, approve)
+      navigationState = {
+        action: notification.action,
+        actionData: notification.actionData,
       };
     }
-    
+
     // Navigate to the link with state
     navigate(notification.link, { state: navigationState });
 

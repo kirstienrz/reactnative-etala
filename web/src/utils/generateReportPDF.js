@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import API from '../api/config'; 
 
 export const generateReportPDF = async ({ formData, ticketNumber, isAnonymous }) => {
   const doc = new jsPDF("p", "mm", "a4");
@@ -215,42 +216,20 @@ export const generateReportPDF = async ({ formData, ticketNumber, isAnonymous })
 
 // ✅ Function to send PDF to backend via email
 // Email is automatically pulled from logged-in user's account
-export const sendPDFToEmail = async (pdfBlob, ticketNumber, userEmail = null) => {
+export const sendPDFToEmail = async (pdfBlob, ticketNumber) => {
   try {
     const formData = new FormData();
     formData.append('pdf', pdfBlob, `TUP_GAD_Report_${ticketNumber}.pdf`);
     formData.append('ticketNumber', ticketNumber);
 
-    // Optional: only include if you want to override the user's registered email
-    if (userEmail) {
-      formData.append('userEmail', userEmail);
-    }
-
-    // Get the token from localStorage
-    const token = localStorage.getItem('token');
-
-    // Use the same base URL as your API config
-    const baseURL = import.meta.env.VITE_API_URL || 'https://reactnative-etala.onrender.com/api';
-
-    const response = await fetch(`${baseURL}/reports/send-pdf`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        // Don't set Content-Type - let the browser set it with boundary for multipart/form-data
-      },
-      body: formData,
+    const response = await API.post('/reports/send-pdf', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to send PDF via email');
-    }
-
-    const result = await response.json();
-    console.log('📧 Email sent to:', result.emailSentTo);
-    return result;
+    console.log('📧 Email sent to:', response.data.emailSentTo);
+    return response.data;
   } catch (error) {
-    console.error('Error sending PDF to email:', error);
+    console.error('Error sending PDF to email:', error.response?.data || error.message);
     throw error;
   }
 };

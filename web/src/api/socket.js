@@ -3,9 +3,19 @@ import { io } from "socket.io-client";
 import { Capacitor } from "@capacitor/core";
 
 const isMobileApp = Capacitor.isNative;
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// Auto-detect: use localhost for local development, otherwise use env var or production
 const SOCKET_URL = isMobileApp
   ? (import.meta.env.VITE_API_URL_MOBILE ? import.meta.env.VITE_API_URL_MOBILE.replace(/\/api$/, "") : "http://localhost:5000")
-  : (import.meta.env.VITE_SOCKET_URL || "http://localhost:5000");
+  : (isLocalhost ? "http://localhost:5000" : (import.meta.env.VITE_SOCKET_URL || "http://localhost:5000"));
+
+console.log("🔧 Socket Service Configuration:");
+console.log("  - isMobileApp:", isMobileApp);
+console.log("  - isLocalhost:", isLocalhost);
+console.log("  - VITE_SOCKET_URL:", import.meta.env.VITE_SOCKET_URL);
+console.log("  - VITE_API_URL_MOBILE:", import.meta.env.VITE_API_URL_MOBILE);
+console.log("  - Final SOCKET_URL:", SOCKET_URL);
 
 class SocketService {
   constructor() {
@@ -64,10 +74,10 @@ class SocketService {
       console.error("❌ Socket connection error:", error);
     });
 
-    // 🔥 Debug: Log all incoming events (remove in production)
-    // this.socket.onAny((eventName, ...args) => {
-    //   console.log(`📨 Socket event received: ${eventName}`, args);
-    // });
+    // 🔥 Debug: Log all incoming events
+    this.socket.onAny((eventName, ...args) => {
+      console.log(`📨 Socket event received: ${eventName}`, args);
+    });
 
     return this.socket;
   }

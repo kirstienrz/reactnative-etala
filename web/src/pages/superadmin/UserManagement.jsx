@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  getAllUsersForManagement, 
-  createUser, 
-  updateUser, 
+import { toast } from "react-toastify";
+import {
+  getAllUsersForManagement,
+  createUser,
+  updateUser,
   resendActivationLink,
   archiveUser,
   unarchiveUser,
@@ -10,10 +11,10 @@ import {
   respondToAppeal,
   bulkArchiveUsers
 } from '../../api/user';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  ChevronsLeft, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
   ChevronsRight,
   Mail,
   CheckCircle,
@@ -238,7 +239,7 @@ export default function UserManagement() {
     if (!window.confirm('Resend activation email to this user?')) return;
     try {
       await resendActivationLink(userId);
-      setSuccess('Activation link resent successfully!');
+      toast.success('Activation link resent successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend link');
@@ -1399,7 +1400,7 @@ export default function UserManagement() {
                 onClick={async () => {
                   const finalReason = archiveReasonInput === 'Other' ? customArchiveReason : archiveReasonInput;
                   if (!finalReason || !finalReason.trim()) {
-                    alert('Please select or specify a reason.');
+                    toast.error('Please select or specify a reason.');
                     return;
                   }
                   
