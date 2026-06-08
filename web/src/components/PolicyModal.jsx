@@ -36,7 +36,7 @@ const PolicyModal = ({ isOpen, onClose, initialTab = 'terms' }) => {
           3. Confidentiality & Disclosure
         </h4>
         <p className="text-gray-600 text-sm leading-relaxed">
-          ETALA prioritizes your safety and confidentiality. Reports are handled exclusively by the TUP GAD Office. Personal identifiers are protected under strict security protocols. Disclosure to external authorities only occurs with your explicit consent or in extreme circumstances where there is an immediate threat to life or a legal mandate for public safety.
+          ETALA prioritizes your safety and confidentiality. Reports are handled exclusively by the TUPT GAD Office. Personal identifiers are protected under strict security protocols. Disclosure to external authorities only occurs with your explicit consent or in extreme circumstances where there is an immediate threat to life or a legal mandate for public safety.
         </p>
       </section>
 

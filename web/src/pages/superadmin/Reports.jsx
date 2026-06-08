@@ -1779,7 +1779,7 @@ const AdminReports = () => {
               </div>
               <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-4 space-y-1">
                 <p className="text-sm font-semibold text-indigo-900 mb-2">Selected Reporter:</p>
-                {[["Name", `${selectedReporter.firstName} ${selectedReporter.lastName}`],["TUP ID", selectedReporter.tupId],["Email", selectedReporter.email]].map(([k, v]) => (
+                {[["Name", `${selectedReporter.firstName} ${selectedReporter.lastName}`],["TUPT ID", selectedReporter.tupId],["Email", selectedReporter.email]].map(([k, v]) => (
                   <p key={k} className="text-sm text-gray-700"><span className="font-medium">{k}:</span> {v}</p>
                 ))}
               </div>

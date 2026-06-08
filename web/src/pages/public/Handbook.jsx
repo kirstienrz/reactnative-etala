@@ -9,7 +9,7 @@ const Handbook = () => {
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
         <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
-            TUP Taguig <span className="text-violet-400">Handbook</span>
+            TUPT Taguig <span className="text-violet-400">Handbook</span>
           </h1>
           <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
           <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
@@ -24,7 +24,7 @@ const Handbook = () => {
           <h2 className="text-3xl font-bold text-slate-900 mb-6">About the Handbook</h2>
           <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed space-y-4">
             <p>
-              The TUP Taguig Handbook serves as a comprehensive resource that outlines the policies, procedures, rights, and responsibilities for all members of the university community. This document is regularly updated to reflect current regulations and institutional standards.
+              The TUPT Taguig Handbook serves as a comprehensive resource that outlines the policies, procedures, rights, and responsibilities for all members of the university community. This document is regularly updated to reflect current regulations and institutional standards.
             </p>
             <p>
               All students, faculty members, and staff are encouraged to familiarize themselves with the handbook to ensure compliance with university policies and to understand the support services and resources available to them.
@@ -45,7 +45,7 @@ const Handbook = () => {
               <div className="md:w-96 h-96 bg-gradient-to-br from-slate-200 to-slate-300 flex-shrink-0 overflow-hidden relative">
                 <img 
                   src="/assets/handbook/tup-handbook.jpg" 
-                  alt="TUP Taguig Handbook"
+                  alt="TUPT Taguig Handbook"
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.style.display = 'none';
@@ -62,7 +62,7 @@ const Handbook = () => {
               {/* Content */}
               <div className="p-12 flex-1 flex flex-col justify-center">
                 <h3 className="text-3xl font-bold text-slate-900 mb-4">
-                  TUP Taguig Official Handbook
+                  TUPT Taguig Official Handbook
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-8 text-lg">
                   Complete handbook containing academic policies, student rights and responsibilities, faculty guidelines, employee regulations, campus rules, support services, and institutional procedures.

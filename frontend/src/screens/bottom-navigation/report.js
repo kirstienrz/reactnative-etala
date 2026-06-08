@@ -927,7 +927,7 @@ const ReportScreen = ({ navigation }) => {
             {formData.confirmConfidentiality && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
           </View>
           <Text style={styles.checkboxLabel}>
-            I understand that this report will be handled confidentially by the TUP GAD Office *
+            I understand that this report will be handled confidentially by the TUPT GAD Office *
           </Text>
         </TouchableOpacity>
       </View>

@@ -955,7 +955,7 @@ const ReportForm = () => {
 
   //       // ✅ STEP 1: Submit the report
   //       const response = await createReport(submitData);
-  //       const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+  //       const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUPT-' + Date.now().toString().slice(-8);
 
   //       // ✅ STEP 2: Generate PDF - This will auto-download
   //       const pdfBlob = generateReportPDF({
@@ -1096,7 +1096,7 @@ const ReportForm = () => {
 
       // Submit the report
       const response = await createReport(submitData);
-      const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUP-' + Date.now().toString().slice(-8);
+      const ticketNumber = response?.data?.ticketNumber || response?.ticketNumber || 'TUPT-' + Date.now().toString().slice(-8);
 
       // Generate PDF
       const pdfBlob = await generateReportPDF({
@@ -1164,7 +1164,7 @@ const ReportForm = () => {
   const validateStep = () => {
     if (currentStep === 1) {
       if (!formData.reporterRole || !formData.tupRole || !formData.reporterDepartment) {
-        showAlert('Required', 'Please provide your role / TUP affiliation / Department.');
+        showAlert('Required', 'Please provide your role / TUPT affiliation / Department.');
         return false;
       }
     }
@@ -1678,7 +1678,7 @@ const ReportForm = () => {
             </p>
 
             <p style={{ marginBottom: '16px' }}>
-              <strong>1. Survivor-Centered Privacy:</strong> All information provided will be treated with the utmost sensitivity. Access is restricted to authorized TUP GAD Office personnel who are trained in trauma-informed response.
+              <strong>1. Survivor-Centered Privacy:</strong> All information provided will be treated with the utmost sensitivity. Access is restricted to authorized TUPT GAD Office personnel who are trained in trauma-informed response.
             </p>
 
             <p style={{ marginBottom: '16px' }}>
@@ -1686,7 +1686,7 @@ const ReportForm = () => {
             </p>
 
             <p style={{ marginBottom: '16px' }}>
-              <strong>3. Non-Retaliation:</strong> TUP prohibits any form of retaliation against individuals who report incidents of GBV. This system is designed to protect you and your right to a safe campus environment.
+              <strong>3. Non-Retaliation:</strong> TUPT prohibits any form of retaliation against individuals who report incidents of GBV. This system is designed to protect you and your right to a safe campus environment.
             </p>
 
             <p style={{ marginBottom: '16px' }}>
@@ -1830,7 +1830,7 @@ const ReportForm = () => {
 
             <div style={currentStyles.inputGroup}>
               <label style={currentStyles.inputLabel}>
-                TUP Affiliation
+                TUPT Affiliation
                 <span style={currentStyles.requiredStar}> *</span>
               </label>
               {user?.userType ? (
@@ -1963,7 +1963,7 @@ const ReportForm = () => {
               Privacy & Confidentiality
             </p>
             <p style={{ margin: 0, fontSize: '13px', color: currentStyles.colors.textSecondary, lineHeight: '1.5' }}>
-              All GBV reports are handled with extreme sensitivity and strict confidentiality by the TUP GAD Office. 
+              All GBV reports are handled with extreme sensitivity and strict confidentiality by the TUPT GAD Office. 
               Your safety and privacy are our top priorities throughout this process.
             </p>
           </div>
@@ -2300,7 +2300,7 @@ const ReportForm = () => {
                 </div>
 
                 <div>
-                  <p style={currentStyles.summaryLabel}>TUP Affiliation</p>
+                  <p style={currentStyles.summaryLabel}>TUPT Affiliation</p>
                   <p style={currentStyles.summaryValue}>{formData.tupRole || 'Not specified'}</p>
                 </div>
 
@@ -2467,7 +2467,7 @@ const ReportForm = () => {
                     {formData.confirmConfidentiality && <Check size={16} color="white" />}
                   </div>
                   <span style={currentStyles.checkboxLabel}>
-                    I understand this report will be handled with extreme sensitivity by the TUP GAD Office
+                    I understand this report will be handled with extreme sensitivity by the TUPT GAD Office
                   </span>
                   <span style={currentStyles.requiredStar}> *</span>
                 </div>
@@ -2540,7 +2540,7 @@ const ReportForm = () => {
             </button>
           )}
           <div>
-            <h1 style={currentStyles.mainTitle}>TUP GAD Incident Report</h1>
+            <h1 style={currentStyles.mainTitle}>TUPT GAD Incident Report</h1>
             <p style={currentStyles.mainSubtitle}>Secure • Confidential • Professional</p>
           </div>
         </div>

@@ -17,8 +17,17 @@ const upload = multer({
     }
 });
 
-// UPLOAD ROUTE - with multer middleware
+// INSPECT EXCEL — returns sheet names + previews (no DB write)
+router.post('/inspect', upload.single('file'), datasetController.inspectExcel);
+
+// DOWNLOAD TEMPLATE
+router.get('/template', datasetController.downloadTemplate);
+
+// UPLOAD ROUTE — imports a specific sheet into DB
 router.post('/upload', upload.single('file'), datasetController.uploadExcel);
+
+// CREATE MANUAL DATASET — from form input (no Excel file)
+router.post('/manual', datasetController.createManualDataset);
 
 // Get all active datasets
 router.get('/', datasetController.getDatasets);
