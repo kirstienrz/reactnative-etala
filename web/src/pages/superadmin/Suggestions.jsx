@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Archive, Eye, Filter, Search, Calendar, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
-import { getSuggestions, updateSuggestion, toggleArchive } from "../../api/suggestion";
+import { Archive, Eye, Filter, Search, Calendar, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader, Trash2 } from "lucide-react";
+import { getSuggestions, updateSuggestion, toggleArchive, deleteSuggestion } from "../../api/suggestion";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -64,6 +64,19 @@ const AdminGADSuggestionBox = () => {
     } catch (err) {
       console.error("Error unarchiving suggestion:", err);
       toast.error("Failed to unarchive suggestion. Please try again.");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this suggestion? This action cannot be undone.")) {
+      try {
+        await deleteSuggestion(id);
+        await fetchSuggestions(); // Refresh data
+        toast.success("Suggestion deleted successfully");
+      } catch (err) {
+        console.error("Error deleting suggestion:", err);
+        toast.error("Failed to delete suggestion. Please try again.");
+      }
     }
   };
 
@@ -647,6 +660,13 @@ const AdminGADSuggestionBox = () => {
                                 <ArchiveX size={16} />
                               </button>
                             )}
+                            <button
+                              onClick={() => handleDelete(s.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -724,6 +744,13 @@ const AdminGADSuggestionBox = () => {
                           <ArchiveX size={16} />
                         </button>
                       )}
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
 

@@ -34,7 +34,7 @@ const MissionVisionPage = () => {
 
               <div className="prose prose-lg text-slate-700 space-y-6">
                 <p className="text-xl leading-relaxed">
-                  To promote gender equality and women's empowerment through comprehensive programs, policies, and activities that eliminate discrimination and ensure equal opportunities for all members of the TUP Taguig community.
+                  To promote gender equality and women's empowerment through comprehensive programs, policies, and activities that eliminate discrimination and ensure equal opportunities for all members of the TUPT Taguig community.
                 </p>
 
                 <p className="text-lg leading-relaxed text-slate-600">
@@ -114,7 +114,7 @@ const MissionVisionPage = () => {
                 </p>
 
                 <p className="text-lg leading-relaxed text-slate-600">
-                  We envision a future where TUP Taguig serves as a model for gender-sensitive education, producing graduates who champion equality and contribute to building a more just and equitable society.
+                  We envision a future where TUPT Taguig serves as a model for gender-sensitive education, producing graduates who champion equality and contribute to building a more just and equitable society.
                 </p>
               </div>
             </div>

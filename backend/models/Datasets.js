@@ -21,6 +21,21 @@ const datasetSchema = new mongoose.Schema({
     restoredAt: {
         type: Date,
         default: null
+    },
+    // Which sheet this dataset was imported from
+    sourceSheet: {
+        type: String,
+        default: null
+    },
+    // Auto-detected column name for Year Level filtering
+    yearLevelField: {
+        type: String,
+        default: null
+    },
+    // Auto-detected column name for Program/Department filtering
+    programField: {
+        type: String,
+        default: null
     }
 }, {
     timestamps: true

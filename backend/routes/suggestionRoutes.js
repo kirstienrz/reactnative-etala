@@ -15,4 +15,7 @@ router.put("/:id", controller.updateSuggestion);
 // ARCHIVE / UNARCHIVE
 router.patch("/:id/archive", controller.toggleArchive);
 
+// DELETE
+router.delete("/:id", controller.deleteSuggestion);
+
 module.exports = router;

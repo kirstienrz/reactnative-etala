@@ -118,3 +118,18 @@ exports.toggleArchive = async (req, res) => {
     res.status(500).json({ error: "Failed to toggle archive" });
   }
 };
+
+// DELETE — used for deleteSuggestion(id)
+exports.deleteSuggestion = async (req, res) => {
+  try {
+    const suggestion = await Suggestion.findOneAndDelete({ id: req.params.id });
+
+    if (!suggestion) {
+      return res.status(404).json({ error: "Suggestion not found" });
+    }
+
+    res.json({ success: true, message: "Suggestion deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete suggestion" });
+  }
+};

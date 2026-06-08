@@ -982,14 +982,14 @@ const sendReportPDF = async (req, res) => {
         subject: `Official Incident Report Copy - ${ticketNumber}`,
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2 style="color: #7e22ce;">TUP GAD Incident Report</h2>
+            <h2 style="color: #7e22ce;">TUPT GAD Incident Report</h2>
             <p>Hello ${reporter.firstName},</p>
             <p>Thank you for submitting your incident report. Your ticket number is <strong>${ticketNumber}</strong>.</p>
             <p>Attached is an official copy of your submitted report in PDF format for your personal records.</p>
             <p>You can track your report status through the <strong>ETALA Portal</strong>.</p>
             <br/>
             <p>Best regards,</p>
-            <p><strong>TUP GAD Office</strong></p>
+            <p><strong>TUPT GAD Office</strong></p>
           </div>
         `,
         attachments: [{ filename: `Report_${ticketNumber}.pdf`, content: pdfFile.buffer, contentType: "application/pdf" }],
