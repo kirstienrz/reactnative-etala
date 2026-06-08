@@ -3,7 +3,13 @@ import API from "./config"; // axios instance with baseURL & headers
 // 🧍 USER ENDPOINTS
 // =========================================================
 
-// 📨 SEND Referral PDF to user email
+// � Search users for reporter identification
+export const searchReporters = async (searchTerm) => {
+  const res = await API.get(`/user/search-reporters?search=${searchTerm}`);
+  return res.data;
+};
+
+// �📨 SEND Referral PDF to user email
 export const sendReferralPDFToUser = async (formData) => {
   const res = await API.post("/reports/send-pdf", formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -118,11 +124,12 @@ export const getReportById = async (id) => {
 };
 
 // 🔄 UPDATE report status
-export const updateReportStatus = async (id, status, remarks = "", caseStatus = null) => {
+export const updateReportStatus = async (id, status, remarks = "", caseStatus = null, caseClosureReason = null) => {
   const res = await API.put(`/reports/admin/${id}/status`, {
     status,
     remarks,
-    caseStatus
+    caseStatus,
+    caseClosureReason
   });
   return res.data;
 };
@@ -210,4 +217,10 @@ export const getReportAnalytics = async (year) => {
     console.error('Error fetching report analytics:', error);
     throw error;
   }
+};
+
+// 📅 Send booking link to user
+export const sendBookingLink = async (reportId) => {
+  const res = await API.post(`/reports/admin/${reportId}/send-booking-link`);
+  return res.data;
 };

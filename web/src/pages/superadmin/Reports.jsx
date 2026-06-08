@@ -1,721 +1,350 @@
-// DEBUG: Triggering HMR
-import React, { useState, useEffect, useRef } from "react";
+/**
+ * AdminReports.jsx
+ *
+ * Report Management dashboard.
+ *
+ * This component is intentionally thin — business logic lives in:
+ *   services/reportStatusService.js   — status constants, colours, icons, rules
+ *   services/appointmentWorkflowService.js — appointment→status side-effects
+ *   services/notificationService.js   — chat & email notifications
+ *   services/pdfService.js            — referral PDF generation
+ *   services/reportUIHelpers.jsx      — InfoItem, severity helpers, filtering
+ *
+ * STATUS WORKFLOW (v2):
+ *   "For Queuing"    — initial, manually set by admin
+ *   "For Scheduling" — manually set by admin OR auto-set when user submits an appointment request
+ *   "For Interview"  — AUTO-SET when admin approves the appointment
+ *   "For Referral"   — manually set by admin (after interview)
+ *   "Case Closed"    — manually set by admin (terminal)
+ *   "Internal - X"   — set automatically when an internal referral is added
+ */
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   MessageSquare, Send, Share2, X, Eye, Archive, RefreshCw,
   Search, Filter, Calendar, FileText, AlertCircle, CheckCircle,
-  Clock, XCircle, ChevronDown, Download, Users, UserCheck, ClipboardList, Edit,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown, Mail, MoreVertical,
-  Brain, Activity, AlertTriangle, Shield, BarChart, ExternalLink, FileDown, RotateCcw
+  Clock, XCircle, ChevronDown, Download, Users, UserCheck, ClipboardList,
+  Edit, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  Brain, Activity, AlertTriangle, Shield, BarChart, ExternalLink,
+  FileDown, RotateCcw, Mail,
 } from "lucide-react";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
+// ── Service imports ────────────────────────────────────────────────────────────
+import {
+  isStatusDisabled,
+  CASE_STATUS_FILTER_OPTIONS,
+  getCaseStatusColor,
+} from "../../services/reportStatusService.js";
+import {
+  getCaseStatusIcon,
+  getSeverityColor,
+  getSeverityIcon,
+  getSeverityStats,
+  InfoItem,
+  applyFilters,
+  countActiveFilters,
+} from "../../services/reportUIHelpers.jsx";
+import {
+  notifyStatusChange,
+  sendReferralNotification,
+  toastSuccess, toastError, toastInfo,
+} from "../../services/notificationService.js";
+import { generateReferralPDFDoc } from "../../services/pdfService.js";
+
+// ── API imports ────────────────────────────────────────────────────────────────
 import {
   getAllReports, getArchivedReports, getReportById,
   updateReportStatus, archiveReport, restoreReport, addReferral,
-  sendReferralPDFToUser, updateReportServices
-} from "../../api/report";
+  updateReportServices, searchReporters, sendBookingLink,
+} from "../../api/report.js";
+import { analyzeReportSeverity, saveReportSeverity } from "../../api/ai.js";
 
-// Add this API function for sentiment analysis
-import { analyzeReportSeverity, saveReportSeverity } from "../../api/ai";
-import { sendTicketMessage } from "../../api/tickets";
-
+// ─── Main component ───────────────────────────────────────────────────────────
 const AdminReports = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState("active");
-  const [reports, setReports] = useState([]);
+  const navigate  = useNavigate();
+  const location  = useLocation();
+
+  // ── Data ──
+  const [activeTab,       setActiveTab]       = useState("active");
+  const [reports,         setReports]         = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [sentimentResults, setSentimentResults] = useState({});
-  const [showAnalysisConfirmModal, setShowAnalysisConfirmModal] = useState(false);
-  const [pendingAnalysis, setPendingAnalysis] = useState(null);
-  const [selectedReportForAnalysis, setSelectedReportForAnalysis] = useState(null);
-  const [sentimentFilter, setSentimentFilter] = useState("All");
+  const [loading,         setLoading]         = useState(false);
+
+  // ── AI analysis ──
+  const [analyzing,              setAnalyzing]              = useState(false);
+  const [sentimentResults,       setSentimentResults]       = useState({});
+  const [selectedReportForAI,    setSelectedReportForAI]    = useState(null);
+  const [showAnalysisConfirm,    setShowAnalysisConfirm]    = useState(false);
+  const [pendingAnalysis,        setPendingAnalysis]        = useState(null);
+
+  // ── Selection ──
   const [selectedReportIds, setSelectedReportIds] = useState([]);
+  const [sentimentFilter,   setSentimentFilter]   = useState("All");
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [readStatusFilter, setReadStatusFilter] = useState("All");
-  const [caseStatusFilter, setCaseStatusFilter] = useState("All");
-  const [internalDepartmentFilter, setInternalDepartmentFilter] = useState("All");
-  const [categoryFilter, setCategoryFilter] = useState("All");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  // ── Filters ──
+  const defaultFilters = {
+    searchTerm:               "",
+    readStatusFilter:         "All",
+    caseStatusFilter:         "All",
+    internalDepartmentFilter: "All",
+    categoryFilter:           "All",
+    dateFrom:                 "",
+    dateTo:                   "",
+    sortOrder:                "latest",
+    sentimentFilter:          "All",
+  };
+  const [filters,     setFilters]     = useState(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
-  const [sortOrder, setSortOrder] = useState("latest");
-
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage,setItemsPerPage]= useState(10);
 
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showCaseStatusModal, setShowCaseStatusModal] = useState(false);
-  const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [showRestoreModal, setShowRestoreModal] = useState(false);
-  const [showReferralModal, setShowReferralModal] = useState(false);
+  // ── Modals ──
+  const [selectedReport,          setSelectedReport]          = useState(null);
+  const [showDetailsModal,        setShowDetailsModal]        = useState(false);
+  const [showCaseStatusModal,     setShowCaseStatusModal]     = useState(false);
+  const [showArchiveModal,        setShowArchiveModal]        = useState(false);
+  const [showRestoreModal,        setShowRestoreModal]        = useState(false);
+  const [showReferralModal,       setShowReferralModal]       = useState(false);
+  const [showViewReferralModal,   setShowViewReferralModal]   = useState(false);
+  const [selectedReferral,        setSelectedReferral]        = useState(null);
+  const [showReporterConfirm,     setShowReporterConfirm]     = useState(false);
+  const [modalTab,                setModalTab]                = useState("details");
 
-  const [newStatus, setNewStatus] = useState("");
-  const [newCaseStatus, setNewCaseStatus] = useState("");
-  const [statusRemarks, setStatusRemarks] = useState("");
-  const [referralDept, setReferralDept] = useState("");
-  const [referralNote, setReferralNote] = useState("");
-  const [openDropdown, setOpenDropdown] = useState(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  // ── Case status form ──
+  const [newCaseStatus,           setNewCaseStatus]           = useState("");
+  const [newReferralType,         setNewReferralType]         = useState("");
+  const [referralDept,            setReferralDept]            = useState("");
+  const [referralNote,            setReferralNote]            = useState("");
+  const [referralRevealIdentity,  setReferralRevealIdentity]  = useState(false);
+  const [caseClosureReason,       setCaseClosureReason]       = useState("");
+  const [showExternalForm,        setShowExternalForm]        = useState(false);
+  const [isSubmittingReferral,    setIsSubmittingReferral]    = useState(false);
+  const [isDownloadingPDF,        setIsDownloadingPDF]        = useState(false);
 
-  const [newReferralType, setNewReferralType] = useState("");
-  // New state for external referral workflow
-  const [externalReferralData, setExternalReferralData] = useState({
-    referredBy: "",
-    position: "",
-    schoolName: "",
-    referralDate: "",
-    reason: "",
-    actionsTaken: [],
-    caseSummary: "",
-    barangayName: "",
-    barangayAddress: "",
-    receivingOfficer: "",
-    endorsementMode: "",
-    attachments: []
+  // ── Booking link ──
+  const [isSendingBookingLink, setIsSendingBookingLink] = useState(false);
+
+  // ── Reporter search ──
+  const [reporterSearch,        setReporterSearch]        = useState("");
+  const [reporterSearchResults, setReporterSearchResults] = useState([]);
+  const [selectedReporter,      setSelectedReporter]      = useState(null);
+  const [reporterInputRef,      setReporterInputRef]      = useState(null);
+  const [dropdownPosition,      setDropdownPosition]      = useState({ top: 0, left: 0 });
+
+  // ── External referral form ──
+  const [externalData, setExternalData] = useState({
+    referredBy: "", position: "", schoolName: "", referralDate: "",
+    reason: "", actionsTaken: [], caseSummary: "",
+    barangayName: "", barangayAddress: "", receivingOfficer: "",
+    endorsementMode: "", attachments: [],
   });
-  const [showExternalReferralForm, setShowExternalReferralForm] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [modalTab, setModalTab] = useState("details");
 
-  const handleDragEnter = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
+  // ── Read tracking ──
+  const [readReports, setReadReports] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("adminReadReports")) || []); }
+    catch { return new Set(); }
+  });
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files);
-      setExternalReferralData(prev => ({
-        ...prev,
-        attachments: [...(prev.attachments || []), ...newFiles]
-      }));
-    }
-  };
-
-  const [showViewReferralModal, setShowViewReferralModal] = useState(false);
-  const [selectedReferral, setSelectedReferral] = useState(null);
-  const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
-  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
-  const [autoOpenReportTicket, setAutoOpenReportTicket] = useState(null);
-  useEffect(() => {
-    if (newCaseStatus === "For Referral" && newReferralType === "External") {
-      setShowExternalReferralForm(true);
-    } else {
-      setShowExternalReferralForm(false);
-    }
-  }, [newCaseStatus, newReferralType]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const ticketParam = params.get("ticket");
-    if (ticketParam) {
-      setAutoOpenReportTicket(ticketParam);
-    }
-  }, [location.search]);
-
-  useEffect(() => {
-    if (!autoOpenReportTicket || loading) return;
-
-    const combinedReports = [...reports, ...archivedReports];
-    const matchedReport = combinedReports.find(r =>
-      r.ticketNumber === autoOpenReportTicket || r._id === autoOpenReportTicket
-    );
-
-    if (matchedReport) {
-      handleViewDetails(matchedReport._id);
-      setAutoOpenReportTicket(null);
-    }
-  }, [autoOpenReportTicket, reports, archivedReports, loading]);
-
+  // ── Misc ──
+  const [toast,                setToast]                = useState({ show: false, message: "", type: "" });
+  const [autoOpenTicket,       setAutoOpenTicket]       = useState(null);
+  const [openDropdown,         setOpenDropdown]         = useState(null);
   const dropdownRefs = useRef({});
 
-  const [readReports, setReadReports] = useState(() => {
-    const stored = localStorage.getItem('adminReadReports');
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const [toast, setToast] = useState({ show: false, message: "", type: "" });
-
-  // Load sentiment results from localStorage
-  useEffect(() => {
-    const savedSentiments = localStorage.getItem('reportSentiments');
-    if (savedSentiments) {
-      setSentimentResults(JSON.parse(savedSentiments));
-    }
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
   }, []);
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
+  // ── Read helpers ───────────────────────────────────────────────────────────
+  const markAsRead   = useCallback((id) => setReadReports(p => { const n = new Set(p); n.add(id);    return n; }), []);
+  const markAsUnread = useCallback((id) => setReadReports(p => { const n = new Set(p); n.delete(id); return n; }), []);
+  const isRead       = useCallback((id) => readReports.has(id), [readReports]);
 
+  // ── Persist read state ─────────────────────────────────────────────────────
   useEffect(() => {
-    setSelectedReportIds([]);
-  }, [activeTab]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (openDropdown && !event.target.closest('.dropdown-trigger') && !event.target.closest('.dropdown-menu')) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [openDropdown]);
-
-  useEffect(() => {
-    localStorage.setItem('adminReadReports', JSON.stringify(readReports));
+    localStorage.setItem("adminReadReports", JSON.stringify([...readReports]));
   }, [readReports]);
 
-  // Save sentiment results to localStorage
+  // ── Persist sentiment cache ────────────────────────────────────────────────
   useEffect(() => {
-    if (Object.keys(sentimentResults).length > 0) {
-      localStorage.setItem('reportSentiments', JSON.stringify(sentimentResults));
+    if (Object.keys(sentimentResults).length) {
+      localStorage.setItem("reportSentiments", JSON.stringify(sentimentResults));
     }
   }, [sentimentResults]);
 
-  // Update dropdown position when it opens
+  // ── Load cached sentiments on mount ───────────────────────────────────────
   useEffect(() => {
-    if (openDropdown && dropdownRefs.current[openDropdown]) {
-      const buttonRect = dropdownRefs.current[openDropdown].getBoundingClientRect();
-      setDropdownPosition({
-        top: buttonRect.bottom + 4,
-        left: buttonRect.right - 192 // 192px = w-48 width
-      });
-    }
+    try {
+      const s = localStorage.getItem("reportSentiments");
+      if (s) setSentimentResults(JSON.parse(s));
+    } catch {}
+  }, []);
+
+  // ── Reset selection when switching tabs ───────────────────────────────────
+  useEffect(() => { setSelectedReportIds([]); }, [activeTab]);
+
+  // ── Auto-open report from URL ?ticket= ────────────────────────────────────
+  useEffect(() => {
+    const t = new URLSearchParams(location.search).get("ticket");
+    if (t) setAutoOpenTicket(t);
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!autoOpenTicket || loading) return;
+    const match = [...reports, ...archivedReports].find(
+      (r) => r.ticketNumber === autoOpenTicket || r._id === autoOpenTicket
+    );
+    if (match) { handleViewDetails(match._id); setAutoOpenTicket(null); }
+  }, [autoOpenTicket, reports, archivedReports, loading]);
+
+  // ── Show external form when "For Referral" + "External" chosen ────────────
+  useEffect(() => {
+    setShowExternalForm(newCaseStatus === "For Referral" && newReferralType === "External");
+  }, [newCaseStatus, newReferralType]);
+
+  // ── Close dropdowns on outside click ──────────────────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      if (openDropdown && !e.target.closest(".dropdown-trigger") && !e.target.closest(".dropdown-menu")) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [openDropdown]);
 
-  const markAsRead = (reportId) => {
-    if (!readReports.includes(reportId)) {
-      setReadReports([...readReports, reportId]);
-    }
-  };
-
-  const markAsUnread = (reportId) => {
-    setReadReports(readReports.filter(id => id !== reportId));
-  };
-
-  const isReportRead = (reportId) => {
-    return readReports.includes(reportId);
-  };
-
-  // Helper to generate a consistent, beautiful PDF Document for referrals
-  const generateReferralPDFDoc = async (report, referral) => {
-    const doc = new jsPDF();
-    const title = `${referral.referralType || "Internal"} Referral Report`;
-    const purpleTheme = [126, 34, 206]; // Purple 700
-
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
-    doc.text(title, 14, 22);
-
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Reference Ticket: ${report.ticketNumber}`, 14, 30);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 35);
-
-    // Horizontal Line
-    doc.setDrawColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
-    doc.setLineWidth(0.5);
-    doc.line(14, 40, 196, 40);
-
-    let yPos = 50;
-
-    // Report Info
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.setFont("helvetica", "bold");
-    doc.text("Incident Overview", 14, yPos);
-    yPos += 10;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    const salaysay = report.salaysay || "No statement provided";
-    const submittedAtDate = report.submittedAt ? new Date(report.submittedAt).toLocaleDateString() : "N/A";
-
-    const overviewData = [
-      ["Field", "Content"],
-      ["Incident Category", report.category || "N/A"],
-      ["Salaysay", salaysay],
-      ["Date Reported", submittedAtDate],
-      ["Current Case Status", report.caseStatus || "N/A"]
-    ];
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [overviewData[0]],
-      body: overviewData.slice(1),
-      theme: 'grid',
-      headStyles: { fillColor: [245, 243, 255], textColor: [126, 34, 206], fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 3 }
-    });
-
-    yPos = (doc.lastAutoTable?.finalY || (yPos + 40)) + 15;
-
-    // Referral Specifics
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Referral Information", 14, yPos);
-    yPos += 10;
-
-    const referralTableData = [];
-    if (referral.referralType === "External") {
-      referralTableData.push(["Target Barangay", referral.barangayName || "N/A"]);
-      referralTableData.push(["Barangay Address", referral.barangayAddress || "N/A"]);
-      referralTableData.push(["Receiving Officer", referral.receivingOfficer || "N/A"]);
-      referralTableData.push(["Endorsement Mode", referral.endorsementMode || "N/A"]);
-      referralTableData.push(["Referred By", referral.referredBy || "N/A"]);
-      referralTableData.push(["Position", referral.position || "N/A"]);
-      referralTableData.push(["School Name", referral.schoolName || "N/A"]);
-    } else {
-      referralTableData.push(["Target Department", referral.department || "N/A"]);
-      const noteLabel = "Internal Note / Remarks";
-      const noteContent = referral.note || "No notes provided";
-      referralTableData.push([noteLabel, noteContent]);
-    }
-    const referralDateStr = referral.date || referral.referralTimestamp ? new Date(referral.date || referral.referralTimestamp).toLocaleString() : new Date().toLocaleString();
-    referralTableData.push(["Date of Referral", referralDateStr]);
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [["Referral Property", "Details"]],
-      body: referralTableData,
-      theme: 'striped',
-      headStyles: { fillColor: purpleTheme },
-      styles: { fontSize: 9, cellPadding: 3 }
-    });
-
-    yPos = (doc.lastAutoTable?.finalY || (yPos + 40)) + 15;
-
-    // Reason (Multi-line)
-    if (referral.referralType === "External" && referral.reason) {
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Reason for Referral", 14, yPos);
-      yPos += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const splitReason = doc.splitTextToSize(referral.reason, 180);
-      doc.text(splitReason, 14, yPos);
-      yPos += (splitReason.length * 6) + 15;
-    }
-
-    // ✅ ADD IMAGES (Evidence)
-    // Priority: Images uploaded in the referral form, fallback to original report attachments
-    const referralImages = referral.attachments?.filter(att => {
-      // Robust check for File object (newly uploaded)
-      const isFile = att instanceof File || (att && typeof att === 'object' && att.name && att.size && att.type);
-      if (isFile) {
-        return att.type.startsWith('image/') || att.name.match(/\.(jpg|jpeg|png|webp|gif)$/i);
-      }
-      // If it's a URI object (from database)
-      return att.uri && (att.uri.startsWith('data:image') || att.uri.includes('image') || att.fileName?.match(/\.(jpg|jpeg|png|webp|gif)$/i));
-    }) || [];
-
-    const reportImages = report.attachments?.filter(att =>
-      att.uri && (att.uri.includes('image') || att.fileName?.match(/\.(jpg|jpeg|png|webp|gif)$/i))
-    ) || [];
-
-    // Prioritize referral images OVER report images. If referral has images, use ONLY those.
-    const imageAttachments = referralImages.length > 0 ? referralImages : reportImages;
-
-    if (imageAttachments.length > 0) {
-      if (yPos > 240) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(purpleTheme[0], purpleTheme[1], purpleTheme[2]);
-      doc.text("Attached Evidence / Media", 14, yPos);
-      yPos += 10;
-
-      const getBase64 = async (fileOrUrl) => {
-        const isFile = fileOrUrl instanceof File || (fileOrUrl && typeof fileOrUrl === 'object' && fileOrUrl.name && fileOrUrl.size && fileOrUrl.type);
-        if (isFile) {
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(fileOrUrl);
-          });
-        }
-        try {
-          const response = await fetch(fileOrUrl);
-          const blob = await response.blob();
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-          });
-        } catch (e) { return null; }
-      };
-
-      for (const att of imageAttachments) {
-        if (yPos > 220) {
-          doc.addPage();
-          yPos = 20;
-        }
-        const isFile = att instanceof File || (att && typeof att === 'object' && att.name && att.size && att.type);
-        const input = isFile ? att : att.uri;
-        const base64 = await getBase64(input);
-        if (base64) {
-          try {
-            doc.addImage(base64, 'JPEG', 14, yPos, 180, 100, undefined, 'FAST');
-            yPos += 110;
-          } catch (err) {
-            console.error("Image embed error:", err);
-            const label = att instanceof File ? att.name : (att.fileName || 'Unnamed');
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(`[Image attachment: ${label}]`, 14, yPos);
-            yPos += 10;
-          }
-        }
-      }
-    }
-
-    // Footer
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150);
-      doc.text(`INSPIRE ERS - Official Referral Report | Page ${i} of ${pageCount}`, 14, 285);
-      doc.text(`Ticket #${report.ticketNumber}`, 170, 285);
-    }
-
-    return doc;
-  };
-
-  // AI Analysis Trigger with Confirmation Modal
-  const triggerAnalysis = (type, reportId = null, reportData = null) => {
-    setPendingAnalysis({ type, reportId, reportData });
-    setShowAnalysisConfirmModal(true);
-  };
-
-  // Sentiment Analysis Function
-  const analyzeSentiment = async (reportId, reportData) => {
-    setAnalyzing(true);
-    setSelectedReportForAnalysis(reportId);
-
-    // Dynamic safety lookup to extract full details from standard/archived report lists
-    const fullReport = (reports || []).find(r => r._id === reportId) ||
-      (archivedReports || []).find(r => r._id === reportId) ||
-      (selectedReport && selectedReport._id === reportId ? selectedReport : null);
-
-    const description = reportData?.incidentDescription ||
-      reportData?.incidentStatement ||
-      reportData?.salaysay ||
-      fullReport?.incidentDescription ||
-      fullReport?.incidentStatement ||
-      fullReport?.salaysay ||
-      "";
-
-    try {
-      const res = await analyzeReportSeverity({
-        incidentDescription: description,
-        reportId: reportId,
-        additionalContext: {
-          timestamp: reportData.timestamp,
-          location: reportData.location || 'Not specified',
-          peopleInvolved: reportData.peopleInvolved || 'Not specified'
-        }
-      });
-
-      if (res.success) {
-        const newSentimentResults = {
-          ...sentimentResults,
-          [reportId]: {
-            ...res.data,
-            analyzedAt: new Date().toISOString()
-          }
-        };
-        setSentimentResults(newSentimentResults);
-        showToast(`Severity analysis complete: ${res.data.severity}`, "success");
-        localStorage.setItem('reportSentiments', JSON.stringify(newSentimentResults));
-        
-        // Save report severity to database immediately!
-        try {
-          await saveReportSeverity(reportId, res.data.severity);
-          const localizedSeverity = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
-          setReports(prev => prev.map(r => r._id === reportId ? { ...r, severity: localizedSeverity } : r));
-          setArchivedReports(prev => prev.map(r => r._id === reportId ? { ...r, severity: localizedSeverity } : r));
-        } catch (dbErr) {
-          console.error("Failed to save severity to DB:", dbErr);
-        }
-      } else {
-        showToast(res.message || "Failed to analyze severity", "error");
-      }
-    } catch (error) {
-      console.error('Analysis error:', error);
-      showToast(`Analysis failed: ${error.response?.data?.message || error.message}`, "error");
-    } finally {
-      setAnalyzing(false);
-      setSelectedReportForAnalysis(null);
-    }
-  };
-
-  // Bulk Analyze All Pending Reports
-  const handleAnalyzeAllPending = async () => {
-    const combined = [...reports, ...archivedReports];
-    const unanalyzed = combined.filter(r => !sentimentResults[r._id] || r.severity === 'Unanalyzed');
-    
-    if (unanalyzed.length === 0) {
-      showToast("All reports are already analyzed!", "success");
-      return;
-    }
-
-    setAnalyzing(true);
-    showToast(`Starting AI analysis for ${unanalyzed.length} reports...`, "info");
-
-    let successCount = 0;
-    
-    for (let i = 0; i < unanalyzed.length; i++) {
-      const report = unanalyzed[i];
-      const description = report.incidentDescription || 
-                          report.incidentStatement || 
-                          report.salaysay || 
-                          "No incident description provided.";
-                          
-      try {
-        const res = await analyzeReportSeverity({
-          incidentDescription: description,
-          reportId: report._id,
-          additionalContext: {
-            timestamp: report.submittedAt,
-            location: report.placeOfIncident || 'Not specified',
-          }
-        });
-
-        if (res.success) {
-          successCount++;
-          
-          setSentimentResults(prev => {
-            const updated = {
-              ...prev,
-              [report._id]: {
-                ...res.data,
-                analyzedAt: new Date().toISOString()
-              }
-            };
-            localStorage.setItem('reportSentiments', JSON.stringify(updated));
-            return updated;
-          });
-
-          await saveReportSeverity(report._id, res.data.severity);
-
-          const localizedSeverity = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
-          setReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
-          setArchivedReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
-        }
-      } catch (err) {
-        console.error(`Failed to analyze report ${report._id}:`, err);
-      }
-    }
-
-    setAnalyzing(false);
-    showToast(`Analysis complete: ${successCount}/${unanalyzed.length} reports analyzed successfully.`, "success");
-  };
-
-  // Bulk Analyze Checked Reports
-  const handleBulkAnalyze = async () => {
-    if (selectedReportIds.length === 0) return;
-    
-    setAnalyzing(true);
-    showToast(`Starting bulk severity analysis for ${selectedReportIds.length} reports...`, "info");
-    
-    let successCount = 0;
-    const combined = [...reports, ...archivedReports];
-    const targets = combined.filter(r => selectedReportIds.includes(r._id));
-    
-    for (let i = 0; i < targets.length; i++) {
-      const report = targets[i];
-      const description = report.incidentDescription || 
-                          report.incidentStatement || 
-                          report.salaysay || 
-                          "No incident description provided.";
-                          
-      try {
-        const res = await analyzeReportSeverity({
-          incidentDescription: description,
-          reportId: report._id,
-          additionalContext: {
-            timestamp: report.submittedAt,
-            location: report.placeOfIncident || 'Not specified',
-          }
-        });
-
-        if (res.success) {
-          successCount++;
-          
-          setSentimentResults(prev => {
-            const updated = {
-              ...prev,
-              [report._id]: {
-                ...res.data,
-                analyzedAt: new Date().toISOString()
-              }
-            };
-            localStorage.setItem('reportSentiments', JSON.stringify(updated));
-            return updated;
-          });
-
-          await saveReportSeverity(report._id, res.data.severity);
-
-          const localizedSeverity = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
-          setReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
-          setArchivedReports(prev => prev.map(r => r._id === report._id ? { ...r, severity: localizedSeverity } : r));
-        }
-      } catch (err) {
-        console.error(`Failed to analyze report ${report._id}:`, err);
-      }
-    }
-
-    setAnalyzing(false);
-    setSelectedReportIds([]); // Clear selection
-    showToast(`Bulk analysis complete: ${successCount}/${targets.length} reports successfully analyzed.`, "success");
-  };
-
-  // Get severity color
-  const getSeverityColor = (severity) => {
-    switch (severity?.toLowerCase()) {
-      case 'severe':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'moderate':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'mild':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  // Get severity icon
-  const getSeverityIcon = (severity) => {
-    switch (severity?.toLowerCase()) {
-      case 'severe':
-        return <AlertTriangle size={14} className="text-red-600" />;
-      case 'moderate':
-        return <Activity size={14} className="text-yellow-600" />;
-      case 'mild':
-        return <Shield size={14} className="text-green-600" />;
-      default:
-        return <Brain size={14} className="text-gray-400" />;
-    }
-  };
-
-  // ✅ Navigate to messaging with selected ticket
-  const handleMessageUser = async (report) => {
-    // Navigate to messages page with the ticket number as state
-    navigate('/superadmin/messages', {
-      state: {
-        selectedTicketNumber: report.ticketNumber,
-        reportId: report._id
-      }
-    });
-  };
-
+  // ── Data fetch ─────────────────────────────────────────────────────────────
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const [activeRes, archivedRes] = await Promise.all([
-        getAllReports(),
-        getArchivedReports()
-      ]);
-
-      const activeList = activeRes.data || [];
-      const archivedList = archivedRes.data || [];
+      const [activeRes, archRes] = await Promise.all([getAllReports(), getArchivedReports()]);
+      const activeList = activeRes.data   || [];
+      const archList   = archRes.data     || [];
 
       if (activeRes.success) setReports(activeList);
       else showToast(activeRes.message || "Failed to fetch active reports", "error");
 
-      if (archivedRes.success) setArchivedReports(archivedList);
-      else console.error("Archived reports fetch failed:", archivedRes);
+      if (archRes.success) setArchivedReports(archList);
 
-      // Populate sentimentResults from DB but merge with localStorage to preserve original realistic confidences (65%, 90%, etc.)
-      const dbSentiments = {};
-      const localSentiments = {};
-      const savedSentiments = localStorage.getItem('reportSentiments');
-      if (savedSentiments) {
-        try {
-          Object.assign(localSentiments, JSON.parse(savedSentiments));
-        } catch (e) { }
-      }
-
-      [...activeList, ...archivedList].forEach(r => {
-        if (r.severity && r.severity !== 'Unanalyzed') {
-          if (localSentiments[r._id]) {
-            // Use the real confidence and details from local storage
-            dbSentiments[r._id] = localSentiments[r._id];
-          } else {
-            // Realistic fallback confidence (e.g. 85%) instead of an extreme 100%
-            dbSentiments[r._id] = {
-              severity: r.severity.toUpperCase(),
-              confidence: 0.85,
-              explanation: "Loaded from secure GAD database records."
-            };
-          }
+      // Merge DB severity with local cache
+      let local = {};
+      try { local = JSON.parse(localStorage.getItem("reportSentiments")) || {}; } catch {}
+      const merged = { ...local };
+      [...activeList, ...archList].forEach((r) => {
+        if (r.severity && r.severity !== "Unanalyzed") {
+          merged[r._id] = local[r._id] || {
+            severity:    r.severity.toUpperCase(),
+            confidence:  0.85,
+            explanation: "Loaded from database.",
+          };
         }
       });
+      setSentimentResults(merged);
 
-      // Merge both to ensure all real confidences are perfectly restored
-      const mergedSentiments = { ...localSentiments, ...dbSentiments };
-      if (Object.keys(mergedSentiments).length > 0) {
-        setSentimentResults(mergedSentiments);
-      }
-
-      // Silent background synchronization to MongoDB to align server calculations/dashboard charts!
-      [...activeList, ...archivedList].forEach(async (r) => {
-        if ((!r.severity || r.severity === 'Unanalyzed') && localSentiments[r._id]) {
-          const localSev = localSentiments[r._id].severity;
-          if (localSev && localSev !== 'Unanalyzed') {
-            try {
-              // Silently write to MongoDB so dashboard statistics are perfectly computed
-              await saveReportSeverity(r._id, localSev);
-              // Update local state record's severity field
-              r.severity = localSev.charAt(0).toUpperCase() + localSev.slice(1).toLowerCase();
-            } catch (err) {
-              console.error(`Silent sync failed for report ${r._id}:`, err);
-            }
-          }
+      // Background sync: push any locally-cached severities up to DB
+      [...activeList, ...archList].forEach(async (r) => {
+        if ((!r.severity || r.severity === "Unanalyzed") && local[r._id]?.severity) {
+          try { await saveReportSeverity(r._id, local[r._id].severity); } catch {}
         }
       });
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || "Unknown error";
-      showToast(`Failed to fetch reports: ${errorMessage}`, "error");
+    } catch (err) {
+      showToast(`Failed to fetch reports: ${err.response?.data?.message || err.message}`, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const showToast = (message, type = "success") => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
+  useEffect(() => { fetchReports(); }, []);
+
+  // ── AI analysis ────────────────────────────────────────────────────────────
+  const triggerAnalysis = (type, reportId = null, reportData = null) => {
+    setPendingAnalysis({ type, reportId, reportData });
+    setShowAnalysisConfirm(true);
   };
 
+  const runSingleAnalysis = async (reportId, reportData) => {
+    setAnalyzing(true);
+    setSelectedReportForAI(reportId);
+    const full = [...reports, ...archivedReports].find((r) => r._id === reportId);
+    const description =
+      reportData?.incidentDescription ||
+      reportData?.salaysay ||
+      full?.salaysay ||
+      full?.incidentDescription || "";
+    try {
+      const res = await analyzeReportSeverity({
+        incidentDescription: description,
+        reportId,
+        additionalContext: {
+          timestamp: reportData?.timestamp,
+          location:  reportData?.location || "Not specified",
+        },
+      });
+      if (res.success) {
+        const entry = { ...res.data, analyzedAt: new Date().toISOString() };
+        setSentimentResults((p) => ({ ...p, [reportId]: entry }));
+        showToast(`Severity analysis complete: ${res.data.severity}`, "success");
+        try {
+          await saveReportSeverity(reportId, res.data.severity);
+          const sev = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
+          setReports((p) => p.map((r) => r._id === reportId ? { ...r, severity: sev } : r));
+          setArchivedReports((p) => p.map((r) => r._id === reportId ? { ...r, severity: sev } : r));
+        } catch {}
+      } else {
+        showToast(res.message || "Failed to analyze severity", "error");
+      }
+    } catch (err) {
+      showToast(`Analysis failed: ${err.response?.data?.message || err.message}`, "error");
+    } finally {
+      setAnalyzing(false);
+      setSelectedReportForAI(null);
+    }
+  };
+
+  const runBulkAnalysis = async (ids) => {
+    setAnalyzing(true);
+    const combined = [...reports, ...archivedReports];
+    const targets  = combined.filter((r) => ids.includes(r._id));
+    let ok = 0;
+    for (const report of targets) {
+      const description = report.salaysay || report.incidentDescription || "No description.";
+      try {
+        const res = await analyzeReportSeverity({
+          incidentDescription: description,
+          reportId: report._id,
+          additionalContext: {
+            timestamp: report.submittedAt,
+            location:  report.placeOfIncident || "Not specified",
+          },
+        });
+        if (res.success) {
+          ok++;
+          const entry = { ...res.data, analyzedAt: new Date().toISOString() };
+          setSentimentResults((prev) => ({ ...prev, [report._id]: entry }));
+          await saveReportSeverity(report._id, res.data.severity);
+          const sev = res.data.severity.charAt(0).toUpperCase() + res.data.severity.slice(1).toLowerCase();
+          setReports((p) => p.map((r) => r._id === report._id ? { ...r, severity: sev } : r));
+          setArchivedReports((p) => p.map((r) => r._id === report._id ? { ...r, severity: sev } : r));
+        }
+      } catch {}
+    }
+    setAnalyzing(false);
+    return { ok, total: targets.length };
+  };
+
+  const handleBulkAnalyze = async () => {
+    if (!selectedReportIds.length) return;
+    showToast(`Starting bulk analysis for ${selectedReportIds.length} reports...`, "info");
+    const { ok, total } = await runBulkAnalysis(selectedReportIds);
+    setSelectedReportIds([]);
+    showToast(`Bulk analysis complete: ${ok}/${total} reports analyzed.`, "success");
+  };
+
+  // ── View details ───────────────────────────────────────────────────────────
   const handleViewDetails = async (reportId) => {
     try {
       const res = await getReportById(reportId);
@@ -724,200 +353,163 @@ const AdminReports = () => {
         setShowDetailsModal(true);
         markAsRead(reportId);
       } else {
-        showToast(res.message || "Failed to load report details", "error");
+        showToast(res.message || "Failed to load report", "error");
       }
-    } catch (error) {
-      showToast(`Failed to load report details: ${error.message}`, "error");
+    } catch (err) {
+      showToast(`Failed to load report: ${err.message}`, "error");
     }
   };
 
+  const handleMessageUser = (report) => {
+    navigate("/superadmin/messages", {
+      state: { selectedTicketNumber: report.ticketNumber, reportId: report._id },
+    });
+  };
+
+  // ── Send booking link ──────────────────────────────────────────────────────
+  const handleSendBookingLink = async (reportId) => {
+    setIsSendingBookingLink(true);
+    try {
+      const res = await sendBookingLink(reportId);
+      if (res.success) {
+        showToast("Booking link sent successfully");
+      } else {
+        showToast(res.message || "Failed to send booking link", "error");
+      }
+    } catch (err) {
+      showToast(
+        `Failed to send booking link: ${err.response?.data?.message || err.message}`,
+        "error"
+      );
+    } finally {
+      setIsSendingBookingLink(false);
+    }
+  };
+
+  // ── Case status update ─────────────────────────────────────────────────────
+  const handleUpdateCaseStatus = async () => {
+    if (!newCaseStatus) return;
+    if (newCaseStatus === "For Referral" && newReferralType === "External") {
+      setShowExternalForm(true);
+      return;
+    }
+    const finalStatus = newCaseStatus === "For Referral" && newReferralType
+      ? newReferralType
+      : newCaseStatus;
+
+    try {
+      const res = await updateReportStatus(
+        selectedReport._id,
+        selectedReport.status,
+        "",
+        finalStatus,
+        caseClosureReason
+      );
+      if (res.success) {
+        showToast("Case status updated successfully");
+        resetStatusModal();
+        fetchReports();
+        try {
+          await notifyStatusChange(selectedReport.ticketNumber, finalStatus);
+        } catch (e) {
+          showToast("Chat notification failed: " + (e.message || ""), "error");
+        }
+      } else {
+        showToast(res.message || "Failed to update case status", "error");
+      }
+    } catch (err) {
+      showToast(`Failed to update case status: ${err.response?.data?.message || err.message}`, "error");
+    }
+  };
+
+  // ── Internal referral ──────────────────────────────────────────────────────
+  const handleAddReferral = async () => {
+    if (!referralDept) return;
+    try {
+      const payload = {
+        department:     referralDept,
+        note:           referralNote,
+        referralType:   "Internal",
+        revealIdentity: referralRevealIdentity,
+      };
+      const res = await addReferral(selectedReport._id, payload);
+      if (res.success) {
+        showToast("Referral added successfully");
+        resetStatusModal();
+        fetchReports();
+        try {
+          await sendReferralNotification(selectedReport, {
+            ...payload,
+            referralTimestamp: new Date().toISOString(),
+          });
+        } catch (e) {
+          showToast("Failed to send referral notification: " + (e.message || ""), "error");
+        }
+      } else {
+        showToast(res.message || "Failed to add referral", "error");
+      }
+    } catch (err) {
+      showToast(`Failed to add referral: ${err.message}`, "error");
+    }
+  };
+
+  // ── External referral ──────────────────────────────────────────────────────
   const handleExternalReferral = async () => {
     setIsSubmittingReferral(true);
-    // Prepare payload
     const payload = {
-      ...externalReferralData,
-      referralType: "External",
+      ...externalData,
+      referralType:      "External",
       referralTimestamp: new Date().toISOString(),
-      reportId: selectedReport._id
+      reportId:          selectedReport._id,
     };
     try {
-      // Placeholder API call - replace with actual endpoint when available
       const res = await addReferral(selectedReport._id, payload);
       if (res.success) {
         showToast("External referral submitted successfully");
-        // Update case status to "Referred to Barangay"
-        const statusRes = await updateReportStatus(
-          selectedReport._id,
-          selectedReport.status,
-          "",
-          "Referred to Barangay"
-        );
-        if (statusRes.success) {
-          // Add timeline entry locally (could be via API as well)
-          const updatedReport = { ...selectedReport };
-          updatedReport.timeline = updatedReport.timeline || [];
-          updatedReport.timeline.push({
-            action: "Case referred externally to Barangay",
-            timestamp: new Date().toISOString()
-          });
-          // Refresh UI
-          // Refresh UI
-          fetchReports();
-
-          // ✅ Send PDF + notification as ONE message
-          try {
-            const reportDoc = await generateReferralPDFDoc(selectedReport, payload);
-            const pdfBlob = reportDoc.output('blob');
-            const pdfFile = new File([pdfBlob], `Referral_Report_${selectedReport.ticketNumber}.pdf`, { type: 'application/pdf' });
-
-            const chatFormData = new FormData();
-            chatFormData.append('pdf', pdfFile);
-            chatFormData.append('ticketNumber', selectedReport.ticketNumber);
-            chatFormData.append('content', `📢 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay opisyal nang ni-refer sa Barangay ${payload.barangayName}.\n\n📋 Referral Type: External\n🏘️ Barangay: ${payload.barangayName}\n👤 Receiving Officer: ${payload.receivingOfficer || 'N/A'}\n\n📄 Naka-attach ang Referral Report PDF sa ibaba.`);
-
-            await sendReferralPDFToUser(chatFormData);
-            console.log("✅ Referral notification + PDF sent to user");
-          } catch (pdfError) {
-            console.error("❌ Failed to send referral notification:", pdfError);
-            showToast("Failed to send referral notification: " + (pdfError.response?.data?.message || pdfError.message), "error");
-          }
+        await updateReportStatus(selectedReport._id, selectedReport.status, "", "Referred to Barangay");
+        fetchReports();
+        try {
+          await sendReferralNotification(selectedReport, payload);
+        } catch (e) {
+          showToast("Failed to send referral notification: " + (e.message || ""), "error");
         }
-        // Reset form state
-        setExternalReferralData({
-          referredBy: "",
-          position: "",
-          schoolName: "",
-          referralDate: "",
-          reason: "",
-          actionsTaken: [],
-          caseSummary: "",
-          barangayName: "",
-          barangayAddress: "",
-          receivingOfficer: "",
-          endorsementMode: "",
-          attachments: []
-        });
-        setShowExternalReferralForm(false);
-        setShowCaseStatusModal(false);
-        setNewCaseStatus("");
-        setNewReferralType("");
+        resetStatusModal();
+        resetExternalData();
       } else {
         showToast(res.message || "Failed to submit external referral", "error");
       }
     } catch (err) {
-      console.error(err);
       showToast(err.message || "Error submitting external referral", "error");
     } finally {
       setIsSubmittingReferral(false);
     }
   };
 
-  const handleDownloadReferralPDF = async () => {
-    if (!selectedReferral || !selectedReport) return;
-    setIsDownloadingPDF(true);
-
+  // ── Reporter confirm ───────────────────────────────────────────────────────
+  const handleConfirmReporter = async () => {
+    if (!selectedReporter) return;
     try {
-      const doc = await generateReferralPDFDoc(selectedReport, selectedReferral);
-      doc.save(`${selectedReferral.referralType || "Internal"}_Referral_${selectedReport.ticketNumber}.pdf`);
-      showToast("Referral report downloaded successfully", "success");
-    } catch (error) {
-      console.error("PDF generation error:", error);
-      showToast("Failed to generate PDF report", "error");
-    } finally {
-      setIsDownloadingPDF(false);
-    }
-  };
-
-  const handleUpdateCaseStatus = async () => {
-    if (!newCaseStatus) return;
-    // If external referral selected, expand form instead of immediate update
-    if (newCaseStatus === "For Referral" && newReferralType === "External") {
-      setShowExternalReferralForm(true);
-      return;
-    }
-    // Determine final status for internal or other cases
-    let finalStatus = newCaseStatus;
-    if (newCaseStatus === "For Referral") {
-      finalStatus = newReferralType || "For Referral"; // Internal fallback
-    }
-    try {
-      const res = await updateReportStatus(
-        selectedReport._id,
-        selectedReport.status,
-        "",
-        finalStatus
-      );
+      const res = await addReferral(selectedReport._id, {
+        department:     referralDept,
+        note:           referralNote,
+        referralType:   "Internal",
+        reporterUserId: selectedReporter._id,
+      });
       if (res.success) {
-        showToast("Case status updated successfully");
-        setShowCaseStatusModal(false);
-        setNewCaseStatus("");
-        setNewReferralType("");
+        showToast("Referral added with reporter identification");
+        resetStatusModal();
+        setShowReporterConfirm(false);
+        setSelectedReporter(null);
         fetchReports();
-
-        // ✅ SEND CHAT NOTIFICATION FOR CASE STATUS UPDATE
-        try {
-          const statusMessages = {
-            "For Queuing": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay nasa status na: For Queuing.\n\nMalapit na itong ma-review ng aming team.`,
-            "For Interview": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay nasa status na: For Interview.\n\n📅 Nagpadala na kami ng booking link sa iyong email para makapag-schedule ka ng iyong consultation appointment. Paki-check ang iyong email inbox.`,
-            "Internal": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay ni-refer sa isang internal department para sa karagdagang aksyon.\n\nReferral Type: Internal`,
-            "Case Closed": `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay opisyal nang isinara (Case Closed).\n\nKung may mga katanungan ka pa, huwag mag-atubiling mag-mensahe.`
-          };
-          const msgContent = statusMessages[finalStatus] || `📋 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay na-update na sa: ${finalStatus}.`;
-          await sendTicketMessage(selectedReport.ticketNumber, {
-            content: msgContent,
-            attachments: []
-          });
-          console.log(`✅ Chat notification sent for status update: ${finalStatus}`);
-        } catch (msgError) {
-          console.error("❌ Failed to send chat notification for status update:", msgError);
-          showToast("Chat notification failed: " + (msgError.response?.data?.message || msgError.message), "error");
-        }
-
-        // ✅ NAVIGATE TO MESSAGES & OPEN BOOKING MODAL when status is "For Interview"
-        if (finalStatus === "For Interview" && selectedReport.ticketNumber) {
-          showToast("📅 Redirecting to Messages to set your availability and send booking link...", "success");
-          setTimeout(() => {
-            navigate('/superadmin/messages', {
-              state: {
-                selectedTicketNumber: selectedReport.ticketNumber,
-                reportId: selectedReport._id,
-                openBookingModal: true
-              }
-            });
-          }, 1500);
-        }
       } else {
-        showToast(res.message || "Failed to update case status", "error");
+        showToast(res.message || "Failed to add referral", "error");
       }
-    } catch (error) {
-      console.error("Update case status error:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Unknown error";
-      showToast(`Failed to update case status: ${errorMessage}`, "error");
+    } catch {
+      showToast("Failed to add referral", "error");
     }
   };
 
-  const handleUpdateServices = async (serviceField, value) => {
-    try {
-      setLoading(true);
-      const res = await updateReportServices(selectedReport._id, { [serviceField]: value });
-      if (res.success) {
-        showToast("Service status updated successfully");
-        // Update local state
-        const updatedReport = { ...selectedReport, ...res.data };
-        setSelectedReport(updatedReport);
-        // Also update in the list
-        setReports(prev => prev.map(r => r._id === selectedReport._id ? { ...r, ...res.data } : r));
-      } else {
-        showToast(res.message || "Failed to update services", "error");
-      }
-    } catch (error) {
-      console.error("Update services error:", error);
-      showToast(`Failed to update services: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ── Archive / Restore ──────────────────────────────────────────────────────
   const handleArchive = async () => {
     try {
       const res = await archiveReport(selectedReport._id);
@@ -927,10 +519,10 @@ const AdminReports = () => {
         setShowDetailsModal(false);
         fetchReports();
       } else {
-        showToast(res.message || "Failed to archive report", "error");
+        showToast(res.message || "Failed to archive", "error");
       }
-    } catch (error) {
-      showToast(`Failed to archive report: ${error.message}`, "error");
+    } catch (err) {
+      showToast(`Failed to archive: ${err.message}`, "error");
     }
   };
 
@@ -943,449 +535,273 @@ const AdminReports = () => {
         setShowDetailsModal(false);
         fetchReports();
       } else {
-        showToast(res.message || "Failed to restore report", "error");
+        showToast(res.message || "Failed to restore", "error");
       }
-    } catch (error) {
-      showToast(`Failed to restore report: ${error.message}`, "error");
+    } catch (err) {
+      showToast(`Failed to restore: ${err.message}`, "error");
     }
   };
 
-  const handleAddReferral = async () => {
-    if (!referralDept) return;
+  // ── Services update ────────────────────────────────────────────────────────
+  const handleUpdateServices = async (field, value) => {
     try {
-      const res = await addReferral(selectedReport._id, {
-        department: referralDept,
-        note: referralNote,
-        referralType: "Internal"
-      });
+      setLoading(true);
+      const res = await updateReportServices(selectedReport._id, { [field]: value });
       if (res.success) {
-        showToast("Referral added successfully");
-        setShowReferralModal(false);
-        setShowCaseStatusModal(false);
-        setNewCaseStatus("");
-        setNewReferralType("");
-        setReferralDept("");
-        setReferralNote("");
-        fetchReports();
-
-        // ✅ Send PDF + notification as ONE message
-        try {
-          const payload = {
-            department: referralDept,
-            note: referralNote,
-            referralType: "Internal",
-            referralTimestamp: new Date().toISOString()
-          };
-          const reportDoc = await generateReferralPDFDoc(selectedReport, payload);
-          const pdfBlob = reportDoc.output('blob');
-          const pdfFile = new File([pdfBlob], `Internal_Referral_${selectedReport.ticketNumber}.pdf`, { type: 'application/pdf' });
-
-          const chatFormData = new FormData();
-          chatFormData.append('pdf', pdfFile);
-          chatFormData.append('ticketNumber', selectedReport.ticketNumber);
-          chatFormData.append('content', `📢 Case Status Update\n\nAng iyong case (${selectedReport.ticketNumber}) ay ni-refer sa ${referralDept}.\n\n📋 Referral Type: Internal\n🏢 Department: ${referralDept}\n\n📄 Naka-attach ang Referral Report PDF sa ibaba.`);
-
-          await sendReferralPDFToUser(chatFormData);
-          console.log("✅ Internal referral notification + PDF sent to user");
-        } catch (pdfError) {
-          console.error("❌ Failed to send referral notification:", pdfError);
-          showToast("Failed to send referral notification: " + (pdfError.response?.data?.message || pdfError.message), "error");
-        }
+        showToast("Service status updated successfully");
+        const updated = { ...selectedReport, ...res.data };
+        setSelectedReport(updated);
+        setReports((p) => p.map((r) => r._id === selectedReport._id ? { ...r, ...res.data } : r));
       } else {
-        showToast(res.message || "Failed to add referral", "error");
+        showToast(res.message || "Failed to update services", "error");
       }
-    } catch (error) {
-      showToast(`Failed to add referral: ${error.message}`, "error");
+    } catch (err) {
+      showToast(`Failed to update services: ${err.message}`, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setReadStatusFilter("All");
-    setCaseStatusFilter("All");
-    setInternalDepartmentFilter("All");
-    setCategoryFilter("All");
-    setDateFrom("");
-    setDateTo("");
-    setSortOrder("latest");
-    setSentimentFilter("All");
-    setCurrentPage(1);
-  };
-
-  const getCaseStatusColor = (caseStatus) => {
-    if (caseStatus?.startsWith("Internal")) return "bg-purple-100 text-purple-800";
-    const colors = {
-      "For Queuing": "bg-orange-100 text-orange-800",
-      "For Interview": "bg-cyan-100 text-cyan-800",
-      "For Referral": "bg-pink-100 text-pink-800",
-      "Case Closed": "bg-gray-100 text-gray-800"
-    };
-    return colors[caseStatus] || "bg-gray-100 text-gray-800";
-  };
-
-  const getCaseStatusIcon = (caseStatus) => {
-    if (caseStatus?.startsWith("Internal")) return <Share2 size={14} />;
-    const icons = {
-      "For Queuing": <ClipboardList size={14} />,
-      "For Interview": <Users size={14} />,
-      "For Referral": <Share2 size={14} />,
-      "Case Closed": <XCircle size={14} />
-    };
-    return icons[caseStatus] || <AlertCircle size={14} />;
-  };
-
-  const allCategories = ["General"]; // Simplified as per removal of incident types
-
-  const filteredReports = (activeTab === "active" ? reports : archivedReports).filter(r => {
-    const matchesSearch = !searchTerm ||
-      r.ticketNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.salaysay?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (r.createdBy?.tupId || "").toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesReadStatus = readStatusFilter === "All" ||
-      (readStatusFilter === "Read" && isReportRead(r._id)) ||
-      (readStatusFilter === "Unread" && !isReportRead(r._id));
-
-    const matchesCaseStatus = caseStatusFilter === "All" || 
-      (caseStatusFilter === "Internal" 
-        ? (r.caseStatus?.startsWith("Internal") && (internalDepartmentFilter === "All" || r.caseStatus === `Internal - ${internalDepartmentFilter}`)) 
-        : r.caseStatus === caseStatusFilter);
-    const matchesCategory = categoryFilter === "All" || r.incidentTypes?.includes(categoryFilter);
-
-    const matchesSentiment = sentimentFilter === "All" ||
-      (sentimentResults[r._id]?.severity?.toLowerCase() === sentimentFilter.toLowerCase());
-
-    const reportDate = new Date(r.submittedAt);
-    const matchesDateFrom = !dateFrom || reportDate >= new Date(dateFrom);
-    const matchesDateTo = !dateTo || reportDate <= new Date(dateTo + "T23:59:59");
-
-    return matchesSearch && matchesReadStatus && matchesCaseStatus && matchesCategory && matchesSentiment && matchesDateFrom && matchesDateTo;
-  }).sort((a, b) => {
-    const dateA = new Date(a.submittedAt);
-    const dateB = new Date(b.submittedAt);
-    return sortOrder === "latest" ? dateB - dateA : dateA - dateB;
-  });
-
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedReports = filteredReports.slice(startIndex, endIndex);
-
-  const goToPage = (page) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
-
-  const activeFilterCount = [
-    readStatusFilter !== "All",
-    caseStatusFilter !== "All",
-    internalDepartmentFilter !== "All",
-    categoryFilter !== "All",
-    dateFrom,
-    dateTo,
-    sortOrder !== "latest",
-    sentimentFilter !== "All"
-  ].filter(Boolean).length;
-
-  const InfoItem = ({ label, value, fallback = null }) => {
-    const displayValue = String(value || '').replace(/undefined/g, '').trim();
-    if (!displayValue || displayValue === '/' || displayValue === ',') {
-      if (fallback) {
-        return (
-          <div>
-            <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">{label}</label>
-            <p className="text-gray-400 text-xs font-medium leading-tight italic">{fallback}</p>
-          </div>
-        );
-      }
-      return null;
+  // ── Referral PDF download ──────────────────────────────────────────────────
+  const handleDownloadReferralPDF = async () => {
+    if (!selectedReferral || !selectedReport) return;
+    setIsDownloadingPDF(true);
+    try {
+      const doc = await generateReferralPDFDoc(selectedReport, selectedReferral);
+      doc.save(`${selectedReferral.referralType ?? "Internal"}_Referral_${selectedReport.ticketNumber}.pdf`);
+      showToast("Referral report downloaded successfully");
+    } catch {
+      showToast("Failed to generate PDF report", "error");
+    } finally {
+      setIsDownloadingPDF(false);
     }
-    return (
-      <div>
-        <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-0.5">{label}</label>
-        <p className="text-gray-900 text-sm font-medium leading-tight">{displayValue}</p>
-      </div>
-    );
   };
 
-  // Get severity distribution for stats
-  const getSeverityStats = () => {
-    const stats = { severe: 0, moderate: 0, mild: 0, unanalyzed: 0 };
-    reports.forEach(report => {
-      const sentiment = sentimentResults[report._id];
-      if (sentiment?.severity) {
-        const severity = sentiment.severity.toLowerCase();
-        if (stats.hasOwnProperty(severity)) {
-          stats[severity]++;
+  // ── Reporter search ────────────────────────────────────────────────────────
+  const handleReporterSearch = async (term) => {
+    setReporterSearch(term);
+    if (term.length >= 2) {
+      try {
+        const results = await searchReporters(term);
+        setReporterSearchResults(results);
+        if (reporterInputRef) {
+          const r = reporterInputRef.getBoundingClientRect();
+          setDropdownPosition({ top: r.bottom + 4, left: r.left, width: r.width });
         }
-      } else {
-        stats.unanalyzed++;
+      } catch (err) {
+        if (err.response?.status === 403) showToast("Admin access required to search reporters.", "error");
+        else showToast("Failed to search reporters.", "error");
+        setReporterSearchResults([]);
       }
+    } else {
+      setReporterSearchResults([]);
+    }
+  };
+
+  const handleSelectReporter = (reporter) => {
+    setSelectedReporter(reporter);
+    setReporterSearchResults([]);
+    setReporterSearch("");
+    setShowReporterConfirm(true);
+  };
+
+  // ── Drag-drop for external form ────────────────────────────────────────────
+  const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true);  };
+  const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
+  const handleDragOver  = (e) => { e.preventDefault(); e.stopPropagation(); };
+  const handleDrop      = (e) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) setExternalData((p) => ({ ...p, attachments: [...p.attachments, ...files] }));
+  };
+
+  // ── Resets ─────────────────────────────────────────────────────────────────
+  const resetStatusModal = () => {
+    setShowCaseStatusModal(false);
+    setShowReferralModal(false);
+    setShowExternalForm(false);
+    setNewCaseStatus("");
+    setNewReferralType("");
+    setReferralDept("");
+    setReferralNote("");
+    setReferralRevealIdentity(false);
+    setCaseClosureReason("");
+  };
+
+  const resetExternalData = () =>
+    setExternalData({
+      referredBy: "", position: "", schoolName: "", referralDate: "",
+      reason: "", actionsTaken: [], caseSummary: "",
+      barangayName: "", barangayAddress: "", receivingOfficer: "",
+      endorsementMode: "", attachments: [],
     });
-    return stats;
-  };
 
-  const severityStats = getSeverityStats();
+  const clearFilters = () => { setFilters(defaultFilters); setCurrentPage(1); };
 
+  const updateFilter = (key, value) =>
+    setFilters((p) => ({ ...p, [key]: value }));
+
+  // ── Derived data ───────────────────────────────────────────────────────────
+  const currentList      = activeTab === "active" ? reports : archivedReports;
+  const filteredReports  = applyFilters(currentList, sentimentResults, filters, readReports);
+  const totalPages       = Math.ceil(filteredReports.length / itemsPerPage);
+  const startIndex       = (currentPage - 1) * itemsPerPage;
+  const paginatedReports = filteredReports.slice(startIndex, startIndex + itemsPerPage);
+  const goToPage         = (p) => setCurrentPage(Math.max(1, Math.min(p, totalPages)));
+  const activeFilterCount= countActiveFilters(filters);
+  const sevStats         = getSeverityStats(reports, sentimentResults);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ══════════════════════════════════════════════════════════════════════════
   return (
     <>
-      <div id="admin-reports-main-v2" className="min-h-screen bg-gray-50 p-4 sm:p-6 overflow-x-hidden max-w-[100vw]">
-        {/* Toast Notification */}
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 overflow-x-hidden max-w-[100vw]">
+
+        {/* ── Toast ──────────────────────────────────────────────────────────── */}
         {toast.show && (
-          <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 rounded-2xl px-6 py-4 shadow-2xl animate-in slide-in-from-top-4 duration-300 border ${toast.type === "error" ? "bg-red-600 border-red-500" : "bg-emerald-600 border-emerald-500"
-            } text-white`}>
-            {toast.type === "error" ? <XCircle size={22} className="text-red-100" /> : <CheckCircle size={22} className="text-emerald-100" />}
-            <span className="font-bold text-sm tracking-wide">{toast.message}</span>
+          <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 rounded-2xl px-6 py-4 shadow-2xl border ${toast.type === "error" ? "bg-red-600 border-red-500" : "bg-emerald-600 border-emerald-500"} text-white`}>
+            {toast.type === "error" ? <XCircle size={22} /> : <CheckCircle size={22} />}
+            <span className="font-bold text-sm">{toast.message}</span>
           </div>
         )}
 
-        {/* Header Section */}
+        {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Report Management</h1>
-              <p className="text-gray-600 text-sm md:text-base">Monitor and manage incident reports with AI-powered severity analysis</p>
+              <p className="text-gray-600 text-sm md:text-base">
+                Monitor and manage incident reports with AI-powered severity analysis
+              </p>
             </div>
           </div>
 
-
-          {/* Severity Stats Overview */}
+          {/* Severity stat cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Severe Reports</p>
-                  <p className="text-2xl font-bold text-red-600">{severityStats.severe}</p>
+            {[
+              { label: "Severe Reports",   count: sevStats.severe,    color: "red",    Icon: AlertTriangle },
+              { label: "Moderate Reports", count: sevStats.moderate,  color: "yellow", Icon: Activity },
+              { label: "Mild Reports",     count: sevStats.mild,      color: "green",  Icon: Shield },
+              { label: "Unanalyzed",       count: sevStats.unanalyzed,color: "gray",   Icon: Brain },
+            ].map(({ label, count, color, Icon }) => (
+              <div key={label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">{label}</p>
+                    <p className={`text-2xl font-bold text-${color}-600`}>{count}</p>
+                  </div>
+                  <div className={`p-3 bg-${color}-50 rounded-full`}>
+                    <Icon className={`text-${color}-600`} size={24} />
+                  </div>
                 </div>
-                <div className="p-3 bg-red-50 rounded-full">
-                  <AlertTriangle className="text-red-600" size={24} />
-                </div>
-              </div>
-              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-red-500 rounded-full"
-                  style={{ width: `${(severityStats.severe / reports.length) * 100 || 0}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Moderate Reports</p>
-                  <p className="text-2xl font-bold text-yellow-600">{severityStats.moderate}</p>
-                </div>
-                <div className="p-3 bg-yellow-50 rounded-full">
-                  <Activity className="text-yellow-600" size={24} />
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full bg-${color}-500 rounded-full`}
+                    style={{ width: `${(count / (reports.length || 1)) * 100}%` }}
+                  />
                 </div>
               </div>
-              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-yellow-500 rounded-full"
-                  style={{ width: `${(severityStats.moderate / reports.length) * 100 || 0}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Mild Reports</p>
-                  <p className="text-2xl font-bold text-green-600">{severityStats.mild}</p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-full">
-                  <Shield className="text-green-600" size={24} />
-                </div>
-              </div>
-              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-green-500 rounded-full"
-                  style={{ width: `${(severityStats.mild / reports.length) * 100 || 0}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Unanalyzed</p>
-                  <p className="text-2xl font-bold text-gray-600">{severityStats.unanalyzed}</p>
-                </div>
-                <div className="p-3 bg-gray-50 rounded-full">
-                  <Brain className="text-gray-600" size={24} />
-                </div>
-              </div>
-              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gray-500 rounded-full"
-                  style={{ width: `${(severityStats.unanalyzed / reports.length) * 100 || 0}%` }}
-                ></div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Search and Filters Card */}
+        {/* ── Search + Filters ────────────────────────────────────────────────── */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
                 placeholder="Search reports..."
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={filters.searchTerm}
+                onChange={(e) => updateFilter("searchTerm", e.target.value)}
               />
             </div>
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${showFilters || activeFilterCount > 0
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+              onClick={() => setShowFilters((p) => !p)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${showFilters || activeFilterCount > 0 ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
             >
-              <Filter size={20} />
-              Filters
+              <Filter size={20} /> Filters
               {activeFilterCount > 0 && (
-                <span className="bg-white text-blue-600 px-2 py-1 rounded-full text-xs font-bold min-w-6">
+                <span className="bg-white text-blue-600 px-2 py-1 rounded-full text-xs font-bold">
                   {activeFilterCount}
                 </span>
               )}
             </button>
           </div>
 
-          {/* Advanced Filters */}
           {showFilters && (
             <div className="pt-4 border-t border-gray-200">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Sort By Date</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={sortOrder}
-                    onChange={(e) => {
-                      setSortOrder(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sort By Date</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={filters.sortOrder} onChange={(e) => { updateFilter("sortOrder", e.target.value); setCurrentPage(1); }}>
                     <option value="latest">Latest First</option>
                     <option value="oldest">Oldest First</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Read Status</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={readStatusFilter}
-                    onChange={(e) => {
-                      setReadStatusFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <option>All</option>
-                    <option>Unread</option>
-                    <option>Read</option>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Read Status</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={filters.readStatusFilter} onChange={(e) => { updateFilter("readStatusFilter", e.target.value); setCurrentPage(1); }}>
+                    <option>All</option><option>Unread</option><option>Read</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Case Status</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={caseStatusFilter}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Case Status</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={filters.caseStatusFilter}
                     onChange={(e) => {
-                      setCaseStatusFilter(e.target.value);
-                      if (e.target.value !== "Internal") {
-                        setInternalDepartmentFilter("All");
-                      }
+                      updateFilter("caseStatusFilter", e.target.value);
+                      if (e.target.value !== "Internal") updateFilter("internalDepartmentFilter", "All");
                       setCurrentPage(1);
-                    }}
-                  >
-                    <option>All</option>
-                    <option>For Queuing</option>
-                    <option>For Interview</option>
-                    <option>Internal</option>
-                    <option>External</option>
-                    <option>Case Closed</option>
+                    }}>
+                    {CASE_STATUS_FILTER_OPTIONS.map((o) => <option key={o}>{o}</option>)}
                   </select>
                 </div>
-
-                {caseStatusFilter === "Internal" && (
+                {filters.caseStatusFilter === "Internal" && (
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Internal Department</label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      value={internalDepartmentFilter}
-                      onChange={(e) => {
-                        setInternalDepartmentFilter(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Internal Department</label>
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      value={filters.internalDepartmentFilter}
+                      onChange={(e) => { updateFilter("internalDepartmentFilter", e.target.value); setCurrentPage(1); }}>
                       <option>All</option>
-                      <option>Legal Clinic</option>
-                      <option>Guidance and Counseling</option>
-                      <option>Medical Health Services</option>
-                      <option>Gender and Development</option>
-                      <option>Director's Office</option>
-                      <option>Human Resources (for Employees)</option>
-                      <option>Student Affairs</option>
+                      {["Legal Clinic","Guidance and Counseling","Medical Health Services",
+                        "Gender and Development","Director's Office",
+                        "Human Resources (for Employees)","Student Affairs"].map((d) => (
+                        <option key={d}>{d}</option>
+                      ))}
                     </select>
                   </div>
                 )}
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">Severity Level</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={sentimentFilter}
-                    onChange={(e) => {
-                      setSentimentFilter(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <option>All</option>
-                    <option>Severe</option>
-                    <option>Moderate</option>
-                    <option>Mild</option>
-                    <option>Unanalyzed</option>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Severity Level</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={filters.sentimentFilter}
+                    onChange={(e) => { updateFilter("sentimentFilter", e.target.value); setCurrentPage(1); }}>
+                    <option>All</option><option>Severe</option><option>Moderate</option>
+                    <option>Mild</option><option>Unanalyzed</option>
                   </select>
                 </div>
-
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={dateFrom}
-                    onChange={(e) => {
-                      setDateFrom(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  />
+                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={filters.dateFrom}
+                    onChange={(e) => { updateFilter("dateFrom", e.target.value); setCurrentPage(1); }} />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 truncate">To Date</label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={dateTo}
-                    onChange={(e) => {
-                      setDateTo(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={filters.dateTo}
+                    onChange={(e) => { updateFilter("dateTo", e.target.value); setCurrentPage(1); }} />
                 </div>
               </div>
-
               {activeFilterCount > 0 && (
                 <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
+                  <button onClick={clearFilters} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                     Clear all filters
                   </button>
                 </div>
@@ -1394,46 +810,26 @@ const AdminReports = () => {
           )}
         </div>
 
-        {/* Content Section */}
+        {/* ── Reports table card ──────────────────────────────────────────────── */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {/* Tabs and Summary */}
           <div className="border-b border-gray-200">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between p-4 md:p-6 gap-4">
               <div className="flex gap-2 w-full lg:w-auto">
-                <button
-                  onClick={() => {
-                    setActiveTab("active");
-                    setCurrentPage(1);
-                  }}
-                  className={`flex-1 lg:flex-none whitespace-nowrap px-3 sm:px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "active"
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
-                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-                    }`}
-                >
-                  Active <span className="hidden sm:inline">Reports</span> ({reports.length})
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("archived");
-                    setCurrentPage(1);
-                  }}
-                  className={`flex-1 lg:flex-none whitespace-nowrap px-3 sm:px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === "archived"
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
-                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-                    }`}
-                >
-                  Archived ({archivedReports.length})
-                </button>
+                {["active", "archived"].map((tab) => (
+                  <button key={tab} onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+                    className={`flex-1 lg:flex-none whitespace-nowrap px-3 sm:px-6 py-2.5 rounded-xl font-bold transition-all duration-200 ${activeTab === tab ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"}`}>
+                    {tab === "active" ? `Active Reports (${reports.length})` : `Archived (${archivedReports.length})`}
+                  </button>
+                ))}
               </div>
               <div className="text-sm text-gray-500 font-medium bg-gray-50 px-4 py-2 rounded-lg">
-                Showing <span className="text-gray-900 font-bold">{startIndex + 1}-{Math.min(endIndex, filteredReports.length)}</span> of{" "}
-                <span className="text-gray-900 font-bold">{filteredReports.length}</span> reports
+                Showing <span className="text-gray-900 font-bold">{startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredReports.length)}</span>
+                {" "}of{" "}
+                <span className="text-gray-900 font-bold">{filteredReports.length}</span>
               </div>
             </div>
           </div>
 
-
-          {/* Reports Table */}
           <div className="p-6">
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -1447,104 +843,62 @@ const AdminReports = () => {
               </div>
             ) : (
               <>
-                {/* Desktop Table View */}
+                {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
-                          <input
-                            type="checkbox"
-                            checked={
-                              paginatedReports.length > 0 &&
-                              paginatedReports.every(r => selectedReportIds.includes(r._id))
-                            }
+                        <th className="px-6 py-3 w-10">
+                          <input type="checkbox"
+                            checked={paginatedReports.length > 0 && paginatedReports.every((r) => selectedReportIds.includes(r._id))}
                             onChange={() => {
-                              const pageIds = paginatedReports.map(r => r._id);
-                              const allChecked = pageIds.every(id => selectedReportIds.includes(id));
-                              if (allChecked) {
-                                setSelectedReportIds(prev => prev.filter(id => !pageIds.includes(id)));
-                              } else {
-                                setSelectedReportIds(prev => {
-                                  const newSelections = [...prev];
-                                  pageIds.forEach(id => {
-                                    if (!newSelections.includes(id)) newSelections.push(id);
-                                  });
-                                  return newSelections;
-                                });
-                              }
+                              const ids = paginatedReports.map((r) => r._id);
+                              const allChecked = ids.every((id) => selectedReportIds.includes(id));
+                              setSelectedReportIds(allChecked
+                                ? selectedReportIds.filter((id) => !ids.includes(id))
+                                : [...new Set([...selectedReportIds, ...ids])]);
                             }}
-                            className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                            className="w-4 h-4 text-indigo-600 rounded border-gray-300 cursor-pointer"
                           />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Ticket
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Severity
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Case Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
+                        <th className="px-6 py-3 w-6" />
+                        {["Ticket", "Severity", "Case Status", "Date", "Actions"].map((h) => (
+                          <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {paginatedReports.map((report) => {
                         const sentiment = sentimentResults[report._id];
+                        const unread    = !isRead(report._id);
                         return (
-                          <tr
-                            key={report._id}
-                            className={`hover:bg-gray-50 transition-colors ${!isReportRead(report._id) ? 'bg-blue-50' : ''}`}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap w-10">
-                              <input
-                                type="checkbox"
-                                checked={selectedReportIds.includes(report._id)}
-                                onChange={() => {
-                                  if (selectedReportIds.includes(report._id)) {
-                                    setSelectedReportIds(prev => prev.filter(id => id !== report._id));
-                                  } else {
-                                    setSelectedReportIds(prev => [...prev, report._id]);
-                                  }
-                                }}
-                                className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                          <tr key={report._id} className={`hover:bg-gray-50 transition-colors ${unread ? "bg-blue-50" : ""}`}>
+                            <td className="px-6 py-4 w-10">
+                              <input type="checkbox" checked={selectedReportIds.includes(report._id)}
+                                onChange={() => setSelectedReportIds((p) =>
+                                  p.includes(report._id) ? p.filter((id) => id !== report._id) : [...p, report._id])}
+                                className="w-4 h-4 text-indigo-600 rounded border-gray-300 cursor-pointer"
                               />
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {!isReportRead(report._id) && (
-                                <div className="flex items-center">
-                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                </div>
-                              )}
+                            <td className="px-6 py-4">
+                              {unread && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                              <span className={`text-sm font-mono font-medium ${unread ? "text-blue-900 font-bold" : "text-gray-900"}`}>
                                 {report.ticketNumber}
-                              </div>
+                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {sentiment ? (
                                 <div className="flex flex-col gap-1">
                                   <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
-                                    {getSeverityIcon(sentiment.severity)}
-                                    {sentiment.severity}
-                                    <span className="text-xs opacity-75">({Math.round(sentiment.confidence * 100)}%)</span>
+                                    {getSeverityIcon(sentiment.severity)} {sentiment.severity}
+                                    <span className="opacity-75">({Math.round(sentiment.confidence * 100)}%)</span>
                                   </span>
-                                  {sentiment.keywords && sentiment.keywords.length > 0 && (
+                                  {sentiment.keywords?.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-1">
-                                      {sentiment.keywords.slice(0, 2).map((keyword, idx) => (
-                                        <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                                          {keyword}
-                                        </span>
+                                      {sentiment.keywords.slice(0, 2).map((k, i) => (
+                                        <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{k}</span>
                                       ))}
                                       {sentiment.keywords.length > 2 && (
                                         <span className="text-xs text-gray-400">+{sentiment.keywords.length - 2}</span>
@@ -1554,29 +908,21 @@ const AdminReports = () => {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => {
-                                    triggerAnalysis('single', report._id, {
-                                      salaysay: report.salaysay || report.incidentDescription || report.incidentStatement,
-                                      timestamp: report.submittedAt
-                                    });
-                                  }}
+                                  onClick={() => triggerAnalysis("single", report._id, { salaysay: report.salaysay || report.incidentDescription, timestamp: report.submittedAt })}
                                   disabled={analyzing}
-                                  className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium disabled:opacity-50"
                                 >
-                                  {analyzing && (selectedReportForAnalysis === report._id || selectedReportForAnalysis?._id === report._id) ? (
-                                    <RefreshCw size={12} className="animate-spin text-purple-600" />
-                                  ) : (
-                                    <Brain size={12} />
-                                  )}
-                                  {analyzing && (selectedReportForAnalysis === report._id || selectedReportForAnalysis?._id === report._id) ? "Analyzing..." : "Analyze"}
+                                  {analyzing && selectedReportForAI === report._id
+                                    ? <RefreshCw size={12} className="animate-spin text-purple-600" />
+                                    : <Brain size={12} />}
+                                  {analyzing && selectedReportForAI === report._id ? "Analyzing..." : "Analyze"}
                                 </button>
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {report.caseStatus ? (
                                 <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
-                                  {getCaseStatusIcon(report.caseStatus)}
-                                  {report.caseStatus}
+                                  {getCaseStatusIcon(report.caseStatus)} {report.caseStatus}
                                 </span>
                               ) : (
                                 <span className="text-gray-400 text-xs">Not Set</span>
@@ -1586,100 +932,39 @@ const AdminReports = () => {
                               {new Date(report.submittedAt).toLocaleDateString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              {/* INLINE ACTIONS - Lahat ng actions ay DIRECT NA MAKIKITA */}
                               <div className="flex items-center gap-1">
-                                {/* View Details Button */}
+                                <button onClick={() => handleViewDetails(report._id)} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded" title="View Details"><Eye size={16} /></button>
+                                <button onClick={() => handleMessageUser(report)} className="p-1.5 hover:bg-green-50 text-green-600 rounded" title="Message User"><MessageSquare size={16} /></button>
+                                {isRead(report._id)
+                                  ? <button onClick={() => markAsUnread(report._id)} className="p-1.5 hover:bg-gray-100 text-gray-600 rounded" title="Mark Unread"><Mail size={16} /></button>
+                                  : <button onClick={() => markAsRead(report._id)} className="p-1.5 hover:bg-green-50 text-green-600 rounded" title="Mark Read"><CheckCircle size={16} /></button>}
                                 <button
-                                  onClick={() => handleViewDetails(report._id)}
-                                  className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
-                                  title="View Details"
-                                >
-                                  <Eye size={16} />
-                                </button>
-
-                                {/* Message Button */}
-                                <button
-                                  onClick={() => handleMessageUser(report)}
-                                  className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
-                                  title="Message User"
-                                >
-                                  <MessageSquare size={16} />
-                                </button>
-
-                                {/* Mark as Read/Unread Button */}
-                                {isReportRead(report._id) ? (
+                                  onClick={() => { setSelectedReport(report); setNewCaseStatus(report.caseStatus || ""); setShowCaseStatusModal(true); }}
+                                  className="p-1.5 hover:bg-purple-50 text-purple-600 rounded" title="Edit Case Status"
+                                ><Edit size={16} /></button>
+                                {/* Send Booking Link — only visible when caseStatus is "For Scheduling" */}
+                                {report.caseStatus === "For Scheduling" && (
                                   <button
-                                    onClick={() => markAsUnread(report._id)}
-                                    className="p-1.5 hover:bg-gray-100 text-gray-600 rounded transition-colors"
-                                    title="Mark as Unread"
+                                    onClick={() => handleSendBookingLink(report._id)}
+                                    disabled={isSendingBookingLink}
+                                    className="p-1.5 hover:bg-blue-50 text-blue-600 rounded disabled:opacity-50"
+                                    title="Send Booking Link"
                                   >
-                                    <Mail size={16} />
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => markAsRead(report._id)}
-                                    className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
-                                    title="Mark as Read"
-                                  >
-                                    <CheckCircle size={16} />
+                                    <Send size={16} />
                                   </button>
                                 )}
-
-                                {/* Edit Case Status Button */}
-                                <button
-                                  onClick={() => {
-                                    setSelectedReport(report);
-                                    setNewCaseStatus(report.caseStatus || "");
-                                    setShowCaseStatusModal(true);
-                                  }}
-                                  className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors"
-                                  title="Edit Case Status"
-                                >
-                                  <Edit size={16} />
-                                </button>
-
-                                {/* Archive/Restore Button */}
-                                {activeTab === "active" ? (
+                                {activeTab === "active"
+                                  ? <button onClick={() => { setSelectedReport(report); setShowArchiveModal(true); }} className="p-1.5 hover:bg-red-50 text-red-600 rounded" title="Archive"><Archive size={16} /></button>
+                                  : <button onClick={() => { setSelectedReport(report); setShowRestoreModal(true); }} className="p-1.5 hover:bg-green-50 text-green-600 rounded" title="Restore"><RefreshCw size={16} /></button>}
+                                {!sentiment && (
                                   <button
-                                    onClick={() => {
-                                      setSelectedReport(report);
-                                      setShowArchiveModal(true);
-                                    }}
-                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
-                                    title="Archive Report"
-                                  >
-                                    <Archive size={16} />
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedReport(report);
-                                      setShowRestoreModal(true);
-                                    }}
-                                    className="p-1.5 hover:bg-green-50 text-green-600 rounded transition-colors"
-                                    title="Restore Report"
-                                  >
-                                    <RefreshCw size={16} />
-                                  </button>
-                                )}
-
-                                {!sentimentResults[report._id] && (
-                                  <button
-                                  onClick={() => {
-                                    triggerAnalysis('single', report._id, {
-                                      salaysay: report.salaysay || report.incidentDescription || report.incidentStatement,
-                                      timestamp: report.submittedAt
-                                    });
-                                  }}
+                                    onClick={() => triggerAnalysis("single", report._id, { salaysay: report.salaysay || report.incidentDescription, timestamp: report.submittedAt })}
                                     disabled={analyzing}
-                                    className="p-1.5 hover:bg-purple-50 text-purple-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Analyze Severity"
+                                    className="p-1.5 hover:bg-purple-50 text-purple-600 rounded disabled:opacity-50" title="Analyze Severity"
                                   >
-                                    {analyzing && (selectedReportForAnalysis === report._id || selectedReportForAnalysis?._id === report._id) ? (
-                                      <RefreshCw size={16} className="animate-spin text-purple-600" />
-                                    ) : (
-                                      <Brain size={16} />
-                                    )}
+                                    {analyzing && selectedReportForAI === report._id
+                                      ? <RefreshCw size={16} className="animate-spin" />
+                                      : <Brain size={16} />}
                                   </button>
                                 )}
                               </div>
@@ -1691,109 +976,76 @@ const AdminReports = () => {
                   </table>
                 </div>
 
-                {/* Mobile Card View */}
+                {/* Mobile cards */}
                 <div className="md:hidden flex flex-col gap-4">
                   {paginatedReports.map((report) => {
                     const sentiment = sentimentResults[report._id];
+                    const unread    = !isRead(report._id);
                     return (
-                      <div key={report._id} className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col gap-3 relative ${!isReportRead(report._id) ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
-                        {/* Header: Ticket & Date */}
+                      <div key={report._id} className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col gap-3 ${unread ? "border-blue-300 bg-blue-50" : "border-gray-200"}`}>
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedReportIds.includes(report._id)}
-                              onChange={() => {
-                                if (selectedReportIds.includes(report._id)) {
-                                  setSelectedReportIds(prev => prev.filter(id => id !== report._id));
-                                } else {
-                                  setSelectedReportIds(prev => [...prev, report._id]);
-                                }
-                              }}
-                              className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                            <input type="checkbox" checked={selectedReportIds.includes(report._id)}
+                              onChange={() => setSelectedReportIds((p) =>
+                                p.includes(report._id) ? p.filter((id) => id !== report._id) : [...p, report._id])}
+                              className="w-4 h-4 text-indigo-600 rounded border-gray-300 cursor-pointer"
                             />
-                            {!isReportRead(report._id) && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-                            )}
-                            <div className={`text-sm font-medium font-mono ${!isReportRead(report._id) ? 'text-blue-900 font-bold' : 'text-gray-900'}`}>
+                            {unread && <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />}
+                            <span className={`text-sm font-mono font-medium ${unread ? "text-blue-900 font-bold" : "text-gray-900"}`}>
                               {report.ticketNumber}
-                            </div>
+                            </span>
                           </div>
-                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
                             {new Date(report.submittedAt).toLocaleDateString()}
-                          </div>
+                          </span>
                         </div>
-
-                        {/* Badges: Severity & Case Status */}
                         <div className="flex flex-wrap items-center gap-2">
                           {sentiment ? (
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentiment.severity)}`}>
-                              {getSeverityIcon(sentiment.severity)}
-                              {sentiment.severity}
+                              {getSeverityIcon(sentiment.severity)} {sentiment.severity}
                             </span>
                           ) : (
                             <button
-                              onClick={() => {
-                                triggerAnalysis('single', report._id, {
-                                  salaysay: report.salaysay || report.incidentDescription || report.incidentStatement,
-                                  timestamp: report.submittedAt
-                                });
-                              }}
+                              onClick={() => triggerAnalysis("single", report._id, { salaysay: report.salaysay || report.incidentDescription, timestamp: report.submittedAt })}
                               disabled={analyzing}
-                              className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium disabled:opacity-50"
                             >
-                              {analyzing && (selectedReportForAnalysis === report._id || selectedReportForAnalysis?._id === report._id) ? (
-                                <RefreshCw size={12} className="animate-spin text-purple-600" />
-                              ) : (
-                                <Brain size={12} />
-                              )}
-                              {analyzing && (selectedReportForAnalysis === report._id || selectedReportForAnalysis?._id === report._id) ? "Analyzing..." : "Analyze"}
+                              {analyzing && selectedReportForAI === report._id ? <RefreshCw size={12} className="animate-spin text-purple-600" /> : <Brain size={12} />}
+                              {analyzing && selectedReportForAI === report._id ? "Analyzing..." : "Analyze"}
                             </button>
                           )}
-
                           {report.caseStatus ? (
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getCaseStatusColor(report.caseStatus)}`}>
-                              {getCaseStatusIcon(report.caseStatus)}
-                              {report.caseStatus}
+                              {getCaseStatusIcon(report.caseStatus)} {report.caseStatus}
                             </span>
                           ) : (
                             <span className="text-gray-400 text-xs">No Status</span>
                           )}
                         </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-1">
-                          <div className="flex gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                            <button onClick={() => handleViewDetails(report._id)} className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors flex-shrink-0" title="View Details">
-                              <Eye size={18} />
-                            </button>
-                            <button onClick={() => handleMessageUser(report)} className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors flex-shrink-0" title="Message User">
-                              <MessageSquare size={18} />
-                            </button>
-                            {isReportRead(report._id) ? (
-                              <button onClick={() => markAsUnread(report._id)} className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors flex-shrink-0">
-                                <Mail size={18} />
-                              </button>
-                            ) : (
-                              <button onClick={() => markAsRead(report._id)} className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors flex-shrink-0">
-                                <CheckCircle size={18} />
+                        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                          <div className="flex gap-1">
+                            <button onClick={() => handleViewDetails(report._id)} className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg"><Eye size={18} /></button>
+                            <button onClick={() => handleMessageUser(report)} className="p-2 hover:bg-green-50 text-green-600 rounded-lg"><MessageSquare size={18} /></button>
+                            {isRead(report._id)
+                              ? <button onClick={() => markAsUnread(report._id)} className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg"><Mail size={18} /></button>
+                              : <button onClick={() => markAsRead(report._id)} className="p-2 hover:bg-green-50 text-green-600 rounded-lg"><CheckCircle size={18} /></button>}
+                            <button onClick={() => { setSelectedReport(report); setNewCaseStatus(report.caseStatus || ""); setShowCaseStatusModal(true); }} className="p-2 hover:bg-purple-50 text-purple-600 rounded-lg"><Edit size={18} /></button>
+                            {/* Send Booking Link (mobile) — only when caseStatus is "For Scheduling" */}
+                            {report.caseStatus === "For Scheduling" && (
+                              <button
+                                onClick={() => handleSendBookingLink(report._id)}
+                                disabled={isSendingBookingLink}
+                                className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg disabled:opacity-50"
+                                title="Send Booking Link"
+                              >
+                                <Send size={18} />
                               </button>
                             )}
-                            <button onClick={() => { setSelectedReport(report); setNewCaseStatus(report.caseStatus || ""); setShowCaseStatusModal(true); }} className="p-2 hover:bg-purple-50 text-purple-600 rounded-lg transition-colors flex-shrink-0">
-                              <Edit size={18} />
-                            </button>
                           </div>
-                          
-                          <div className="pl-2 border-l border-gray-100 flex-shrink-0">
-                            {activeTab === "active" ? (
-                              <button onClick={() => { setSelectedReport(report); setShowArchiveModal(true); }} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
-                                <Archive size={14} /> Archive
-                              </button>
-                            ) : (
-                              <button onClick={() => { handleRestore(report._id); }} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
-                                <RotateCcw size={14} /> Restore
-                              </button>
-                            )}
+                          <div className="pl-2 border-l border-gray-100">
+                            {activeTab === "active"
+                              ? <button onClick={() => { setSelectedReport(report); setShowArchiveModal(true); }} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center gap-1 text-xs font-bold"><Archive size={14} /> Archive</button>
+                              : <button onClick={() => { setSelectedReport(report); setShowRestoreModal(true); }} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg flex items-center gap-1 text-xs font-bold"><RotateCcw size={14} /> Restore</button>}
                           </div>
                         </div>
                       </div>
@@ -1801,88 +1053,38 @@ const AdminReports = () => {
                   })}
                 </div>
 
-                {/* Pagination Controls */}
+                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
                     <div className="flex items-center gap-2">
                       <label className="text-sm text-gray-600">Items per page:</label>
-                      <select
-                        className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                        value={itemsPerPage}
-                        onChange={(e) => {
-                          setItemsPerPage(Number(e.target.value));
-                          setCurrentPage(1);
-                        }}
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
+                      <select className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+                        value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}>
+                        {[5, 10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
-
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => goToPage(1)}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="First page"
-                      >
-                        <ChevronsLeft size={16} />
-                      </button>
-                      <button
-                        onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Previous page"
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-
+                      <button onClick={() => goToPage(1)} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50"><ChevronsLeft size={16} /></button>
+                      <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16} /></button>
                       <div className="flex items-center gap-1">
-                        {[...Array(totalPages)].map((_, idx) => {
-                          const page = idx + 1;
-                          if (
-                            page === 1 ||
-                            page === totalPages ||
-                            (page >= currentPage - 1 && page <= currentPage + 1)
-                          ) {
+                        {[...Array(totalPages)].map((_, i) => {
+                          const p = i + 1;
+                          if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
                             return (
-                              <button
-                                key={page}
-                                onClick={() => goToPage(page)}
-                                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${currentPage === page
-                                  ? 'bg-blue-600 text-white'
-                                  : 'border border-gray-300 hover:bg-gray-100'
-                                  }`}
-                              >
-                                {page}
+                              <button key={p} onClick={() => goToPage(p)}
+                                className={`px-3 py-1 rounded-lg text-sm font-medium ${currentPage === p ? "bg-blue-600 text-white" : "border border-gray-300 hover:bg-gray-100"}`}>
+                                {p}
                               </button>
                             );
-                          } else if (page === currentPage - 2 || page === currentPage + 2) {
-                            return <span key={page} className="px-2 text-gray-400">...</span>;
+                          }
+                          if (p === currentPage - 2 || p === currentPage + 2) {
+                            return <span key={p} className="px-2 text-gray-400">...</span>;
                           }
                           return null;
                         })}
                       </div>
-
-                      <button
-                        onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Next page"
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                      <button
-                        onClick={() => goToPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Last page"
-                      >
-                        <ChevronsRight size={16} />
-                      </button>
+                      <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16} /></button>
+                      <button onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50"><ChevronsRight size={16} /></button>
                     </div>
                   </div>
                 )}
@@ -1891,1343 +1093,910 @@ const AdminReports = () => {
           </div>
         </div>
 
-        {/* AI Severity Analysis Explanation & Confirmation Modal */}
-        {showAnalysisConfirmModal && pendingAnalysis && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col border border-gray-100 animate-in zoom-in-95 duration-200">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-white">
+        {/* ── AI Analysis Confirm Modal ───────────────────────────────────────── */}
+        {showAnalysisConfirm && pendingAnalysis && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-gray-100">
+              <div className="flex items-center justify-between p-6 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
-                    <Brain size={24} className="animate-pulse" />
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                    <Brain size={24} className="text-purple-600 animate-pulse" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900 leading-tight">
-                      AI Severity Analysis
-                    </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Understand how the AI processes reports before proceeding
-                    </p>
+                    <h2 className="text-lg font-bold text-gray-900">AI Severity Analysis</h2>
+                    <p className="text-xs text-gray-500">Review before proceeding</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowAnalysisConfirmModal(false);
-                    setPendingAnalysis(null);
-                  }}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X size={20} className="text-gray-400 hover:text-gray-600" />
+                <button onClick={() => { setShowAnalysisConfirm(false); setPendingAnalysis(null); }} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                  <X size={20} className="text-gray-400" />
                 </button>
               </div>
-
-              {/* Content */}
               <div className="p-6 space-y-6">
-                {/* How It Works Container */}
-                <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-5 space-y-4">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                    How It Works
-                  </h3>
-                  
-                  <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm border border-blue-100 shadow-sm">
-                      1
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-4">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">How It Works</h3>
+                  {[
+                    ["AI analyzes incident descriptions", "Uses OpenAI to understand context and severity"],
+                    ["Classifies severity level", "Categorizes as Severe, Moderate, or Mild"],
+                    ["Extracts key insights", "Identifies keywords and provides confidence scores"],
+                  ].map(([title, sub], i) => (
+                    <div key={i} className={`flex items-start gap-4 ${i > 0 ? "border-t border-gray-100 pt-4" : ""}`}>
+                      <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm border border-blue-100">{i + 1}</div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{sub}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">AI analyzes incident descriptions</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Uses OpenAI to understand context and severity</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4 border-t border-gray-100/60 pt-4">
-                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm border border-blue-100 shadow-sm">
-                      2
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">Classifies severity level</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Categorizes as Severe, Moderate, or Mild</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4 border-t border-gray-100/60 pt-4">
-                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm border border-blue-100 shadow-sm">
-                      3
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">Extracts key insights</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Identifies keywords and provides confidence scores</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-
-                <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex gap-3">
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3">
                   <AlertCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                    This action will request OpenAI to analyze the content of the selected {pendingAnalysis.type === 'bulk' ? `${selectedReportIds.length} reports` : 'report'}. The severity results will be saved and visible to all administrators.
+                    This will request OpenAI to analyze{" "}
+                    {pendingAnalysis.type === "bulk" ? `${selectedReportIds.length} reports` : "1 report"}.
+                    Results will be saved and visible to all administrators.
                   </p>
                 </div>
               </div>
-
-              {/* Footer */}
-              <div className="border-t border-gray-100 p-6 bg-gray-50/50 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowAnalysisConfirmModal(false);
-                    setPendingAnalysis(null);
-                  }}
-                  className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-xl font-bold text-sm transition active:scale-95 duration-200 cursor-pointer"
-                >
+              <div className="border-t border-gray-100 p-6 bg-gray-50 flex items-center justify-end gap-3">
+                <button onClick={() => { setShowAnalysisConfirm(false); setPendingAnalysis(null); }}
+                  className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-xl font-bold text-sm">
                   Cancel
                 </button>
                 <button
                   onClick={() => {
-                    setShowAnalysisConfirmModal(false);
-                    if (pendingAnalysis.type === 'single') {
-                      analyzeSentiment(pendingAnalysis.reportId, pendingAnalysis.reportData);
-                    } else if (pendingAnalysis.type === 'bulk') {
-                      handleBulkAnalyze();
-                    }
+                    setShowAnalysisConfirm(false);
+                    if (pendingAnalysis.type === "single") runSingleAnalysis(pendingAnalysis.reportId, pendingAnalysis.reportData);
+                    else handleBulkAnalyze();
                     setPendingAnalysis(null);
                   }}
-                  className="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 duration-200 cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-md flex items-center gap-1.5"
                 >
-                  <Brain size={16} />
-                  <span>
-                    Confirm & Analyze {pendingAnalysis.type === 'bulk' ? `(${selectedReportIds.length} Reports)` : '(1 Report)'}
-                  </span>
+                  <Brain size={16} /> Confirm & Analyze{" "}
+                  {pendingAnalysis.type === "bulk" ? `(${selectedReportIds.length})` : "(1)"}
                 </button>
               </div>
             </div>
           </div>
         )}
-        {/* Overlays and Modals Section */}
-        <div className="overlays-section">
-          {openDropdown && (
-            <div
-              className="dropdown-menu fixed bg-white rounded-lg shadow-lg border border-gray-200 py-1 w-48"
-              style={{
-                top: dropdownPosition.top + "px",
-                left: dropdownPosition.left + "px",
-                zIndex: 1000
-              }}
-            >
-              <button
-                onClick={() => {
-                  handleViewDetails(openDropdown);
-                  setOpenDropdown(null);
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Eye size={16} />
-                View Details
-              </button>
 
-              <button
-                onClick={() => {
-                  const report = paginatedReports.find(r => r._id === openDropdown);
-                  if (report) handleMessageUser(report);
-                  setOpenDropdown(null);
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <MessageSquare size={16} />
-                Message User
-              </button>
-
-              {!sentimentResults[openDropdown] && (
-                <button
-                  onClick={() => {
-                    const report = paginatedReports.find(r => r._id === openDropdown);
-                    if (report) {
-                      triggerAnalysis('single', report._id, {
-                        incidentDescription: report.incidentDescription || report.incidentStatement || report.salaysay,
-                        incidentTypes: report.incidentTypes,
-                        timestamp: report.submittedAt
-                      });
-                    }
-                    setOpenDropdown(null);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
-                  disabled={analyzing}
-                >
-                  {analyzing && (selectedReportForAnalysis === openDropdown || selectedReportForAnalysis?._id === openDropdown) ? (
-                    <RefreshCw size={16} className="animate-spin text-purple-600" />
-                  ) : (
-                    <Brain size={16} />
-                  )}
-                  {analyzing && (selectedReportForAnalysis === openDropdown || selectedReportForAnalysis?._id === openDropdown) ? "Analyzing..." : "Analyze Severity"}
-                </button>
-              )}
-
-              {isReportRead(openDropdown) ? (
-                <button
-                  onClick={() => {
-                    markAsUnread(openDropdown);
-                    showToast("Marked as unread", "success");
-                    setOpenDropdown(null);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <Mail size={16} />
-                  Mark as Unread
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    markAsRead(openDropdown);
-                    showToast("Marked as read", "success");
-                    setOpenDropdown(null);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <CheckCircle size={16} />
-                  Mark as Read
-                </button>
-              )}
-
-              <button
-                onClick={() => {
-                  const report = paginatedReports.find(r => r._id === openDropdown);
-                  if (report) {
-                    setSelectedReport(report);
-                    setNewCaseStatus(report.caseStatus || "");
-                    setShowCaseStatusModal(true);
-                  }
-                  setOpenDropdown(null);
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Edit size={16} />
-                Edit Case Status
-              </button>
-
-              <div className="border-t border-gray-200 my-1"></div>
-
-              {activeTab === "active" ? (
-                <button
-                  onClick={() => {
-                    const report = paginatedReports.find(r => r._id === openDropdown);
-                    if (report) {
-                      setSelectedReport(report);
-                      setShowArchiveModal(true);
-                    }
-                    setOpenDropdown(null);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                >
-                  <Archive size={16} />
-
-                  Archive
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    const report = paginatedReports.find(r => r._id === openDropdown);
-                    if (report) {
-                      setSelectedReport(report);
-                      setShowRestoreModal(true);
-                    }
-                    setOpenDropdown(null);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
-                >
-                  <RefreshCw size={16} />
-                  Restore
-                </button>
-              )}
-            </div>
-          )}
-
-          {showDetailsModal && selectedReport && (
-            <div className="report-details-modal-wrapper">
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-                  {/* Header */}
-                  <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white sticky top-0 z-10">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
-                      <p className="text-sm text-gray-600 mt-1">{selectedReport.ticketNumber}</p>
-                      {sentimentResults[selectedReport._id] && (
-                        <div className="mt-2">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
-                            {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
-                            AI Analysis: {sentimentResults[selectedReport._id].severity}
-                            ({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
-                          </span>
-                        </div>
-                      )}
+        {/* ── Details Modal ───────────────────────────────────────────────────── */}
+        {showDetailsModal && selectedReport && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Report Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">{selectedReport.ticketNumber}</p>
+                  {sentimentResults[selectedReport._id] && (
+                    <div className="mt-2">
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
+                        {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
+                        AI Analysis: {sentimentResults[selectedReport._id].severity}
+                        {" "}({Math.round(sentimentResults[selectedReport._id].confidence * 100)}% confidence)
+                      </span>
                     </div>
-                    <button
-                      onClick={() => setShowDetailsModal(false)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <X size={24} className="text-gray-500" />
-                    </button>
-                  </div>
+                  )}
+                </div>
+                <button onClick={() => setShowDetailsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X size={24} className="text-gray-500" />
+                </button>
+              </div>
 
-                  {/* Tab Navigation */}
-                  <div className="flex border-b border-gray-100 bg-gray-50/50 px-6">
-                    <button
-                      onClick={() => setModalTab("details")}
-                      className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${modalTab === "details"
-                        ? "border-indigo-600 text-indigo-600 bg-white"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                        }`}
-                    >
-                      Incident Details
-                    </button>
-                    <button
-                      onClick={() => setModalTab("history")}
-                      className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${modalTab === "history"
-                        ? "border-indigo-600 text-indigo-600 bg-white"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                        }`}
-                    >
-                      Case History & Referrals
-                    </button>
-                  </div>
+              {/* Tabs */}
+              <div className="flex border-b border-gray-100 bg-gray-50 px-6">
+                {["details", "history"].map((tab) => (
+                  <button key={tab} onClick={() => setModalTab(tab)}
+                    className={`px-6 py-4 text-sm font-bold transition-all border-b-2 ${modalTab === tab ? "border-indigo-600 text-indigo-600 bg-white" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                    {tab === "details" ? "Incident Details" : "Case History & Referrals"}
+                  </button>
+                ))}
+              </div>
 
-                  {/* Content */}
-                  <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-                    {modalTab === "details" ? (
-                      <div className="space-y-6">
-                        {/* AI Analysis Result (Inline if present) */}
-                        {sentimentResults[selectedReport._id] && (
-                          <div className={`border rounded-2xl p-5 ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
-                            <div className="flex items-start justify-between">
-                              <div className="flex gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-white/50 flex items-center justify-center shadow-sm">
-                                  {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
-                                </div>
-                                <div>
-                                  <h3 className="font-bold text-gray-900">AI Severity Analysis</h3>
-                                  <p className="text-sm mt-1 opacity-90">{sentimentResults[selectedReport._id].explanation}</p>
-                                  <div className="flex flex-wrap gap-2 mt-3">
-                                    {sentimentResults[selectedReport._id].keywords?.map((k, idx) => (
-                                      <span key={idx} className="px-2 py-0.5 bg-white/40 rounded-md text-[10px] font-bold uppercase tracking-wider">
-                                        {k}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                {modalTab === "details" ? (
+                  <div className="space-y-6">
+                    {sentimentResults[selectedReport._id] && (
+                      <div className={`border rounded-2xl p-5 ${getSeverityColor(sentimentResults[selectedReport._id].severity)}`}>
+                        <div className="flex gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-white/50 flex items-center justify-center shadow-sm">
+                            {getSeverityIcon(sentimentResults[selectedReport._id].severity)}
                           </div>
-                        )}
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {/* Reporter Info */}
-                          <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                            <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                              <UserCheck size={14} /> Reporter Information
-                            </h3>
-                            {selectedReport.isAnonymous ? (
-                              <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                                <p className="text-sm font-bold text-indigo-900 mb-2">Anonymous Submission</p>
-                                <div className="grid grid-cols-2 gap-y-3">
-                                  <InfoItem label="Role" value={selectedReport.reporterRole} />
-                                  <InfoItem label="Gender" value={selectedReport.anonymousGender} />
-                                  <InfoItem label="Affiliation" value={selectedReport.tupRole} />
-                                  <InfoItem label="Dept" value={selectedReport.reporterDepartment} />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-4">
-                                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                                  <div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                                    {selectedReport.createdBy?.firstName?.charAt(0) || "U"}
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-gray-900">
-                                      {selectedReport.createdBy?.firstName} {selectedReport.createdBy?.lastName}
-                                    </p>
-                                    <p className="text-xs text-gray-500">{selectedReport.createdBy?.tupId}</p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => handleMessageUser(selectedReport)}
-                                  className="w-full py-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2"
-                                >
-                                  <MessageSquare size={14} /> Message Reporter
-                                </button>
-                              </div>
-                            )}
-                          </section>
-
-                          {/* Basic Info */}
-                          <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                            <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                              <ClipboardList size={14} /> Case Overview
-                            </h3>
-                            <div className="grid grid-cols-2 gap-4">
-                              <InfoItem label="Status" value={selectedReport.caseStatus} />
-                              <InfoItem label="Category" value={selectedReport.incidentTypes?.join(", ") || "General"} />
-                              <InfoItem label="Submitted" value={new Date(selectedReport.submittedAt).toLocaleDateString()} />
-                              <InfoItem label="Time" value={new Date(selectedReport.submittedAt).toLocaleTimeString()} />
-                            </div>
-                          </section>
-                        </div>
-
-                        {/* Location Details */}
-                        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                          <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Shield size={14} /> Location Details
-                          </h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InfoItem label="Place of Incident" value={selectedReport.placeOfIncident} />
-                            <InfoItem label="Address Details" value={`${selectedReport.incidentBarangay || ''} ${selectedReport.incidentCityMun || ''} ${selectedReport.incidentProvince || ''}`} />
-                          </div>
-                        </section>
-
-                        {/* Incident Statement */}
-                        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                          <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Incident Statement</h3>
-                          <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                            <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                              {selectedReport.salaysay || selectedReport.incidentDescription || selectedReport.incidentStatement || "No statement provided"}
-                            </p>
-                          </div>
-                        </section>
-
-                        {/* Victim & Perpetrator Details */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                            <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Victim Details</h3>
-                            <div className="grid grid-cols-2 gap-y-4">
-                              <InfoItem label="Full Name" value={selectedReport.isAnonymous ? "Anonymous Reporter" : `${selectedReport.firstName || ''} ${selectedReport.lastName || ''}`} />
-                              <InfoItem label="Gender" value={selectedReport.isAnonymous ? (selectedReport.reporterGender || selectedReport.anonymousGender) : selectedReport.sex} />
-                              <InfoItem label="Address" value={`${selectedReport.barangay || ''} ${selectedReport.cityMun || ''}`} />
-                              <InfoItem label="Occupation" value={selectedReport.occupation} />
-                            </div>
-                          </section>
-                          <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                            <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Perpetrator Details</h3>
-                            <div className="grid grid-cols-2 gap-y-4">
-                              <InfoItem label="Name" value={`${selectedReport.perpFirstName || ''} ${selectedReport.perpLastName || ''}`} fallback="Not provided" />
-                              <InfoItem label="Gender" value={selectedReport.perpSex} fallback="Not provided" />
-                              <InfoItem label="Relationship" value={selectedReport.perpRelationship} fallback="Not provided" />
-                              <InfoItem label="Occupation" value={selectedReport.perpOccupation} fallback="Not provided" />
-                              <InfoItem label="Address" value={selectedReport.perpBarangay} fallback="Not provided" />
-                            </div>
-                          </section>
-                        </div>
-
-                        {/* Witness Information */}
-                        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                          <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Users size={14} /> Witness Information
-                          </h3>
-                          {selectedReport.witnessName ? (
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <InfoItem label="Witness Name" value={selectedReport.witnessName} fallback="Not provided" />
-                                <InfoItem label="Gender" value={selectedReport.witnessGender} fallback="Not provided" />
-                                <InfoItem label="Contact Info" value={selectedReport.witnessContact} fallback="Not provided" />
-                                <InfoItem label="Address" value={selectedReport.witnessAddress} fallback="Not provided" />
-                              </div>
-                              {selectedReport.witnessAccount && (
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                  <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-1">Witness Statement</label>
-                                  <p className="text-sm text-gray-800 leading-relaxed italic">"{selectedReport.witnessAccount}"</p>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500 italic">No witnesses provided</p>
-                          )}
-                        </section>
-
-                        {/* Attachments */}
-                        {selectedReport.attachments?.length > 0 && (
-                          <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                            <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Evidence & Attachments</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                              {selectedReport.attachments.map((att, i) => (
-                                <a
-                                  key={i}
-                                  href={att.uri}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-indigo-50 rounded-xl border border-gray-200 hover:border-indigo-200 transition-all group"
-                                >
-                                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-gray-400 group-hover:text-indigo-600 transition-colors shadow-sm">
-                                    <FileText size={16} />
-                                  </div>
-                                  <span className="text-[11px] font-bold text-gray-700 truncate flex-1">{att.fileName}</span>
-                                  <Download size={14} className="text-gray-400" />
-                                </a>
+                          <div>
+                            <h3 className="font-bold text-gray-900">AI Severity Analysis</h3>
+                            <p className="text-sm mt-1 opacity-90">{sentimentResults[selectedReport._id].explanation}</p>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {sentimentResults[selectedReport._id].keywords?.map((k, i) => (
+                                <span key={i} className="px-2 py-0.5 bg-white/40 rounded-md text-[10px] font-bold uppercase tracking-wider">{k}</span>
                               ))}
                             </div>
-                          </section>
-                        )}
-
-                        {/* Additional Notes */}
-                        {selectedReport.additionalNotes && (
-                          <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                            <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Additional Notes</h3>
-                            <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100">
-                              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
-                                {selectedReport.additionalNotes}
-                              </p>
-                            </div>
-                          </section>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {/* Referral Tracking Section */}
-                        {selectedReport.referrals?.length > 0 && (
-                          <section className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl">
-                            <div className="flex items-center justify-between mb-6">
-                              <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                                <Share2 size={18} /> Formal Referrals Issued
-                              </h3>
-                              <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold">
-                                {selectedReport.referrals.length} {selectedReport.referrals.length === 1 ? 'Referral' : 'Referrals'}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {selectedReport.referrals.map((ref, idx) => (
-                                <div key={idx} className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all">
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                                        {ref.referralType === "External" ? <Shield size={20} /> : <Users size={20} />}
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-bold leading-tight">
-                                          {ref.referralType === "External" ? ref.barangayName : ref.department}
-                                        </p>
-                                        <p className="text-[10px] opacity-70 uppercase font-bold tracking-tighter">
-                                          {ref.referralType} Referral
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={() => { setSelectedReferral(ref); setShowViewReferralModal(true); }}
-                                      className="w-8 h-8 bg-white text-indigo-600 rounded-lg flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
-                                    >
-                                      <Eye size={16} />
-                                    </button>
-                                  </div>
-                                  <div className="text-[10px] opacity-80 flex items-center gap-1">
-                                    <Clock size={10} /> Issued on {new Date(ref.date).toLocaleDateString()}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </section>
-                        )}
-
-                        {/* Unified Timeline */}
-                        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                          <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <Clock size={16} /> Activity Log & Audit Trail
-                          </h3>
-                          <div className="space-y-6">
-                            {selectedReport.timeline?.map((t, i) => (
-                              <div key={i} className="relative pl-8 border-l-2 border-gray-100 pb-2">
-                                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${t.action.includes("Referral") ? "bg-indigo-600" :
-                                  t.action.includes("Closed") ? "bg-gray-800" : "bg-blue-500"
-                                  }`}></div>
-
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                                  <p className="text-sm font-bold text-gray-900">{t.action}</p>
-                                  <time className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
-                                    {new Date(t.timestamp).toLocaleString()}
-                                  </time>
-                                </div>
-
-                                <div className="flex items-center gap-4 mt-2">
-                                  <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
-                                    <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center">
-                                      <UserCheck size={10} className="text-gray-400" />
-                                    </div>
-                                    <span className="font-bold text-gray-700">
-                                      {selectedReport.isAnonymous &&
-                                        (t.performedBy && typeof t.performedBy === 'object'
-                                          ? (t.performedBy._id === (selectedReport.createdBy?._id || selectedReport.createdBy))
-                                          : (t.performedBy === (selectedReport.createdBy?._id || selectedReport.createdBy)))
-                                        ? "Anonymous Reporter"
-                                        : (t.performedBy && typeof t.performedBy === 'object'
-                                          ? `${t.performedBy.firstName || ''} ${t.performedBy.lastName || ''}`.trim() || 'System'
-                                          : (t.performedBy || 'System'))
-                                      }
-                                    </span>
-                                  </p>
-                                </div>
-
-                                {t.remarks && (
-                                  <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                    <p className="text-[11px] text-gray-600 italic leading-relaxed">
-                                      "{t.remarks}"
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
                           </div>
-                        </section>
+                        </div>
                       </div>
                     )}
-                  </div>
 
-                  {/* Footer Actions for Details Modal */}
-                  <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      {!sentimentResults[selectedReport._id] && (
-                        <button
-                          onClick={() => {
-                            triggerAnalysis('single', selectedReport._id, {
-                              salaysay: selectedReport.salaysay || selectedReport.incidentDescription || selectedReport.incidentStatement,
-                              timestamp: selectedReport.submittedAt
-                            });
-                          }}
-                          disabled={analyzing}
-                          className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                          {analyzing && (selectedReportForAnalysis === selectedReport._id || selectedReportForAnalysis?._id === selectedReport._id) ? (
-                            <RefreshCw size={18} className="animate-spin" />
-                          ) : (
-                            <Brain size={18} />
-                          )}
-                          {analyzing && (selectedReportForAnalysis === selectedReport._id || selectedReportForAnalysis?._id === selectedReport._id) ? "Analyzing..." : "AI Analyze Severity"}
-                        </button>
-                      )}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Reporter */}
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <UserCheck size={14} /> Reporter Information
+                        </h3>
+                        {selectedReport.isAnonymous && !selectedReport.identifiedUserId ? (
+                          <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                            <p className="text-sm font-bold text-indigo-900 mb-2">Anonymous Submission</p>
+                            <div className="grid grid-cols-2 gap-y-3">
+                              <InfoItem label="Role"        value={selectedReport.reporterRole} />
+                              <InfoItem label="Gender"      value={selectedReport.anonymousGender} />
+                              <InfoItem label="Affiliation" value={selectedReport.tupRole} />
+                              <InfoItem label="Dept"        value={selectedReport.reporterDepartment} />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                              <div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                                {(selectedReport.identifiedUserId?.firstName || selectedReport.createdBy?.firstName || "U").charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900">
+                                  {selectedReport.identifiedUserId
+                                    ? `${selectedReport.identifiedUserId.firstName ?? ""} ${selectedReport.identifiedUserId.lastName ?? ""}`.trim() || "Anonymous User"
+                                    : `${selectedReport.createdBy?.firstName ?? ""} ${selectedReport.createdBy?.lastName ?? ""}`.trim() || "Anonymous User"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {selectedReport.identifiedUserId?.tupId || selectedReport.createdBy?.tupId}
+                                </p>
+                              </div>
+                            </div>
+                            <button onClick={() => handleMessageUser(selectedReport)}
+                              className="w-full py-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2">
+                              <MessageSquare size={14} /> Message Reporter
+                            </button>
+                          </div>
+                        )}
+                      </section>
 
-                      {selectedReport.caseStatus === "For Interview" && (
-                        <button
-                          onClick={() => setShowReferralModal(true)}
-                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Share2 size={18} />
-                          Refer
-                        </button>
-                      )}
-
-                      {!selectedReport.archived ? (
-                        <button
-                          onClick={() => setShowArchiveModal(true)}
-                          className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Archive size={18} />
-                          Archive Report
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setShowRestoreModal(true)}
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                          <RefreshCw size={18} />
-                          Restore Report
-                        </button>
-                      )}
+                      {/* Case overview */}
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <ClipboardList size={14} /> Case Overview
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <InfoItem label="Status"    value={selectedReport.caseStatus} />
+                          <InfoItem label="Category"  value={selectedReport.incidentTypes?.join(", ") || "General"} />
+                          <InfoItem label="Submitted" value={new Date(selectedReport.submittedAt).toLocaleDateString()} />
+                          <InfoItem label="Time"      value={new Date(selectedReport.submittedAt).toLocaleTimeString()} />
+                        </div>
+                      </section>
                     </div>
+
+                    {/* Location */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Shield size={14} /> Location Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InfoItem label="Place of Incident" value={selectedReport.placeOfIncident} />
+                        <InfoItem label="Address Details"   value={`${selectedReport.incidentBarangay ?? ""} ${selectedReport.incidentCityMun ?? ""} ${selectedReport.incidentProvince ?? ""}`} />
+                      </div>
+                    </section>
+
+                    {/* Statement */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Incident Statement</h3>
+                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                          {selectedReport.salaysay || selectedReport.incidentDescription || selectedReport.incidentStatement || "No statement provided"}
+                        </p>
+                      </div>
+                    </section>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Victim Details</h3>
+                        <div className="grid grid-cols-2 gap-y-4">
+                          <InfoItem label="Full Name"   value={selectedReport.isAnonymous && !selectedReport.identifiedUserId ? "Anonymous Reporter" : (selectedReport.identifiedUserId ? `${selectedReport.identifiedUserId.firstName ?? ""} ${selectedReport.identifiedUserId.lastName ?? ""}`.trim() : `${selectedReport.firstName ?? ""} ${selectedReport.lastName ?? ""}`.trim())} />
+                          <InfoItem label="Gender"      value={selectedReport.isAnonymous && !selectedReport.identifiedUserId ? (selectedReport.reporterGender || selectedReport.anonymousGender) : selectedReport.sex} />
+                          <InfoItem label="Address"     value={`${selectedReport.barangay ?? ""} ${selectedReport.cityMun ?? ""}`} />
+                          <InfoItem label="Occupation"  value={selectedReport.occupation} />
+                        </div>
+                      </section>
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Perpetrator Details</h3>
+                        <div className="grid grid-cols-2 gap-y-4">
+                          <InfoItem label="Name"         value={`${selectedReport.perpFirstName ?? ""} ${selectedReport.perpLastName ?? ""}`} fallback="Not provided" />
+                          <InfoItem label="Gender"       value={selectedReport.perpSex} fallback="Not provided" />
+                          <InfoItem label="Relationship" value={selectedReport.perpRelationship} fallback="Not provided" />
+                          <InfoItem label="Occupation"   value={selectedReport.perpOccupation} fallback="Not provided" />
+                          <InfoItem label="Address"      value={selectedReport.perpBarangay} fallback="Not provided" />
+                        </div>
+                      </section>
+                    </div>
+
+                    {/* Witnesses */}
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Users size={14} /> Witness Information
+                      </h3>
+                      {selectedReport.witnessName ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <InfoItem label="Witness Name"  value={selectedReport.witnessName}    fallback="Not provided" />
+                            <InfoItem label="Gender"        value={selectedReport.witnessGender}  fallback="Not provided" />
+                            <InfoItem label="Contact Info"  value={selectedReport.witnessContact} fallback="Not provided" />
+                            <InfoItem label="Address"       value={selectedReport.witnessAddress} fallback="Not provided" />
+                          </div>
+                          {selectedReport.witnessAccount && (
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                              <label className="text-gray-500 text-[10px] font-bold uppercase tracking-wider block mb-1">Witness Statement</label>
+                              <p className="text-sm text-gray-800 leading-relaxed italic">"{selectedReport.witnessAccount}"</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No witnesses provided</p>
+                      )}
+                    </section>
+
+                    {selectedReport.attachments?.length > 0 && (
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Evidence & Attachments</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                          {selectedReport.attachments.map((att, i) => (
+                            <a key={i} href={att.uri} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-indigo-50 rounded-xl border border-gray-200 hover:border-indigo-200 transition-all group">
+                              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-gray-400 group-hover:text-indigo-600 shadow-sm"><FileText size={16} /></div>
+                              <span className="text-[11px] font-bold text-gray-700 truncate flex-1">{att.fileName}</span>
+                              <Download size={14} className="text-gray-400" />
+                            </a>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {selectedReport.additionalNotes && (
+                      <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Additional Notes</h3>
+                        <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100">
+                          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">{selectedReport.additionalNotes}</p>
+                        </div>
+                      </section>
+                    )}
                   </div>
+                ) : (
+                  /* History tab */
+                  <div className="space-y-6">
+                    {selectedReport.referrals?.length > 0 && (
+                      <section className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl">
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                            <Share2 size={18} /> Formal Referrals Issued
+                          </h3>
+                          <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold">
+                            {selectedReport.referrals.length} Referral{selectedReport.referrals.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedReport.referrals.map((ref, i) => (
+                            <div key={i} className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                    {ref.referralType === "External" ? <Shield size={20} /> : <Users size={20} />}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold leading-tight">
+                                      {ref.referralType === "External" ? ref.barangayName : ref.department}
+                                    </p>
+                                    <p className="text-[10px] opacity-70 uppercase font-bold tracking-tighter">{ref.referralType} Referral</p>
+                                  </div>
+                                </div>
+                                <button onClick={() => { setSelectedReferral(ref); setShowViewReferralModal(true); }}
+                                  className="w-8 h-8 bg-white text-indigo-600 rounded-lg flex items-center justify-center hover:scale-105 transition-transform shadow-lg">
+                                  <Eye size={16} />
+                                </button>
+                              </div>
+                              <div className="text-[10px] opacity-80 flex items-center gap-1">
+                                <Clock size={10} /> Issued on {new Date(ref.date).toLocaleDateString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                      <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <Clock size={16} /> Activity Log & Audit Trail
+                      </h3>
+                      <div className="space-y-6">
+                        {selectedReport.timeline?.map((t, i) => (
+                          <div key={i} className="relative pl-8 border-l-2 border-gray-100 pb-2">
+                            <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${t.action.includes("Referral") ? "bg-indigo-600" : t.action.includes("Closed") ? "bg-gray-800" : "bg-blue-500"}`} />
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+                              <p className="text-sm font-bold text-gray-900">{t.action}</p>
+                              <time className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                                {new Date(t.timestamp).toLocaleString()}
+                              </time>
+                            </div>
+                            <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                              <span className="font-bold text-gray-700">
+                                {selectedReport.isAnonymous &&
+                                  ((t.performedBy?._id || t.performedBy) === (selectedReport.createdBy?._id || selectedReport.createdBy))
+                                  ? (selectedReport.identifiedUserId
+                                      ? `${selectedReport.identifiedUserId.firstName ?? ""} ${selectedReport.identifiedUserId.lastName ?? ""}`.trim() || "Reporter"
+                                      : "Anonymous Reporter")
+                                  : (t.performedBy && typeof t.performedBy === "object"
+                                      ? `${t.performedBy.firstName ?? ""} ${t.performedBy.lastName ?? ""}`.trim() || "System"
+                                      : (t.performedBy || "System"))}
+                              </span>
+                            </p>
+                            {t.remarks && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <p className="text-[11px] text-gray-600 italic">"{t.remarks}"</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {!sentimentResults[selectedReport._id] && (
+                    <button
+                      onClick={() => triggerAnalysis("single", selectedReport._id, { salaysay: selectedReport.salaysay || selectedReport.incidentDescription, timestamp: selectedReport.submittedAt })}
+                      disabled={analyzing}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {analyzing && selectedReportForAI === selectedReport._id
+                        ? <RefreshCw size={18} className="animate-spin" />
+                        : <Brain size={18} />}
+                      {analyzing && selectedReportForAI === selectedReport._id ? "Analyzing..." : "AI Analyze Severity"}
+                    </button>
+                  )}
+
+                  {/* Send Booking Link — only shown when caseStatus is "For Scheduling" */}
+                  {selectedReport.caseStatus === "For Scheduling" && (
+                    <button
+                      onClick={() => handleSendBookingLink(selectedReport._id)}
+                      disabled={isSendingBookingLink}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2"
+                    >
+                      {isSendingBookingLink
+                        ? <RefreshCw size={18} className="animate-spin" />
+                        : <Send size={18} />}
+                      {isSendingBookingLink ? "Sending..." : "Send Booking Link"}
+                    </button>
+                  )}
+
+                  {selectedReport.caseStatus === "For Interview" && (
+                    <button onClick={() => setShowReferralModal(true)}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                      <Share2 size={18} /> Refer
+                    </button>
+                  )}
+                  {!selectedReport.archived
+                    ? <button onClick={() => setShowArchiveModal(true)} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2"><Archive size={18} /> Archive Report</button>
+                    : <button onClick={() => setShowRestoreModal(true)} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2"><RefreshCw size={18} /> Restore Report</button>}
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Internal Referral Modal */}
-          {showReferralModal && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-300">
-              <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col shadow-2xl overflow-hidden border border-gray-100">
-                <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                      <Users size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Internal Referral</h3>
-                      <p className="text-indigo-100 text-sm">Case #{selectedReport.ticketNumber}</p>
-                    </div>
+        {/* ── Case Status Modal ───────────────────────────────────────────────── */}
+        {showCaseStatusModal && selectedReport && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center"><Edit size={15} className="text-indigo-600" /></div>
+                  <div>
+                    <h2 className="text-sm font-bold text-gray-900">Update Case Status</h2>
+                    <p className="text-xs text-gray-400">Select a status to apply to this case</p>
                   </div>
-                  <button
-                    onClick={() => setShowReferralModal(false)}
-                    className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+                </div>
+                <button onClick={resetStatusModal} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400"><X size={16} /></button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+                {/* Status picker */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Case Status</label>
+                  <select
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white"
+                    value={newCaseStatus}
+                    onChange={(e) => { setNewCaseStatus(e.target.value); setShowExternalForm(false); }}
                   >
-                    <X size={24} />
-                  </button>
+                    <option value="">Choose a case status</option>
+                    <option value="For Queuing"    disabled={isStatusDisabled("For Queuing",    selectedReport?.caseStatus)}>For Queuing</option>
+                    <option value="For Scheduling" disabled={isStatusDisabled("For Scheduling", selectedReport?.caseStatus)}>For Scheduling</option>
+                    <option value="For Interview"  disabled>For Interview (auto — set when booking approved)</option>
+                    <option value="For Referral"   disabled={isStatusDisabled("For Referral",   selectedReport?.caseStatus)}>For Referral</option>
+                    <option value="Case Closed"    disabled={isStatusDisabled("Case Closed",    selectedReport?.caseStatus)}>Case Closed</option>
+                  </select>
+
+                  {newCaseStatus === "For Queuing" && (
+                    <p className="mt-2 text-xs text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 flex items-start gap-2">
+                      <ClipboardList size={14} className="flex-shrink-0 mt-0.5" />
+                      This places the case in the queue for admin review.
+                    </p>
+                  )}
                 </div>
 
-                <div className="p-8 space-y-6">
-                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
-                      <AlertCircle size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-blue-800 font-medium">Important</p>
-                      <p className="text-xs text-blue-600 leading-relaxed">
-                        Internal referrals are for coordination between departments. A PDF report will be automatically generated and sent to the reporter via chat.
-                      </p>
-                    </div>
-                  </div>
-
+                {/* Referral type (For Referral only) */}
+                {newCaseStatus === "For Referral" && (
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                        <Users size={16} className="text-indigo-500" />
-                        Target Department
-                      </label>
-                      <select
-                        value={referralDept}
-                        onChange={(e) => setReferralDept(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
-                      >
-                        <option value="">Select a department</option>
-                        <option value="Legal Clinic">Legal Clinic</option>
-                        <option value="Guidance and Counseling">Guidance and Counseling</option>
-                        <option value="Medical Health Services">Medical Health Services</option>
-                        <option value="Gender and Development">Gender and Development</option>
-                        <option value="Director's Office">Director's Office</option>
-                        <option value="Human Resources">Human Resources (for Employees)</option>
-                        <option value="Student Affairs">Student Affairs</option>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Referral Type</label>
+                      <select className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white"
+                        value={newReferralType} onChange={(e) => { setNewReferralType(e.target.value); setShowExternalForm(false); }}>
+                        <option value="">Select type</option>
+                        <option value="Internal">Internal</option>
+                        <option value="External">External</option>
                       </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                        <FileText size={16} className="text-indigo-500" />
-                        Referral Note
-                      </label>
-                      <textarea
-                        placeholder="Provide specific details or instructions for this referral..."
-                        value={referralNote}
-                        onChange={(e) => setReferralNote(e.target.value)}
-                        className="w-full h-32 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none resize-none"
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-8 py-6 bg-gray-50 border-t border-gray-100 flex gap-4">
-                  <button
-                    onClick={() => setShowReferralModal(false)}
-                    className="flex-1 px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddReferral}
-                    disabled={!referralDept}
-                    className="flex-1 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2"
-                  >
-                    <Send size={18} />
-                    Submit Referral
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* View Referral Modal */}
-          {showViewReferralModal && selectedReferral && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-300">
-              <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col max-h-[90vh] shadow-2xl overflow-hidden border border-gray-100">
-                {/* Header */}
-                <div className={`px-8 py-6 flex items-center justify-between text-white ${selectedReferral.referralType === "External" ? "bg-gradient-to-r from-emerald-600 to-teal-600" : "bg-gradient-to-r from-indigo-600 to-blue-600"}`}>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                      {selectedReferral.referralType === "External" ? <Shield size={24} /> : <Users size={24} />}
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Referral Details</h2>
-                      <p className="text-white/80 text-sm font-medium uppercase tracking-wider">
-                        {selectedReferral.referralType} Referral Tracking
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowViewReferralModal(false)}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar text-left text-gray-800">
-                  {selectedReferral.referralType === "External" ? (
-                    <>
-                      <section className="space-y-4 text-left">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
-                          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Barangay Information</h3>
+                    {newReferralType === "Internal" && (
+                      <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                        <div>
+                          <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Target Department</label>
+                          <select value={referralDept} onChange={(e) => setReferralDept(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="">Select a department</option>
+                            {["Legal Clinic","Guidance and Counseling","Medical Health Services","Gender and Development",
+                              "Director's Office","Human Resources","Student Affairs"].map((d) => <option key={d} value={d}>{d}</option>)}
+                          </select>
                         </div>
-                        <div className="grid grid-cols-1 gap-4 bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Target Barangay</span>
-                            <p className="text-sm font-medium text-gray-900">{selectedReferral.barangayName}</p>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Address</span>
-                            <p className="text-sm font-medium text-gray-900">{selectedReferral.barangayAddress || "N/A"}</p>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Receiving Officer</span>
-                              <p className="text-sm font-medium text-gray-900">{selectedReferral.receivingOfficer || "N/A"}</p>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-[10px] font-bold text-emerald-700 uppercase leading-none">Endorsement Mode</span>
-                              <p className="text-sm font-medium text-gray-900">{selectedReferral.endorsementMode || "N/A"}</p>
-                            </div>
-                          </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Internal Note</label>
+                          <textarea placeholder="Instructions for the target department..." value={referralNote}
+                            onChange={(e) => setReferralNote(e.target.value)}
+                            className="w-full h-24 px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" />
                         </div>
-                      </section>
-
-                      <section className="space-y-4 text-left">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-4 bg-teal-500 rounded-full" />
-                          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Referral Reason & Actions</h3>
-                        </div>
-                        <div className="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                          <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase leading-none">Reason</span>
-                            <p className="text-sm text-gray-800 leading-relaxed mt-2">{selectedReferral.reason}</p>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 block leading-none">Actions Taken</span>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedReferral.actionsTaken?.map((action, i) => (
-                                <span key={i} className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-[10px] font-bold rounded-lg shadow-sm">
-                                  {action}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </section>
-
-                      {selectedReferral.attachments?.length > 0 && (
-                        <section className="space-y-4 text-left">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-1.5 h-4 bg-indigo-500 rounded-full" />
-                            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Attachments ({selectedReferral.attachments.length})</h3>
-                          </div>
-                          <div className="grid grid-cols-1 gap-2">
-                            {selectedReferral.attachments.map((file, i) => (
-                              <a
-                                key={i}
-                                href={file.uri}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl hover:border-indigo-400 hover:shadow-md transition-colors group"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                    <FileText size={18} />
+                        {selectedReport.isAnonymous && (
+                          <div className="space-y-4">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input type="checkbox" checked={referralRevealIdentity}
+                                onChange={(e) => setReferralRevealIdentity(e.target.checked)}
+                                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                              <span className="text-sm font-semibold text-gray-700">Reveal User Identity in System</span>
+                            </label>
+                            <div>
+                              <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Link Reporter to User Account</label>
+                              <div className="relative">
+                                <input type="text" placeholder="Search by User ID, Name, or Email..."
+                                  value={reporterSearch} onChange={(e) => handleReporterSearch(e.target.value)}
+                                  className="w-full px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                {reporterSearchResults.length > 0 && (
+                                  <div className="absolute z-10 w-full mt-1 bg-white border border-indigo-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                    {reporterSearchResults.map((u) => (
+                                      <button key={u._id} onClick={() => handleSelectReporter(u)}
+                                        className="w-full px-3 py-2 text-left hover:bg-indigo-50 border-b border-indigo-100 last:border-b-0">
+                                        <div className="text-sm font-medium text-gray-900">{u.firstName} {u.lastName}</div>
+                                        <div className="text-xs text-gray-500">{u.tupId} • {u.email}</div>
+                                      </button>
+                                    ))}
                                   </div>
-                                  <div className="text-left">
-                                    <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{file.fileName}</p>
-                                    <p className="text-[10px] text-gray-500 font-medium">Click to view file</p>
-                                  </div>
-                                </div>
-                                <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center text-gray-400 transition-colors group-hover:bg-gray-50">
-                                  <ExternalLink size={14} />
-                                </div>
-                              </a>
-                            ))}
-                          </div>
-                        </section>
-                      )}
-                    </>
-                  ) : (
-                    <div className="space-y-6 text-left">
-                      <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100">
-                        <div className="grid grid-cols-1 gap-6">
-                          <div>
-                            <span className="text-[10px] font-bold text-indigo-700 uppercase leading-none">Target Department</span>
-                            <p className="text-lg font-bold text-gray-900 mt-2">{selectedReferral.department}</p>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-bold text-indigo-700 uppercase leading-none">Internal Note / Remarks</span>
-                            <p className="text-sm text-gray-800 leading-relaxed mt-2 bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
-                              {selectedReferral.note || "No notes provided"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row items-center gap-4 justify-between">
-                  <div className="flex flex-col text-left">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Submission Date</span>
-                    <span className="text-sm font-bold text-gray-900">{new Date(selectedReferral.date).toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <button
-                      onClick={handleDownloadReferralPDF}
-                      disabled={isDownloadingPDF}
-                      className="flex-1 sm:flex-none px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {isDownloadingPDF ? (
-                        <RefreshCw size={16} className="animate-spin" />
-                      ) : (
-                        <FileDown size={18} className="text-gray-400" />
-                      )}
-                      Report PDF
-                    </button>
-                    <button
-                      onClick={() => setShowViewReferralModal(false)}
-                      className="flex-1 sm:flex-none px-8 py-3 bg-gray-900 text-white rounded-2xl text-sm font-bold hover:bg-gray-800 transition-colors shadow-lg active:scale-95"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Enhanced Case Status Modal */}
-          {showCaseStatusModal && selectedReport && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                      <Edit size={15} className="text-indigo-600" />
-                    </div>
-                    <div className="text-left">
-                      <h2 className="text-sm font-bold text-gray-900">Update Case Status</h2>
-                      <p className="text-xs text-gray-400">Select a status to apply to this case</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => { setShowCaseStatusModal(false); setShowExternalReferralForm(false); }}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5 text-left">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Case Status</label>
-                    <select
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white transition"
-                      value={newCaseStatus}
-                      onChange={(e) => { setNewCaseStatus(e.target.value); setShowExternalReferralForm(false); }}
-                    >
-                      <option value="">Choose a case status</option>
-                      <option disabled={
-                        selectedReport?.caseStatus === "For Interview" ||
-                        selectedReport?.caseStatus === "For Referral" ||
-                        selectedReport?.caseStatus?.startsWith("Internal") ||
-                        selectedReport?.caseStatus === "Referred to Barangay" ||
-                        selectedReport?.caseStatus === "Case Closed"
-                      }>For Queuing</option>
-                      <option disabled={
-                        selectedReport?.caseStatus === "For Referral" ||
-                        selectedReport?.caseStatus?.startsWith("Internal") ||
-                        selectedReport?.caseStatus === "Referred to Barangay" ||
-                        selectedReport?.caseStatus === "Case Closed"
-                      }>For Interview</option>
-                      <option disabled={
-                        !selectedReport?.caseStatus || 
-                        selectedReport?.caseStatus === "For Queuing" ||
-                        selectedReport?.caseStatus?.startsWith("Internal") ||
-                        selectedReport?.caseStatus === "Referred to Barangay" ||
-                        selectedReport?.caseStatus === "Case Closed"
-                      }>For Referral</option>
-                      <option disabled={
-                        !selectedReport?.caseStatus || 
-                        selectedReport?.caseStatus === "For Queuing" ||
-                        selectedReport?.caseStatus === "Case Closed"
-                      }>Case Closed</option>
-                    </select>
-                  </div>
-
-                  {newCaseStatus === "For Referral" && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase">Referral Type</label>
-                        <select
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 bg-white"
-                          value={newReferralType}
-                          onChange={(e) => {
-                            setNewReferralType(e.target.value);
-                            setShowExternalReferralForm(false);
-                          }}
-                        >
-                          <option value="">Select type</option>
-                          <option value="Internal">Internal</option>
-                          <option value="External">External</option>
-                        </select>
-                      </div>
-
-                      {newReferralType === "Internal" && (
-                        <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                          <div>
-                            <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Target Department</label>
-                            <select
-                              value={referralDept}
-                              onChange={(e) => setReferralDept(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                            >
-                              <option value="">Select a department</option>
-                              <option value="Legal Clinic">Legal Clinic</option>
-                              <option value="Guidance and Counseling">Guidance and Counseling</option>
-                              <option value="Medical Health Services">Medical Health Services</option>
-                              <option value="Gender and Development">Gender and Development</option>
-                              <option value="Director's Office">Director's Office</option>
-                              <option value="Human Resources">Human Resources (for Employees)</option>
-                              <option value="Student Affairs">Student Affairs</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Internal Note</label>
-                            <textarea
-                              placeholder="Instructions for the target department..."
-                              value={referralNote}
-                              onChange={(e) => setReferralNote(e.target.value)}
-                              className="w-full h-24 px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-                            ></textarea>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {showExternalReferralForm && (
-                    <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
-                      {/* Section 1 - School Referral Info */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">School Info</span>
-                          <div className="flex-1 h-px bg-gray-100" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1">REFERRED BY</label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 transition"
-                              value={externalReferralData.referredBy}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, referredBy: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1">POSITION</label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 transition"
-                              value={externalReferralData.position}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, position: e.target.value })}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1">SCHOOL NAME</label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-400 transition"
-                              value={externalReferralData.schoolName}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, schoolName: e.target.value })}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1">DATE OF REFERRAL</label>
-                            <input
-                              type="datetime-local"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
-                              value={externalReferralData.referralDate}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, referralDate: e.target.value })}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">REASON FOR REFERRAL <span className="text-red-500">*</span></label>
-                            <textarea
-                              rows={3}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 resize-none"
-                              placeholder="Briefly explain the reason for referral..."
-                              value={externalReferralData.reason}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, reason: e.target.value })}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase">ACTIONS TAKEN BY SCHOOL</label>
-                            <div className="flex flex-wrap gap-2">
-                              {["Counseling", "Parent Conference", "Mediation", "Incident Report Filed"].map((action) => (
-                                <button
-                                  key={action}
-                                  type="button"
-                                  onClick={() => {
-                                    const current = externalReferralData.actionsTaken;
-                                    const updated = current.includes(action) ? current.filter(a => a !== action) : [...current, action];
-                                    setExternalReferralData({ ...externalReferralData, actionsTaken: updated });
-                                  }}
-                                  className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${externalReferralData.actionsTaken.includes(action) ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-gray-300 text-gray-500"}`}
-                                >
-                                  {action}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 2 - Case Summary */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Case Context</span>
-                          <div className="flex-1 h-px bg-gray-100" />
-                        </div>
-                        <textarea
-                          rows={3}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 resize-none"
-                          placeholder="Brief case summary..."
-                          value={externalReferralData.caseSummary}
-                          onChange={(e) => setExternalReferralData({ ...externalReferralData, caseSummary: e.target.value })}
-                        />
-                      </div>
-
-                      {/* Section 3 - Barangay Info */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Barangay Details</span>
-                          <div className="flex-1 h-px bg-gray-100" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">TARGET BARANGAY <span className="text-red-500">*</span></label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
-                              value={externalReferralData.barangayName}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, barangayName: e.target.value })}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">BARANGAY ADDRESS</label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
-                              value={externalReferralData.barangayAddress}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, barangayAddress: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">RECEIVING OFFICER</label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 transition"
-                              value={externalReferralData.receivingOfficer}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, receivingOfficer: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">MODE</label>
-                            <select
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 bg-white"
-                              value={externalReferralData.endorsementMode}
-                              onChange={(e) => setExternalReferralData({ ...externalReferralData, endorsementMode: e.target.value })}
-                            >
-                              <option value="">Select mode</option>
-                              <option>Official Letter</option>
-                              <option>Email</option>
-                              <option>Walk-in</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 4 - Multi-upload Drag & Drop Attachments */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Attachments</span>
-                          <div className="flex-1 h-px bg-gray-100" />
-                        </div>
-                        <div
-                          onDragEnter={handleDragEnter}
-                          onDragOver={handleDragOver}
-                          onDragLeave={handleDragLeave}
-                          onDrop={handleDrop}
-                          className={`relative flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-6 cursor-pointer transition-all ${isDragging
-                            ? "border-indigo-500 bg-indigo-50 scale-[1.01]"
-                            : "border-gray-200 hover:border-indigo-400 hover:bg-indigo-50"
-                            }`}
-                        >
-                          <input
-                            type="file"
-                            multiple
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
-                            onChange={(e) => {
-                              const files = Array.from(e.target.files);
-                              setExternalReferralData(prev => ({ ...prev, attachments: [...(prev.attachments || []), ...files] }));
-                            }}
-                          />
-                          <div className="pointer-events-none flex flex-col items-center">
-                            <FileText className={`w-8 h-8 mb-2 transition-colors ${isDragging ? "text-indigo-600" : "text-gray-300"}`} />
-                            <p className={`text-xs font-bold ${isDragging ? "text-indigo-700" : "text-gray-500"}`}>
-                              {isDragging ? "Drop files now" : "Click or drag to upload"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {externalReferralData.attachments?.length > 0 && (
-                          <div className="grid grid-cols-1 gap-2 mt-3">
-                            {externalReferralData.attachments.map((f, i) => (
-                              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                <div className="flex items-center gap-2 truncate">
-                                  <FileText size={14} className="text-gray-400 flex-shrink-0" />
-                                  <span className="text-[11px] font-medium text-gray-700 truncate">{f.name}</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setExternalReferralData(prev => ({ ...prev, attachments: prev.attachments.filter((_, idx) => idx !== i) }))}
-                                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-colors"
-                                >
-                                  <X size={12} />
-                                </button>
+                                )}
                               </div>
-                            ))}
+                            </div>
                           </div>
                         )}
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Case Closed */}
+                {newCaseStatus === "Case Closed" && (
+                  <div className="space-y-4">
+                    {selectedReport.isAnonymous && selectedReport.identifiedUserId ? (
+                      <div className="p-4 bg-green-50 border border-green-100 rounded-xl flex items-start gap-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center"><UserCheck size={16} className="text-green-600" /></div>
+                        <div>
+                          <p className="text-sm font-bold text-green-900 mb-1">Identity Revealed</p>
+                          <p className="text-xs text-green-700">
+                            {selectedReport.identifiedUserId.firstName} {selectedReport.identifiedUserId.lastName}
+                          </p>
+                        </div>
+                      </div>
+                    ) : selectedReport.isAnonymous && (
+                      <div className="space-y-3">
+                        <label className="block text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Case Closure Reason</label>
+                        {[["successful", "Successful / Case Completed"], ["no_show", "User Did Not Come Through (No-Show)"]].map(([val, lbl]) => (
+                          <label key={val} className="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" name="caseClosureReason" value={val}
+                              checked={caseClosureReason === val} onChange={(e) => setCaseClosureReason(e.target.value)}
+                              className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" />
+                            <span className="text-sm font-medium text-gray-700">{lbl}</span>
+                          </label>
+                        ))}
+                        {caseClosureReason === "successful" && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-indigo-700 mb-1 uppercase tracking-wider">Link Reporter to User Account (Required)</label>
+                            <div className="relative">
+                              <input ref={(el) => setReporterInputRef(el)} type="text"
+                                placeholder="Search by User ID, Name, or Email..."
+                                value={reporterSearch} onChange={(e) => handleReporterSearch(e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-indigo-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                              {reporterSearchResults.length > 0 && (
+                                <div className="fixed z-[9999] bg-white border border-indigo-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                                  style={{ top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width }}>
+                                  {reporterSearchResults.map((u) => (
+                                    <button key={u._id} onClick={() => handleSelectReporter(u)}
+                                      className="w-full px-3 py-2 text-left hover:bg-indigo-50 border-b border-indigo-100 last:border-b-0">
+                                      <div className="text-sm font-medium text-gray-900">{u.firstName} {u.lastName}</div>
+                                      <div className="text-xs text-gray-500">{u.tupId} • {u.email}</div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* External referral form */}
+                {showExternalForm && (
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">School Info</span><div className="flex-1 h-px bg-gray-100" /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[["referredBy","REFERRED BY"], ["position","POSITION"]].map(([k, lbl]) => (
+                          <div key={k}>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1">{lbl}</label>
+                            <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                              value={externalData[k]} onChange={(e) => setExternalData((p) => ({ ...p, [k]: e.target.value }))} />
+                          </div>
+                        ))}
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-bold text-gray-500 mb-1">SCHOOL NAME</label>
+                          <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                            value={externalData.schoolName} onChange={(e) => setExternalData((p) => ({ ...p, schoolName: e.target.value }))} />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-bold text-gray-500 mb-1">DATE OF REFERRAL</label>
+                          <input type="datetime-local" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                            value={externalData.referralDate} onChange={(e) => setExternalData((p) => ({ ...p, referralDate: e.target.value }))} />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-bold text-gray-500 mb-1">REASON FOR REFERRAL <span className="text-red-500">*</span></label>
+                          <textarea rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 resize-none"
+                            value={externalData.reason} onChange={(e) => setExternalData((p) => ({ ...p, reason: e.target.value }))} />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase">ACTIONS TAKEN BY SCHOOL</label>
+                          <div className="flex flex-wrap gap-2">
+                            {["Counseling","Parent Conference","Mediation","Incident Report Filed"].map((action) => (
+                              <button key={action} type="button"
+                                onClick={() => setExternalData((p) => ({ ...p, actionsTaken: p.actionsTaken.includes(action) ? p.actionsTaken.filter((a) => a !== action) : [...p.actionsTaken, action] }))}
+                                className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${externalData.actionsTaken.includes(action) ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-gray-300 text-gray-500"}`}>
+                                {action}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                <div className="p-6 border-t border-gray-100 flex gap-3 flex-shrink-0">
-                  <button
-                    onClick={() => { setShowCaseStatusModal(false); setShowExternalReferralForm(false); }}
-                    className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-bold transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  {showExternalReferralForm ? (
-                    <button
-                      onClick={handleExternalReferral}
-                      disabled={!externalReferralData.reason || !externalReferralData.barangayName || isSubmittingReferral}
-                      className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2"
-                    >
-                      {isSubmittingReferral ? (
-                        <>
-                          <RefreshCw size={16} className="animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        "Submit Referral"
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Case Context</span><div className="flex-1 h-px bg-gray-100" /></div>
+                      <textarea rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 resize-none"
+                        placeholder="Brief case summary..." value={externalData.caseSummary}
+                        onChange={(e) => setExternalData((p) => ({ ...p, caseSummary: e.target.value }))} />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Barangay Details</span><div className="flex-1 h-px bg-gray-100" /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[["barangayName","TARGET BARANGAY","col-span-2",true], ["barangayAddress","BARANGAY ADDRESS","col-span-2",false], ["receivingOfficer","RECEIVING OFFICER","",false]].map(([k, lbl, cls, req]) => (
+                          <div key={k} className={cls}>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">{lbl}{req && <span className="text-red-500"> *</span>}</label>
+                            <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                              value={externalData[k]} onChange={(e) => setExternalData((p) => ({ ...p, [k]: e.target.value }))} />
+                          </div>
+                        ))}
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">MODE</label>
+                          <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 bg-white"
+                            value={externalData.endorsementMode} onChange={(e) => setExternalData((p) => ({ ...p, endorsementMode: e.target.value }))}>
+                            <option value="">Select mode</option>
+                            <option>Official Letter</option><option>Email</option><option>Walk-in</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Attachments</span><div className="flex-1 h-px bg-gray-100" /></div>
+                      <div onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+                        className={`relative flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl py-6 cursor-pointer transition-all ${isDragging ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-indigo-400 hover:bg-indigo-50"}`}>
+                        <input type="file" multiple className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                          onChange={(e) => setExternalData((p) => ({ ...p, attachments: [...p.attachments, ...Array.from(e.target.files)] }))} />
+                        <FileText className={`w-8 h-8 mb-2 ${isDragging ? "text-indigo-600" : "text-gray-300"}`} />
+                        <p className={`text-xs font-bold pointer-events-none ${isDragging ? "text-indigo-700" : "text-gray-500"}`}>
+                          {isDragging ? "Drop files now" : "Click or drag to upload"}
+                        </p>
+                      </div>
+                      {externalData.attachments?.length > 0 && (
+                        <div className="grid grid-cols-1 gap-2">
+                          {externalData.attachments.map((f, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                              <div className="flex items-center gap-2 truncate">
+                                <FileText size={14} className="text-gray-400 flex-shrink-0" />
+                                <span className="text-[11px] font-medium text-gray-700 truncate">{f.name}</span>
+                              </div>
+                              <button type="button"
+                                onClick={() => setExternalData((p) => ({ ...p, attachments: p.attachments.filter((_, j) => j !== i) }))}
+                                className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white text-gray-400 hover:text-red-500">
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-100 flex gap-3">
+                <button onClick={resetStatusModal} className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-bold">Cancel</button>
+                {showExternalForm
+                  ? <button onClick={handleExternalReferral}
+                      disabled={!externalData.reason || !externalData.barangayName || isSubmittingReferral}
+                      className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      {isSubmittingReferral ? <><RefreshCw size={16} className="animate-spin" /> Submitting...</> : "Submit Referral"}
                     </button>
-                  ) : (
-                    <button
+                  : <button
                       onClick={newReferralType === "Internal" ? handleAddReferral : handleUpdateCaseStatus}
-                      disabled={
-                        !newCaseStatus ||
-                        (newCaseStatus === "For Referral" && !newReferralType) ||
-                        (newReferralType === "Internal" && !referralDept) ||
-                        loading
-                      }
-                      className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all"
-                    >
+                      disabled={!newCaseStatus || (newCaseStatus === "For Referral" && !newReferralType) || (newReferralType === "Internal" && !referralDept) || loading}
+                      className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold">
                       {newReferralType === "Internal" ? "Submit Internal Referral" : "Update Status"}
-                    </button>
+                    </button>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Reporter Confirm Modal ──────────────────────────────────────────── */}
+        {showReporterConfirm && selectedReporter && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center"><UserCheck size={20} className="text-indigo-600" /></div>
+                <h3 className="text-lg font-bold text-gray-900">Confirm Reporter Identification</h3>
+              </div>
+              <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-4 space-y-1">
+                <p className="text-sm font-semibold text-indigo-900 mb-2">Selected Reporter:</p>
+                {[["Name", `${selectedReporter.firstName} ${selectedReporter.lastName}`],["TUP ID", selectedReporter.tupId],["Email", selectedReporter.email]].map(([k, v]) => (
+                  <p key={k} className="text-sm text-gray-700"><span className="font-medium">{k}:</span> {v}</p>
+                ))}
+              </div>
+              <p className="text-sm text-gray-600 mb-6">This user will be linked as the reporter for case {selectedReport?.ticketNumber}.</p>
+              <div className="flex gap-3">
+                <button onClick={() => { setShowReporterConfirm(false); setSelectedReporter(null); }} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Cancel</button>
+                <button onClick={handleConfirmReporter} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Confirm & Link</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Internal Referral Modal ─────────────────────────────────────────── */}
+        {showReferralModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col shadow-2xl overflow-hidden border border-gray-100">
+              <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center"><Users size={24} /></div>
+                  <div>
+                    <h3 className="text-xl font-bold">Internal Referral</h3>
+                    <p className="text-indigo-100 text-sm">Case #{selectedReport?.ticketNumber}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowReferralModal(false)} className="p-2 hover:bg-white/20 rounded-xl"><X size={24} /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0"><AlertCircle size={20} /></div>
+                  <p className="text-xs text-blue-600 leading-relaxed">A PDF report will be automatically generated and sent to the reporter via chat.</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2"><Users size={16} className="text-indigo-500" /> Target Department</label>
+                    <select value={referralDept} onChange={(e) => setReferralDept(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                      <option value="">Select a department</option>
+                      {["Legal Clinic","Guidance and Counseling","Medical Health Services","Gender and Development","Director's Office","Human Resources","Student Affairs"].map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2"><FileText size={16} className="text-indigo-500" /> Referral Note</label>
+                    <textarea placeholder="Provide specific details or instructions..." value={referralNote}
+                      onChange={(e) => setReferralNote(e.target.value)}
+                      className="w-full h-32 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none" />
+                  </div>
+                  {selectedReport?.isAnonymous && (
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={referralRevealIdentity} onChange={(e) => setReferralRevealIdentity(e.target.checked)}
+                        className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                      <span className="text-sm font-semibold text-gray-700">Reveal User Identity</span>
+                    </label>
                   )}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Archive Modal */}
-          {showArchiveModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans">
-              <div className="bg-white rounded-2xl w-full max-w-sm text-center overflow-hidden shadow-2xl">
-                <div className="p-8">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Archive className="text-red-600" size={32} />
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Archive Report</h2>
-                  <p className="text-sm text-gray-500">This will move the report to the archived section.</p>
-                </div>
-                <div className="flex p-4 border-t border-gray-100 gap-3">
-                  <button
-                    onClick={() => setShowArchiveModal(false)}
-                    className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleArchive}
-                    className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-red-700 transition-colors"
-                  >
-                    Archive
-                  </button>
-                </div>
+              <div className="px-8 py-6 bg-gray-50 border-t border-gray-100 flex gap-4">
+                <button onClick={() => setShowReferralModal(false)} className="flex-1 px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-100">Cancel</button>
+                <button onClick={handleAddReferral} disabled={!referralDept}
+                  className="flex-1 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                  <Send size={18} /> Submit Referral
+                </button>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Restore Modal */}
-          {showRestoreModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans">
-              <div className="bg-white rounded-2xl w-full max-w-sm text-center overflow-hidden shadow-2xl">
-                <div className="p-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <RefreshCw className="text-green-600" size={32} />
+        {/* ── View Referral Modal ─────────────────────────────────────────────── */}
+        {showViewReferralModal && selectedReferral && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col max-h-[90vh] shadow-2xl overflow-hidden border border-gray-100">
+              <div className={`px-8 py-6 flex items-center justify-between text-white ${selectedReferral.referralType === "External" ? "bg-gradient-to-r from-emerald-600 to-teal-600" : "bg-gradient-to-r from-indigo-600 to-blue-600"}`}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                    {selectedReferral.referralType === "External" ? <Shield size={24} /> : <Users size={24} />}
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Restore Report</h2>
-                  <p className="text-sm text-gray-500">This will move the report back to active status.</p>
+                  <div>
+                    <h2 className="text-xl font-bold">Referral Details</h2>
+                    <p className="text-white/80 text-sm font-medium uppercase tracking-wider">{selectedReferral.referralType} Referral</p>
+                  </div>
                 </div>
-                <div className="flex p-4 border-t border-gray-100 gap-3">
-                  <button
-                    onClick={() => setShowRestoreModal(false)}
-                    className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRestore}
-                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-green-700 transition-colors"
-                  >
-                    Restore
-                  </button>
-                </div>
+                <button onClick={() => setShowViewReferralModal(false)} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10"><X size={20} /></button>
               </div>
-            </div>
-          )}
 
-          {/* Floating Bulk Actions Bar */}
-          {selectedReportIds.length > 0 && (
-            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[60] p-4 bg-white/95 backdrop-blur-md border border-indigo-100 rounded-2xl shadow-2xl flex items-center justify-between gap-6 animate-in slide-in-from-bottom-6 duration-300 w-[90%] max-w-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shadow-inner">
-                  {selectedReportIds.length}
-                </div>
+              <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                {selectedReferral.referralType === "External" ? (
+                  <>
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-2 mb-2"><div className="w-1.5 h-4 bg-emerald-500 rounded-full" /><h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Barangay Information</h3></div>
+                      <div className="grid grid-cols-1 gap-4 bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100">
+                        {[["Target Barangay", selectedReferral.barangayName], ["Address", selectedReferral.barangayAddress || "N/A"]].map(([l, v]) => (
+                          <div key={l}><span className="text-[10px] font-bold text-emerald-700 uppercase">{l}</span><p className="text-sm font-medium text-gray-900 mt-1">{v}</p></div>
+                        ))}
+                        <div className="grid grid-cols-2 gap-4">
+                          {[["Receiving Officer", selectedReferral.receivingOfficer || "N/A"],["Endorsement Mode", selectedReferral.endorsementMode || "N/A"]].map(([l, v]) => (
+                            <div key={l}><span className="text-[10px] font-bold text-emerald-700 uppercase">{l}</span><p className="text-sm font-medium text-gray-900 mt-1">{v}</p></div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-2 mb-2"><div className="w-1.5 h-4 bg-teal-500 rounded-full" /><h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Reason & Actions</h3></div>
+                      <div className="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                        <div><span className="text-[10px] font-bold text-gray-400 uppercase">Reason</span><p className="text-sm text-gray-800 leading-relaxed mt-2">{selectedReferral.reason}</p></div>
+                        <div>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Actions Taken</span>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedReferral.actionsTaken?.map((a, i) => (
+                              <span key={i} className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-[10px] font-bold rounded-lg shadow-sm">{a}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                    {selectedReferral.attachments?.length > 0 && (
+                      <section className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2"><div className="w-1.5 h-4 bg-indigo-500 rounded-full" /><h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Attachments ({selectedReferral.attachments.length})</h3></div>
+                        <div className="grid grid-cols-1 gap-2">
+                          {selectedReferral.attachments.map((f, i) => (
+                            <a key={i} href={f.uri} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl hover:border-indigo-400 hover:shadow-md transition-colors group">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors"><FileText size={18} /></div>
+                                <div><p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{f.fileName}</p><p className="text-[10px] text-gray-500">Click to view</p></div>
+                              </div>
+                              <ExternalLink size={14} className="text-gray-400" />
+                            </a>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 space-y-4">
+                    <div><span className="text-[10px] font-bold text-indigo-700 uppercase">Target Department</span><p className="text-lg font-bold text-gray-900 mt-2">{selectedReferral.department}</p></div>
+                    <div><span className="text-[10px] font-bold text-indigo-700 uppercase">Internal Note</span><p className="text-sm text-gray-800 leading-relaxed mt-2 bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">{selectedReferral.note || "No notes provided"}</p></div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row items-center gap-4 justify-between">
                 <div>
-                  <h3 className="font-bold text-gray-900 text-sm leading-none mb-1">
-                    {selectedReportIds.length === 1 ? "1 Report Selected" : `${selectedReportIds.length} Reports Selected`}
-                  </h3>
-                  <p className="text-xs text-gray-500 font-medium leading-none mt-1">
-                    Analyze severity in bulk with AI.
-                  </p>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Submission Date</span>
+                  <span className="text-sm font-bold text-gray-900">{new Date(selectedReferral.date).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button onClick={handleDownloadReferralPDF} disabled={isDownloadingPDF}
+                    className="flex-1 sm:flex-none px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl text-sm font-bold hover:bg-gray-50 flex items-center justify-center gap-2 disabled:opacity-50">
+                    {isDownloadingPDF ? <RefreshCw size={16} className="animate-spin" /> : <FileDown size={18} className="text-gray-400" />} Report PDF
+                  </button>
+                  <button onClick={() => setShowViewReferralModal(false)} className="flex-1 sm:flex-none px-8 py-3 bg-gray-900 text-white rounded-2xl text-sm font-bold hover:bg-gray-800">Close</button>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => triggerAnalysis('bulk')}
-                  disabled={analyzing}
-                  className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-all font-bold text-xs shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer transform active:scale-95 duration-200"
-                >
-                  <Brain size={14} className={analyzing ? "animate-pulse" : ""} />
-                  {analyzing ? "Analyzing..." : "Bulk Analyze"}
-                </button>
-                <button
-                  onClick={() => setSelectedReportIds([])}
-                  className="px-4 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-bold text-xs transition cursor-pointer"
-                >
-                  Cancel
-                </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Archive Modal ───────────────────────────────────────────────────── */}
+        {showArchiveModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm text-center overflow-hidden shadow-2xl">
+              <div className="p-8">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Archive className="text-red-600" size={32} /></div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Archive Report</h2>
+                <p className="text-sm text-gray-500">This will move the report to the archived section.</p>
+              </div>
+              <div className="flex p-4 border-t border-gray-100 gap-3">
+                <button onClick={() => setShowArchiveModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm">Cancel</button>
+                <button onClick={handleArchive} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700">Archive</button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* ── Restore Modal ───────────────────────────────────────────────────── */}
+        {showRestoreModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm text-center overflow-hidden shadow-2xl">
+              <div className="p-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><RefreshCw className="text-green-600" size={32} /></div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Restore Report</h2>
+                <p className="text-sm text-gray-500">This will move the report back to active status.</p>
+              </div>
+              <div className="flex p-4 border-t border-gray-100 gap-3">
+                <button onClick={() => setShowRestoreModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm">Cancel</button>
+                <button onClick={handleRestore} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700">Restore</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Bulk Analysis Bar ───────────────────────────────────────────────── */}
+        {selectedReportIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] p-4 bg-white/95 backdrop-blur-md border border-indigo-100 rounded-2xl shadow-2xl flex items-center justify-between gap-6 w-[90%] max-w-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">{selectedReportIds.length}</div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm leading-none mb-1">
+                  {selectedReportIds.length === 1 ? "1 Report Selected" : `${selectedReportIds.length} Reports Selected`}
+                </h3>
+                <p className="text-xs text-gray-500">Analyze severity in bulk with AI.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => triggerAnalysis("bulk")}
+                disabled={analyzing}
+                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-md disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Brain size={14} className={analyzing ? "animate-pulse" : ""} />
+                {analyzing ? "Analyzing..." : "Bulk Analyze"}
+              </button>
+              <button onClick={() => setSelectedReportIds([])} className="px-4 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-bold text-xs">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

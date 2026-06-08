@@ -566,7 +566,8 @@ const sendInterviewBookingLink = async (req, res) => {
       expiresAt,
       granted: true,
       used: false,
-      reportTicketNumber: ticketNumber // ✅ Track which report this is for
+      reportTicketNumber: ticketNumber, // ✅ Track which report this is for
+      adminId: req.user?.id || req.user?._id // ✅ Store admin ID who generated link
     };
     await user.save();
 
@@ -757,6 +758,15 @@ const verifyBookingAccess = async (req, res) => {
       });
     }
 
+    // Get the report's ID
+    const report = await Report.findOne({ ticketNumber: ticket });
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report ticket not found'
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: 'Access granted',
@@ -766,6 +776,8 @@ const verifyBookingAccess = async (req, res) => {
         email: user.email
       },
       ticketNumber: ticket,
+      reportId: report._id,
+      adminId: user.bookingAccess?.adminId || null,
       expiresAt: user.bookingAccess.expiresAt
     });
 
@@ -1295,52 +1307,80 @@ const getMyConsultations = async (req, res) => {
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-    // Only fetch consultations for this user
-    const calendarEvents = await CalendarEvent.find({
-      userId,
-      type: 'consultation'
-    }).populate('userId', 'firstName lastName email');
 
-    // Format as in getAllCalendarEvents
-    const formattedCalendarEvents = calendarEvents.map(event => {
-      const user = event.userId;
-      const userName = user
-        ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-        : event.extendedProps?.userName || 'Unknown User';
-      const userEmail = user?.email || event.extendedProps?.userEmail || 'N/A';
-      let displayStatus = event.extendedProps?.status === 'scheduled' ? 'upcoming' : event.extendedProps?.status;
-      const now = new Date();
-      const eventDate = event.end ? new Date(event.end) : new Date(event.start);
-      if ((displayStatus === 'upcoming' || displayStatus === 'scheduled') && eventDate < now) {
-        displayStatus = 'completed';
+    const Appointment = require('../models/Appointment');
+
+    // Fetch appointments for this user
+    const appointments = await Appointment.find({ userId })
+      .populate("adminId", "firstName lastName")
+      .populate("reportId", "ticketNumber isAnonymous identifiedUserId")
+      .populate("reportId.identifiedUserId", "firstName lastName email")
+      .sort({ createdAt: -1 });
+
+    // Format appointments for frontend
+    const formattedAppointments = appointments.map(appt => {
+      const report = appt.reportId;
+      const isAnonymous = report?.isAnonymous;
+      const isIdentityRevealed = !!report?.identifiedUserId;
+
+      // Determine the display name based on anonymity and identity revelation
+      let displayName = 'Anonymous User';
+      let displayEmail = 'Private';
+
+      if (!isAnonymous || isIdentityRevealed) {
+        if (isIdentityRevealed) {
+          displayName = `${report.identifiedUserId.firstName || ''} ${report.identifiedUserId.lastName || ''}`.trim() || 'Anonymous User';
+          displayEmail = report.identifiedUserId.email || 'Private';
+        } else {
+          displayName = 'User';
+          displayEmail = 'Private';
+        }
       }
-      const eventAttachments = event.attachments && Array.isArray(event.attachments) ? event.attachments : [];
+
+      // Map appointment status to display status
+      let displayStatus = 'pending';
+      if (appt.status === 'Approved' || appt.status === 'Scheduled') {
+        displayStatus = 'upcoming';
+      } else if (appt.status === 'Admin Rescheduled' || appt.status === 'User Rescheduled') {
+        displayStatus = 'rescheduled';
+      } else if (appt.status === 'Cancelled') {
+        displayStatus = 'cancelled';
+      } else if (appt.status === 'Completed') {
+        displayStatus = 'completed';
+      } else if (appt.status === 'Pending') {
+        displayStatus = 'pending';
+      }
+
+      // Create start and end dates from appointment date and time
+      const startDateTime = new Date(`${appt.date}T${appt.startTime}`);
+      const endDateTime = new Date(`${appt.date}T${appt.endTime}`);
+
       return {
-        _id: event._id,
-        title: event.title,
-        start: event.start,
-        end: event.end,
-        allDay: event.allDay,
-        color: getEventColor(event.type),
-        userId: event.userId?._id,
-        reportTicketNumber: event.reportTicketNumber,
+        _id: appt._id,
+        title: 'Consultation',
+        start: startDateTime.toISOString(),
+        end: endDateTime.toISOString(),
+        allDay: false,
+        color: '#8b5cf6',
+        userId: appt.userId,
+        reportTicketNumber: report?.ticketNumber || 'N/A',
         extendedProps: {
-          type: event.type,
-          description: event.description,
-          location: event.location,
-          notes: event.notes,
-          userName,
-          userEmail,
-          mode: event.extendedProps?.mode || 'N/A',
-          status: displayStatus || 'upcoming',
-          attachments: eventAttachments
+          type: 'consultation',
+          isAnonymous,
+          isIdentityRevealed,
+          userName: displayName,
+          userEmail: displayEmail,
+          mode: 'online',
+          status: displayStatus,
+          duration: appt.duration || 30
         }
       };
     });
+
     res.status(200).json({
       success: true,
-      count: formattedCalendarEvents.length,
-      data: formattedCalendarEvents
+      count: formattedAppointments.length,
+      data: formattedAppointments
     });
   } catch (error) {
     console.error('❌ Error fetching my consultations:', error);

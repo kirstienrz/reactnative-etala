@@ -10,6 +10,10 @@ const useUnreadMessages = (isActive = false) => {
   const initializedRef = useRef(false);
 
   const syncFromServer = async () => {
+    // Only attempt if we have a token (avoid 401 on landing/login)
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
     try {
       const data = await getAllTickets({ sortBy: 'lastMessageAt' });
       const count = data.filter(t =>
@@ -17,8 +21,10 @@ const useUnreadMessages = (isActive = false) => {
       ).length;
       countRef.current = count;
       dispatch(setUnreadMessageCount(count));
-    } catch {
-      console.error('Failed to fetch unread count');
+    } catch (err) {
+      if (err.response?.status !== 401) {
+        console.error('Failed to fetch unread count');
+      }
     }
   };
 

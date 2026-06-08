@@ -59,6 +59,14 @@ const ticketSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    lastEmailSentToUser: {
+      type: Date,
+      default: null
+    },
+    lastEmailSentToAdmin: {
+      type: Date,
+      default: null
+    },
   },
   {
     timestamps: true,

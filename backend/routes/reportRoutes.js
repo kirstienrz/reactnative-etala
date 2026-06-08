@@ -23,7 +23,8 @@ const {
   uploadPDFOnly,
   getReportAnalytics,
   addReferral,
-  updateReportServices
+  updateReportServices,
+  sendBookingLink
 } = require("../controllers/reportController");
 
 // ===================================================================
@@ -95,6 +96,13 @@ router.post(
   auth(["admin", "superadmin"]),
   uploadReport.array("attachments", 10),
   addReferral
+);
+
+// 📌 Send booking link to user
+router.post(
+  "/admin/:id/send-booking-link",
+  auth(["admin", "superadmin"]),
+  sendBookingLink
 );
 
 // 📌 Archive report

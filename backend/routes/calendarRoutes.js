@@ -23,7 +23,7 @@ router.route('/events/:id')
   .put(uploadCalendarEvent.array('attachments', 10), updateCalendarEvent)  // ✅ ADDED
   .delete(deleteCalendarEvent);
 
-router.post('/send-booking-link', sendInterviewBookingLink);
+router.post('/send-booking-link', auth(["superadmin"]), sendInterviewBookingLink);
 router.get('/verify-booking-access', verifyBookingAccess);
 
 // Secure: Get only the authenticated user's consultations

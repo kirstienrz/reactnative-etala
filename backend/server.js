@@ -176,6 +176,11 @@ app.use(xss());
 const server = http.createServer(app);
 require("./utils/sendAdminReminder");
 
+// Start reminder scheduler after server is ready
+setTimeout(() => {
+  require("./utils/appointmentReminderScheduler");
+}, 3000);
+
 // ================= MIDDLEWARES =================
 // express.json is already applied above with limit
 
@@ -230,6 +235,8 @@ app.use("/api/documentation", require("./routes/documentationRoutes"));
 app.use("/api/finance", require("./routes/financeRoutes"));
 app.use("/api/tickets", require("./routes/tickets"));
 app.use("/api/admin-availability", require("./routes/adminAvailabilityRoutes"));
+app.use("/api/default-schedule", require("./routes/defaultScheduleRoutes"));
+app.use("/api/appointments", require("./routes/appointmentRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 // ================= START SERVER =================
@@ -238,4 +245,10 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log("Allowed origins:", allowedOrigins);
+
+  // Start reminder scheduler after server is ready
+  setTimeout(() => {
+    const startReminderScheduler = require("./utils/appointmentReminderScheduler");
+    startReminderScheduler();
+  }, 3000);
 });

@@ -47,6 +47,7 @@ import DatasetPage from "./pages/superadmin/sexData";
 import Documentation from "./pages/superadmin/Documentation";
 import FinancePage from "./pages/superadmin/Finance";
 import NotificationsPage from "./pages/superadmin/Notifications";
+import AppointmentManagement from "./pages/superadmin/AppointmentManagement";
 
 import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
@@ -79,10 +80,12 @@ import DownloadApk from "./pages/public/DownloadApk";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   return (
     <Provider store={store}>
+      <Toaster position="top-center" reverseOrder={false} />
       <ToastContainer
         position="top-right"
         autoClose={5000}
@@ -155,8 +158,7 @@ const App = () => {
               <Route path="/superadmin/documentation" element={<Documentation />} />
               <Route path="/superadmin/finance" element={<FinancePage />} />
               <Route path="/superadmin/notifications" element={<NotificationsPage />} />
-
-
+              <Route path="/superadmin/appointments" element={<AppointmentManagement />} />
             </Route>
 
 

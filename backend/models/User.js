@@ -56,6 +56,7 @@ const userSchema = new mongoose.Schema({
     expiresAt: { type: Date },
     granted: { type: Boolean, default: false },
     reportTicketNumber: { type: String },
+    adminId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     used: { type: Boolean, default: false }
   },
 

@@ -6,13 +6,61 @@ const Message = require("../models/message");
 const Report = require("../models/report");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/auth");
-const sendEmail = require("../utils/sendEmail"); // ✉️ Import email utility
+const sendEmail = require("../utils/sendEmail");
 const notificationController = require("../controllers/notificationController");
 
 // Middlewares
 const authenticateAdmin = authMiddleware(["superadmin"]);
 const authenticateUser = authMiddleware(["user", "superadmin"]);
 const authenticateAny = authMiddleware(["user", "superadmin"]);
+
+// ─── Shared email template helper ────────────────────────────────────────────
+
+const buildEmail = ({ title, icon, accentColor = "#667eea", bodyHtml, ticketNumber = null }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f3f4f6; }
+    .wrapper { padding: 30px 16px; }
+    .container { max-width: 600px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%); color: white; padding: 32px 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.3px; }
+    .header .icon { font-size: 36px; margin-bottom: 10px; display: block; }
+    .content { background: #ffffff; padding: 32px 30px; }
+    .info-box { background: #f8f9ff; padding: 16px 20px; border-left: 4px solid ${accentColor}; margin: 20px 0; border-radius: 0 8px 8px 0; }
+    .info-box p { margin: 6px 0; font-size: 14px; }
+    .info-box strong { color: #374151; }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: #6b7280; }
+    .detail-value { color: #111827; font-weight: 500; }
+    .warning { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 18px; margin: 20px 0; border-radius: 0 8px 8px 0; font-size: 14px; color: #92400e; }
+    .footer { background: #f9fafb; padding: 20px 30px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; }
+    p { margin: 0 0 14px; font-size: 15px; color: #374151; }
+    p:last-child { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <span class="icon">${icon}</span>
+        <h1>${title}</h1>
+      </div>
+      <div class="content">
+        ${bodyHtml}
+        ${ticketNumber ? `<div class="info-box"><p><strong>Reference:</strong> Ticket #${ticketNumber}</p></div>` : ""}
+      </div>
+      <div class="footer">
+        <p>This is an automated message from <strong>GAD Portal</strong>. Please do not reply to this email.</p>
+        <p>© 2026 GAD Portal. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
 
 // ========================================
 // 📊 SPECIFIC ROUTES (MUST BE BEFORE PARAMETERIZED ROUTES)
@@ -45,9 +93,9 @@ router.get("/my-tickets", authenticateUser, async (req, res) => {
 
     let tickets = await Ticket.find({ userId })
       .populate("reportId")
+      .populate("reportId.identifiedUserId", "firstName lastName email")
       .sort({ lastMessageAt: -1 });
 
-    // Convert to plain objects with virtuals
     tickets = tickets.map(t => t.toObject({ virtuals: true }));
 
     res.json(tickets);
@@ -70,10 +118,10 @@ router.get("/", authenticateAdmin, async (req, res) => {
     if (search) query.ticketNumber = new RegExp(search, "i");
     let tickets = await Ticket.find(query)
       .populate("reportId")
+      .populate("reportId.identifiedUserId", "firstName lastName email")
       .populate("userId", "firstName lastName email")
       .sort({ [sortBy]: -1 });
 
-    // Convert to plain objects with virtuals
     tickets = tickets.map(t => t.toObject({ virtuals: true }));
 
     res.json(tickets);
@@ -94,18 +142,15 @@ router.get("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Check if user has access to this ticket
     const ticket = await Ticket.findOne({ ticketNumber });
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // If user (not admin), verify they own this ticket
     if (userRole !== "superadmin") {
       if (!ticket.isAnonymous && ticket.userId.toString() !== userId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      // For anonymous tickets, check if user created the report
       if (ticket.reportId) {
         const report = await Report.findById(ticket.reportId);
         if (report && report.createdBy.toString() !== userId) {
@@ -134,18 +179,15 @@ router.patch("/:ticketNumber/messages/read", authenticateAny, async (req, res) =
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Check if user has access to this ticket
     const ticket = await Ticket.findOne({ ticketNumber });
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // If user (not admin), verify they own this ticket
     if (userRole !== "superadmin") {
       if (!ticket.isAnonymous && ticket.userId.toString() !== userId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      // For anonymous tickets, check if user created the report
       if (ticket.reportId) {
         const report = await Report.findById(ticket.reportId);
         if (report && report.createdBy.toString() !== userId) {
@@ -154,11 +196,9 @@ router.patch("/:ticketNumber/messages/read", authenticateAny, async (req, res) =
       }
     }
 
-    // Get Socket.IO instance
     const io = req.app.get("io");
 
     if (userRole === "superadmin") {
-      // Admin reading - mark user messages as read
       await Message.updateMany(
         { ticketNumber, sender: "user", isRead: false },
         { isRead: true }
@@ -169,40 +209,30 @@ router.patch("/:ticketNumber/messages/read", authenticateAny, async (req, res) =
         { new: true }
       );
 
-      // ADD THIS LOG
       console.log("✅ Mark as read result:", {
         ticketNumber,
         unreadCount: updateResult?.unreadCount,
         matched: !!updateResult
       });
 
-      // 🔥 Emit read status update to user
       io.to(`ticket-${ticketNumber}`).emit("messages-read", {
         ticketNumber,
         readBy: "superadmin"
       });
 
-      // 🔥 Emit to admin room to update ticket list
       let updatedTicket = await Ticket.findOne({ ticketNumber })
         .populate("reportId")
+        .populate("reportId.identifiedUserId", "firstName lastName email")
         .populate("userId", "firstName lastName email");
 
-      // Convert to plain object and manually add virtual property
       updatedTicket = updatedTicket.toObject({ virtuals: true });
 
       console.log("📤 Emitting ticket-updated to admin-room");
-      console.log("📊 Updated ticket data:", {
-        ticketNumber: updatedTicket.ticketNumber,
-        hasUnreadMessages: updatedTicket.hasUnreadMessages,
-        unreadCount: updatedTicket.unreadCount
-      });
-
       io.to("admin-room").emit("ticket-updated", updatedTicket);
     } else {
-      // User reading - mark admin messages as read
-      console.log('👤 User is marking messages as read');
-      console.log('🔍 User ID:', userId);
-      console.log('🔍 Ticket user ID:', ticket.userId);
+      console.log("👤 User is marking messages as read");
+      console.log("🔍 User ID:", userId);
+      console.log("🔍 Ticket user ID:", ticket.userId);
 
       await Message.updateMany(
         { ticketNumber, sender: "superadmin", isRead: false },
@@ -213,38 +243,30 @@ router.patch("/:ticketNumber/messages/read", authenticateAny, async (req, res) =
         { "unreadCount.user": 0 }
       );
 
-      // 🔥 Emit read status update to admin
       io.to(`ticket-${ticketNumber}`).emit("messages-read", {
         ticketNumber,
         readBy: "user"
       });
 
-      // 🔥 Emit to user room to update ticket list
       let updatedTicket = await Ticket.findOne({ ticketNumber })
         .populate("reportId")
+        .populate("reportId.identifiedUserId", "firstName lastName email")
         .populate("userId", "firstName lastName email");
 
-      // Convert to plain object and manually add virtual property
       updatedTicket = updatedTicket.toObject({ virtuals: true });
 
-      console.log('📤 Emitting ticket-updated to user room');
-      console.log('📍 Room name:', `user-${ticket.userId}`);
-      console.log('📊 Updated ticket data:', {
-        ticketNumber: updatedTicket.ticketNumber,
-        unreadCount: updatedTicket.unreadCount,
-        hasUnreadMessagesForUser: updatedTicket.hasUnreadMessagesForUser
-      });
+      console.log("📤 Emitting ticket-updated to user room");
+      console.log("📍 Room name:", `user-${ticket.userId}`);
 
-      // Check user room
       const userRoom = io.sockets.adapter.rooms.get(`user-${ticket.userId}`);
-      console.log('📊 User room status:', {
+      console.log("📊 User room status:", {
         exists: !!userRoom,
         size: userRoom ? userRoom.size : 0,
         sockets: userRoom ? Array.from(userRoom) : []
       });
 
       io.to(`user-${ticket.userId}`).emit("ticket-updated", updatedTicket);
-      console.log('✅ Emitted ticket-updated to user room');
+      console.log("✅ Emitted ticket-updated to user room");
     }
 
     res.json({ success: true, message: "Messages marked as read" });
@@ -258,34 +280,25 @@ router.patch("/:ticketNumber/messages/unread", authenticateAdmin, async (req, re
   try {
     const { ticketNumber } = req.params;
 
-    // Check if ticket exists
     const ticket = await Ticket.findOne({ ticketNumber });
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // Set unread count to 1 (minimum to show as unread)
     await Ticket.findOneAndUpdate(
       { ticketNumber },
       { "unreadCount.superadmin": 1 }
     );
 
-    // Get updated ticket
     let updatedTicket = await Ticket.findOne({ ticketNumber })
       .populate("reportId")
+      .populate("reportId.identifiedUserId", "firstName lastName email")
       .populate("userId", "firstName lastName email");
 
-    // Convert to plain object and manually add virtual property
     updatedTicket = updatedTicket.toObject({ virtuals: true });
 
     console.log("📤 Emitting ticket-updated (mark unread) to admin-room");
-    console.log("📊 Updated ticket data:", {
-      ticketNumber: updatedTicket.ticketNumber,
-      hasUnreadMessages: updatedTicket.hasUnreadMessages,
-      unreadCount: updatedTicket.unreadCount
-    });
 
-    // 🔥 Emit to admin room to update ticket list
     const io = req.app.get("io");
     io.to("admin-room").emit("ticket-updated", updatedTicket);
 
@@ -297,6 +310,18 @@ router.patch("/:ticketNumber/messages/unread", authenticateAdmin, async (req, re
 
 const { censorProfanity } = require("../utils/profanityFilter");
 
+// ─── Helper: Check if it's a new day ─────────────────────────────────────────────
+const isNewDay = (lastEmailDate) => {
+  if (!lastEmailDate) return true;
+  const now = new Date();
+  const last = new Date(lastEmailDate);
+  return (
+    now.getDate() !== last.getDate() ||
+    now.getMonth() !== last.getMonth() ||
+    now.getFullYear() !== last.getFullYear()
+  );
+};
+
 // ✉️ Send message (BOTH USER & ADMIN)
 router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
   try {
@@ -305,15 +330,12 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
     const senderId = req.user.id;
     const userRole = req.user.role;
 
-    // Validate content
     if (!content || content.trim() === "") {
       return res.status(400).json({ message: "Message content is required" });
     }
 
-    // 🛡️ Censor profanity (English & Tagalog)
     content = censorProfanity(content);
 
-    // Check if ticket exists
     const ticket = await Ticket.findOne({ ticketNumber })
       .populate("userId", "firstName lastName email");
 
@@ -321,17 +343,14 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // Check if ticket is closed
     if (ticket.status === "Closed") {
       return res.status(400).json({ message: "Cannot send message to closed ticket" });
     }
 
-    // If user (not admin), verify they own this ticket
     if (userRole !== "superadmin") {
       if (!ticket.isAnonymous && ticket.userId._id.toString() !== senderId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      // For anonymous tickets, check if user created the report
       if (ticket.reportId) {
         const report = await Report.findById(ticket.reportId);
         if (report && report.createdBy.toString() !== senderId) {
@@ -340,28 +359,24 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
       }
     }
 
-    // Get sender info
     const sender = await User.findById(senderId);
     if (!sender) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Determine sender type and name
     const isAdmin = userRole === "superadmin";
     const senderName = isAdmin
       ? `${sender.firstName} ${sender.lastName}`
       : ticket.displayName;
 
-    // ✉️ CHECK IF THIS IS THE FIRST ADMIN REPLY
     const isFirstAdminReply = isAdmin && !ticket.adminHasReplied;
 
-    // ✅ Parse attachments safely (may arrive as stringified JSON)
     let parsedAttachments = attachments || [];
-    if (typeof parsedAttachments === 'string') {
+    if (typeof parsedAttachments === "string") {
       try { parsedAttachments = JSON.parse(parsedAttachments); } catch (e) { parsedAttachments = []; }
     }
     parsedAttachments = (Array.isArray(parsedAttachments) ? parsedAttachments : []).map(att => {
-      if (typeof att === 'string') {
+      if (typeof att === "string") {
         try { return JSON.parse(att); } catch (e) { return null; }
       }
       return att;
@@ -381,7 +396,6 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
 
     await message.save();
 
-    // Update ticket last message time and unread count
     const updateData = {
       lastMessageAt: new Date(),
       lastMessage: content.substring(0, 100)
@@ -389,7 +403,6 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
 
     if (isAdmin) {
       updateData.$inc = { "unreadCount.user": 1 };
-      // ✅ Mark that admin has replied
       if (isFirstAdminReply) {
         updateData.adminHasReplied = true;
       }
@@ -402,23 +415,108 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
       updateData,
       { new: true }
     ).populate("reportId")
+      .populate("reportId.identifiedUserId", "firstName lastName email")
       .populate("userId", "firstName lastName email");
 
-    // Convert to plain object with virtuals
     updatedTicket = updatedTicket.toObject({ virtuals: true });
 
-    // ✅ SAVE PERSISTENT NOTIFICATION
     notificationController.createNotification({
       recipient: isAdmin ? (ticket.userId?._id || ticket.userId) : null,
-      recipientRole: isAdmin ? 'user' : 'superadmin',
-      type: 'message',
+      recipientRole: isAdmin ? "user" : "superadmin",
+      type: "message",
       title: `💬 New Message - Ticket #${ticketNumber}`,
-      content: `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+      content: `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? "..." : ""}`,
       metadata: { ticketNumber },
-      link: isAdmin ? '/user/chat' : '/superadmin/messages'
+      link: isAdmin ? "/user/chat" : "/superadmin/messages"
     });
 
-    // ✉️ SEND EMAIL NOTIFICATION ON FIRST ADMIN REPLY
+    // ─── First Daily Chat Email Notifications ───────────────────────────────────────
+    // Skip system-generated messages (senderName === "System")
+    const isSystemMessage = senderName === "System";
+    
+    if (!isSystemMessage) {
+      // Admin sending to user: Check if first message of the day
+      if (isAdmin && isNewDay(ticket.lastEmailSentToUser) && ticket.userId?.email) {
+        try {
+          const userEmail = ticket.userId.email;
+          const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
+
+          await sendEmail({
+            to: userEmail,
+            subject: `New Message on Your Support Ticket #${ticketNumber} — GAD Portal`,
+            html: buildEmail({
+              title: "You Have a New Message",
+              icon: "💬",
+              accentColor: "#2563eb",
+              bodyHtml: `
+                <p>Hello, ${userName}!</p>
+                <p>Our support team has sent you a new message. Please log in to the GAD Portal to view the message and continue the conversation.</p>
+                <div class="info-box">
+                  <div class="detail-row"><span class="detail-label">Ticket Number</span><span class="detail-value">#${ticketNumber}</span></div>
+                  <div class="detail-row"><span class="detail-label">Message</span><span class="detail-value">${content.substring(0, 100)}${content.length > 100 ? "..." : ""}</span></div>
+                </div>
+                <div class="warning">📌 Please do not reply to this email. Log in to the GAD Portal to respond directly in the chat.</div>
+              `,
+              ticketNumber,
+            }),
+          });
+
+          // Update the tracking field
+          await Ticket.findOneAndUpdate(
+            { ticketNumber },
+            { lastEmailSentToUser: new Date() }
+          );
+
+          console.log(`✉️ First daily chat email sent to user for ticket ${ticketNumber}`);
+        } catch (emailError) {
+          console.error("❌ Failed to send first daily chat email to user:", emailError);
+        }
+      }
+
+      // User sending to admin: Check if first message of the day
+      if (!isAdmin && isNewDay(ticket.lastEmailSentToAdmin)) {
+        try {
+          // Get admin email (superadmin)
+          const admin = await User.findOne({ role: "superadmin" });
+          if (admin?.email) {
+            const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
+
+            await sendEmail({
+              to: admin.email,
+              subject: `New Message from User - Ticket #${ticketNumber} — GAD Portal`,
+              html: buildEmail({
+                title: "New Message from User",
+                icon: "💬",
+                accentColor: "#059669",
+                bodyHtml: `
+                  <p>Hello, Admin!</p>
+                  <p>You have received a new message from a user. Please log in to the GAD Portal to view and respond.</p>
+                  <div class="info-box">
+                    <div class="detail-row"><span class="detail-label">Ticket Number</span><span class="detail-value">#${ticketNumber}</span></div>
+                    <div class="detail-row"><span class="detail-label">User</span><span class="detail-value">${userName}</span></div>
+                    <div class="detail-row"><span class="detail-label">Message</span><span class="detail-value">${content.substring(0, 100)}${content.length > 100 ? "..." : ""}</span></div>
+                  </div>
+                  <div class="warning">📌 Please do not reply to this email. Log in to the GAD Portal to respond directly in the chat.</div>
+                `,
+                ticketNumber,
+              }),
+            });
+
+            // Update the tracking field
+            await Ticket.findOneAndUpdate(
+              { ticketNumber },
+              { lastEmailSentToAdmin: new Date() }
+            );
+
+            console.log(`✉️ First daily chat email sent to admin for ticket ${ticketNumber}`);
+          }
+        } catch (emailError) {
+          console.error("❌ Failed to send first daily chat email to admin:", emailError);
+        }
+      }
+    }
+
+    // ✉️ Send formatted email on first admin reply (legacy - keep for backward compatibility)
     if (isFirstAdminReply && ticket.userId?.email) {
       try {
         const userEmail = ticket.userId.email;
@@ -426,46 +524,46 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
 
         await sendEmail({
           to: userEmail,
-          subject: `Reply to Your Support Ticket #${ticketNumber}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #2563eb;">Support Ticket Update</h2>
-              <p>Hi ${userName},</p>
-              <p>Our support team has replied to your ticket <strong>#${ticketNumber}</strong>.</p>
-              <p>Please log in to your account in the GAD Portal to view the message and continue the conversation.</p>
-              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                This is an automated notification. Please do not reply to this email.
-              </p>
-            </div>
-          `
+          subject: `New Reply on Your Support Ticket #${ticketNumber} — GAD Portal`,
+          html: buildEmail({
+            title: "You Have a New Reply",
+            icon: "💬",
+            accentColor: "#2563eb",
+            bodyHtml: `
+              <p>Hello, ${userName}!</p>
+              <p>Our support team has replied to your ticket. Please log in to the GAD Portal to view the message and continue the conversation.</p>
+              <div class="info-box">
+                <div class="detail-row"><span class="detail-label">Ticket Number</span><span class="detail-value">#${ticketNumber}</span></div>
+                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">Open — Awaiting your reply</span></div>
+              </div>
+              <div class="warning">📌 Please do not reply to this email. Log in to the GAD Portal to respond directly in the chat.</div>
+            `,
+            ticketNumber,
+          }),
         });
 
         console.log(`✉️ First reply email sent for ticket ${ticketNumber}`);
       } catch (emailError) {
         console.error("❌ Failed to send first reply email:", emailError);
-        // Don't fail the request if email fails
       }
     }
 
-    // 🔥 EMIT SOCKET EVENT FOR NEW MESSAGE
     const io = req.app.get("io");
     io.to(`ticket-${ticketNumber}`).emit("new-message", {
       message,
       ticket: updatedTicket
     });
 
-    // 🔥 EMIT EVENT FOR TICKET LIST UPDATE (for admins/users to see unread counts)
     const ticketUserId = ticket.userId?._id || ticket.userId;
     if (isAdmin) {
       if (ticketUserId) {
-        console.log('📤 Admin sent message, emitting to user room');
-        console.log('👤 User ID:', ticketUserId);
-        console.log('📍 Room name:', `user-${ticketUserId}`);
-
+        console.log("📤 Admin sent message, emitting to user room");
+        console.log("👤 User ID:", ticketUserId);
+        console.log("📍 Room name:", `user-${ticketUserId}`);
         io.to(`user-${ticketUserId}`).emit("ticket-updated", updatedTicket);
-        console.log('✅ Emitted ticket-updated to user room');
+        console.log("✅ Emitted ticket-updated to user room");
       } else {
-        console.log('⚠️ No userId found for ticket, skipping user room emit');
+        console.log("⚠️ No userId found for ticket, skipping user room emit");
       }
     } else {
       io.to("admin-room").emit("ticket-updated", updatedTicket);
@@ -492,13 +590,12 @@ router.patch("/:ticketNumber/close", authenticateAdmin, async (req, res) => {
         closedReason: reason
       },
       { new: true }
-    );
+    ).populate("userId", "firstName lastName email");
 
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // Optional: Send system message
     const systemMessage = new Message({
       ticketNumber,
       sender: "superadmin",
@@ -508,7 +605,35 @@ router.patch("/:ticketNumber/close", authenticateAdmin, async (req, res) => {
     });
     await systemMessage.save();
 
-    // 🔥 EMIT SOCKET EVENT FOR TICKET CLOSURE
+    // ✉️ Notify user by email
+    if (ticket.userId?.email) {
+      try {
+        const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
+        await sendEmail({
+          to: ticket.userId.email,
+          subject: `Support Ticket #${ticketNumber} Closed — GAD Portal`,
+          html: buildEmail({
+            title: "Your Ticket Has Been Closed",
+            icon: "🔒",
+            accentColor: "#6b7280",
+            bodyHtml: `
+              <p>Hello, ${userName}!</p>
+              <p>Your support ticket has been marked as <strong>Closed</strong> by our team.</p>
+              <div class="info-box">
+                <div class="detail-row"><span class="detail-label">Ticket Number</span><span class="detail-value">#${ticketNumber}</span></div>
+                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">Closed</span></div>
+                ${reason ? `<div class="detail-row"><span class="detail-label">Reason</span><span class="detail-value">${reason}</span></div>` : ""}
+              </div>
+              <div class="warning">📌 If you believe this was closed in error or need further assistance, please contact us through the GAD Portal to reopen the ticket.</div>
+            `,
+            ticketNumber,
+          }),
+        });
+      } catch (emailErr) {
+        console.error("❌ Failed to send ticket closed email:", emailErr);
+      }
+    }
+
     const io = req.app.get("io");
     io.to(`ticket-${ticketNumber}`).emit("ticket-closed", {
       ticket,
@@ -535,13 +660,12 @@ router.patch("/:ticketNumber/reopen", authenticateAdmin, async (req, res) => {
         $unset: { closedAt: "", closedReason: "" }
       },
       { new: true }
-    );
+    ).populate("userId", "firstName lastName email");
 
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // Optional: Send system message
     const systemMessage = new Message({
       ticketNumber,
       sender: "superadmin",
@@ -551,7 +675,34 @@ router.patch("/:ticketNumber/reopen", authenticateAdmin, async (req, res) => {
     });
     await systemMessage.save();
 
-    // 🔥 EMIT SOCKET EVENT FOR TICKET REOPENING
+    // ✉️ Notify user by email
+    if (ticket.userId?.email) {
+      try {
+        const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
+        await sendEmail({
+          to: ticket.userId.email,
+          subject: `Support Ticket #${ticketNumber} Reopened — GAD Portal`,
+          html: buildEmail({
+            title: "Your Ticket Has Been Reopened",
+            icon: "🔓",
+            accentColor: "#059669",
+            bodyHtml: `
+              <p>Hello, ${userName}!</p>
+              <p>Your support ticket has been <strong>reopened</strong> by our team and is now active again.</p>
+              <div class="info-box">
+                <div class="detail-row"><span class="detail-label">Ticket Number</span><span class="detail-value">#${ticketNumber}</span></div>
+                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">Open</span></div>
+              </div>
+              <p>Please log in to the GAD Portal to continue the conversation with our support team.</p>
+            `,
+            ticketNumber,
+          }),
+        });
+      } catch (emailErr) {
+        console.error("❌ Failed to send ticket reopened email:", emailErr);
+      }
+    }
+
     const io = req.app.get("io");
     io.to(`ticket-${ticketNumber}`).emit("ticket-reopened", {
       ticket,
@@ -575,13 +726,13 @@ router.get("/:ticketNumber", authenticateAny, async (req, res) => {
 
     const ticket = await Ticket.findOne({ ticketNumber })
       .populate("reportId")
+      .populate("reportId.identifiedUserId", "firstName lastName email")
       .populate("userId", "firstName lastName email tupId");
 
     if (!ticket) {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // If user (not admin), verify access
     if (userRole !== "superadmin") {
       if (!ticket.isAnonymous && ticket.userId?._id.toString() !== userId) {
         return res.status(403).json({ message: "Access denied" });

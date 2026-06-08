@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { getUserReportsWithParams } from "../../api/report";
-import { UserCheck, ClipboardList, Shield, Users, FileText, Download, Share2, Clock, X } from "lucide-react";
+import { getUserConsultations } from "../../api/calendar";
+import { UserCheck, ClipboardList, Shield, Users, FileText, Download, Share2, Clock, X, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Reports() {
+  const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -11,8 +14,31 @@ export default function Reports() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedReport, setSelectedReport] = useState(null);
   const [modalTab, setModalTab] = useState("details");
+  const [userConsultations, setUserConsultations] = useState([]);
+  const [checkingConsultations, setCheckingConsultations] = useState(false);
 
   const limit = 5;
+
+  const checkUserConsultations = async () => {
+    setCheckingConsultations(true);
+    try {
+      const res = await getUserConsultations();
+      if (res.success && res.data) {
+        setUserConsultations(res.data);
+      } else {
+        setUserConsultations([]);
+      }
+    } catch (err) {
+      console.error('Error checking consultations:', err);
+      setUserConsultations([]);
+    } finally {
+      setCheckingConsultations(false);
+    }
+  };
+
+  const handleReportSelect = (report) => {
+    setSelectedReport(report);
+  };
 
   const fetchReports = async () => {
     setLoading(true);
@@ -44,6 +70,7 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReports();
+    checkUserConsultations();
   }, [page, search, statusFilter]);
 
   const InfoItem = ({ label, value, fallback = null }) => {
@@ -81,7 +108,7 @@ export default function Reports() {
     if (openTicket && reports.length > 0) {
       const found = reports.find(r => r.ticketNumber === openTicket);
       if (found) {
-        setSelectedReport(found);
+        handleReportSelect(found);
       }
     }
   }, [reports]);
@@ -139,7 +166,7 @@ export default function Reports() {
                 <div
                   key={report._id}
                   className="p-6 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-                  onClick={() => setSelectedReport(report)}
+                  onClick={() => handleReportSelect(report)}
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
@@ -151,9 +178,13 @@ export default function Reports() {
                           report.caseStatus === 'For Referral' ? 'bg-pink-100 text-pink-800' :
                           report.caseStatus === 'Case Closed' ? 'bg-gray-100 text-gray-800' :
                           report.caseStatus?.startsWith("Internal") ? 'bg-purple-100 text-purple-800' :
+                          report.caseStatus?.startsWith("External") ? 'bg-blue-100 text-blue-800' :
+                          report.archived ? 'bg-gray-100 text-gray-800' :
                           'bg-yellow-100 text-yellow-800' // Default / Pending fallback
                         }`}>
-                          {report.caseStatus || report.status}
+                          {report.caseStatus === 'Case Closed' ? 'Case Closed' :
+                           report.archived && !report.caseStatus ? 'Archived' :
+                           report.caseStatus || report.status}
                         </span>
                       </div>
                       <div className="text-gray-600 text-sm">
@@ -268,7 +299,7 @@ export default function Reports() {
                         <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4 flex items-center gap-2">
                           <UserCheck size={14} /> Reporter Information
                         </h3>
-                        {selectedReport.isAnonymous ? (
+                        {selectedReport.isAnonymous && !selectedReport.identifiedUserId ? (
                           <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
                             <p className="text-sm font-bold text-purple-900 mb-2">Anonymous Submission</p>
                             <div className="grid grid-cols-2 gap-y-3">
@@ -282,13 +313,15 @@ export default function Reports() {
                           <div className="space-y-4">
                             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
                               <div className="w-12 h-12 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                                {selectedReport.createdBy?.firstName?.charAt(0) || "U"}
+                                {selectedReport.identifiedUserId?.firstName?.charAt(0) || selectedReport.createdBy?.firstName?.charAt(0) || "U"}
                               </div>
                               <div>
                                 <p className="font-bold text-gray-900">
-                                  {selectedReport.createdBy?.firstName} {selectedReport.createdBy?.lastName}
+                                  {selectedReport.identifiedUserId 
+                                    ? `${selectedReport.identifiedUserId.firstName || ''} ${selectedReport.identifiedUserId.lastName || ''}`.trim() || 'Anonymous User'
+                                    : `${selectedReport.createdBy?.firstName || ''} ${selectedReport.createdBy?.lastName || ''}`.trim() || 'Anonymous User'}
                                 </p>
-                                <p className="text-xs text-gray-500">{selectedReport.createdBy?.tupId}</p>
+                                <p className="text-xs text-gray-500">{selectedReport.identifiedUserId?.tupId || selectedReport.createdBy?.tupId}</p>
                               </div>
                             </div>
                           </div>
@@ -509,7 +542,57 @@ export default function Reports() {
 
               {/* Footer Actions for Details Modal */}
               <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0">
-                <div className="flex justify-end">
+                <div className="flex justify-between items-center">
+                  {checkingConsultations ? (
+                    <button
+                      disabled
+                      className="flex items-center gap-2 px-6 py-3 bg-gray-300 text-gray-600 rounded-lg font-bold shadow-sm cursor-not-allowed"
+                    >
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                      Checking...
+                    </button>
+                  ) : (() => {
+                    // Check if user has any active consultations (pending, upcoming, or rescheduled)
+                    const hasActiveConsultation = userConsultations.some(consultation =>
+                      consultation.extendedProps?.status === 'upcoming' ||
+                      consultation.extendedProps?.status === 'pending' ||
+                      consultation.extendedProps?.status === 'rescheduled'
+                    );
+
+                    if (hasActiveConsultation) {
+                      // Find the active consultation
+                      const activeConsultation = userConsultations.find(consultation =>
+                        consultation.extendedProps?.status === 'upcoming' ||
+                        consultation.extendedProps?.status === 'pending' ||
+                        consultation.extendedProps?.status === 'rescheduled'
+                      );
+                      return (
+                        <button
+                          onClick={() => {
+                            // Redirect to UserConsultations page to view the appointment
+                            navigate(`/user/consultations?appointment=${activeConsultation._id}`);
+                          }}
+                          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold shadow-sm"
+                        >
+                          <Calendar size={18} />
+                          View in Consultations
+                        </button>
+                      );
+                    } else {
+                      return (
+                        <button
+                          onClick={() => {
+                            // Redirect to UserConsultations page with the reportId
+                            navigate(`/user/consultations?book=${selectedReport._id}`);
+                          }}
+                          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-sm"
+                        >
+                          <Calendar size={18} />
+                          Book Consultation
+                        </button>
+                      );
+                    }
+                  })()}
                   <button
                     onClick={() => setSelectedReport(null)}
                     className="px-8 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-bold shadow-sm"

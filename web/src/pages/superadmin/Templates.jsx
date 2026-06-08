@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from "react-toastify";
 import { FileText, Download, Copy, Search, Filter, Eye, Mail, Flag, AlertTriangle, BookOpen, Save, Edit2, X } from 'lucide-react';
 
 const TemplatesPage = () => {
@@ -201,7 +202,7 @@ _______________________
 
   const handleCopyTemplate = (content) => {
     navigator.clipboard.writeText(content);
-    alert('Template copied to clipboard!');
+    toast.success('Template copied to clipboard!');
   };
 
   const handleDownloadTemplate = (template) => {
@@ -236,7 +237,7 @@ _______________________
       setTemplates(updatedTemplates);
       setEditingTemplate(null);
       setEditedContent('');
-      alert('Template updated successfully!');
+      toast.success('Template updated successfully!');
     }
   };
 

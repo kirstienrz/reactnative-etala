@@ -154,6 +154,39 @@ router.get("/all", auth(), async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+// 🔍 Search users for reporter identification (admin/superadmin only) - MUST BE BEFORE /:id
+router.get("/search-reporters", auth(), async (req, res) => {
+  try {
+    console.log("🔍 Search reporters - User role:", req.user.role);
+    if (req.user.role !== "superadmin" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin and Superadmin only." });
+    }
+
+    const search = req.query.search || "";
+    if (!search || search.length < 2) {
+      return res.json([]);
+    }
+
+    const users = await User.find({
+      $or: [
+        { tupId: { $regex: search, $options: "i" } },
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+      isArchived: false,
+    })
+      .select("_id tupId firstName lastName email")
+      .limit(20);
+
+    res.json(users);
+  } catch (err) {
+    console.error("❌ Error searching reporters:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // 🧠 GET user profile (Protected)
 router.get("/:id", auth(), async (req, res) => {
   try {
@@ -837,7 +870,38 @@ router.put("/manage/users/:id/unarchive", auth(), async (req, res) => {
 
 // Add this to your user routes file
 
-// 📊 GET user analytics (superadmin only)
+// � Search users for reporter identification (superadmin only)
+router.get("/search-reporters", auth(), async (req, res) => {
+  try {
+    if (req.user.role !== "superadmin" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin and Superadmin only." });
+    }
+
+    const search = req.query.search || "";
+    if (!search || search.length < 2) {
+      return res.json([]);
+    }
+
+    const users = await User.find({
+      $or: [
+        { tupId: { $regex: search, $options: "i" } },
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+      isArchived: false,
+    })
+      .select("_id tupId firstName lastName email")
+      .limit(20);
+
+    res.json(users);
+  } catch (err) {
+    console.error("❌ Error searching reporters:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// �📊 GET user analytics (superadmin only)
 router.get("/analytics", auth(), async (req, res) => {
   try {
     if (req.user.role !== "superadmin") {

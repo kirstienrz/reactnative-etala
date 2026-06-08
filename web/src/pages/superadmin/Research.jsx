@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from "react-toastify";
 import {
   Upload, Edit2, Trash2, Plus, X, Search, Calendar,
   Image, BookOpen, User, Eye, Archive, ArchiveRestore,
@@ -248,11 +249,11 @@ export default function ResearchAdmin() {
         setShowModal(false);
 
         // Show success message
-        alert(response.message);
+        toast.success(response.message);
       }
     } catch (error) {
       console.error('Error saving research:', error);
-      alert(error.response?.data?.error || 'Failed to save research');
+      toast.error(error.response?.data?.error || 'Failed to save research');
     } finally {
       setIsSubmitting(false);
     }

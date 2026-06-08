@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import { Archive, Eye, Filter, Search, Calendar, Tag, CheckCircle, Clock, ArchiveX, Download, Printer, BarChart3, MessageSquare, History, TrendingUp, PieChart, Menu, X, Check, Loader } from "lucide-react";
 import { getSuggestions, updateSuggestion, toggleArchive } from "../../api/suggestion";
 import jsPDF from "jspdf";
@@ -52,7 +53,7 @@ const AdminGADSuggestionBox = () => {
       await fetchSuggestions(); // Refresh data
     } catch (err) {
       console.error("Error archiving suggestion:", err);
-      alert("Failed to archive suggestion. Please try again.");
+      toast.error("Failed to archive suggestion. Please try again.");
     }
   };
 
@@ -62,7 +63,7 @@ const AdminGADSuggestionBox = () => {
       await fetchSuggestions(); // Refresh data
     } catch (err) {
       console.error("Error unarchiving suggestion:", err);
-      alert("Failed to unarchive suggestion. Please try again.");
+      toast.error("Failed to unarchive suggestion. Please try again.");
     }
   };
 
@@ -73,7 +74,7 @@ const AdminGADSuggestionBox = () => {
       await fetchSuggestions(); // Refresh data
     } catch (err) {
       console.error("Error updating status:", err);
-      alert("Failed to update status. Please try again.");
+      toast.error("Failed to update status. Please try again.");
     }
   };
 
@@ -84,7 +85,7 @@ const AdminGADSuggestionBox = () => {
       await fetchSuggestions(); // Refresh data
     } catch (err) {
       console.error("Error updating priority:", err);
-      alert("Failed to update priority. Please try again.");
+      toast.error("Failed to update priority. Please try again.");
     }
   };
 
@@ -127,7 +128,7 @@ const AdminGADSuggestionBox = () => {
         setSelectedItems([]);
       } catch (err) {
         console.error("Error bulk archiving:", err);
-        alert("Failed to archive some suggestions. Please try again.");
+        toast.error("Failed to archive some suggestions. Please try again.");
       }
     }
   };
@@ -145,7 +146,7 @@ const AdminGADSuggestionBox = () => {
       setSelectedItems([]);
     } catch (err) {
       console.error("Error bulk status change:", err);
-      alert("Failed to update some suggestions. Please try again.");
+      toast.error("Failed to update some suggestions. Please try again.");
     }
   };
 

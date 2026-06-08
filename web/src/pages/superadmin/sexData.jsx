@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toast } from "react-hot-toast";
 import {
     Upload, Trash2, X, RefreshCw, BarChart2, Archive,
     RotateCcw, Download, Filter, Folder, FolderArchive, Edit2, Check
@@ -129,8 +130,8 @@ export default function SexDataAdmin() {
     }, [active]);
 
     const uploadExcelFile = async () => {
-        if (!file) return alert("Select Excel file");
-        if (!name.trim()) return alert("Enter dataset name");
+        if (!file) return toast.error("Select Excel file");
+        if (!name.trim()) return toast.error("Enter dataset name");
 
         const formData = new FormData();
         formData.append("file", file);
@@ -143,10 +144,10 @@ export default function SexDataAdmin() {
             setName("");
             setShowModal(false);
             loadDatasets();
-            alert("Dataset uploaded successfully!");
+            toast.success("Dataset uploaded successfully!");
         } catch (err) {
             console.error(err);
-            alert("Upload failed: " + (err.message || "Unknown error"));
+            toast.error("Upload failed: " + (err.message || "Unknown error"));
         } finally {
             setIsUploading(false);
         }
@@ -182,7 +183,7 @@ export default function SexDataAdmin() {
             }
         } catch (err) {
             console.error(err);
-            alert("Failed to load dataset");
+            toast.error("Failed to load dataset");
         }
     };
 
@@ -192,10 +193,10 @@ export default function SexDataAdmin() {
             await archiveSexDataset(id);
             if (active?._id === id) setActive(null);
             loadDatasets();
-            alert("Dataset archived successfully!");
+            toast.success("Dataset archived successfully!");
         } catch (err) {
             console.error(err);
-            alert("Failed to archive dataset");
+            toast.error("Failed to archive dataset");
         }
     };
 
@@ -205,10 +206,10 @@ export default function SexDataAdmin() {
             await restoreSexDataset(id);
             if (active?._id === id) setActive(null);
             loadDatasets();
-            alert("Dataset restored successfully!");
+            toast.success("Dataset restored successfully!");
         } catch (err) {
             console.error(err);
-            alert("Failed to restore dataset");
+            toast.error("Failed to restore dataset");
         }
     };
 
@@ -218,25 +219,25 @@ export default function SexDataAdmin() {
             await deleteSexDataset(id);
             if (active?._id === id) setActive(null);
             loadDatasets();
-            alert("Dataset deleted permanently!");
+            toast.success("Dataset deleted permanently!");
         } catch (err) {
             console.error(err);
-            alert("Failed to delete dataset");
+            toast.error("Failed to delete dataset");
         }
     };
 
     const handleUpdateName = async () => {
-        if (!editName.trim()) return alert("Name cannot be empty");
+        if (!editName.trim()) return toast.error("Name cannot be empty");
         try {
             setIsSaving(true);
             await updateSexDataset(active._id, { name: editName });
             setActive({ ...active, name: editName });
             setIsEditing(false);
             loadDatasets();
-            alert("Dataset renamed successfully!");
+            toast.success("Dataset renamed successfully!");
         } catch (err) {
             console.error(err);
-            alert("Failed to rename dataset");
+            toast.error("Failed to rename dataset");
         } finally {
             setIsSaving(false);
         }
@@ -250,10 +251,10 @@ export default function SexDataAdmin() {
             await updateSexDataset(active._id, { rows: updatedRows });
             setActive({ ...active, rows: updatedRows });
             setEditingRow(null);
-            alert("Row updated successfully!");
+            toast.success("Row updated successfully!");
         } catch (err) {
             console.error(err);
-            alert("Failed to update row");
+            toast.error("Failed to update row");
         } finally {
             setIsSaving(false);
         }
@@ -438,7 +439,7 @@ export default function SexDataAdmin() {
             XLSX.writeFile(wb, `${active.name}_${new Date().toISOString().slice(0, 10)}.xlsx`);
         } catch (err) {
             console.error("Excel download error:", err);
-            alert("Failed to download Excel file");
+            toast.error("Failed to download Excel file");
         }
     };
 
@@ -640,7 +641,7 @@ export default function SexDataAdmin() {
             pdf.save(`${active.name}_report_${new Date().toISOString().replace(/T/, '_').replace(/:/g, '-').slice(0, 19)}.pdf`);
         } catch (err) {
             console.error("PDF download error:", err);
-            alert("Failed to generate PDF: " + err.message);
+            toast.error("Failed to generate PDF: " + err.message);
         }
     };
 
@@ -656,7 +657,7 @@ export default function SexDataAdmin() {
             link.click();
         } catch (err) {
             console.error("Image download error:", err);
-            alert("Failed to download chart image");
+            toast.error("Failed to download chart image");
         }
     };
 
