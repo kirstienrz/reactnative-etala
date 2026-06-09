@@ -376,7 +376,7 @@ const ReportScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Sex: *</Text>
             <View style={styles.chipContainer}>
-              {['Male', 'Female'].map(sex => (
+              {['Male', 'Female', 'Lesbian', 'Gay', 'Bisexual', 'Transgender', 'Queer', 'Non-binary', 'Prefer not to say'].map(sex => (
                 <TouchableOpacity key={sex}
                   style={[styles.chip, formData.sex === sex && styles.chipSelected]}
                   onPress={() => setFormData(prev => ({ ...prev, sex }))}>
@@ -577,7 +577,7 @@ const ReportScreen = ({ navigation }) => {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Sex:</Text>
         <View style={styles.chipContainer}>
-          {['Male', 'Female'].map(sex => (
+          {['Male', 'Female', 'Lesbian', 'Gay', 'Bisexual', 'Transgender', 'Queer', 'Non-binary', 'Prefer not to say'].map(sex => (
             <TouchableOpacity key={sex}
               style={[styles.chip, formData.perpSex === sex && styles.chipSelected]}
               onPress={() => setFormData(prev => ({ ...prev, perpSex: sex }))}>
