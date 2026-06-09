@@ -411,6 +411,13 @@ const EditProfile = () => {
                       <option value="">Select Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
+                      <option value="Lesbian">Lesbian</option>
+                      <option value="Gay">Gay</option>
+                      <option value="Bisexual">Bisexual</option>
+                      <option value="Transgender">Transgender</option>
+                      <option value="Queer">Queer</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
                     </select>
                   </div>
                 </div>

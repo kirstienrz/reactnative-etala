@@ -180,7 +180,13 @@ export default function Profile() {
                       <Picker.Item label="Select Gender" value="" />
                       <Picker.Item label="Male" value="Male" />
                       <Picker.Item label="Female" value="Female" />
-                      <Picker.Item label="Other" value="Other" />
+                      <Picker.Item label="Lesbian" value="Lesbian" />
+                      <Picker.Item label="Gay" value="Gay" />
+                      <Picker.Item label="Bisexual" value="Bisexual" />
+                      <Picker.Item label="Transgender" value="Transgender" />
+                      <Picker.Item label="Queer" value="Queer" />
+                      <Picker.Item label="Non-binary" value="Non-binary" />
+                      <Picker.Item label="Prefer not to say" value="Prefer not to say" />
                     </Picker>
                   </View>
                 </View>

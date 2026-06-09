@@ -34,7 +34,7 @@ export default function SignupScreen({ navigation }) {
     ];
 
     const userTypes = ["Student", "Faculty", "Staff"];
-    const genders = ["Male", "Female", "Other"];
+    const genders = ["Male", "Female", "Lesbian", "Gay", "Bisexual", "Transgender", "Queer", "Non-binary", "Prefer not to say"];
 
     const handleSignup = async () => {
         if (!firstName || !lastName || !email || !password || !tupId || !gender || !birthday) {
