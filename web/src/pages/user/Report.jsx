@@ -586,10 +586,9 @@ const ReportForm = () => {
 
   // ✅ Department code → full name mapping
   const departmentMap = {
-    'BASD': 'Basic Arts and Science Department',
-    'CAAD': 'Civil and Allied Department',
-    'EEAD': 'Electrical and Allied Department',
-    'MAAD': 'Mechanical and Allied Department',
+    'COE': 'College of Engineering',
+    'CET': 'College of Engineering Technology',
+    'CES': 'College of Education and Sciences',
   };
 
   React.useEffect(() => {
@@ -1922,10 +1921,9 @@ const ReportForm = () => {
                   required
                 >
                   <option value="">Select Department</option>
-                  <option value="Civil and Allied Department">Civil and Allied Department</option>
-                  <option value="Electrical and Allied Department">Electrical and Allied Department</option>
-                  <option value="Mechanical and Allied Department">Mechanical and Allied Department</option>
-                  <option value="Basic Arts and Science Department">Basic Arts and Science Department</option>
+                  <option value="College of Engineering">College of Engineering</option>
+                  <option value="College of Engineering Technology">College of Engineering Technology</option>
+                  <option value="College of Education and Sciences">College of Education and Sciences</option>
                 </select>
               )}
             </div>

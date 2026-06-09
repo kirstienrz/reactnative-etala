@@ -573,10 +573,10 @@ export default function UserManagement() {
               <option value="all">All Departments</option>
               <option value="System">System</option>
               <option value="OSA">OSA</option>
-              <option value="MAAD">MAAD</option>
-              <option value="CAAD">CAAD</option>
-              <option value="EAAD">EAAD</option>
-              <option value="BASD">BASD</option>
+              <option value="HR">HR</option>
+              <option value="COE">COE</option>
+              <option value="CET">CET</option>
+              <option value="CES">CES</option>
             </select>
           </div>
 
@@ -1211,10 +1211,9 @@ export default function UserManagement() {
                     <option value="System">System</option>
                     <option value="OSA">OSA</option>
                     <option value="HR">HR</option>
-                    <option value="MAAD">MAAD</option>
-                    <option value="CAAD">CAAD</option>
-                    <option value="EAAD">EAAD</option>
-                    <option value="BASD">BASD</option>
+                    <option value="COE">COE</option>
+                    <option value="CET">CET</option>
+                    <option value="CES">CES</option>
                   </select>
                 </div>
 

@@ -7,10 +7,9 @@ import PolicyModal from "../components/PolicyModal";
 import { Capacitor } from "@capacitor/core";
 
 const departments = [
-  { code: 'BASD', name: 'Basic Arts and Sciences Department' },
-  { code: 'CAAD', name: 'Civil and Allied Department' },
-  { code: 'EEAD', name: 'Electrical and Allied Department' },
-  { code: 'MAAD', name: 'Mechanical and Allied Department' },
+  { code: 'COE', name: 'College of Engineering' },
+  { code: 'CET', name: 'College of Engineering Technology' },
+  { code: 'CES', name: 'College of Education and Sciences' },
 ];
 
 const SignupPage = () => {

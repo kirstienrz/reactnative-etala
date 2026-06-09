@@ -228,28 +228,22 @@ const LandingPage = () => {
 
   const departments = [
     {
-      code: 'BASD',
-      name: 'Basic Arts and Sciences Department',
+      code: 'COE',
+      name: 'College of Engineering',
       color: 'from-indigo-600 to-purple-700',
-      image: '/assets/departments/basd.png'
+      image: '/assets/departments/coe.png'
     },
     {
-      code: 'CAAD',
-      name: 'Civil and Allied Department',
+      code: 'CET',
+      name: 'College of Engineering Technology',
       color: 'from-emerald-600 to-teal-700',
-      image: '/assets/departments/caad.png'
+      image: '/assets/departments/cet.png'
     },
     {
-      code: 'EEAD',
-      name: 'Electrical and Allied Department',
+      code: 'CES',
+      name: 'College of Education and Sciences',
       color: 'from-orange-500 to-red-600',
-      image: '/assets/departments/eaad.png'
-    },
-    {
-      code: 'MAAD',
-      name: 'Mechanical and Allied Department',
-      color: 'from-cyan-600 to-blue-700',
-      image: '/assets/departments/maad.png'
+      image: '/assets/departments/ces.png'
     }
   ];
 
