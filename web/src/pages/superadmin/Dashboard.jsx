@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { getUserAnalytics } from '../../api/user';
@@ -13,8 +13,10 @@ import {
   MessageSquare, Activity, TrendingUp, Clock, CheckCircle,
   AlertCircle, Bell, PieChart as PieChartIcon, Archive,
   Target, TrendingDown, BarChart3, Calendar, X, ChevronRight,
-  Menu, LogOut
+  Menu, LogOut, Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import HeatmapTable from '../../components/HeatmapTable';
 import NotificationCenter from '../../components/NotificationCenter';
 import { getAllCalendarEvents } from '../../api/calendar';
@@ -38,8 +40,63 @@ const SuperAdminDashboard = () => {
   const [heatmapSubView, setHeatmapSubView] = useState('reporter'); // 'reporter', 'victim', 'witness'
   const [pendingCompletionEvents, setPendingCompletionEvents] = useState([]);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Detect native app (Capacitor APK)
+  const handleDownloadPDF = async () => {
+    setIsGeneratingPDF(true);
+    setTimeout(async () => {
+      try {
+        const sections = document.querySelectorAll('.pdf-section');
+        if (!sections || sections.length === 0) return;
+
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfPageHeight = pdf.internal.pageSize.getHeight();
+        let isFirstPage = true;
+
+        for (const section of sections) {
+          const canvas = await html2canvas(section, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+          });
+          const imgData = canvas.toDataURL('image/png');
+          // Scale image to fit page width, preserve aspect ratio
+          const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+          if (!isFirstPage) pdf.addPage();
+          isFirstPage = false;
+
+          // If section is taller than one page, let it span Ã¢â‚¬â€ but each section
+          // starts fresh on a new page so the cut never happens mid-table
+          if (imgHeight <= pdfPageHeight) {
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+          } else {
+            // Very tall section: tile it down multiple pages
+            let heightLeft = imgHeight;
+            let position = 0;
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfPageHeight;
+            while (heightLeft > 0) {
+              position = heightLeft - imgHeight;
+              pdf.addPage();
+              pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+              heightLeft -= pdfPageHeight;
+            }
+          }
+        }
+
+        pdf.save(`ETALA_Overall_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+      } finally {
+        setIsGeneratingPDF(false);
+      }
+    }, 2000); // Allow time for charts and heatmap tables to render
+  };
+
   useEffect(() => {
     try {
       const platform = Capacitor.getPlatform();
@@ -103,7 +160,7 @@ const SuperAdminDashboard = () => {
         }
 
       } catch (err) {
-        console.error('❌ Error fetching analytics:', err);
+        console.error('Ã¢ÂÅ’ Error fetching analytics:', err);
         setError('Failed to load dashboard data. Please try again.');
       } finally {
         setLoading(false);
@@ -275,7 +332,16 @@ const SuperAdminDashboard = () => {
     return (
       <div className="bg-gray-50 min-h-screen native-admin-content relative">
         {/* Dark matching header background stripe behind stats cards for overlapping layout */}
-        <div className="bg-gray-900 h-16 w-full absolute top-0 left-0 border-b border-gray-800 z-10" />
+        <div className="bg-gray-900 h-16 w-full absolute top-0 left-0 border-b border-gray-800 z-10 flex justify-end items-start pt-3 px-4">
+           <button
+              onClick={handleDownloadPDF}
+              disabled={isGeneratingPDF}
+              className="flex items-center gap-1.5 bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md"
+            >
+              <Download size={14} />
+              {isGeneratingPDF ? 'Wait...' : 'Export PDF'}
+            </button>
+        </div>
 
         {/* ===== NATIVE STAT CARDS (Horizontal Scroll) ===== */}
         <div className="px-4 pt-3 relative z-20">
@@ -651,6 +717,14 @@ const SuperAdminDashboard = () => {
             <p className="text-blue-100 text-sm">Comprehensive analytics and insights</p>
           </div>
           <div className="hidden sm:flex items-center space-x-4">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isGeneratingPDF}
+              className="flex items-center gap-2 bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-blue-50 transition disabled:opacity-50"
+            >
+              <Download size={18} />
+              {isGeneratingPDF ? 'Generating...' : 'Download Report'}
+            </button>
             <Calendar className="w-6 h-6" />
             <span className="text-sm">{new Date().toLocaleDateString('en-US', {
               weekday: 'long',
@@ -714,7 +788,7 @@ const SuperAdminDashboard = () => {
                   <p className="text-xs sm:text-sm text-gray-600">Total Reports</p>
                   <p className="text-2xl sm:text-3xl font-bold text-blue-600">{totalReports}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {activeReports} active • {archivedReports} archived
+                    {activeReports} active Ã¢â‚¬Â¢ {archivedReports} archived
                   </p>
                 </div>
                 <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 opacity-20" />
@@ -728,7 +802,7 @@ const SuperAdminDashboard = () => {
                   <p className="text-xs sm:text-sm text-gray-600">Active Reports</p>
                   <p className="text-2xl sm:text-3xl font-bold text-green-600">{activeReports}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {todayCount} today • {weekCount} this week
+                    {todayCount} today Ã¢â‚¬Â¢ {weekCount} this week
                   </p>
                 </div>
                 <Activity className="w-8 h-8 sm:w-10 sm:h-10 text-green-500 opacity-20" />
@@ -1275,8 +1349,229 @@ const SuperAdminDashboard = () => {
         </div>
       )}
 
+      {/* Hidden PDF Report Ã¢â‚¬â€ each .pdf-section is captured as one PDF page */}
+      {isGeneratingPDF && (
+        <div className="absolute top-0 left-[-9999px] w-[1000px] font-sans">
+
+          {/* PAGE 1 â€” Header + Overview */}
+          <div className="pdf-section bg-white p-6 text-gray-800">
+            <div className="text-center pb-3 border-b-2 border-gray-200 mb-4">
+              <h1 className="text-2xl font-bold text-gray-900">ETALA Overall Analytics Report</h1>
+              <p className="text-gray-500 mt-1 text-sm">Generated on {new Date().toLocaleDateString()}</p>
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 border-b pb-1 mb-3">1. Overview</h2>
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <p className="text-xs font-semibold text-gray-600">Total Reports</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{totalReports}</p>
+                <p className="text-xs text-gray-500">{activeReports} active</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                <p className="text-xs font-semibold text-gray-600">Resolution Rate</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">{resolutionRate}%</p>
+                <p className="text-xs text-gray-500">{avgResponseDays}d avg response</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                <p className="text-xs font-semibold text-gray-600">Total Users</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">{userOverview.totalUsers || 0}</p>
+                <p className="text-xs text-gray-500">{userOverview.activeUsers || 0} active</p>
+              </div>
+              <div className="bg-cyan-50 p-4 rounded-xl border border-cyan-100">
+                <p className="text-xs font-semibold text-gray-600">Daily Average</p>
+                <p className="text-2xl font-bold text-cyan-600 mt-1">{avgDailyReports}</p>
+                <p className="text-xs text-gray-500">Peak: {peakMonth}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white border rounded-xl p-4">
+                <h3 className="text-base font-bold mb-2">Case Status</h3>
+                <div className="flex items-center justify-center">
+                  <PieChart width={400} height={220}>
+                    <Pie data={statusData} cx="50%" cy="50%" outerRadius={75} dataKey="value" isAnimationActive={false}>
+                      {statusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
+                    </Pie>
+                    <Legend />
+                  </PieChart>
+                </div>
+              </div>
+              <div className="bg-white border rounded-xl p-4">
+                <h3 className="text-base font-bold mb-2">Severity Levels</h3>
+                <div className="flex items-center justify-center">
+                  <PieChart width={400} height={220}>
+                    <Pie data={severityData} cx="50%" cy="50%" outerRadius={75} dataKey="value" isAnimationActive={false}>
+                      {severityData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
+                    </Pie>
+                    <Legend />
+                  </PieChart>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* PAGE 2 â€” Trends & Demographics */}
+          <div className="pdf-section bg-white p-6 text-gray-800">
+            <h2 className="text-xl font-bold text-gray-800 border-b pb-1 mb-3">2. Trends &amp; Demographics</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <div className="bg-white border rounded-xl p-5">
+                <h3 className="text-base font-bold mb-3">Report Monthly Trends</h3>
+                <AreaChart width={430} height={220} data={monthlyTrendData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} width={25} />
+                  <Area type="monotone" dataKey="reports" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} isAnimationActive={false} />
+                </AreaChart>
+              </div>
+              <div className="bg-white border rounded-xl p-5">
+                <h3 className="text-base font-bold mb-3">Top Reporting Departments</h3>
+                <BarChart width={430} height={220} data={topDeptData} margin={{ top: 5, right: 10, left: 0, bottom: 70 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-40} textAnchor="end" interval={0} tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 10 }} width={25} />
+                  <Bar dataKey="value" fill="#8b5cf6" isAnimationActive={false} />
+                </BarChart>
+              </div>
+            </div>
+          </div>
+
+          {/* PAGE 3 â€” Heatmap: Dept x Month + Gender x Role */}
+          <div className="pdf-section bg-white p-6 text-gray-800">
+            <h2 className="text-xl font-bold text-gray-800 border-b pb-1 mb-3">3. Heatmap Analysis</h2>
+
+            {reportAnalytics?.heatmaps?.deptVsMonth && (
+              <div className="mb-5">
+                <h3 className="text-base font-bold mb-1">Monthly Report Volume by Department</h3>
+                <p className="text-xs text-gray-500 mb-2">Tracking incident distribution across campus departments for {selectedYear}</p>
+                <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '5px 10px', background: '#f9fafb', textAlign: 'left', fontWeight: 700 }}>Department</th>
+                      {reportAnalytics.heatmaps.deptVsMonth.columns.map((col, ci) => (
+                        <th key={ci} style={{ border: '1px solid #e5e7eb', padding: '5px 6px', background: '#f9fafb', textAlign: 'center', fontWeight: 700 }}>{col}</th>
+                      ))}
+                      <th style={{ border: '1px solid #e5e7eb', padding: '5px 6px', background: '#f3f4f6', textAlign: 'center', fontWeight: 700 }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const hm = reportAnalytics.heatmaps.deptVsMonth;
+                      const allVals = Object.values(hm.data).flatMap(r => Object.values(r || {}));
+                      const maxVal = Math.max(...allVals.filter(v => v > 0), 1);
+                      return hm.rows.map((row, ri) => {
+                        const rowObj = hm.data[row] || {};
+                        const rowTotal = hm.columns.reduce((a, col) => a + (rowObj[col] || 0), 0);
+                        return (
+                          <tr key={ri}>
+                            <td style={{ border: '1px solid #e5e7eb', padding: '5px 10px', fontWeight: 600, background: '#f9fafb' }}>{row}</td>
+                            {hm.columns.map((col, ci) => {
+                              const val = rowObj[col] || 0;
+                              const intensity = val ? Math.round((val / maxVal) * 100) : 0;
+                              const bg = val ? `rgba(20,184,166,${0.1 + intensity / 130})` : '#f9fafb';
+                              return <td key={ci} style={{ border: '1px solid #e5e7eb', padding: '5px 6px', textAlign: 'center', background: bg, color: intensity > 60 ? '#fff' : '#374151', fontWeight: val ? 600 : 400 }}>{val}</td>;
+                            })}
+                            <td style={{ border: '1px solid #e5e7eb', padding: '5px 6px', textAlign: 'center', background: '#f3f4f6', fontWeight: 700 }}>{rowTotal}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', marginBottom: 16 }} />
+
+            {reportAnalytics?.heatmaps?.genderVsRole && (
+              <div>
+                <h3 className="text-base font-bold mb-1">Incident Distribution by Gender &amp; Role</h3>
+                <p className="text-xs text-gray-500 mb-2">Analyzing reporter perspectives across different gender identities for {selectedYear}</p>
+                <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '5px 10px', background: '#f9fafb', textAlign: 'left', fontWeight: 700 }}>Gender</th>
+                      {reportAnalytics.heatmaps.genderVsRole.columns.map((col, ci) => (
+                        <th key={ci} style={{ border: '1px solid #e5e7eb', padding: '5px 6px', background: '#f9fafb', textAlign: 'center', fontWeight: 700 }}>{col}</th>
+                      ))}
+                      <th style={{ border: '1px solid #e5e7eb', padding: '5px 6px', background: '#f3f4f6', textAlign: 'center', fontWeight: 700 }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const hm = reportAnalytics.heatmaps.genderVsRole;
+                      const allVals = Object.values(hm.data).flatMap(r => Object.values(r || {}));
+                      const maxVal = Math.max(...allVals.filter(v => v > 0), 1);
+                      return hm.rows.map((row, ri) => {
+                        const rowObj = hm.data[row] || {};
+                        const rowTotal = hm.columns.reduce((a, col) => a + (rowObj[col] || 0), 0);
+                        return (
+                          <tr key={ri}>
+                            <td style={{ border: '1px solid #e5e7eb', padding: '5px 10px', fontWeight: 600, background: '#f9fafb' }}>{row}</td>
+                            {hm.columns.map((col, ci) => {
+                              const val = rowObj[col] || 0;
+                              const intensity = val ? Math.round((val / maxVal) * 100) : 0;
+                              const bg = val ? `rgba(139,92,246,${0.1 + intensity / 130})` : '#f9fafb';
+                              return <td key={ci} style={{ border: '1px solid #e5e7eb', padding: '5px 6px', textAlign: 'center', background: bg, color: intensity > 60 ? '#fff' : '#374151', fontWeight: val ? 600 : 400 }}>{val}</td>;
+                            })}
+                            <td style={{ border: '1px solid #e5e7eb', padding: '5px 6px', textAlign: 'center', background: '#f3f4f6', fontWeight: 700 }}>{rowTotal}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* PAGE 4 â€” Heatmap: Reporter Gender x Month + End of Report */}
+          {reportAnalytics?.heatmaps?.reporterGenderVsMonth && (
+            <div className="pdf-section bg-white p-6 text-gray-800">
+              <h3 className="text-base font-bold mb-1">Reporter Gender Distribution by Month</h3>
+              <p className="text-xs text-gray-500 mb-2">Monthly breakdown of all reporters' gender identities for {selectedYear}</p>
+              <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '5px 10px', background: '#f9fafb', textAlign: 'left', fontWeight: 700 }}>Gender</th>
+                    {reportAnalytics.heatmaps.reporterGenderVsMonth.columns.map((col, ci) => (
+                      <th key={ci} style={{ border: '1px solid #e5e7eb', padding: '5px 6px', background: '#f9fafb', textAlign: 'center', fontWeight: 700 }}>{col}</th>
+                    ))}
+                    <th style={{ border: '1px solid #e5e7eb', padding: '5px 6px', background: '#f3f4f6', textAlign: 'center', fontWeight: 700 }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const hm = reportAnalytics.heatmaps.reporterGenderVsMonth;
+                    const allVals = Object.values(hm.data).flatMap(r => Object.values(r || {}));
+                    const maxVal = Math.max(...allVals.filter(v => v > 0), 1);
+                    return hm.rows.map((row, ri) => {
+                      const rowObj = hm.data[row] || {};
+                      const rowTotal = hm.columns.reduce((a, col) => a + (rowObj[col] || 0), 0);
+                      return (
+                        <tr key={ri}>
+                          <td style={{ border: '1px solid #e5e7eb', padding: '5px 10px', fontWeight: 600, background: '#f9fafb' }}>{row}</td>
+                          {hm.columns.map((col, ci) => {
+                            const val = rowObj[col] || 0;
+                            const intensity = val ? Math.round((val / maxVal) * 100) : 0;
+                            const bg = val ? `rgba(99,102,241,${0.1 + intensity / 130})` : '#f9fafb';
+                            return <td key={ci} style={{ border: '1px solid #e5e7eb', padding: '5px 6px', textAlign: 'center', background: bg, color: intensity > 60 ? '#fff' : '#374151', fontWeight: val ? 600 : 400 }}>{val}</td>;
+                          })}
+                          <td style={{ border: '1px solid #e5e7eb', padding: '5px 6px', textAlign: 'center', background: '#f3f4f6', fontWeight: 700 }}>{rowTotal}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+              <div className="text-center pt-6 text-gray-400 text-sm">
+                <p>End of Report</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 };
 
 export default SuperAdminDashboard;
+
