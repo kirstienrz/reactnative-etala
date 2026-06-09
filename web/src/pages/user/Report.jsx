@@ -1673,7 +1673,7 @@ const ReportForm = () => {
             textAlign: 'justify'
           }}>
             <p style={{ fontWeight: '600', marginBottom: '16px' }}>
-              By proceeding with this report, you acknowledge that ETALA is a safe space for reporting Gender-Based Violence (GBV). We adhere to the following principles:
+              In accordance with the Data Privacy Act, by proceeding with this report, you acknowledge that ETALA is a safe space for reporting Gender-Based Violence (GBV). We adhere to the following principles:
             </p>
 
             <p style={{ marginBottom: '16px' }}>
