@@ -222,7 +222,7 @@ const LandingPage = () => {
 
   const heroSlides = [
     {
-      image: '/assets/carousel/CAROUSEL1.jpg'
+      image: '/assets/carousel/CAROUSEL 1.jpg'
     },
   ];
 
@@ -298,7 +298,7 @@ const LandingPage = () => {
                 <div className="absolute inset-0 bg-black/10"></div>
               </div>
             ))}
-            
+
             {/* Dots */}
             {heroSlides.length > 1 && (
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-20">
@@ -322,17 +322,17 @@ const LandingPage = () => {
 
         {/* GAD Agenda Card */}
         <div className="px-4 mt-6">
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="text-lg font-black text-slate-900 mb-2">GAD Agenda</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  The GAD Office promotes gender equality and women's empowerment, a unified approach to developing human capital, and initiatives aligned with sustainability goals. It underscores data-driven decisions, global competitiveness through inclusivity, and strong governance.
-                </p>
-            </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h3 className="text-lg font-black text-slate-900 mb-2">GAD Agenda</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              The GAD Office promotes gender equality and women's empowerment, a unified approach to developing human capital, and initiatives aligned with sustainability goals. It underscores data-driven decisions, global competitiveness through inclusivity, and strong governance.
+            </p>
+          </div>
         </div>
 
         {/* Highlights Section */}
         <div className="mt-6">
-            <HighlightsSection />
+          <HighlightsSection />
         </div>
 
         {/* News & Updates (Horizontal Scroll) */}
@@ -342,7 +342,7 @@ const LandingPage = () => {
             <button onClick={() => navigate('/news')} className="text-violet-600 text-xs font-bold bg-violet-50 px-3 py-1.5 rounded-full active:scale-[0.95] transition-transform">View All</button>
           </div>
         </div>
-        
+
         <div className="flex overflow-x-auto hide-scroll px-4 pb-4 gap-4 snap-x">
           {loading ? (
             <div className="flex justify-center w-full py-8"><div className="animate-spin h-8 w-8 border-4 border-violet-200 border-t-violet-600 rounded-full"></div></div>
@@ -376,45 +376,45 @@ const LandingPage = () => {
 
         {/* Case Handling Process */}
         <div className="mt-6 px-4">
-            <h2 className="text-lg font-black text-slate-800 mb-4">Case Handling Process</h2>
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs font-semibold text-violet-600 mb-4 bg-violet-50 p-2 rounded-lg inline-block">Before You Proceed</p>
-                <div className="space-y-6 relative">
-                    {/* Timeline Line */}
-                    <div className="absolute top-2 left-[7px] bottom-2 w-0.5 bg-violet-100"></div>
-                    
-                    {[
-                        { step: "First Action", label: "Initial Approach & Appointment", desc: "The concerned student or faculty member will formally approach the office and set an appointment." },
-                        { step: "Second Action", label: "Consultation & Assessment", desc: "A consultation will be conducted to assess the nature of the concern." },
-                        { step: "Third Action", label: "Committee Formation", desc: "Based on the assessment, a formal committee will be constituted when necessary." },
-                        { step: "Final Step", label: "Turnover / Referral", desc: "The case may be officially endorsed to the appropriate office." }
-                    ].map((item, i) => (
-                        <div key={i} className="flex gap-4 relative z-10">
-                            <div className="w-4 h-4 rounded-full bg-violet-600 mt-1 flex-shrink-0 border-4 border-white shadow-sm"></div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-violet-500 mb-0.5">{item.step}</p>
-                                <p className="text-sm font-bold text-slate-800 mb-1">{item.label}</p>
-                                <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
-                            </div>
-                        </div>
-                    ))}
+          <h2 className="text-lg font-black text-slate-800 mb-4">Case Handling Process</h2>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <p className="text-xs font-semibold text-violet-600 mb-4 bg-violet-50 p-2 rounded-lg inline-block">Before You Proceed</p>
+            <div className="space-y-6 relative">
+              {/* Timeline Line */}
+              <div className="absolute top-2 left-[7px] bottom-2 w-0.5 bg-violet-100"></div>
+
+              {[
+                { step: "First Action", label: "Initial Approach & Appointment", desc: "The concerned student or faculty member will formally approach the office and set an appointment." },
+                { step: "Second Action", label: "Consultation & Assessment", desc: "A consultation will be conducted to assess the nature of the concern." },
+                { step: "Third Action", label: "Committee Formation", desc: "Based on the assessment, a formal committee will be constituted when necessary." },
+                { step: "Final Step", label: "Turnover / Referral", desc: "The case may be officially endorsed to the appropriate office." }
+              ].map((item, i) => (
+                <div key={i} className="flex gap-4 relative z-10">
+                  <div className="w-4 h-4 rounded-full bg-violet-600 mt-1 flex-shrink-0 border-4 border-white shadow-sm"></div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-violet-500 mb-0.5">{item.step}</p>
+                    <p className="text-sm font-bold text-slate-800 mb-1">{item.label}</p>
+                    <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
+                  </div>
                 </div>
+              ))}
             </div>
+          </div>
         </div>
 
         {/* Share/Web Link (formerly Download) */}
         <div className="mt-8 px-4 pb-12">
-             <div className="bg-gradient-to-br from-violet-600 to-purple-800 rounded-2xl p-6 text-white text-center shadow-lg relative overflow-hidden">
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-white opacity-10 rounded-full"></div>
-                  <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white opacity-10 rounded-full"></div>
-                  <h2 className="text-xl font-black mb-2 relative z-10">Stay Connected</h2>
-                  <p className="text-xs text-violet-200 mb-5 relative z-10">Open portal on another device by scanning this QR code.</p>
-                  
-                  <div className="bg-white p-3 rounded-xl inline-block mx-auto shadow-md relative z-10">
-                       <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getWebUrl())}`} alt="Web Portal" className="w-24 h-24" />
-                  </div>
-                  <p className="mt-3 text-[10px] font-bold tracking-wider uppercase opacity-80 relative z-10">Scan to Share Web</p>
-             </div>
+          <div className="bg-gradient-to-br from-violet-600 to-purple-800 rounded-2xl p-6 text-white text-center shadow-lg relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-white opacity-10 rounded-full"></div>
+            <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white opacity-10 rounded-full"></div>
+            <h2 className="text-xl font-black mb-2 relative z-10">Stay Connected</h2>
+            <p className="text-xs text-violet-200 mb-5 relative z-10">Open portal on another device by scanning this QR code.</p>
+
+            <div className="bg-white p-3 rounded-xl inline-block mx-auto shadow-md relative z-10">
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getWebUrl())}`} alt="Web Portal" className="w-24 h-24" />
+            </div>
+            <p className="mt-3 text-[10px] font-bold tracking-wider uppercase opacity-80 relative z-10">Scan to Share Web</p>
+          </div>
         </div>
 
         {/* Modal for Mobile News */}
@@ -687,7 +687,7 @@ const LandingPage = () => {
               <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center relative border border-white/20">
                 <div className="bg-gray-50 overflow-hidden rounded-2xl mb-6 shadow-inner flex items-center justify-center w-48 h-48 md:w-64 md:h-64">
                   {isApkAccess ? (
-                    <a 
+                    <a
                       href={getWebUrl()}
                       onClick={(e) => {
                         e.preventDefault();
@@ -703,7 +703,7 @@ const LandingPage = () => {
                       />
                     </a>
                   ) : (
-                    <Link 
+                    <Link
                       to="/download"
                       className="block w-full h-full p-3 cursor-pointer"
                       title="Click to download eTALA APK"
