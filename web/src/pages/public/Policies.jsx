@@ -99,6 +99,10 @@ const UserDocuments = () => {
             (doc.issued_by && doc.issued_by.toLowerCase().includes(searchQuery.toLowerCase()));
         const matchesType = selectedTypeFilter === "all" || doc.document_type === selectedTypeFilter;
         return matchesSearch && matchesType;
+    }).sort((a, b) => {
+        const dateA = new Date(a.date_issued || a.createdAt || 0);
+        const dateB = new Date(b.date_issued || b.createdAt || 0);
+        return dateB - dateA;
     });
 
     // Pagination calculations

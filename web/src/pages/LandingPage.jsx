@@ -19,8 +19,15 @@ import {
 } from 'lucide-react';
 import { Capacitor } from "@capacitor/core";
 import { getInfographics } from "../api/infographics";
-import { getNews, getAnnouncements } from "../api/newsAnnouncement";
+import { getNews } from "../api/newsAnnouncement";
 import { getAllCalendarEvents } from "../api/calendar";
+import { getOrgChartImages } from "../api/organizational";
+import { getSexDatasets } from "../api/sexData";
+import { getAlbums } from "../api/albums";
+import { getWebinars } from "../api/webinar";
+import { getAllResearch } from "../api/research";
+import { getResources } from "../api/resource";
+import { getDocuments } from "../api/documents";
 import HighlightsSection from '../components/Highlights';
 
 const InfographicModal = ({ image, onClose }) => {
@@ -53,7 +60,7 @@ const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [infographics, setInfographics] = useState([]);
   const [newsItems, setNewsItems] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
+  const [additionalWhatsNew, setAdditionalWhatsNew] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [selectedNews, setSelectedNews] = useState(null);
@@ -155,33 +162,103 @@ const LandingPage = () => {
   }, []);
 
   useEffect(() => {
-    const fetchNews = async () => {
+    const fetchWhatsNewData = async () => {
       try {
-        const data = await getNews(); // fetch non-archived news
-        setNewsItems(data.slice(0, 3)); // only top 3 latest
+        const [newsRes, orgRes, sexRes, infoRes, albumRes, webRes, resRes, rscRes, docRes] = await Promise.all([
+          getNews().catch(() => []),
+          getOrgChartImages().catch(() => ({ data: [] })),
+          getSexDatasets().catch(() => []),
+          getInfographics().catch(() => []),
+          getAlbums().catch(() => ({ data: [] })),
+          getWebinars().catch(() => []),
+          getAllResearch().catch(() => ({ data: [] })),
+          getResources().catch(() => []),
+          getDocuments().catch(() => [])
+        ]);
+
+        // Add 'News' type to news items
+        setNewsItems((newsRes || []).map(item => ({ ...item, type: "News" })));
+
+        const extras = [
+          ...(docRes?.data || docRes || []).map(item => ({
+            ...item,
+            title: item.title || "Policy/Issuance",
+            content: item.description || "Official university issuance.",
+            imageUrl: null,
+            link: item.files?.[0]?.fileUrl || item.url || null,
+            date: item.date_issued || item.createdAt || item.date,
+            type: item.document_type ? item.document_type.replace('_', ' ').toUpperCase() : "POLICY/ISSUANCE"
+          })),
+          ...(orgRes?.data || orgRes || []).map(item => ({
+            ...item,
+            title: item.title || item.name || "Organizational Structure",
+            content: item.description || "Organizational Structure Update",
+            imageUrl: item.imageUrl || item.fileUrl,
+            date: item.createdAt || item.date,
+            type: "Organizational Structure"
+          })),
+          ...(sexRes?.data || sexRes || []).map(item => ({
+            ...item,
+            title: item.title || "Sex-Disaggregated Data",
+            content: item.description || "Dataset Update",
+            imageUrl: item.imageUrl || item.fileUrl,
+            link: item.link || item.url,
+            date: item.createdAt || item.date,
+            type: "Knowledge Hub"
+          })),
+          ...(infoRes?.data || infoRes || []).map(item => ({
+            ...item,
+            title: item.title || "Infographic",
+            content: item.description || "Infographic Update",
+            imageUrl: item.imageUrl || item.fileUrl,
+            date: item.createdAt || item.date,
+            type: "Knowledge Hub"
+          })),
+          ...(albumRes?.data || albumRes || []).map(item => ({
+            ...item,
+            title: item.title || "Gallery Album",
+            content: item.description || "Gallery Update",
+            imageUrl: item.coverImage?.imageUrl || item.imageUrl,
+            date: item.createdAt || item.date,
+            type: "Knowledge Hub"
+          })),
+          ...(webRes?.data || webRes || []).map(item => ({
+            ...item,
+            title: item.title || "Webinar/Video",
+            content: item.description || "Video Update",
+            link: item.videoUrl,
+            date: item.createdAt || item.date,
+            type: "Knowledge Hub"
+          })),
+          ...(resRes?.data || resRes || []).map(item => ({
+            ...item,
+            title: item.title || "Research",
+            content: item.abstract || item.description || "Research Update",
+            imageUrl: item.fileUrl || item.imageUrl,
+            link: item.url,
+            date: item.createdAt || item.date,
+            type: "Knowledge Hub"
+          })),
+          ...(rscRes?.data || rscRes || []).map(item => ({
+            ...item,
+            title: item.title || "Resource",
+            content: item.description || "Resource Update",
+            imageUrl: item.fileUrl || item.imageUrl,
+            link: item.url,
+            date: item.createdAt || item.date,
+            type: "Resources"
+          }))
+        ];
+
+        setAdditionalWhatsNew(extras);
       } catch (err) {
-        console.error("Failed to fetch news:", err);
+        console.error("Failed to fetch what's new items:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchNews();
-  }, []);
-
-  useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        const data = await getAnnouncements();
-        setAnnouncements(data.slice(0, 3)); // only top 3 latest
-      } catch (err) {
-        console.error("Failed to fetch announcements:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnnouncements();
+    fetchWhatsNewData();
   }, []);
 
   const getYouTubeEmbedUrl = (url) => {
@@ -271,6 +348,12 @@ const LandingPage = () => {
     setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
   };
 
+  const whatsNewItems = [...newsItems, ...additionalWhatsNew].sort((a, b) => {
+    const dateA = new Date(a.date || a.createdAt || 0);
+    const dateB = new Date(b.date || b.createdAt || 0);
+    return dateB - dateA;
+  });
+
   if (isApkAccess) {
     return (
       <main className="bg-gray-50 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
@@ -320,6 +403,47 @@ const LandingPage = () => {
           </button>
         </div>
 
+        {/* What's New Section */}
+        <div className="mt-8 px-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-black text-slate-800">What's New?</h2>
+            <button onClick={() => navigate('/news')} className="text-violet-600 text-xs font-bold bg-violet-50 px-3 py-1.5 rounded-full active:scale-[0.95] transition-transform">View All</button>
+          </div>
+        </div>
+
+        <div className="flex overflow-x-auto hide-scroll px-4 pb-4 gap-4 snap-x">
+          {loading ? (
+            <div className="flex justify-center w-full py-8"><div className="animate-spin h-8 w-8 border-4 border-violet-200 border-t-violet-600 rounded-full"></div></div>
+          ) : whatsNewItems.length > 0 ? (
+            whatsNewItems.slice(0, 5).map((item, idx) => (
+              <div key={item._id || idx} onClick={() => setSelectedNews(item)} className="snap-center shrink-0 w-64 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col active:scale-[0.98] transition-transform">
+                <div className="h-32 bg-gray-100 relative">
+                  {item.imageUrl && !isVideo(item.imageUrl) && !isDocument(item.imageUrl) ? (
+                    <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-white p-4">
+                      <img src="/assets/about/logo.png" alt="Default GAD Logo" className="w-full h-full object-contain opacity-90" />
+                    </div>
+                  )}
+                  {item.type && (
+                    <div className="absolute top-2 right-2 bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-1 rounded shadow-sm">
+                      {item.type}
+                    </div>
+                  )}
+                </div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <h3 className="font-bold text-slate-800 text-xs line-clamp-2 mb-2 leading-snug">{item.title}</h3>
+                  <div className="mt-auto flex items-center text-[11px] text-violet-600 font-bold">
+                    Read More <ChevronRight size={12} className="ml-0.5" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-500 text-sm w-full text-center py-4 bg-white rounded-xl border border-gray-100 shadow-sm">No updates available right now.</p>
+          )}
+        </div>
+
         {/* GAD Agenda Card */}
         <div className="px-4 mt-6">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -335,44 +459,7 @@ const LandingPage = () => {
           <HighlightsSection />
         </div>
 
-        {/* News & Updates (Horizontal Scroll) */}
-        <div className="mt-8 px-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black text-slate-800">Press Releases</h2>
-            <button onClick={() => navigate('/news')} className="text-violet-600 text-xs font-bold bg-violet-50 px-3 py-1.5 rounded-full active:scale-[0.95] transition-transform">View All</button>
-          </div>
-        </div>
 
-        <div className="flex overflow-x-auto hide-scroll px-4 pb-4 gap-4 snap-x">
-          {loading ? (
-            <div className="flex justify-center w-full py-8"><div className="animate-spin h-8 w-8 border-4 border-violet-200 border-t-violet-600 rounded-full"></div></div>
-          ) : newsItems.length > 0 ? (
-            newsItems.map(item => (
-              <div key={item._id} onClick={() => setSelectedNews(item)} className="snap-center shrink-0 w-64 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col active:scale-[0.98] transition-transform">
-                <div className="h-32 bg-gray-100 relative">
-                  {item.imageUrl && !isVideo(item.imageUrl) && !isDocument(item.imageUrl) ? (
-                    <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-violet-50 text-violet-300">
-                      <FileText size={32} />
-                    </div>
-                  )}
-                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur text-violet-700 text-[10px] font-black px-2 py-1 rounded shadow-sm">
-                    {item.date ? item.date.split(' ')[0] : 'Update'}
-                  </div>
-                </div>
-                <div className="p-3 flex-1 flex flex-col">
-                  <h3 className="font-bold text-slate-800 text-xs line-clamp-2 mb-2 leading-snug">{item.title}</h3>
-                  <div className="mt-auto flex items-center text-[11px] text-violet-600 font-bold">
-                    Read More <ChevronRight size={12} className="ml-0.5" />
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-slate-500 text-sm w-full text-center py-4 bg-white rounded-xl border border-gray-100 shadow-sm">No updates available right now.</p>
-          )}
-        </div>
 
         {/* Case Handling Process */}
         <div className="mt-6 px-4">
@@ -443,8 +530,8 @@ const LandingPage = () => {
                       <img src={selectedNews.imageUrl} alt={selectedNews.title} className="w-full h-full object-cover" />
                     )
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-violet-50 text-violet-300">
-                      <FileText size={48} />
+                    <div className="w-full h-full flex items-center justify-center bg-white p-6">
+                      <img src="/assets/about/logo.png" alt="Default GAD Logo" className="w-full h-full object-contain opacity-90" />
                     </div>
                   )}
                 </div>
@@ -548,12 +635,12 @@ const LandingPage = () => {
       {/* Highlights Section - Added after Hero */}
       <HighlightsSection />
 
-      {/* Press Releases Section */}
+      {/* What's New Section */}
       <section className="py-10 md:py-20 bg-slate-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-6 md:mb-12 border-b-4 border-violet-600 pb-4 md:pb-6 gap-4">
-            <h2 className="text-3xl md:text-6xl font-black text-slate-800 text-center sm:text-left">Press Releases</h2>
+            <h2 className="text-3xl md:text-6xl font-black text-slate-800 text-center sm:text-left">What's New?</h2>
             <button
               onClick={() => navigate("/news")}
               className="bg-white text-violet-700 font-bold text-base md:text-xl hover:text-violet-600 transition-colors flex items-center gap-2 md:gap-3 border border-violet-200 px-4 md:px-6 py-2 rounded-lg shadow dark:bg-white dark:text-violet-700 dark:hover:text-violet-600"
@@ -563,25 +650,30 @@ const LandingPage = () => {
           </div>
 
 
-          {/* Press Releases Grid */}
+          {/* What's New Grid */}
           {loading ? (
             <div className="text-center py-32">
               <div className="inline-block animate-spin rounded-full h-20 w-20 border-4 border-violet-200 border-t-violet-600"></div>
-              <p className="mt-8 text-slate-600 text-2xl">Loading press releases...</p>
+              <p className="mt-8 text-slate-600 text-2xl">Loading updates...</p>
             </div>
-          ) : newsItems.length === 0 ? (
+          ) : whatsNewItems.length === 0 ? (
             <div className="text-center py-32 bg-white rounded-xl border-2 border-dashed border-slate-300">
-              <p className="text-slate-600 text-2xl">No press releases available</p>
+              <p className="text-slate-600 text-2xl">No updates available</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-12">
-              {newsItems.map((item) => (
+              {whatsNewItems.slice(0, 3).map((item, idx) => (
                 <div
-                  key={item._id}
-                  className="bg-white shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col"
+                  key={item._id || idx}
+                  className="bg-white shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col relative"
                 >
+                  {item.type && (
+                    <div className="absolute top-4 left-4 z-10 bg-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded shadow-md">
+                      {item.type}
+                    </div>
+                  )}
                   {/* Image */}
-                  <div className="h-48 md:h-80 bg-slate-200 overflow-hidden">
+                  <div className="h-48 md:h-80 bg-slate-200 overflow-hidden relative">
                     {getYouTubeEmbedUrl(item.link) ? (
                       <iframe
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-500 bg-black"
@@ -607,38 +699,19 @@ const LandingPage = () => {
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
-                      <div className="w-full h-full bg-slate-300 flex items-center justify-center">
-                        <svg
-                          className="w-20 h-20 text-slate-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                          />
-                        </svg>
+                      <div className="w-full h-full bg-white flex items-center justify-center p-8">
+                        <img 
+                          src="/assets/about/logo.png" 
+                          alt="Default GAD Logo" 
+                          className="w-full h-full object-contain opacity-80 hover:scale-110 transition-transform duration-500" 
+                        />
                       </div>
                     )}
                   </div>
 
                   {/* Content */}
-                  <div className="flex flex-1">
-                    {/* Date Badge */}
-                    <div className="bg-violet-600 text-white p-4 md:p-8 flex flex-col items-center justify-center w-20 md:w-28 flex-shrink-0">
-                      <div className="text-2xl md:text-4xl font-bold leading-none">
-                        {item.date.split(' ')[1] || '01'}
-                      </div>
-                      <div className="text-xs md:text-base font-semibold mt-1 md:mt-2">
-                        {item.date.split(' ')[0] || 'Jan'}
-                      </div>
-                    </div>
-
-                    {/* Text Content */}
-                    <div className="p-4 md:p-8 flex flex-col flex-1">
+                  <div className="flex flex-1 p-6">
+                    <div className="flex flex-col flex-1">
                       <h3 className="text-lg md:text-2xl font-bold text-slate-800 mb-3 md:mb-6 line-clamp-3 leading-snug flex-1">
                         {item.title}
                       </h3>
@@ -874,7 +947,15 @@ const LandingPage = () => {
                       className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md"
                     />
                   )
-                ) : null}
+                ) : (
+                  <div className="w-full h-64 md:h-80 bg-white flex items-center justify-center p-8 rounded-xl shadow-md border border-gray-100">
+                    <img 
+                      src="/assets/about/logo.png" 
+                      alt="Default GAD Logo" 
+                      className="w-full h-full object-contain opacity-80" 
+                    />
+                  </div>
+                )}
               </div>
               <h2 className={`text-2xl md:text-3xl font-black text-slate-900 mb-4 ${!selectedNews.imageUrl && !getYouTubeEmbedUrl(selectedNews.link) ? "mt-12" : ""}`}>
                 {selectedNews.title}

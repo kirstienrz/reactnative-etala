@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, ArrowRight, X, FileText } from "lucide-react";
+import { Calendar, ArrowRight, X, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { getNews } from "../../api/newsAnnouncement";
-
+import { getOrgChartImages } from "../../api/organizational";
+import { getSexDatasets } from "../../api/sexData";
+import { getAlbums } from "../../api/albums";
+import { getWebinars } from "../../api/webinar";
+import { getAllResearch } from "../../api/research";
+import { getResources } from "../../api/resource";
+import { getDocuments } from "../../api/documents";
+import { getInfographics } from "../../api/infographics";
 const AllNews = () => {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,8 +29,98 @@ const AllNews = () => {
 
   const fetchNews = async () => {
     try {
-      const data = await getNews();
-      setNews(data);
+      const [newsRes, orgRes, sexRes, infoRes, albumRes, webRes, resRes, rscRes, docRes] = await Promise.all([
+        getNews().catch(() => []),
+        getOrgChartImages().catch(() => ({ data: [] })),
+        getSexDatasets().catch(() => []),
+        getInfographics().catch(() => []),
+        getAlbums().catch(() => ({ data: [] })),
+        getWebinars().catch(() => []),
+        getAllResearch().catch(() => ({ data: [] })),
+        getResources().catch(() => []),
+        getDocuments().catch(() => [])
+      ]);
+
+      const newsItems = (newsRes || []).map(item => ({ ...item, type: "News" }));
+
+      const extras = [
+        ...(docRes?.data || docRes || []).map(item => ({
+          ...item,
+          title: item.title || "Policy/Issuance",
+          content: item.description || "Official university issuance.",
+          imageUrl: null,
+          link: item.files?.[0]?.fileUrl || item.url || null,
+          date: item.date_issued || item.createdAt || item.date,
+          type: item.document_type ? item.document_type.replace('_', ' ').toUpperCase() : "POLICY/ISSUANCE"
+        })),
+        ...(orgRes?.data || orgRes || []).map(item => ({
+          ...item,
+          title: item.title || item.name || "Organizational Structure",
+          content: item.description || "Organizational Structure Update",
+          imageUrl: item.imageUrl || item.fileUrl,
+          date: item.createdAt || item.date,
+          type: "Organizational Structure"
+        })),
+        ...(sexRes?.data || sexRes || []).map(item => ({
+          ...item,
+          title: item.title || "Sex-Disaggregated Data",
+          content: item.description || "Dataset Update",
+          imageUrl: item.imageUrl || item.fileUrl,
+          link: item.link || item.url,
+          date: item.createdAt || item.date,
+          type: "Knowledge Hub"
+        })),
+        ...(infoRes?.data || infoRes || []).map(item => ({
+          ...item,
+          title: item.title || "Infographic",
+          content: item.description || "Infographic Update",
+          imageUrl: item.imageUrl || item.fileUrl,
+          date: item.createdAt || item.date,
+          type: "Knowledge Hub"
+        })),
+        ...(albumRes?.data || albumRes || []).map(item => ({
+          ...item,
+          title: item.title || "Gallery Album",
+          content: item.description || "Gallery Update",
+          imageUrl: item.coverImage?.imageUrl || item.imageUrl,
+          date: item.createdAt || item.date,
+          type: "Knowledge Hub"
+        })),
+        ...(webRes?.data || webRes || []).map(item => ({
+          ...item,
+          title: item.title || "Webinar/Video",
+          content: item.description || "Video Update",
+          link: item.videoUrl,
+          date: item.createdAt || item.date,
+          type: "Knowledge Hub"
+        })),
+        ...(resRes?.data || resRes || []).map(item => ({
+          ...item,
+          title: item.title || "Research",
+          content: item.abstract || item.description || "Research Update",
+          imageUrl: item.fileUrl || item.imageUrl,
+          link: item.url,
+          date: item.createdAt || item.date,
+          type: "Knowledge Hub"
+        })),
+        ...(rscRes?.data || rscRes || []).map(item => ({
+          ...item,
+          title: item.title || "Resource",
+          content: item.description || "Resource Update",
+          imageUrl: item.fileUrl || item.imageUrl,
+          link: item.url,
+          date: item.createdAt || item.date,
+          type: "Resources"
+        }))
+      ];
+
+      const allItems = [...newsItems, ...extras].sort((a, b) => {
+        const dateA = new Date(a.date || a.createdAt || 0);
+        const dateB = new Date(b.date || b.createdAt || 0);
+        return dateB - dateA;
+      });
+
+      setNews(allItems);
     } catch (err) {
       console.error(err);
     } finally {
@@ -74,11 +171,11 @@ const AllNews = () => {
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
         <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight select-none">
-            In the <span className="text-violet-400">News</span>
+            What's <span className="text-violet-400">New</span>
           </h1>
           <div className="w-20 h-1.5 bg-violet-500 mx-auto rounded-full mb-8"></div>
           <p className="text-xl text-violet-100/80 max-w-2xl mx-auto font-medium leading-relaxed">
-            Stay updated with the latest stories, highlights, and press releases from the GAD Office.
+            Stay updated with the latest stories, policies, and resources from the GAD Office.
           </p>
         </div>
       </section>
@@ -133,11 +230,16 @@ const AllNews = () => {
                         />
                       )
                     ) : (
-                      <div className="w-full h-40 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 font-bold">
-                        NEWS
+                      <div className="w-full h-40 bg-white border border-slate-100 rounded-lg flex flex-col items-center justify-center p-4">
+                        <img src="/assets/about/logo.png" alt="Default GAD Logo" className="w-full h-full object-contain opacity-80" />
                       </div>
                     )}
                   </div>
+                  {item.type && (
+                    <div className="absolute top-4 left-4 z-10 bg-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded shadow-md">
+                      {item.type}
+                    </div>
+                  )}
 
                   {/* CONTENT */}
                   <div className="flex-1">
@@ -239,13 +341,23 @@ const AllNews = () => {
                       title="Document Viewer"
                     />
                   ) : (
-                    <img
-                      src={selectedNews.imageUrl}
-                      alt={selectedNews.title}
-                      className="w-full h-64 md:h-80 object-cover rounded-xl shadow-md"
-                    />
+                    <div className="w-full h-64 md:h-80 bg-white flex items-center justify-center p-8 rounded-xl shadow-md border border-gray-100">
+                      <img
+                        src="/assets/about/logo.png"
+                        alt="Default GAD Logo"
+                        className="w-full h-full object-contain opacity-80"
+                      />
+                    </div>
                   )
-                ) : null}
+                ) : (
+                  <div className="w-full h-64 md:h-80 bg-white flex items-center justify-center p-8 rounded-xl shadow-md border border-gray-100">
+                    <img
+                      src="/assets/about/logo.png"
+                      alt="Default GAD Logo"
+                      className="w-full h-full object-contain opacity-80"
+                    />
+                  </div>
+                )}
               </div>
               <h2 className={`text-2xl md:text-3xl font-black text-slate-900 mb-4 ${!selectedNews.imageUrl && !getYouTubeEmbedUrl(selectedNews.link) ? "mt-12" : ""}`}>
                 {selectedNews.title}
