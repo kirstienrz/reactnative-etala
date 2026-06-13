@@ -297,7 +297,7 @@ exports.approveAppointment = async (req, res) => {
     try {
       const user = await User.findById(appointment.userId);
       if (user?.email) {
-        await sendEmail({
+        sendEmail({
           to: user.email,
           subject: "Appointment Approved — GAD Portal",
           html: buildEmail({
@@ -316,10 +316,12 @@ exports.approveAppointment = async (req, res) => {
             `,
             ticketNumber: appointment.reportId?.ticketNumber,
           }),
+        }).catch((emailErr) => {
+          console.error("❌ Error sending email:", emailErr);
         });
       }
     } catch (emailErr) {
-      console.error("❌ Error sending email:", emailErr);
+      console.error("❌ Error finding user for email:", emailErr);
     }
 
     try {
@@ -410,7 +412,7 @@ exports.cancelAppointment = async (req, res) => {
     try {
       const user = await User.findById(appointment.userId);
       if (user?.email) {
-        await sendEmail({
+        sendEmail({
           to: user.email,
           subject: "Appointment Cancelled — GAD Portal",
           html: buildEmail({
@@ -430,10 +432,12 @@ exports.cancelAppointment = async (req, res) => {
             `,
             ticketNumber: appointment.reportId?.ticketNumber,
           }),
+        }).catch((emailErr) => {
+          console.error("❌ Error sending email:", emailErr);
         });
       }
     } catch (emailErr) {
-      console.error("❌ Error sending email:", emailErr);
+      console.error("❌ Error finding user for email:", emailErr);
     }
 
     try {
@@ -501,7 +505,7 @@ exports.rescheduleAppointment = async (req, res) => {
       }
       const user = await User.findById(appointment.userId);
       if (user?.email) {
-        await sendEmail({
+        sendEmail({
           to: user.email,
           subject: "Appointment Rescheduled — GAD Portal",
           html: buildEmail({
@@ -520,6 +524,8 @@ exports.rescheduleAppointment = async (req, res) => {
             `,
             ticketNumber: appointment.reportId?.ticketNumber,
           }),
+        }).catch((emailErr) => {
+          console.error("❌ Error sending reschedule email to user:", emailErr);
         });
       }
     } else {
@@ -533,7 +539,7 @@ exports.rescheduleAppointment = async (req, res) => {
       });
       const admin = await User.findById(appointment.adminId);
       if (admin?.email) {
-        await sendEmail({
+        sendEmail({
           to: admin.email,
           subject: "Appointment Rescheduled by Student — GAD Portal",
           html: buildEmail({
@@ -551,6 +557,8 @@ exports.rescheduleAppointment = async (req, res) => {
               <p>Please log in to the GAD Portal to review this change.</p>
             `,
           }),
+        }).catch((emailErr) => {
+          console.error("❌ Error sending reschedule email to admin:", emailErr);
         });
       }
     }
@@ -770,10 +778,12 @@ exports.requestAnotherTime = async (req, res) => {
         timeStyle: "short",
       });
 
-      await sendEmail({
+      sendEmail({
         to: user.email,
         subject: `Select a New Consultation Time — Ticket #${ticketNumber}`,
         html: buildBookingEmail({ userName, ticketNumber, bookingLink, expiresAtStr }),
+      }).catch((emailErr) => {
+        console.error("❌ Error sending booking email to user:", emailErr);
       });
     }
 
