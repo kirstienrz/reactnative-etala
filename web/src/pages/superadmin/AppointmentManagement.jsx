@@ -32,7 +32,7 @@ import {
   rescheduleAppointment,
   completeAppointment,
 } from "../../api/appointments";
-import { toast } from "react-hot-toast";
+import { toast } from "react-toastify";
 import AvailabilityPickerModal from "../../components/AvailabilityPickerModal";
 
 // ─── Status helpers ──────────────────────────────────────────────────────────

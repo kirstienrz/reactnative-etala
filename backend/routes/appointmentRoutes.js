@@ -32,8 +32,8 @@ router.get("/admin-list", auth(["admin", "superadmin"]), getAdminAppointments);
 router.get("/admin-list/:adminId", auth(["admin", "superadmin"]), getAdminAppointments);
 router.patch("/approve/:id", auth(["admin", "superadmin"]), approveAppointment);
 router.patch("/cancel/:id", auth(["admin", "superadmin"]), cancelAppointment);
-router.patch("/reschedule/:id", auth(["admin"]), rescheduleAppointment);
-router.patch("/complete/:id", auth(["admin"]), completeAppointment);
+router.patch("/reschedule/:id", auth(["admin", "superadmin"]), rescheduleAppointment);
+router.patch("/complete/:id", auth(["admin", "superadmin"]), completeAppointment);
 
 // Reminder routes (automated and manual)
 router.post("/check-reminders", checkAndSendReminders); // Called by cron job

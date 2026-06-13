@@ -1227,7 +1227,7 @@ const AdminReports = () => {
                             <p className="text-sm font-bold text-indigo-900 mb-2">Anonymous Submission</p>
                             <div className="grid grid-cols-2 gap-y-3">
                               <InfoItem label="Role"        value={selectedReport.reporterRole} />
-                              <InfoItem label="Gender"      value={selectedReport.anonymousGender} />
+                              <InfoItem label="Gender"      value={selectedReport.reporterGender || selectedReport.anonymousGender} />
                               <InfoItem label="Affiliation" value={selectedReport.tupRole} />
                               <InfoItem label="Dept"        value={selectedReport.reporterDepartment} />
                             </div>
