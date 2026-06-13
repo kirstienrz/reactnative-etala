@@ -387,6 +387,9 @@ export default function InterviewBooking() {
         });
         setBookingSuccess(true);
         toast.success("Reschedule request sent to admin!");
+        setTimeout(() => {
+          navigate('/user/consultations');
+        }, 1500);
         return;
       }
 
@@ -436,6 +439,9 @@ export default function InterviewBooking() {
 
       setBookingSuccess(true);
       toast.success("Consultation booked successfully!");
+      setTimeout(() => {
+        navigate('/user/consultations');
+      }, 1500);
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || "Booking failed";
       toast.error(errorMsg);
