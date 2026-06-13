@@ -626,6 +626,7 @@ const ReportForm = () => {
   const [showConfidentialityModal, setShowConfidentialityModal] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [hasAgreedPersistent, setHasAgreedPersistent] = useState(false);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   const [formData, setFormData] = useState({
     // Reporter/Victim Information (all optional now)
@@ -750,7 +751,7 @@ const ReportForm = () => {
   };
 
   const showAlert = (title, message) => {
-    alert(`${title}\n\n${message}`);
+    setAlertConfig({ title, message });
   };
 
   const processFiles = (files) => {
@@ -1655,7 +1656,7 @@ const ReportForm = () => {
               <Shield size={32} color={currentStyles.colors.primary} />
             </div>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: currentStyles.colors.textPrimary, margin: '0 0 8px 0' }}>
-              GBV Reporting Confidentiality
+              Gender-Based Violence (GBV) Reporting Confidentiality
             </h2>
             <p style={{ fontSize: '14px', color: currentStyles.colors.textSecondary, margin: 0 }}>
               Please review and agree to our confidentiality terms to proceed.
@@ -1685,26 +1686,26 @@ const ReportForm = () => {
             </p>
 
             <p style={{ marginBottom: '16px' }}>
-              <strong>3. Non-Retaliation:</strong> TUPT prohibits any form of retaliation against individuals who report incidents of GBV. This system is designed to protect you and your right to a safe campus environment.
+              <strong>3. Non-Retaliation:</strong> TUPT prohibits any form of retaliation against individuals who report incidents of Gender-Based Violence (GBV). This system is designed to protect you and your right to a safe campus environment.
             </p>
 
             <p style={{ marginBottom: '16px' }}>
               <strong>4. Accuracy & Integrity:</strong> While we stand with survivors, we maintain the integrity of the system by requiring truthful accounts. This ensures that resources are directed effectively to those in need.
             </p>
 
-            <p style={{ fontStyle: 'italic', color: currentStyles.colors.textSecondary }}>
+            <p style={{ fontStyle: 'italic', color: currentStyles.colors.textSecondary, marginBottom: '24px' }}>
               If you do not agree with these terms, you may choose not to proceed with the submission of your report.
             </p>
-          </div>
 
-          <div style={{ borderTop: `1px solid ${currentStyles.colors.border}`, paddingTop: '24px' }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '12px',
                 cursor: 'pointer',
-                marginBottom: '24px'
+                borderTop: `1px solid ${currentStyles.colors.border}`,
+                paddingTop: '20px',
+                marginTop: '20px'
               }}
               onClick={() => setAgreedToTerms(!agreedToTerms)}
             >
@@ -1717,10 +1718,12 @@ const ReportForm = () => {
                 {agreedToTerms && <Check size={14} color="white" />}
               </div>
               <span style={{ fontSize: '14px', fontWeight: '500', color: currentStyles.colors.textPrimary, lineHeight: '1.4' }}>
-                I have read and agree to the GBV reporting confidentiality terms and confirm that my statement is true to the best of my knowledge.
+                I have read and agree to the Gender-Based Violence (GBV) reporting confidentiality terms and confirm that my statement is true to the best of my knowledge.
               </span>
             </div>
+          </div>
 
+          <div style={{ borderTop: `1px solid ${currentStyles.colors.border}`, paddingTop: '24px' }}>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 style={{
@@ -1746,6 +1749,87 @@ const ReportForm = () => {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAlertModal = () => {
+    if (!alertConfig) return null;
+
+    const lowerTitle = alertConfig.title.toLowerCase();
+    const isSuccess = lowerTitle.includes('success');
+    const isError = lowerTitle.includes('error');
+
+    return (
+      <div style={{
+        ...currentStyles.modalOverlay,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 10000
+      }} onClick={() => setAlertConfig(null)}>
+        <div style={{
+          ...currentStyles.modalContent,
+          maxWidth: '400px',
+          padding: '32px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center'
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '28px',
+            backgroundColor: isSuccess ? '#ecfdf5' : isError ? '#fef2f2' : '#fffbeb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '20px',
+            border: `1px solid ${isSuccess ? '#a7f3d0' : isError ? '#fecaca' : '#fde68a'}`,
+          }}>
+            {isSuccess ? (
+              <Check size={28} color="#059669" />
+            ) : isError ? (
+              <X size={28} color="#dc2626" />
+            ) : (
+              <Info size={28} color="#d97706" />
+            )}
+          </div>
+          
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: '700',
+            color: currentStyles.colors.textPrimary,
+            margin: '0 0 12px 0',
+            lineHeight: '1.3'
+          }}>
+            {alertConfig.title}
+          </h3>
+          
+          <p style={{
+            fontSize: '14px',
+            color: currentStyles.colors.textSecondary,
+            margin: '0 0 24px 0',
+            lineHeight: '1.6',
+            whiteSpace: 'pre-wrap',
+            alignSelf: 'stretch'
+          }}>
+            {alertConfig.message}
+          </p>
+
+          <button
+            style={{
+              ...currentStyles.primaryButton,
+              width: '100%',
+              padding: '12px 24px',
+              backgroundColor: isSuccess ? '#059669' : isError ? '#dc2626' : currentStyles.colors.primary,
+              boxShadow: 'none'
+            }}
+            onClick={() => setAlertConfig(null)}
+          >
+            Okay
+          </button>
         </div>
       </div>
     );
@@ -1968,7 +2052,7 @@ const ReportForm = () => {
               Privacy & Confidentiality
             </p>
             <p style={{ margin: 0, fontSize: '13px', color: currentStyles.colors.textSecondary, lineHeight: '1.5' }}>
-              All GBV reports are handled with extreme sensitivity and strict confidentiality by the TUPT GAD Office. 
+              All Gender-Based Violence (GBV) reports are handled with extreme sensitivity and strict confidentiality by the TUPT GAD Office. 
               Your safety and privacy are our top priorities throughout this process.
             </p>
           </div>
@@ -2605,6 +2689,7 @@ const ReportForm = () => {
 
       {renderAIValidationModal()}
       {renderConfidentialityModal()}
+      {renderAlertModal()}
 
       {showDatePicker && (
         <div style={currentStyles.modalOverlay} onClick={() => setShowDatePicker(false)}>
