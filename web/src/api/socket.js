@@ -2,13 +2,13 @@
 import { io } from "socket.io-client";
 import { Capacitor } from "@capacitor/core";
 
-const isMobileApp = Capacitor.isNative;
+const isMobileApp = Capacitor.isNativePlatform();
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 // Auto-detect: use localhost for local development, otherwise use env var or production
 const SOCKET_URL = isMobileApp
   ? (import.meta.env.VITE_API_URL_MOBILE ? import.meta.env.VITE_API_URL_MOBILE.replace(/\/api$/, "") : "http://localhost:5000")
-  : (isLocalhost ? "http://localhost:5000" : (import.meta.env.VITE_SOCKET_URL || "http://localhost:5000"));
+  : (import.meta.env.VITE_SOCKET_URL || "http://localhost:5000");
 
 console.log("🔧 Socket Service Configuration:");
 console.log("  - isMobileApp:", isMobileApp);

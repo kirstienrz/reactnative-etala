@@ -1,14 +1,14 @@
 import axios from "axios";
 import { Capacitor } from "@capacitor/core";
 
-const isMobileApp = Capacitor.isNative; // true if running as mobile app
+const isMobileApp = Capacitor.isNativePlatform(); // true if running as mobile app (iOS/Android)
 const defaultBaseURL = (window.location.origin.includes("localhost") && !isMobileApp)
   ? "http://localhost:5000/api"
   : "https://reactnative-etala.onrender.com/api";
 
 const baseURL = (isMobileApp
   ? import.meta.env.VITE_API_URL_MOBILE
-  : (window.location.origin.includes("localhost") ? null : import.meta.env.VITE_API_URL)) || defaultBaseURL;
+  : import.meta.env.VITE_API_URL) || defaultBaseURL;
 
 const API = axios.create({
   baseURL,
