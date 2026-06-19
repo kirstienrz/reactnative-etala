@@ -1,31 +1,16 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || (
-  window.location.origin.includes("localhost")
-    ? "http://localhost:5000/api"
-    : "https://reactnative-etala.onrender.com/api"
-);
+import API from './config';
 
 export const getNotifications = async () => {
-  const token = localStorage.getItem('token');
-  const res = await axios.get(`${API_URL}/notifications`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await API.get('/notifications');
   return res.data.data;
 };
 
 export const markAsRead = async (id) => {
-  const token = localStorage.getItem('token');
-  const res = await axios.patch(`${API_URL}/notifications/${id}/read`, {}, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await API.patch(`/notifications/${id}/read`, {});
   return res.data.data;
 };
 
 export const markAllRead = async () => {
-  const token = localStorage.getItem('token');
-  const res = await axios.post(`${API_URL}/notifications/mark-all-read`, {}, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await API.post('/notifications/mark-all-read', {});
   return res.data;
 };

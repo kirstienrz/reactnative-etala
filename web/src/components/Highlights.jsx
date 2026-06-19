@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Sparkles, X, Play, Pause, Volume2, VolumeX, 
 import io from 'socket.io-client';
 import { getCarouselImages } from '../api/carousel';
 import { createPortal } from 'react-dom';
+import { Capacitor } from '@capacitor/core';
 
 const StoryViewer = ({ highlight, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -202,7 +203,11 @@ const HighlightsSection = () => {
   }, []);
 
   useEffect(() => {
-    const newSocket = io(window.location.origin.includes('localhost') ? 'http://localhost:5000' : 'https://reactnative-etala.onrender.com/', {
+    const isMobileApp = Capacitor.isNative;
+    const socketURL = (window.location.origin.includes('localhost') && !isMobileApp)
+      ? 'http://localhost:5000'
+      : 'https://reactnative-etala.onrender.com/'
+    const newSocket = io(socketURL, {
       transports: ['websocket'],
     });
 
