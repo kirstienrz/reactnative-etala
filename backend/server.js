@@ -39,7 +39,7 @@ app.use(helmet({
 // Global CORS Middleware (Applied BEFORE Rate Limiters)
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || origin === 'null' || allowedOrigins.includes(origin) || origin.startsWith('file://') || origin.startsWith('capacitor://')) {
       return callback(null, true);
     }
     if (process.env.NODE_ENV === 'production') {
