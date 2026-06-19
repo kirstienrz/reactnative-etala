@@ -14,10 +14,9 @@ export default function DownloadApk() {
   const [downloadStarted, setDownloadStarted] = useState(false);
   const navigate = useNavigate();
 
-  // ✅ APK is hosted on GitHub Releases (supports up to 2GB, free)
-  // Update this URL after creating a new GitHub Release and uploading the APK there.
+  // ✅ APK is hosted on Google Drive for faster downloads
   const APK_DOWNLOAD_URL =
-    "https://github.com/kirstienrz/reactnative-etala/releases/latest/download/eTALA.apk";
+    "https://drive.google.com/uc?export=download&id=1AOg7VQVscqmQzMcPC6WK7sYpVXnrrmpH";
 
   const triggerDownload = () => {
     setDownloadStarted(true);
