@@ -46,4 +46,6 @@ dist/
 # Capacitor specific
 capacitor.config.json.local
 
-
+# Large binary files - hosted on GitHub Releases instead
+*.apk
+public/assets/*.apk

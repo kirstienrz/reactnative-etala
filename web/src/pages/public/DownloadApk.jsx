@@ -14,14 +14,14 @@ export default function DownloadApk() {
   const [downloadStarted, setDownloadStarted] = useState(false);
   const navigate = useNavigate();
 
+  // ✅ APK is hosted on GitHub Releases (supports up to 2GB, free)
+  // Update this URL after creating a new GitHub Release and uploading the APK there.
+  const APK_DOWNLOAD_URL =
+    "https://github.com/kirstienrz/reactnative-etala/releases/latest/download/eTALA.apk";
+
   const triggerDownload = () => {
     setDownloadStarted(true);
-    const link = document.createElement("a");
-    link.href = "/assets/eTALA.apk";
-    link.download = "eTALA.apk";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.open(APK_DOWNLOAD_URL, "_blank");
   };
 
   const steps = [
