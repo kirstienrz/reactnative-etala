@@ -26,7 +26,8 @@ import {
   ArrowUpDown,
   Edit2,
   Archive,
-  RotateCcw
+  RotateCcw,
+  HelpCircle
 } from 'lucide-react';
 
 export default function UserManagement() {
@@ -55,6 +56,7 @@ export default function UserManagement() {
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealUserId, setAppealUserId] = useState(null);
   const [appealAction, setAppealAction] = useState(null);
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const [archivingUserId, setArchivingUserId] = useState(null);
   const [archiveReasonInput, setArchiveReasonInput] = useState('');
   const [archiveGraceDaysInput, setArchiveGraceDaysInput] = useState(7);
@@ -384,9 +386,21 @@ export default function UserManagement() {
 
   return (
     <div className="w-full max-w-[100vw] overflow-x-hidden mx-auto px-4 sm:px-8 py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-        <p className="text-gray-600">Manage all users, admins, and their roles</p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-gray-600">Manage all users, admins, and their roles</p>
+            <button 
+              onClick={() => setShowGuideModal(true)} 
+              className="text-gray-400 hover:text-gray-600 transition flex items-center gap-1 text-xs ml-2"
+              title="Need help?"
+            >
+              <HelpCircle size={14} />
+              <span className="underline decoration-dotted underline-offset-2">Guide</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -1588,6 +1602,92 @@ export default function UserManagement() {
                 className={`px-5 py-2 text-sm text-white rounded-lg shadow-md transition font-bold ${appealAction === 'approve' ? 'bg-green-600 hover:bg-green-700 shadow-green-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20'}`}
               >
                 {appealAction === 'approve' ? 'Approve' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Guide Modal */}
+      {showGuideModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative bg-white border border-gray-200 w-full max-w-2xl shadow-2xl rounded-2xl p-6 transition-all transform scale-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-2 border-b border-gray-100 z-10">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <HelpCircle className="text-blue-600" /> User Management Guide
+              </h3>
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl transition"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <section>
+                <h4 className="text-lg font-bold text-gray-800 mb-3 border-l-4 border-blue-500 pl-3">Understanding the Tabs</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <div className="font-bold text-blue-700 mb-1">Active</div>
+                    <p className="text-sm text-gray-600">Users who are fully active and can log in normally. Sorted alphabetically.</p>
+                  </div>
+                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                    <div className="font-bold text-amber-700 mb-1">Pending Archive</div>
+                    <p className="text-sm text-gray-600">Users scheduled for deactivation. They are in a grace period, can still log in, and can appeal. Sorted by closest deadline.</p>
+                  </div>
+                  <div className="bg-gray-100 p-3 rounded-xl border border-gray-200">
+                    <div className="font-bold text-gray-700 mb-1">Archived</div>
+                    <p className="text-sm text-gray-600">Users who are fully deactivated and can no longer log in. Sorted by most recently archived.</p>
+                  </div>
+                  <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+                    <div className="font-bold text-indigo-700 mb-1">Appeals</div>
+                    <p className="text-sm text-gray-600">Users who submitted an appeal to stop their deactivation. The countdown is frozen until you decide.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-lg font-bold text-gray-800 mb-3 border-l-4 border-emerald-500 pl-3">User Actions</h4>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition">
+                    <div className="mt-0.5 text-indigo-600 bg-indigo-50 p-1.5 rounded-lg"><Edit2 size={16} /></div>
+                    <div>
+                      <div className="font-bold text-gray-800 text-sm">Edit User</div>
+                      <p className="text-xs text-gray-600">Modify a user's details, change their role to Admin/User, or manually activate their account.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition">
+                    <div className="mt-0.5 text-blue-600 bg-blue-50 p-1.5 rounded-lg"><Mail size={16} /></div>
+                    <div>
+                      <div className="font-bold text-gray-800 text-sm">Resend Activation</div>
+                      <p className="text-xs text-gray-600">Resend the account activation email (only visible for users who haven't activated yet).</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition">
+                    <div className="mt-0.5 text-amber-600 bg-amber-50 p-1.5 rounded-lg"><Archive size={16} /></div>
+                    <div>
+                      <div className="font-bold text-gray-800 text-sm">Archive Account</div>
+                      <p className="text-xs text-gray-600">Schedule an active user for deactivation. You must select a reason and a grace period (e.g., 7 days).</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition">
+                    <div className="mt-0.5 text-emerald-600 bg-emerald-50 p-1.5 rounded-lg"><RotateCcw size={16} /></div>
+                    <div>
+                      <div className="font-bold text-gray-800 text-sm">Restore Account</div>
+                      <p className="text-xs text-gray-600">Cancel a scheduled deactivation for pending users, OR fully reactivate an already archived user.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 transition font-bold"
+              >
+                Got it
               </button>
             </div>
           </div>
