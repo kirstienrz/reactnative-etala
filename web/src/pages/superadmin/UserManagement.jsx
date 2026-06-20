@@ -48,6 +48,8 @@ export default function UserManagement() {
   const [appeals, setAppeals] = useState([]);
   const [pendingArchiveCount, setPendingArchiveCount] = useState(0);
   const [showArchiveReasonModal, setShowArchiveReasonModal] = useState(false);
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendUserId, setResendUserId] = useState(null);
   const [archivingUserId, setArchivingUserId] = useState(null);
   const [archiveReasonInput, setArchiveReasonInput] = useState('');
   const [archiveGraceDaysInput, setArchiveGraceDaysInput] = useState(7);
@@ -235,14 +237,21 @@ export default function UserManagement() {
     setFormData(updatedForm);
   };
 
-  const handleResendActivation = async (userId) => {
-    if (!window.confirm('Resend activation email to this user?')) return;
+  const handleResendActivation = (userId) => {
+    setResendUserId(userId);
+    setShowResendModal(true);
+  };
+
+  const confirmResendActivation = async () => {
+    setShowResendModal(false);
     try {
-      await resendActivationLink(userId);
+      await resendActivationLink(resendUserId);
       toast.success('Activation link resent successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend link');
+    } finally {
+      setResendUserId(null);
     }
   };
 
@@ -1441,6 +1450,54 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+
+      {/* Resend Activation Modal */}
+      {showResendModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative bg-white border border-gray-200 w-full max-w-sm shadow-2xl rounded-2xl p-6 transition-all transform scale-100">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Resend Activation</h3>
+              <button
+                onClick={() => {
+                  setShowResendModal(false);
+                  setResendUserId(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl transition"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="mb-6 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4 shadow-inner">
+                <Mail size={24} />
+              </div>
+              <p className="text-sm text-gray-600 font-medium">
+                Are you sure you want to resend the activation email to this user? They will receive a new link to set their password.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+              <button
+                onClick={() => {
+                  setShowResendModal(false);
+                  setResendUserId(null);
+                }}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmResendActivation}
+                className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md shadow-blue-500/20 transition font-bold"
+              >
+                Resend Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
