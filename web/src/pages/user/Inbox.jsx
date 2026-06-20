@@ -16,6 +16,9 @@ const Inbox = () => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
 
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
   // ── Unread state — pure in-memory, reconciled from server on load ──────────
   const [unreadTickets, setUnreadTickets] = useState(new Set());
 
@@ -212,6 +215,17 @@ const Inbox = () => {
     );
   }
 
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = search.toLowerCase() === '' || 
+      (ticket.ticketNumber || '').toLowerCase().includes(search.toLowerCase()) ||
+      (ticket.lastMessage || '').toLowerCase().includes(search.toLowerCase()) ||
+      (ticket.reportId?.ticketNumber || '').toLowerCase().includes(search.toLowerCase());
+      
+    const matchesStatus = statusFilter === '' || ticket.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-4xl mx-auto">
@@ -228,8 +242,40 @@ const Inbox = () => {
 
         <p className="text-gray-600 mb-6">Your messages and support tickets.</p>
 
+        {/* Search and Filter */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Messages
+              </label>
+              <input
+                type="text"
+                placeholder="Search by ticket number, message..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="w-full sm:w-64">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Status
+              </label>
+              <select
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white transition-all"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-          {tickets.length === 0 ? (
+          {filteredTickets.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-8 h-8 text-gray-400" />
@@ -239,7 +285,7 @@ const Inbox = () => {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {tickets.map((ticket) => {
+              {filteredTickets.map((ticket) => {
                 const ticketNumber = ticket.ticketNumber;
                 const hasUnread = isUnread(ticketNumber);
                 const isMenuOpen = openMenuId === ticketNumber;
