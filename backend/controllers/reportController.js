@@ -229,7 +229,7 @@ const getUserReports = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const reports = await Report.find(query)
-      .sort({ createdAt: -1 })
+      .sort({ submittedAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .populate("createdBy", "firstName lastName email")
