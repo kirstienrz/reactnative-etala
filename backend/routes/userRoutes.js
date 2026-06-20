@@ -1082,7 +1082,8 @@ router.post("/appeal", auth(), async (req, res) => {
       const adminEmails = superadmins.map(admin => admin.email).filter(Boolean);
 
       if (adminEmails.length > 0) {
-        await sendEmail({
+        // Run email sending asynchronously so the user isn't stuck waiting
+        sendEmail({
           to: adminEmails,
           subject: "ALERT: New Account Archive Appeal Submitted - eTALA Portal",
           html: `
@@ -1120,8 +1121,9 @@ router.post("/appeal", auth(), async (req, res) => {
               <p style="font-size: 12px; color: #6b7280; text-align: center;">TUP eTALA Gender and Development Portal &bull; Admin Alerts</p>
             </div>
           `
-        });
-        console.log("✅ Superadmins notified of new appeal");
+        }).catch(err => console.error("❌ Failed to notify admins of appeal via email:", err));
+        
+        console.log("✅ Superadmins notified of new appeal (async)");
       }
     } catch (err) {
       console.error("❌ Failed to notify admins of appeal via email:", err);
