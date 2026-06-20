@@ -710,13 +710,13 @@ const AppointmentManagement = () => {
       ══════════════════════════════════════════════════ */}
       {showConfirmModal && selectedAppt && (
         <Backdrop onClick={closeConfirmModal}>
-          <ModalCard className="max-w-sm">
+          <ModalCard className="max-w-sm max-h-[90vh] flex flex-col">
             <ModalHeader
               title={confirmAction === "approve" ? "Approve Appointment" : "Cancel Appointment"}
               onClose={closeConfirmModal}
               accent={confirmAction === "approve" ? "green" : "red"}
             />
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <p className="text-sm text-gray-600">
                 {confirmAction === "approve"
                   ? "Approving this appointment will automatically set the case status to For Interview."
@@ -760,9 +760,9 @@ const AppointmentManagement = () => {
       ══════════════════════════════════════════════════ */}
       {showRescheduleModal && selectedAppt && (
         <Backdrop onClick={() => setShowRescheduleModal(false)}>
-          <ModalCard className="max-w-md">
+          <ModalCard className="max-w-md max-h-[90vh] flex flex-col">
             <ModalHeader title="Reschedule Appointment" onClose={() => setShowRescheduleModal(false)} accent="orange" />
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <ApptSummary appt={selectedAppt} />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -812,9 +812,9 @@ const AppointmentManagement = () => {
       ══════════════════════════════════════════════════ */}
       {showCompleteModal && selectedAppt && (
         <Backdrop onClick={() => setShowCompleteModal(false)}>
-          <ModalCard className="max-w-lg">
+          <ModalCard className="max-w-lg max-h-[90vh] flex flex-col">
             <ModalHeader title="Complete Interview" onClose={() => setShowCompleteModal(false)} accent="blue" />
-            <div className="p-6 space-y-5">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
               <ApptSummary appt={selectedAppt} />
 
               {/* Admin Notes */}
