@@ -17,7 +17,20 @@ export default function CarouselManagement() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [viewArchived, setViewArchived] = useState(false);
-  const [modalMedia, setModalMedia] = useState(null); // { url, type }
+  const [modalMedia, setModalMedia] = useState(null); // { items: [], currentIndex: 0 }
+
+  const handleViewCard = (img) => {
+    let items = [];
+    if (img.items && img.items.length > 0) {
+      items = img.items.map(i => ({ url: i.imageUrl, type: i.type || 'image' }));
+    } else {
+      items = [{
+        url: img.coverImage?.imageUrl || img.imageUrl,
+        type: img.coverImage?.type || img.type || 'image'
+      }];
+    }
+    setModalMedia({ items, currentIndex: 0 });
+  };
   const [selectedImages, setSelectedImages] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
@@ -542,7 +555,7 @@ export default function CarouselManagement() {
                     muted
                     loop
                     playsInline
-                    onClick={() => setModalMedia({ url: img.coverImage?.imageUrl || (img.items && img.items[0]?.imageUrl), type: 'video' })}
+                    onClick={() => handleViewCard(img)}
                   />
                 ) : (
                   <img
@@ -553,7 +566,7 @@ export default function CarouselManagement() {
                       e.target.src = "/assets/about/logo.png";
                       e.target.className = "w-full h-full object-contain p-8 bg-slate-50 opacity-20";
                     }}
-                    onClick={() => setModalMedia({ url: img.coverImage?.imageUrl || (img.items && img.items[0]?.imageUrl) || img.imageUrl, type: 'image' })}
+                    onClick={() => handleViewCard(img)}
                     className="w-full h-full object-cover cursor-pointer group-hover:scale-110 transition-transform duration-700"
                     crossOrigin="anonymous"
                   />
@@ -607,33 +620,72 @@ export default function CarouselManagement() {
       </div>
 
       {/* Modal for Enlarged Media */}
-      {modalMedia && (
+      {modalMedia && modalMedia.items && modalMedia.items.length > 0 && (
         <div
           onClick={() => setModalMedia(null)}
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4 cursor-pointer"
+          className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100] p-4 cursor-pointer"
         >
-          <div className="relative max-w-7xl max-h-full">
+          <div className="relative w-full max-w-6xl h-full max-h-[90vh] flex items-center justify-center">
             <button
               onClick={() => setModalMedia(null)}
-              className="absolute -top-12 right-0 text-white text-4xl font-bold hover:text-gray-300 transition"
+              className="absolute -top-10 right-0 md:-right-10 text-white/70 hover:text-white text-4xl font-bold transition z-50"
             >
               ×
             </button>
-            {modalMedia.type === 'video' ? (
-              <video
-                src={modalMedia.url}
-                controls
-                autoPlay
-                className="max-w-full max-h-screen rounded-lg shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <img
-                src={modalMedia.url}
-                alt="Enlarged view"
-                className="max-w-full max-h-screen object-contain rounded-lg shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              />
+
+            {modalMedia.items.length > 1 && (
+              <button
+                className="absolute left-2 md:-left-12 text-white/50 hover:text-white text-5xl transition z-50 p-4"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalMedia(prev => ({
+                    ...prev,
+                    currentIndex: prev.currentIndex === 0 ? prev.items.length - 1 : prev.currentIndex - 1
+                  }));
+                }}
+              >
+                &#10094;
+              </button>
+            )}
+
+            <div className="flex justify-center items-center w-full h-full">
+              {modalMedia.items[modalMedia.currentIndex].type === 'video' ? (
+                <video
+                  src={modalMedia.items[modalMedia.currentIndex].url}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <img
+                  src={modalMedia.items[modalMedia.currentIndex].url}
+                  alt="Enlarged view"
+                  className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
+            </div>
+
+            {modalMedia.items.length > 1 && (
+              <button
+                className="absolute right-2 md:-right-12 text-white/50 hover:text-white text-5xl transition z-50 p-4"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalMedia(prev => ({
+                    ...prev,
+                    currentIndex: prev.currentIndex === prev.items.length - 1 ? 0 : prev.currentIndex + 1
+                  }));
+                }}
+              >
+                &#10095;
+              </button>
+            )}
+
+            {modalMedia.items.length > 1 && (
+              <div className="absolute -bottom-10 left-0 right-0 text-center text-white/70 font-medium tracking-widest text-sm">
+                {modalMedia.currentIndex + 1} / {modalMedia.items.length}
+              </div>
             )}
           </div>
         </div>
