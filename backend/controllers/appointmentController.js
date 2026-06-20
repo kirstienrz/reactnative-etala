@@ -169,6 +169,7 @@ exports.bookAppointment = async (req, res) => {
     );
 
     await Report.findByIdAndUpdate(reportId, {
+      caseStatus: "For Scheduling",
       $push: {
         timeline: {
           action: "Interview Scheduled",
@@ -245,11 +246,11 @@ exports.bookAppointment = async (req, res) => {
 
     await Message.create({
       ticketNumber: report?.ticketNumber || "Unknown",
-      sender: "user",
-      senderId: userId,
-      senderName,
+      sender: "superadmin",
+      senderId: adminId, // System messages act as if from admin
+      senderName: "System",
       messageType: "text",
-      content: `System: You have booked a consultation for ${date} at ${startTime} (Pending Approval).`,
+      content: `System: A consultation has been booked for ${date} at ${startTime} (Pending Approval).`,
     });
 
     res.status(201).json(appointment);
@@ -379,14 +380,15 @@ exports.cancelAppointment = async (req, res) => {
     await appointment.save();
 
     try {
-      // Revert caseStatus to "For Scheduling" — admin can re-send booking link
+      // Revert caseStatus to "For Queuing" and status to "Pending"
       await Report.findByIdAndUpdate(appointment.reportId, {
-        caseStatus: "For Scheduling",
+        status: "Pending",
+        caseStatus: "For Queuing",
         $push: {
           timeline: {
             action: "Appointment Cancelled",
             performedBy: req.user.id,
-            remarks: `Appointment on ${appointment.date} at ${appointment.startTime} was cancelled. ${reason ? `Reason: ${reason}` : ""} Case status reverted to For Scheduling.`,
+            remarks: `Appointment on ${appointment.date} at ${appointment.startTime} was cancelled. ${reason ? `Reason: ${reason}` : ""} Case status reverted to Pending/For Queuing.`,
           },
         },
       });
@@ -491,6 +493,17 @@ exports.rescheduleAppointment = async (req, res) => {
         ? "Admin Rescheduled"
         : "User Rescheduled";
     await appointment.save();
+
+    await Report.findByIdAndUpdate(appointment.reportId, {
+      caseStatus: "For Scheduling",
+      $push: {
+        timeline: {
+          action: "Appointment Rescheduled",
+          performedBy: req.user.id,
+          remarks: `Appointment rescheduled to ${newDate} at ${newStartTime}. Reason: ${reason}`,
+        },
+      },
+    });
 
     if (req.user.role === "admin" || req.user.role === "superadmin") {
       if (appointment.userId) {

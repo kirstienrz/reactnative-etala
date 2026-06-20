@@ -197,7 +197,7 @@ const reportSchema = new mongoose.Schema({
   },
   caseStatus: {
     type: String,
-    enum: ["For Queuing", "For Interview", "For Appointment", "For Referral", "Case Closed"],
+    enum: ["For Queuing", "For Scheduling", "For Interview", "For Appointment", "For Referral", "Case Closed"],
     default: "For Queuing"
   },
   severity: {

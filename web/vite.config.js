@@ -20,4 +20,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["expo-secure-store", "react-native"],
   },
+  esbuild: {
+    drop: ["console", "debugger"],
+  },
 });
