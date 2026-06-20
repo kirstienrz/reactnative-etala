@@ -345,10 +345,21 @@ router.get("/manage/users", auth(), async (req, res) => {
       query.$and = conditions;
     }
 
+    const sortBy = req.query.sortBy || "createdAt";
+    let sortObj = { createdAt: -1 };
+    
+    if (sortBy === "name") {
+      sortObj = { firstName: 1, lastName: 1 };
+    } else if (sortBy === "gracePeriod") {
+      sortObj = { archiveGracePeriodEndsAt: 1 }; // closest deadline first
+    } else if (sortBy === "archivedDate") {
+      sortObj = { archiveGracePeriodEndsAt: -1 }; // most recently archived first
+    }
+
     const totalUsers = await User.countDocuments(query);
     const users = await User.find(query)
       .select("-password -pin")
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
       .limit(limit);
 
@@ -1135,7 +1146,7 @@ router.get("/manage/appeals", auth(), async (req, res) => {
 
     const appeals = await User.find({ archiveStatus: "Appeal Under Review" })
       .select("-password -pin")
-      .sort({ archiveAppealSubmittedAt: -1 });
+      .sort({ archiveAppealSubmittedAt: 1 });
 
     res.json(appeals);
   } catch (err) {

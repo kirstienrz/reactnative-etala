@@ -50,13 +50,17 @@ export default function UserManagement() {
   const [showArchiveReasonModal, setShowArchiveReasonModal] = useState(false);
   const [showResendModal, setShowResendModal] = useState(false);
   const [resendUserId, setResendUserId] = useState(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [restoreUserId, setRestoreUserId] = useState(null);
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealUserId, setAppealUserId] = useState(null);
+  const [appealAction, setAppealAction] = useState(null);
   const [archivingUserId, setArchivingUserId] = useState(null);
   const [archiveReasonInput, setArchiveReasonInput] = useState('');
   const [archiveGraceDaysInput, setArchiveGraceDaysInput] = useState(7);
   const [customArchiveReason, setCustomArchiveReason] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterDepartment, setFilterDepartment] = useState('all');
-  const [filterArchiveStatus, setFilterArchiveStatus] = useState('all');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -92,7 +96,7 @@ export default function UserManagement() {
     } else {
       fetchUsers();
     }
-  }, [currentPage, debouncedSearch, showArchived, activeTab, filterRole, filterDepartment, filterArchiveStatus]);
+  }, [currentPage, debouncedSearch, showArchived, activeTab, filterRole, filterDepartment]);
 
   const fetchCounts = async () => {
     try {
@@ -133,8 +137,9 @@ export default function UserManagement() {
         search: debouncedSearch,
         role: filterRole,
         department: filterDepartment,
-        archiveStatus: activeTab === 'pending_archive' ? 'Pending Archive' : filterArchiveStatus,
-        isArchived: showArchived
+        archiveStatus: activeTab === 'active' ? 'Active' : activeTab === 'pending_archive' ? 'Pending Archive' : 'all',
+        isArchived: showArchived,
+        sortBy: activeTab === 'active' ? 'name' : activeTab === 'pending_archive' ? 'gracePeriod' : 'archivedDate'
       };
       
       const response = await getAllUsersForManagement(params);
@@ -297,39 +302,48 @@ export default function UserManagement() {
     setShowArchiveReasonModal(true);
   };
 
-  const handleUnarchive = async (userId) => {
-    if (!window.confirm('Are you sure you want to restore this user?')) return;
+  const handleUnarchive = (userId) => {
+    setRestoreUserId(userId);
+    setShowRestoreModal(true);
+  };
 
+  const confirmUnarchive = async () => {
+    setShowRestoreModal(false);
     try {
-      await unarchiveUser(userId);
+      await unarchiveUser(restoreUserId);
       setSuccess('User restored successfully!');
       fetchUsers();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to restore user');
       setTimeout(() => setError(''), 3000);
+    } finally {
+      setRestoreUserId(null);
     }
   };
 
-  const handleRespondToAppeal = async (userId, action) => {
-    const confirmationMsg = action === 'approve'
-      ? "Are you sure you want to approve this user's appeal? Their account will be fully restored."
-      : "Are you sure you want to reject this user's appeal? Their account will be deactivated permanently.";
-    
-    if (!window.confirm(confirmationMsg)) return;
+  const handleRespondToAppeal = (userId, action) => {
+    setAppealUserId(userId);
+    setAppealAction(action);
+    setShowAppealModal(true);
+  };
 
+  const confirmRespondToAppeal = async () => {
+    setShowAppealModal(false);
     try {
       setLoading(true);
-      await respondToAppeal(userId, { action });
-      setSuccess(`Appeal ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
+      await respondToAppeal(appealUserId, { action: appealAction });
+      setSuccess(`Appeal ${appealAction === 'approve' ? 'approved' : 'rejected'} successfully!`);
       fetchAppeals();
-      fetchAppealsCount();
+      fetchCounts();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || `Failed to ${action} appeal`);
+      setError(err.response?.data?.message || `Failed to ${appealAction} appeal`);
       setTimeout(() => setError(''), 3000);
     } finally {
       setLoading(false);
+      setAppealUserId(null);
+      setAppealAction(null);
     }
   };
 
@@ -589,24 +603,7 @@ export default function UserManagement() {
             </select>
           </div>
 
-          {activeTab === 'active' && (
-            <div className="w-full col-span-2 md:col-span-1 md:w-auto">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">Status</label>
-              <select
-                value={filterArchiveStatus}
-                onChange={(e) => {
-                  setFilterArchiveStatus(e.target.value);
-                  setCurrentPage(1);
-                  setSelectedUserIds([]);
-                }}
-                className="w-full md:min-w-[180px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white"
-              >
-                <option value="all">All Statuses</option>
-                <option value="Active">Active Only</option>
-                <option value="Pending Archive">Pending Archive Only</option>
-              </select>
-            </div>
-          )}
+
           
           <div className="w-full col-span-2 md:col-span-1 md:w-auto">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">Results</label>
@@ -625,12 +622,11 @@ export default function UserManagement() {
             </select>
           </div>
 
-          {(filterRole !== 'all' || filterDepartment !== 'all' || searchQuery || filterArchiveStatus !== 'all') && (
+          {(filterRole !== 'all' || filterDepartment !== 'all' || searchQuery) && (
             <button
               onClick={() => {
                 setFilterRole('all');
                 setFilterDepartment('all');
-                setFilterArchiveStatus('all');
                 setSearchQuery('');
                 setCurrentPage(1);
                 setSelectedUserIds([]);
@@ -1492,6 +1488,106 @@ export default function UserManagement() {
                 className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md shadow-blue-500/20 transition font-bold"
               >
                 Resend Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore User Modal */}
+      {showRestoreModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative bg-white border border-gray-200 w-full max-w-sm shadow-2xl rounded-2xl p-6 transition-all transform scale-100">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Restore User</h3>
+              <button
+                onClick={() => {
+                  setShowRestoreModal(false);
+                  setRestoreUserId(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl transition"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="mb-6 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 shadow-inner">
+                <RotateCcw size={24} />
+              </div>
+              <p className="text-sm text-gray-600 font-medium">
+                Are you sure you want to restore this user? Their scheduled deactivation will be cancelled.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+              <button
+                onClick={() => {
+                  setShowRestoreModal(false);
+                  setRestoreUserId(null);
+                }}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmUnarchive}
+                className="px-5 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition font-bold"
+              >
+                Restore
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Appeal Response Modal */}
+      {showAppealModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative bg-white border border-gray-200 w-full max-w-sm shadow-2xl rounded-2xl p-6 transition-all transform scale-100">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">
+                {appealAction === 'approve' ? 'Approve Appeal' : 'Reject Appeal'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAppealModal(false);
+                  setAppealUserId(null);
+                  setAppealAction(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl transition"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="mb-6 flex flex-col items-center text-center">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-inner ${appealAction === 'approve' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                {appealAction === 'approve' ? <CheckCircle size={24} /> : <XCircle size={24} />}
+              </div>
+              <p className="text-sm text-gray-600 font-medium">
+                {appealAction === 'approve' 
+                  ? "Are you sure you want to approve this user's appeal? Their account will be fully restored."
+                  : "Are you sure you want to reject this user's appeal? Their account will be deactivated permanently."}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+              <button
+                onClick={() => {
+                  setShowAppealModal(false);
+                  setAppealUserId(null);
+                  setAppealAction(null);
+                }}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRespondToAppeal}
+                className={`px-5 py-2 text-sm text-white rounded-lg shadow-md transition font-bold ${appealAction === 'approve' ? 'bg-green-600 hover:bg-green-700 shadow-green-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20'}`}
+              >
+                {appealAction === 'approve' ? 'Approve' : 'Reject'}
               </button>
             </div>
           </div>
