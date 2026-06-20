@@ -396,10 +396,27 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
 
     await message.save();
 
+    const isSystemMessage = senderName === "System";
+    
+    let shouldSendUserEmail = false;
+    let shouldSendAdminEmail = false;
+
+    if (!isSystemMessage) {
+      if (isAdmin && isNewDay(ticket.lastEmailSentToUser) && ticket.userId?.email) {
+        shouldSendUserEmail = true;
+      }
+      if (!isAdmin && isNewDay(ticket.lastEmailSentToAdmin)) {
+        shouldSendAdminEmail = true;
+      }
+    }
+
     const updateData = {
       lastMessageAt: new Date(),
       lastMessage: content.substring(0, 100)
     };
+
+    if (shouldSendUserEmail) updateData.lastEmailSentToUser = new Date();
+    if (shouldSendAdminEmail) updateData.lastEmailSentToAdmin = new Date();
 
     if (isAdmin) {
       updateData.$inc = { "unreadCount.user": 1 };
@@ -430,13 +447,10 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
       link: isAdmin ? "/user/chat" : "/superadmin/messages"
     });
 
-    // ─── First Daily Chat Email Notifications ───────────────────────────────────────
-    // Skip system-generated messages (senderName === "System")
-    const isSystemMessage = senderName === "System";
-    
-    if (!isSystemMessage) {
-      // Admin sending to user: Check if first message of the day
-      if (isAdmin && isNewDay(ticket.lastEmailSentToUser) && ticket.userId?.email) {
+    // Run email notifications asynchronously so they don't block the chat API response
+    (async () => {
+      // Admin sending to user
+      if (shouldSendUserEmail) {
         try {
           const userEmail = ticket.userId.email;
           const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
@@ -460,23 +474,15 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
               ticketNumber,
             }),
           });
-
-          // Update the tracking field
-          await Ticket.findOneAndUpdate(
-            { ticketNumber },
-            { lastEmailSentToUser: new Date() }
-          );
-
           console.log(`✉️ First daily chat email sent to user for ticket ${ticketNumber}`);
         } catch (emailError) {
           console.error("❌ Failed to send first daily chat email to user:", emailError);
         }
       }
 
-      // User sending to admin: Check if first message of the day
-      if (!isAdmin && isNewDay(ticket.lastEmailSentToAdmin)) {
+      // User sending to admin
+      if (shouldSendAdminEmail) {
         try {
-          // Get admin email (superadmin)
           const admin = await User.findOne({ role: "superadmin" });
           if (admin?.email) {
             const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
@@ -501,52 +507,13 @@ router.post("/:ticketNumber/messages", authenticateAny, async (req, res) => {
                 ticketNumber,
               }),
             });
-
-            // Update the tracking field
-            await Ticket.findOneAndUpdate(
-              { ticketNumber },
-              { lastEmailSentToAdmin: new Date() }
-            );
-
             console.log(`✉️ First daily chat email sent to admin for ticket ${ticketNumber}`);
           }
         } catch (emailError) {
           console.error("❌ Failed to send first daily chat email to admin:", emailError);
         }
       }
-    }
-
-    // ✉️ Send formatted email on first admin reply (legacy - keep for backward compatibility)
-    if (isFirstAdminReply && ticket.userId?.email) {
-      try {
-        const userEmail = ticket.userId.email;
-        const userName = ticket.displayName || `${ticket.userId.firstName} ${ticket.userId.lastName}`;
-
-        await sendEmail({
-          to: userEmail,
-          subject: `New Reply on Your Support Ticket #${ticketNumber} — GAD Portal`,
-          html: buildEmail({
-            title: "You Have a New Reply",
-            icon: "💬",
-            accentColor: "#2563eb",
-            bodyHtml: `
-              <p>Hello, ${userName}!</p>
-              <p>Our support team has replied to your ticket. Please log in to the GAD Portal to view the message and continue the conversation.</p>
-              <div class="info-box">
-                <div class="detail-row"><span class="detail-label">Ticket Number</span><span class="detail-value">#${ticketNumber}</span></div>
-                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">Open — Awaiting your reply</span></div>
-              </div>
-              <div class="warning">📌 Please do not reply to this email. Log in to the GAD Portal to respond directly in the chat.</div>
-            `,
-            ticketNumber,
-          }),
-        });
-
-        console.log(`✉️ First reply email sent for ticket ${ticketNumber}`);
-      } catch (emailError) {
-        console.error("❌ Failed to send first reply email:", emailError);
-      }
-    }
+    })();
 
     const io = req.app.get("io");
     io.to(`ticket-${ticketNumber}`).emit("new-message", {
