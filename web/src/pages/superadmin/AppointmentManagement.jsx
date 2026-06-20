@@ -854,11 +854,11 @@ const AppointmentManagement = () => {
 
               {/* Identify Anonymous User */}
               {selectedAppt.isAnonymous && (
-                <div className="border rounded-xl overflow-hidden">
+                <div className="border rounded-xl">
                   <button
                     type="button"
                     onClick={() => setCompleteData({ ...completeData, identifyUser: !completeData.identifyUser })}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                    className={`w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors ${!completeData.identifyUser ? 'rounded-xl' : 'rounded-t-xl'}`}
                   >
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-gray-500" />
@@ -870,13 +870,13 @@ const AppointmentManagement = () => {
                   </button>
 
                   {completeData.identifyUser && (
-                    <div className="px-4 pb-4 border-t bg-gray-50">
+                    <div className="px-4 pb-4 border-t bg-gray-50 rounded-b-xl">
                       <p className="text-xs text-gray-500 mt-3 mb-3">
                         This will reveal the user's identity in the report and link it to their account. Search by name, ID, or email.
                       </p>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Search User</label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3 top-[18px] -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
                           className="w-full pl-9 pr-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
@@ -891,7 +891,7 @@ const AppointmentManagement = () => {
                           placeholder="Type name, ID, or email..."
                         />
                         {isSearchingUsers && (
-                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="absolute right-3 top-[18px] -translate-y-1/2">
                             <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
                           </div>
                         )}
@@ -903,7 +903,7 @@ const AppointmentManagement = () => {
                               setUserSearchQuery("");
                               setCompleteData({ ...completeData, selectedUserId: "" });
                             }}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                            className="absolute right-3 top-[18px] -translate-y-1/2 text-gray-400 hover:text-red-500"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -911,7 +911,7 @@ const AppointmentManagement = () => {
                         
                         {/* Search Dropdown */}
                         {userSearchResults.length > 0 && !selectedUserDisplay && (
-                          <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto divide-y divide-gray-100">
+                          <ul className="w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-sm max-h-48 overflow-y-auto divide-y divide-gray-100">
                             {userSearchResults.map(u => (
                               <li 
                                 key={u._id}
@@ -932,14 +932,14 @@ const AppointmentManagement = () => {
                           </ul>
                         )}
                         {userSearchQuery.trim().length > 0 && userSearchResults.length === 0 && !isSearchingUsers && !selectedUserDisplay && (
-                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-500 text-center">
+                          <div className="w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-3 text-sm text-gray-500 text-center">
                             No users found.
                           </div>
                         )}
                       </div>
 
                       {completeData.selectedUserId && (
-                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                        <p className="text-xs text-amber-600 mt-3 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3 flex-shrink-0" />
                           This action is irreversible. Verify the identity carefully.
                         </p>
