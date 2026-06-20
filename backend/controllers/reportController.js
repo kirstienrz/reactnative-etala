@@ -207,13 +207,37 @@ const createReport = async (req, res) => {
 const getUserReports = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page = 1, limit = 10, search = "", status = "" } = req.query;
 
-    const reports = await Report.find({ createdBy: userId })
+    let query = { createdBy: userId };
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { ticketNumber: new RegExp(search, "i") },
+        { incidentDescription: new RegExp(search, "i") },
+        { salaysay: new RegExp(search, "i") },
+        { placeOfIncident: new RegExp(search, "i") },
+        { perpFirstName: new RegExp(search, "i") },
+        { perpLastName: new RegExp(search, "i") }
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const reports = await Report.find(query)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
       .populate("createdBy", "firstName lastName email")
       .populate("timeline.performedBy", "firstName lastName role");
 
-    res.json({ success: true, data: reports, total: reports.length });
+    const total = await Report.countDocuments(query);
+
+    res.json({ success: true, data: reports, total });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
