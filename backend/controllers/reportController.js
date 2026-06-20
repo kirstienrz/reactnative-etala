@@ -435,7 +435,7 @@ const updateReportStatus = async (req, res) => {
           });
 
           // Email
-          await sendEmail({
+          sendEmail({
             to: user.email,
             subject: `🔔 Consultation Booking Link - ${report.ticketNumber} (Valid for 24 Hours)`,
             html: buildBookingEmail({
@@ -444,7 +444,7 @@ const updateReportStatus = async (req, res) => {
               bookingLink,
               expiresAtStr,
             }),
-          });
+          }).catch(err => console.error("❌ Auto booking email failed:", err));
 
           // Chat / inbox message
           const MessageModel = require("../models/message");
@@ -571,21 +571,16 @@ const sendBookingLink = async (req, res) => {
     });
 
     // ── 5. Send email ────────────────────────────────────────────────────────
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: `🔔 Consultation Booking Link - ${report.ticketNumber} (Valid for 24 Hours)`,
-        html: buildBookingEmail({
-          userName,
-          ticketNumber: report.ticketNumber,
-          bookingLink,
-          expiresAtStr,
-        }),
-      });
-    } catch (emailErr) {
-      console.error("❌ sendBookingLink — email failed:", emailErr.message);
-      // Non-fatal: continue so chat + notification still fire
-    }
+    sendEmail({
+      to: user.email,
+      subject: `🔔 Consultation Booking Link - ${report.ticketNumber} (Valid for 24 Hours)`,
+      html: buildBookingEmail({
+        userName,
+        ticketNumber: report.ticketNumber,
+        bookingLink,
+        expiresAtStr,
+      }),
+    }).catch(err => console.error("❌ Manual booking email failed:", err));
 
     // ── 6. Post chat / inbox message ─────────────────────────────────────────
     const MessageModel = require("../models/message");

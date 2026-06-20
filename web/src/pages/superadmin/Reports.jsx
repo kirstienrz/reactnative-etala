@@ -1493,7 +1493,7 @@ const AdminReports = () => {
         {/* ── Case Status Modal ───────────────────────────────────────────────── */}
         {showCaseStatusModal && selectedReport && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
+            <div className="bg-white rounded-2xl w-full max-w-xl flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center"><Edit size={15} className="text-indigo-600" /></div>
@@ -1795,7 +1795,7 @@ const AdminReports = () => {
         {/* ── Internal Referral Modal ─────────────────────────────────────────── */}
         {showReferralModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col shadow-2xl overflow-hidden border border-gray-100">
+            <div className="bg-white rounded-3xl w-full max-w-2xl flex flex-col max-h-[90vh] shadow-2xl overflow-hidden border border-gray-100">
               <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center"><Users size={24} /></div>
@@ -1806,7 +1806,7 @@ const AdminReports = () => {
                 </div>
                 <button onClick={() => setShowReferralModal(false)} className="p-2 hover:bg-white/20 rounded-xl"><X size={24} /></button>
               </div>
-              <div className="p-8 space-y-6">
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-4">
                   <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0"><AlertCircle size={20} /></div>
                   <p className="text-xs text-blue-600 leading-relaxed">A PDF report will be automatically generated and sent to the reporter via chat.</p>
@@ -1849,7 +1849,7 @@ const AdminReports = () => {
         {/* ── View Referral Modal ─────────────────────────────────────────────── */}
         {showViewReferralModal && selectedReferral && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-3xl w-full max-w-lg flex flex-col max-h-[90vh] shadow-2xl overflow-hidden border border-gray-100">
+            <div className="bg-white rounded-3xl w-full max-w-2xl flex flex-col max-h-[90vh] shadow-2xl overflow-hidden border border-gray-100">
               <div className={`px-8 py-6 flex items-center justify-between text-white ${selectedReferral.referralType === "External" ? "bg-gradient-to-r from-emerald-600 to-teal-600" : "bg-gradient-to-r from-indigo-600 to-blue-600"}`}>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
