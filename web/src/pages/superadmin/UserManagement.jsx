@@ -1372,11 +1372,11 @@ export default function UserManagement() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none bg-white text-sm"
                 >
                   <option value="">-- Select a Reason --</option>
-                  <option value="Inactivity (No login for more than 6 months)">💤 Inactivity (No login for &gt;6 months)</option>
-                  <option value="Graduated / Left the Institution">🎓 Graduated / Left Institution</option>
-                  <option value="Policy Violation / Misbehavior">⚠️ Policy Violation / Misbehavior</option>
-                  <option value="Duplicate / Registered by mistake">👥 Duplicate Account</option>
-                  <option value="Other">✏️ Other Reason...</option>
+                  <option value="Inactivity (No login for more than 6 months)">Inactivity (No login for &gt;6 months)</option>
+                  <option value="Graduated / Left the Institution">Graduated / Left Institution</option>
+                  <option value="Policy Violation / Misbehavior">Policy Violation / Misbehavior</option>
+                  <option value="Duplicate / Registered by mistake">Duplicate Account</option>
+                  <option value="Other">Other Reason...</option>
                 </select>
               </div>
 
