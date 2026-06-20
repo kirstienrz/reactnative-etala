@@ -289,8 +289,8 @@ router.get("/all", auth(), async (req, res) => {
 // 📋 GET users with pagination, search, and filtering (for superadmin user management)
 router.get("/manage/users", auth(), async (req, res) => {
   try {
-    if (req.user.role !== "superadmin") {
-      return res.status(403).json({ message: "Access denied. Superadmin only." });
+    if (req.user.role !== "superadmin" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admins and Superadmins only." });
     }
 
     const page = parseInt(req.query.page) || 1;
