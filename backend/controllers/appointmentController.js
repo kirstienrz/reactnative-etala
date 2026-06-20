@@ -485,6 +485,61 @@ exports.rescheduleAppointment = async (req, res) => {
       reason,
     });
 
+    if (!newDate) {
+      if (req.user.role !== "superadmin" && req.user.role !== "admin") {
+        return res.status(400).json({ message: "New date and time are required." });
+      }
+      
+      const AdminAvailability = require("../models/AdminAvailability");
+      await AdminAvailability.updateOne(
+        { adminId: appointment.adminId, "availabilities.date": appointment.date, "availabilities.slots.start": appointment.startTime },
+        { $set: { "availabilities.$[day].slots.$[slot].booked": false } },
+        { arrayFilters: [{ "day.date": appointment.date }, { "slot.start": appointment.startTime }] }
+      );
+
+      appointment.status = "Pending Rebooking";
+      await appointment.save();
+
+      await Report.findByIdAndUpdate(appointment.reportId, {
+        caseStatus: "For Scheduling",
+        $push: {
+          timeline: {
+            action: "Admin Requested Reschedule",
+            performedBy: req.user.id,
+            remarks: `Admin requested to reschedule. Reason: ${reason}.`,
+          },
+        },
+      });
+
+      const user = await User.findById(appointment.userId);
+      if (user) {
+        const crypto = require("crypto");
+        const bookingToken = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        user.bookingAccess = {
+          token: bookingToken,
+          expiresAt,
+          granted: true,
+          used: false,
+          reportTicketNumber: appointment.reportId?.ticketNumber || "Unknown",
+          adminId: appointment.adminId,
+        };
+        await user.save();
+
+        if (user.email) {
+          const ticketNumber = appointment.reportId?.ticketNumber || "Unknown";
+          const bookingLink = `${process.env.FRONTEND_URL}/user/interview?token=${bookingToken}&uid=${user._id}&ticket=${ticketNumber}`;
+          sendEmail({
+            to: user.email,
+            subject: `Reschedule Request — Ticket #${ticketNumber}`,
+            html: buildBookingEmail({ userName: `${user.firstName} ${user.lastName}`, ticketNumber, bookingLink })
+          }).catch((err) => console.error("Email Error:", err));
+        }
+      }
+      return res.json(appointment);
+    }
+
     appointment.date = newDate;
     appointment.startTime = newStartTime;
     appointment.endTime = newEndTime;
