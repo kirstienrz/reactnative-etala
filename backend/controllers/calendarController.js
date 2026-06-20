@@ -657,7 +657,7 @@ const sendInterviewBookingLink = async (req, res) => {
     `;
 
     try {
-      await sendEmail({
+      sendEmail({
         to: userEmail,
         subject: `🔔 Consultation Booking Link - ${ticketNumber} (Valid for 24 Hours)`,
         html

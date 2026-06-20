@@ -193,7 +193,7 @@ exports.bookAppointment = async (req, res) => {
 
     const admin = await User.findById(adminId);
     if (admin?.email) {
-      await sendEmail({
+      sendEmail({
         to: admin.email,
         subject: "New Consultation Booking — GAD Portal",
         html: buildEmail({
@@ -223,7 +223,7 @@ exports.bookAppointment = async (req, res) => {
     });
 
     if (user?.email) {
-      await sendEmail({
+      sendEmail({
         to: user.email,
         subject: "Consultation Booked — GAD Portal",
         html: buildEmail({
