@@ -213,7 +213,7 @@ const ChatScreen = () => {
     // ✅ Temp message for optimistic UI
     const tempMessage = {
       _id: `temp-${Date.now()}`,
-      content: inputText,
+      content: inputText.trim(), // trim to match potential backend saving
       sender: "user",
       senderName: currentUser?.firstName || currentUser?.name || "You",
       createdAt: new Date().toISOString(),
@@ -222,18 +222,27 @@ const ChatScreen = () => {
     };
 
     setMessages((prev) => [...prev, tempMessage]);
-    const messageText = inputText;
+    const messageText = inputText.trim();
     setInputText("");
     setSending(true);
 
     socketService.sendTyping(ticketNumber, currentUser?.firstName || "You", false);
 
     try {
-      await sendTicketMessage(ticketNumber, {
+      const response = await sendTicketMessage(ticketNumber, {
         content: messageText,
         attachments: [],
       });
-      // ✅ Socket will fire new-message which removes the temp and adds the real one
+      
+      // ✅ Use the API response to replace the temp message directly
+      // This guarantees the UI updates even if the socket is delayed or disconnected.
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((msg) => msg._id !== tempMessage._id);
+        // Avoid duplicates if the socket arrived first
+        if (withoutTemp.some((m) => m._id === response._id)) return withoutTemp;
+        return [...withoutTemp, response];
+      });
+      
       setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error("❌ Error sending message:", error);
