@@ -437,14 +437,12 @@ const AdminReports = () => {
         showToast("Referral added successfully");
         resetStatusModal();
         fetchReports();
-        try {
-          await sendReferralNotification(selectedReport, {
-            ...payload,
-            referralTimestamp: new Date().toISOString(),
-          });
-        } catch (e) {
-          showToast("Failed to send referral notification: " + (e.message || ""), "error");
-        }
+        sendReferralNotification(selectedReport, {
+          ...payload,
+          referralTimestamp: new Date().toISOString(),
+        }).catch(e => {
+          console.error("Failed to send referral notification:", e);
+        });
       } else {
         showToast(res.message || "Failed to add referral", "error");
       }
@@ -468,11 +466,9 @@ const AdminReports = () => {
         showToast("External referral submitted successfully");
         await updateReportStatus(selectedReport._id, selectedReport.status, "", "Referred to Barangay");
         fetchReports();
-        try {
-          await sendReferralNotification(selectedReport, payload);
-        } catch (e) {
-          showToast("Failed to send referral notification: " + (e.message || ""), "error");
-        }
+        sendReferralNotification(selectedReport, payload).catch(e => {
+          console.error("Failed to send referral notification:", e);
+        });
         resetStatusModal();
         resetExternalData();
       } else {
