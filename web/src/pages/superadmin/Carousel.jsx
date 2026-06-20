@@ -625,66 +625,92 @@ export default function CarouselManagement() {
           onClick={() => setModalMedia(null)}
           className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100] p-4 cursor-pointer"
         >
-          <div className="relative w-full max-w-6xl h-full max-h-[90vh] flex items-center justify-center">
+          <div className="relative w-full max-w-6xl h-full max-h-[95vh] flex flex-col items-center justify-center pt-8 pb-4">
             <button
               onClick={() => setModalMedia(null)}
-              className="absolute -top-10 right-0 md:-right-10 text-white/70 hover:text-white text-4xl font-bold transition z-50"
+              className="absolute top-0 right-0 md:-right-10 text-white/70 hover:text-white text-4xl font-bold transition z-50"
             >
               ×
             </button>
 
-            {modalMedia.items.length > 1 && (
-              <button
-                className="absolute left-2 md:-left-12 text-white/50 hover:text-white text-5xl transition z-50 p-4"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setModalMedia(prev => ({
-                    ...prev,
-                    currentIndex: prev.currentIndex === 0 ? prev.items.length - 1 : prev.currentIndex - 1
-                  }));
-                }}
-              >
-                &#10094;
-              </button>
-            )}
+            <div className="flex justify-center items-center w-full flex-1 min-h-0 relative">
+              {modalMedia.items.length > 1 && (
+                <button
+                  className="absolute left-2 md:-left-12 text-white/50 hover:text-white text-5xl transition z-50 p-4"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setModalMedia(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex === 0 ? prev.items.length - 1 : prev.currentIndex - 1
+                    }));
+                  }}
+                >
+                  &#10094;
+                </button>
+              )}
 
-            <div className="flex justify-center items-center w-full h-full">
               {modalMedia.items[modalMedia.currentIndex].type === 'video' ? (
                 <video
                   src={modalMedia.items[modalMedia.currentIndex].url}
                   controls
                   autoPlay
-                  className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
+                  className="max-w-full max-h-full rounded-xl shadow-2xl object-contain"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
                 <img
                   src={modalMedia.items[modalMedia.currentIndex].url}
                   alt="Enlarged view"
-                  className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
+                  className="max-w-full max-h-full rounded-xl shadow-2xl object-contain"
                   onClick={(e) => e.stopPropagation()}
                 />
+              )}
+
+              {modalMedia.items.length > 1 && (
+                <button
+                  className="absolute right-2 md:-right-12 text-white/50 hover:text-white text-5xl transition z-50 p-4"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setModalMedia(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex === prev.items.length - 1 ? 0 : prev.currentIndex + 1
+                    }));
+                  }}
+                >
+                  &#10095;
+                </button>
               )}
             </div>
 
             {modalMedia.items.length > 1 && (
-              <button
-                className="absolute right-2 md:-right-12 text-white/50 hover:text-white text-5xl transition z-50 p-4"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setModalMedia(prev => ({
-                    ...prev,
-                    currentIndex: prev.currentIndex === prev.items.length - 1 ? 0 : prev.currentIndex + 1
-                  }));
-                }}
-              >
-                &#10095;
-              </button>
-            )}
-
-            {modalMedia.items.length > 1 && (
-              <div className="absolute -bottom-10 left-0 right-0 text-center text-white/70 font-medium tracking-widest text-sm">
-                {modalMedia.currentIndex + 1} / {modalMedia.items.length}
+              <div className="w-full mt-6 flex flex-col items-center flex-shrink-0">
+                <div className="text-white/70 font-medium tracking-widest text-sm mb-3">
+                  {modalMedia.currentIndex + 1} / {modalMedia.items.length}
+                </div>
+                <div className="flex gap-3 overflow-x-auto max-w-full pb-4 px-4 no-scrollbar items-center">
+                  {modalMedia.items.map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setModalMedia((prev) => ({ ...prev, currentIndex: idx }));
+                      }}
+                      className={`relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-300 ${
+                        modalMedia.currentIndex === idx
+                          ? "border-violet-500 scale-110 shadow-[0_0_20px_rgba(139,92,246,0.6)] z-10"
+                          : "border-transparent opacity-50 hover:opacity-100"
+                      }`}
+                    >
+                      {item.type === "video" ? (
+                        <div className="w-full h-full bg-slate-900 flex items-center justify-center">
+                          <Eye size={16} className="text-white opacity-50" />
+                        </div>
+                      ) : (
+                        <img src={item.url} className="w-full h-full object-cover" alt="" />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
