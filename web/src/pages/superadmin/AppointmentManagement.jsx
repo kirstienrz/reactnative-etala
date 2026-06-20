@@ -32,6 +32,7 @@ import {
   rescheduleAppointment,
   completeAppointment,
 } from "../../api/appointments";
+import { searchUsers } from "../../api/user";
 import { toast } from "react-toastify";
 import AvailabilityPickerModal from "../../components/AvailabilityPickerModal";
 
@@ -117,6 +118,12 @@ const AppointmentManagement = () => {
     selectedUserId: "",
   });
 
+  // User search state for the Complete Modal
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [selectedUserDisplay, setSelectedUserDisplay] = useState(null);
+
   // ─── Data fetching ─────────────────────────────────────────────────────────
 
   useEffect(() => { fetchAppointments(); }, []);
@@ -132,6 +139,27 @@ const AppointmentManagement = () => {
       setLoading(false);
     }
   };
+
+  // ─── User Search Effect ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!completeData.identifyUser || !userSearchQuery.trim() || selectedUserDisplay) {
+      setUserSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingUsers(true);
+      try {
+        const res = await searchUsers(userSearchQuery);
+        // Assuming searchUsers returns an object with `users` array based on the API implementation
+        setUserSearchResults(res.users || []);
+      } catch (err) {
+        console.error("Failed to search users:", err);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [userSearchQuery, completeData.identifyUser, selectedUserDisplay]);
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -233,6 +261,9 @@ const AppointmentManagement = () => {
       identifyUser: false,
       selectedUserId: appt.userId?._id || "",
     });
+    setUserSearchQuery("");
+    setUserSearchResults([]);
+    setSelectedUserDisplay(null);
     setShowCompleteModal(true);
   };
 
@@ -840,21 +871,79 @@ const AppointmentManagement = () => {
 
                   {completeData.identifyUser && (
                     <div className="px-4 pb-4 border-t bg-gray-50">
-                      <p className="text-xs text-gray-500 mt-3 mb-2">
-                        This will reveal the user's identity in the report and link it to their account.
+                      <p className="text-xs text-gray-500 mt-3 mb-3">
+                        This will reveal the user's identity in the report and link it to their account. Search by name, ID, or email.
                       </p>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        value={completeData.selectedUserId}
-                        onChange={(e) => setCompleteData({ ...completeData, selectedUserId: e.target.value })}
-                        placeholder="Enter user's MongoDB ObjectId..."
-                      />
-                      <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        This action is irreversible. Verify the identity carefully.
-                      </p>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Search User</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          className="w-full pl-9 pr-3 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                          value={selectedUserDisplay ? selectedUserDisplay.name : userSearchQuery}
+                          onChange={(e) => {
+                            if (selectedUserDisplay) {
+                              setSelectedUserDisplay(null);
+                              setCompleteData({ ...completeData, selectedUserId: "" });
+                            }
+                            setUserSearchQuery(e.target.value);
+                          }}
+                          placeholder="Type name, ID, or email..."
+                        />
+                        {isSearchingUsers && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                          </div>
+                        )}
+                        {selectedUserDisplay && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedUserDisplay(null);
+                              setUserSearchQuery("");
+                              setCompleteData({ ...completeData, selectedUserId: "" });
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        {/* Search Dropdown */}
+                        {userSearchResults.length > 0 && !selectedUserDisplay && (
+                          <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto divide-y divide-gray-100">
+                            {userSearchResults.map(u => (
+                              <li 
+                                key={u._id}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                                onClick={() => {
+                                  setSelectedUserDisplay({ id: u._id, name: `${u.firstName} ${u.lastName}` });
+                                  setCompleteData({ ...completeData, selectedUserId: u._id });
+                                  setUserSearchResults([]);
+                                }}
+                              >
+                                <div className="font-medium text-sm text-gray-900">{u.firstName} {u.lastName}</div>
+                                <div className="text-xs text-gray-500 flex justify-between">
+                                  <span>{u.tupId}</span>
+                                  <span>{u.email}</span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {userSearchQuery.trim().length > 0 && userSearchResults.length === 0 && !isSearchingUsers && !selectedUserDisplay && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-500 text-center">
+                            No users found.
+                          </div>
+                        )}
+                      </div>
+
+                      {completeData.selectedUserId && (
+                        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                          This action is irreversible. Verify the identity carefully.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
