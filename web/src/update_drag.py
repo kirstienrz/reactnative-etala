@@ -2,7 +2,8 @@ import os
 import glob
 import re
 
-files = glob.glob('c:/Users/Win10/Desktop/reactnative-etala/web/src/pages/superadmin/*.jsx')
+base_dir = os.path.dirname(os.path.abspath(__file__))
+files = glob.glob(os.path.join(base_dir, 'pages', 'superadmin', '*.jsx'))
 
 count = 0
 for file in files:

@@ -4,7 +4,9 @@ const parser = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
 const generate = require('@babel/generator').default;
 
-const files = glob.sync('c:/Users/Win10/Desktop/reactnative-etala/web/src/pages/**/*.{jsx,js}');
+const path = require('path');
+const searchPattern = path.join(__dirname, 'pages/**/*.{jsx,js}').replace(/\\/g, '/');
+const files = glob.sync(searchPattern);
 
 let updatedCount = 0;
 
